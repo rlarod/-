@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>BTCUSDT 실시간 차트 · 선물 모의투자</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- TradingView 공식 오픈소스 라이브러리 (Embed 위젯이 아닌, 직접 캔들을 그리는 용도) -->
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<!-- MARKET WAR 패널 전용 — 페이지의 다른 부분은 3D로 바뀌지 않습니다 -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<!-- MARKET WAR 병사 모델(GLB) 로딩용 — 최신 Three.js는 이 애드온들을 ES모듈로만 배포해서
+     최소한의 브릿지 스크립트로 전역(window)에 노출시킵니다. 페이지의 다른 부분은
+     여전히 일반 <script> 태그 방식 그대로입니다. -->
+<script type="module">
+  import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+  import { SkeletonUtils } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js";
+  window.GLTFLoader = GLTFLoader;
+  window.SkeletonUtils = SkeletonUtils;
+  window.dispatchEvent(new Event("three-addons-ready"));
+</script>
+<!-- 닉네임/익명 로그인 게이트 전용(js/supabase-client.js, js/auth.js가 사용) — UMD 빌드라
+     여기 스크립트가 로드되면 전역 window.supabase.createClient가 생깁니다. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<!-- ===== 닉네임 게이트 — 회원가입/로그인 절차 없이 닉네임만 입력하면 바로 진입.
+     기본값은 숨김(display:none, style.css)이고, js/auth.js가 세션 상태를 보고
+     보여줄지/건너뛸지 결정합니다. 기존 .app 구조는 전혀 안 건드립니다. ===== -->
+<div id="auth-gate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-mark">₿</div>
+    <div class="auth-title">BTCUSDT 모의투자</div>
+    <div class="auth-sub">닉네임만 입력하면 바로 시작합니다 — 회원가입 없음</div>
+    <input type="text" id="auth-nickname-input" class="auth-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off">
+    <div class="auth-err" id="auth-err"></div>
+    <button id="auth-start-btn" class="auth-start-btn">모의투자 시작하기</button>
+    <div class="auth-loading" id="auth-loading">연결 중...</div>
+    <div class="auth-note">최초 접속 시 10,000 USDT가 자동으로 지급됩니다.</div>
+  </div>
+</div>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">₿</div>
+      <div>
+        <div class="name">BTCUSDT 실시간 차트</div>
+        <div class="tag">실제 시장 가격 기반 · 선물 모의투자 (실제 주문 전송 없음, 전부 브라우저 내부 계산)</div>
+      </div>
+    </div>
+    <div class="ws-status">
+      <span class="ws-dot pending" id="ws-dot"></span>
+      <span id="ws-status-text">연결 중...</span>
+      <span class="ws-sep">·</span>
+      <span>마지막 갱신</span>
+      <span id="last-update-text" class="mono-strong">-</span>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-block main-price-block">
+      <span class="stat-label">BTCUSDT</span>
+      <span class="stat-value price" id="stat-price">-</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-label">24H 변동률</span>
+      <span class="stat-value" id="stat-change">-</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-label">24H 고가</span>
+      <span class="stat-value" id="stat-high">-</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-label">24H 저가</span>
+      <span class="stat-value" id="stat-low">-</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-label">24H 거래량</span>
+      <span class="stat-value" id="stat-volume">-</span>
+    </div>
+  </div>
+
+  <div class="interval-row" id="interval-row"></div>
+
+  <!-- ===== 메인 3열: 차트 / 매수·매도 주문 / 실시간 채팅 — 셋 다 이 grid의
+       같은 행(row)에 속해서 top/bottom이 정확히 일치합니다(.main-grid에 높이를
+       주고 grid 기본 stretch로 세 칼럼이 그 높이를 나눠 갖습니다). ===== -->
+  <div class="main-grid">
+
+    <div class="chart-column">
+      <div class="chart-wrap">
+        <div id="chart_container" class="chart-container"></div>
+      </div>
+    </div>
+
+    <!-- ===== 가운데: 주문창(포지션 진입) — 차트/실시간 시세 코드는 그대로 유지 ===== -->
+    <div class="side-column">
+      <div class="panel order-panel">
+        <div class="acc-balance">
+          <span class="field-label">총 자산</span>
+          <span class="balance-value" id="balance-value">-</span>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span>증거금</span></div>
+          <div class="margin-input-wrap">
+            <input type="text" inputmode="numeric" id="margin-input" placeholder="0" value="1000">
+            <span>USDT</span>
+          </div>
+          <div class="chip-row">
+            <div class="chip" data-margin="1000">1,000</div>
+            <div class="chip" data-margin="5000">5,000</div>
+            <div class="chip" data-margin="10000">10,000</div>
+            <div class="chip" data-margin="max">MAX</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span>레버리지</span><span class="lev-val"><span id="lev-display">10</span>x</span></div>
+          <input type="range" id="lev-slider" min="1" max="100" value="10">
+        </div>
+
+        <div class="order-buttons">
+          <button class="order-btn long" id="btn-long">LONG</button>
+          <button class="order-btn short" id="btn-short">SHORT</button>
+        </div>
+        <div class="err-msg" id="order-err"></div>
+
+        <div class="account-divider"></div>
+
+        <div class="position-section">
+          <div class="field-label"><span>현재 포지션</span></div>
+          <div id="position-empty" class="position-empty">보유 중인 포지션이 없습니다.</div>
+          <div id="position-card" class="position-card" style="display:none;">
+            <div class="position-row"><span class="badge long" id="pos-side-badge">LONG</span></div>
+            <div class="position-grid">
+              <div><span>진입가격</span><b id="pos-entry">-</b></div>
+              <div><span>현재가격</span><b id="pos-current">-</b></div>
+              <div><span>레버리지</span><b id="pos-leverage">-</b></div>
+              <div><span>증거금</span><b id="pos-margin">-</b></div>
+              <div><span>포지션 수량</span><b id="pos-qty">-</b></div>
+              <div><span>청산가</span><b id="pos-liq">-</b></div>
+              <div class="pnl-row"><span>미실현 손익</span><b id="pos-pnl">-</b></div>
+              <div class="pnl-row"><span>손익률</span><b id="pos-pnl-pct">-</b></div>
+            </div>
+            <button class="close-btn" id="btn-close-position">포지션 종료</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 오른쪽: 실시간 채팅 — chat.js는 id로만 요소를 찾기 때문에
+         위치를 옮겨도 채팅 로직/Realtime 구독은 전혀 영향 없습니다. ===== -->
+    <div class="page-chat-col">
+      <div class="panel page-chat-panel" id="chat-panel">
+        <div class="field-label"><span>💬 실시간 채팅</span></div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
+          <button id="chat-send-btn" class="chat-send-btn">전송</button>
+        </div>
+        <div class="chat-err" id="chat-err"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel history-panel">
+    <div class="field-label"><span>거래내역</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>종료시각</th><th>방향</th><th>레버리지</th><th>진입가</th><th>종료가</th>
+          <th>증거금</th><th>손익</th><th>손익률</th><th id="history-th-fee">수수료</th><th>사유</th>
+        </tr></thead>
+        <tbody id="history-body"><tr class="empty"><td colspan="10">거래 내역이 없습니다.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 서버 거래내역(Supabase) — 위의 로컬 거래내역과는 별개, 기기가 바뀌어도 유지됨 ===== -->
+  <!-- ===== 투자 랭킹(Supabase) — 다른 사용자 데이터는 SECURITY DEFINER 함수로만 조회, user_id/이메일 노출 없음 ===== -->
+  <div class="panel" id="leaderboard-panel">
+    <div class="field-label"><span>🏆 투자 랭킹 (총자산 기준)</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>순위</th><th>닉네임</th><th>총자산</th><th>수익률</th>
+        </tr></thead>
+        <tbody id="leaderboard-body"><tr class="empty"><td colspan="4">불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
+  </div>
+
+  <div class="panel" id="cloud-history-panel">
+    <div class="field-label"><span>☁ 거래내역 (서버 저장 · 새로고침해도 유지)</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>거래시간</th><th>방향</th><th>진입가</th><th>청산가</th><th>수량</th>
+          <th>레버리지</th><th>증거금</th><th>손익</th><th>손익률</th><th>수수료</th><th>사유</th>
+        </tr></thead>
+        <tbody id="cloud-history-body"><tr class="empty"><td colspan="11">아직 거래내역이 없습니다.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 요청: 호가창을 하단 탭(포지션/미체결/주문내역/거래내역/자산)보다도 더 아래, 페이지 맨 밑으로 -->
+  <div class="panel orderbook-panel" id="orderbook-panel">
+    <div class="ob-header">
+      <span class="ob-title">호가창 (BTCUSDT)</span>
+      <span class="ob-cols"><span>가격</span><span>수량</span><span>누적</span></span>
+    </div>
+    <div class="ob-asks" id="ob-asks"></div>
+    <div class="ob-current-price" id="ob-current-price">현재가 -</div>
+    <div class="ob-bids" id="ob-bids"></div>
+  </div>
+
+  <!-- ===== MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현 (신규) ===== -->
+  <div class="panel market-war-panel" id="market-war-panel">
+    <div class="ob-header">
+      <span class="ob-title">⚔ MARKET WAR</span>
+      <span class="mw-power-label">
+        <span class="mw-buy-label">BUY <b id="mw-buy-pct">50%</b></span>
+        <span class="mw-sell-label">SELL <b id="mw-sell-pct">50%</b></span>
+      </span>
+    </div>
+    <div class="mw-power-bar">
+      <div class="mw-power-buy" id="mw-power-buy" style="width:50%;"></div>
+      <div class="mw-power-sell" id="mw-power-sell" style="width:50%;"></div>
+    </div>
+    <div class="mw-canvas-wrap">
+      <canvas id="mw-canvas" class="mw-canvas"></canvas>
+      <div class="mw-hud">
+        <div class="mw-hud-price" id="mw-hud-price">-</div>
+        <div class="mw-hud-status" id="mw-hud-status">SYNCING</div>
+      </div>
+      <div class="mw-controls-hint">드래그 회전 · 휠 확대</div>
+    </div>
+    <div class="mw-feed" id="mw-feed"></div>
+  </div>
+
+  <div class="disclaimer">
+    <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
+    BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
+    수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
+  </div>
+</div>
+
+<!-- 스크립트 태그 순서는 실행에 영향 없음 — 전부 App.X 네임스페이스만 등록하는
+     IIFE라서, 실제 초기화 순서는 main.js의 boot() 함수가 DOMContentLoaded 시점에
+     Chart → OrderBook → RecentTrades → MarketWar → Trading → UI → WS 순서로
+     각 모듈의 init()을 호출하면서 결정됩니다. -->
+<script src="main.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/supabase-sync.js"></script>
+<script src="js/trade-history.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/websocket.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/orderbook.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/market-war.js"></script>
+<script src="js/trading.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

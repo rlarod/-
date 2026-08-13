@@ -1,0 +1,159 @@
+/* =========================================================================
+ * js/config.js — App.Config
+ * =========================================================================
+ * 심볼/간격 목록과 Binance Futures 공식 엔드포인트를 만드는 규칙만 모아둡니다.
+ * 다른 파일들은 URL을 직접 문자열로 만들지 않고 전부 이 파일의 함수를
+ * 통해서만 만듭니다.
+ *
+ * ⚠️ 2026-04-23부로 Binance Futures가 레거시 WebSocket 주소를 폐지하고
+ * /public, /market, /private로 나뉜 새 주소 체계로 이전했습니다. kline/
+ * ticker/trade/markPrice 같은 일반 시세 스트림은 /market 경로로만 옵니다.
+ *
+ * ── 이번 단계에서 바뀐 가장 중요한 부분: 통화 모델 ──────────────────
+ * 이전 버전은 WebSocket에서 받는 순간 바로 원화로 환산해서 내부 상태
+ * 전체(차트 데이터, 거래 엔진, 잔고)가 원화 기준이었습니다. 이번에
+ * "내부 계산은 항상 USDT, 화면 표시만 선택한 통화로 환산" 원칙으로
+ * 바꿨습니다. 그래서:
+ *   - js/websocket.js는 이제 원화 환산 없이 Binance가 준 USDT 값을 그대로 emit
+ *   - js/trading.js의 잔고/증거금/손익/청산가는 전부 USDT 단위
+ *   - 화면에 보여줄 때만(js/utils.js의 formatCurrency) 현재 선택된 통화로 환산
+ * displayCurrency는 여기(config.js)에서 "현재 선택된 표시 통화" 하나만
+ * 관리하고, 'currency:change' 이벤트로 알립니다. USD_KRW(환율 상수)도
+ * 순수 표시 변환에만 쓰입니다 — 절대 거래 계산에 섞이지 않습니다.
+ * ========================================================================= */
+
+window.App = window.App || {};
+
+App.Config = (function () {
+  // 지금은 BTCUSDT 하나만 쓰지만, 배열 구조로 만들어 향후 확장에 대비합니다.
+  const SYMBOLS = [{ symbol: "BTCUSDT", label: "BTC/USDT" }];
+
+  let activeSymbol = SYMBOLS[0].symbol;
+  function getActiveSymbol() {
+    return activeSymbol;
+  }
+
+  // 실제 거래소처럼 초 단위 ~ 일봉까지 지원합니다.
+  // native: Binance가 공식 kline 스트림/REST로 직접 제공하는 간격 (1s, 1m, 5m, 15m, 1h, 4h, 1d)
+  // 비-native(5s, 15s)는 실제 체결가를 직접 그 시간 단위로 묶어서 구성합니다(가짜 데이터 아님).
+  const INTERVALS = [
+    { value: "1s", label: "1초", seconds: 1, native: true },
+    { value: "5s", label: "5초", seconds: 5, native: false },
+    { value: "15s", label: "15초", seconds: 15, native: false },
+    { value: "1m", label: "1분", seconds: 60, native: true },
+    { value: "5m", label: "5분", seconds: 300, native: true },
+    { value: "15m", label: "15분", seconds: 900, native: true },
+    { value: "1h", label: "1시간", seconds: 3600, native: true },
+    { value: "4h", label: "4시간", seconds: 14400, native: true },
+    { value: "1d", label: "1일", seconds: 86400, native: true },
+  ];
+  let activeInterval = "1m";
+
+  const KLINE_LIMIT = 500;
+
+  const REST_BASE = "https://fapi.binance.com";
+  const WS_STREAM_BASE = "wss://fstream.binance.com/market";
+
+  const RECONNECT_MIN_MS = 1000;
+  const RECONNECT_MAX_MS = 15000;
+
+  // 화면 표시 전용 고정 환율 (거래 엔진 계산에는 절대 쓰이지 않음)
+  const USD_KRW = 1500;
+
+  // ---------------- 표시 통화 (USDT ↔ KRW) ----------------
+  const CURRENCY_STORAGE_KEY = "settings";
+  let displayCurrency = "USDT"; // 기본값 USDT
+
+  function restoreDisplayCurrency() {
+    if (!App.Storage) return;
+    try {
+      const saved = App.Storage.load(CURRENCY_STORAGE_KEY);
+      if (saved && (saved.displayCurrency === "USDT" || saved.displayCurrency === "KRW")) {
+        displayCurrency = saved.displayCurrency;
+      }
+    } catch (e) {
+      /* 손상된 설정은 무시하고 기본값(USDT) 유지 */
+    }
+  }
+
+  function getDisplayCurrency() {
+    return displayCurrency;
+  }
+  function setDisplayCurrency(cur) {
+    if (cur !== "USDT" && cur !== "KRW") return;
+    if (cur === displayCurrency) return;
+    displayCurrency = cur;
+    if (App.Storage) App.Storage.save(CURRENCY_STORAGE_KEY, { displayCurrency: cur });
+    App.Bus.emit("currency:change", { currency: cur });
+  }
+
+  function getIntervals() {
+    return INTERVALS.slice();
+  }
+  function getActiveInterval() {
+    return activeInterval;
+  }
+  function setActiveInterval(interval) {
+    if (interval === activeInterval) return;
+    activeInterval = interval;
+    App.Bus.emit("interval:change", { interval });
+  }
+  function findInterval(value) {
+    return INTERVALS.find((iv) => iv.value === value) || null;
+  }
+  function isNativeInterval(value) {
+    const iv = findInterval(value);
+    return iv ? iv.native : true;
+  }
+  function intervalToSeconds(value) {
+    const iv = findInterval(value);
+    return iv ? iv.seconds : 60;
+  }
+
+  function buildKlinesRestUrl(symbol, interval, limit, endTime) {
+    let url =
+      REST_BASE + "/fapi/v1/klines?symbol=" + symbol + "&interval=" + interval + "&limit=" + limit;
+    if (endTime) url += "&endTime=" + Math.floor(endTime);
+    return url;
+  }
+
+  // 실시간 펀딩비는 markPrice WS 스트림으로 받지만(buildCombinedStreamUrl에 포함),
+  // 새로고침/재접속 사이에 놓친 펀딩 정산이 있는지 시작할 때 딱 한 번 확인하기
+  // 위한 REST(폴링 아님). 공식 엔드포인트: GET /fapi/v1/fundingRate
+  function buildFundingRateRestUrl(symbol, limit) {
+    return REST_BASE + "/fapi/v1/fundingRate?symbol=" + symbol + "&limit=" + (limit || 1);
+  }
+
+  // Binance Futures 공식 WS(/market 경로): ticker(24H) + trade(체결) + markPrice(마크가격·
+  // 실시간 펀딩비 추정치)를 항상 함께 구독하고, kline은 native 간격일 때만 추가합니다.
+  // markPrice는 공식 공지에서 "Regular market feeds(markPrice/kline/ticker) → /market"이라고
+  // 명시된 스트림이라, 기존 연결에 그대로 추가했습니다 — 별도 WebSocket을 새로 만들지 않았습니다.
+  function buildCombinedStreamUrl(symbol) {
+    const s = symbol.toLowerCase();
+    const streams = [s + "@ticker", s + "@trade", s + "@markPrice@1s"];
+    if (isNativeInterval(activeInterval)) {
+      streams.splice(0, 0, s + "@kline_" + activeInterval);
+    }
+    return WS_STREAM_BASE + "/stream?streams=" + streams.join("/");
+  }
+
+  restoreDisplayCurrency();
+
+  return {
+    getActiveSymbol,
+    getIntervals,
+    getActiveInterval,
+    setActiveInterval,
+    isNativeInterval,
+    intervalToSeconds,
+    getDisplayCurrency,
+    setDisplayCurrency,
+    KLINE_LIMIT,
+    RECONNECT_MIN_MS,
+    RECONNECT_MAX_MS,
+    USD_KRW,
+    buildKlinesRestUrl,
+    buildCombinedStreamUrl,
+    buildFundingRateRestUrl,
+  };
+})();

@@ -1,0 +1,484 @@
+:root{
+  --bg:#0A0C12;
+  --surface:#12151E;
+  --surface2:#191D29;
+  --surface3:#20242F;
+  --border:#262B39;
+  --border-soft:#1D212C;
+  --text:#EDEFF4;
+  --text-dim:#8791A8;
+  --text-faint:#565D70;
+  --gold:#E3B341;
+  --gold-soft:rgba(227,179,65,0.14);
+  --red:#F5464B;
+  --red-soft:rgba(245,70,75,0.13);
+  --blue:#3B82F6;
+  --blue-soft:rgba(59,130,246,0.13);
+  --mono:'JetBrains Mono', ui-monospace, monospace;
+  --sans:'Pretendard Variable','Pretendard',-apple-system,system-ui,sans-serif;
+  /* MARKET WAR 전용 색상 — 매수(BUY)=빨강, 매도(SELL)=파랑 (호가창의 초록/빨강 관례와는 별개) */
+  --mw-buy:#F6465D;
+  --mw-buy-soft:rgba(246,70,93,0.16);
+  --mw-sell:#3B82F6;
+  --mw-sell-soft:rgba(59,130,246,0.16);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.app{
+  max-width:1920px;margin:0 auto;padding:18px 24px 40px;
+  display:flex;flex-direction:column;min-height:100vh;
+}
+
+/* ---------- topbar ---------- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 20px;background:linear-gradient(180deg,var(--surface2),var(--surface));
+  border:1px solid var(--border);border-radius:14px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand .mark{
+  width:34px;height:34px;border-radius:9px;
+  background:conic-gradient(from 220deg,var(--gold),#8a611f 40%,var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;color:#14100a;font-size:13px;
+  box-shadow:0 0 0 1px rgba(227,179,65,0.35), 0 4px 14px rgba(227,179,65,0.15);
+}
+.brand .name{font-weight:700;font-size:16px;letter-spacing:-0.01em;}
+.brand .tag{font-size:11px;color:var(--text-dim);font-weight:500;margin-top:1px;}
+
+.ws-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);font-family:var(--mono);}
+.ws-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--text-faint);}
+.ws-dot.ok{background:#34D399;box-shadow:0 0 6px rgba(52,211,153,0.6);}
+.ws-dot.fail{background:var(--red);box-shadow:0 0 6px rgba(245,70,75,0.6);}
+.ws-dot.pending{background:var(--gold);box-shadow:0 0 6px rgba(227,179,65,0.6);}
+.ws-sep{color:var(--text-faint);}
+.mono-strong{font-family:var(--mono);font-weight:700;color:var(--text);}
+
+/* ---------- stats bar ---------- */
+.stats-bar{
+  margin-top:12px;padding:14px 20px;background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:12px;display:flex;gap:32px;flex-wrap:wrap;align-items:baseline;
+}
+.stat-block{display:flex;flex-direction:column;gap:4px;}
+.stat-label{font-size:11px;color:var(--text-faint);}
+.stat-value{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);}
+.main-price-block .stat-value.price{font-size:26px;font-weight:700;color:var(--gold);}
+.stat-value.up{color:var(--red);}
+.stat-value.down{color:var(--blue);}
+
+/* ---------- 시간 단위 선택 버튼 ---------- */
+.interval-row{
+  margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;
+}
+.interval-btn{
+  background:var(--surface);border:1px solid var(--border-soft);color:var(--text-dim);
+  padding:6px 12px;border-radius:7px;font-family:var(--mono);font-size:12px;font-weight:600;
+  cursor:pointer;transition:.12s;
+}
+.interval-btn:hover{border-color:var(--text-faint);color:var(--text);}
+.interval-btn.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);}
+
+/* ---------- chart ---------- */
+.chart-wrap{
+  margin-top:14px;flex:1;display:flex;min-height:0;
+}
+.chart-container{
+  width:100%;
+  height:78vh; /* main-grid 밖(예: 화면 좁을 때 1열)에서 쓰일 때의 기본값 */
+  min-height:520px;
+  border-radius:14px;
+  overflow:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+}
+.disclaimer{
+  margin-top:14px;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
+  font-size:11.5px;color:var(--text-faint);line-height:1.6;
+}
+.disclaimer b{color:var(--text-dim);}
+
+::selection{background:rgba(227,179,65,0.3);}
+
+/* =========================================================================
+ * 아래는 이번 단계(모의주문 엔진)에서 새로 추가된 스타일입니다.
+ * 위쪽의 topbar/stats-bar/chart-wrap/chart-container 관련 규칙은
+ * 전혀 수정하지 않았습니다.
+ * ========================================================================= */
+
+/* =========================================================================
+ * 메인 3열: 차트 / 매수·매도 주문 / 실시간 채팅.
+ * .main-grid에 명시적 높이(78vh — 기존 차트가 쓰던 값 그대로 재사용)를
+ * 주고, 세 칼럼은 grid 기본 stretch로 그 높이를 그대로 나눠 갖습니다.
+ * 임의의 px로 채팅 높이를 맞춘 게 아니라, 셋이 "같은 부모의 같은 행"에
+ * 속하기 때문에 top/bottom이 항상 정확히 일치합니다.
+ * ========================================================================= */
+.main-grid{
+  display:grid;grid-template-columns:2.2fr 1fr 1fr;gap:14px;
+  margin-top:14px;
+  height:78vh;min-height:520px;
+}
+.main-grid .chart-wrap{margin-top:0;}
+.main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
+.main-grid .chart-column .chart-container{height:100%;} /* 이 안에서는 78vh 대신 부모(행) 높이를 그대로 채움 */
+
+.side-column{min-width:0;height:100%;display:flex;flex-direction:column;gap:14px;min-height:0;}
+.order-panel{height:100%;overflow-y:auto;display:flex;flex-direction:column;}
+
+.page-chat-col{height:100%;display:flex;min-width:0;}
+.page-chat-panel{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
+.page-chat-panel .chat-messages{flex:1;height:auto;min-height:0;} /* 메시지 영역만 내부 스크롤, 입력창은 항상 하단 고정 */
+
+@media (max-width:1050px){
+  .main-grid{grid-template-columns:1fr;height:auto;}
+  .main-grid .chart-column,
+  .side-column,
+  .page-chat-col{height:auto;}
+  .main-grid .chart-column .chart-container{height:78vh;} /* 1열로 쌓일 때는 각자 자연스러운 높이로 복귀 */
+  .order-panel{height:auto;overflow-y:visible;}
+  .page-chat-panel .chat-messages{flex:none;height:220px;} /* 모바일에선 기존처럼 고정 높이로 복귀 */
+}
+@media (max-width:700px){
+  .chart-container,
+  .main-grid .chart-column .chart-container{height:62vh;min-height:380px;}
+  .main-price-block .stat-value.price{font-size:20px;}
+  .stats-bar{gap:20px;}
+}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
+
+/* ---------- 총자산 ---------- */
+.acc-balance{
+  display:flex;flex-direction:column;gap:4px;padding-bottom:14px;margin-bottom:14px;
+  border-bottom:1px solid var(--border-soft);
+}
+.acc-balance .field-label{font-size:11px;color:var(--text-faint);}
+.balance-value{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);}
+
+/* ---------- 입력 필드 공통 ---------- */
+.field{margin-bottom:16px;}
+.field-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:7px;}
+.field-label .lev-val{font-family:var(--mono);color:var(--gold);font-weight:700;}
+
+.margin-input-wrap{
+  display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:0 12px;
+}
+.margin-input-wrap input{
+  flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);
+  font-size:15px;font-weight:600;padding:11px 0;min-width:0;width:100%;
+}
+.margin-input-wrap span{color:var(--text-faint);font-size:12px;}
+
+.chip-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.chip{
+  flex:1;text-align:center;padding:6px 0;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-dim);font-family:var(--mono);font-size:11.5px;cursor:pointer;min-width:38px;
+}
+.chip:hover{border-color:var(--gold);color:var(--gold);}
+
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--surface3);outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;
+  box-shadow:0 0 0 4px rgba(227,179,65,0.18);
+}
+
+/* ---------- LONG / SHORT 버튼 ---------- */
+.order-buttons{display:flex;flex-direction:column;gap:8px;}
+.order-btn{
+  width:100%;padding:14px 0;border-radius:9px;border:none;font-family:var(--sans);font-weight:800;
+  font-size:15px;letter-spacing:0.03em;cursor:pointer;transition:.15s;
+}
+.order-btn.long{background:var(--red);color:#1a0708;}
+.order-btn.short{background:var(--blue);color:#06111f;}
+.order-btn:hover{filter:brightness(1.08);}
+.order-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
+
+.err-msg{font-size:11.5px;color:var(--red);margin-top:8px;min-height:14px;}
+
+.account-divider{height:1px;background:var(--border-soft);margin:16px 0;}
+
+/* ---------- 현재 포지션 ---------- */
+.position-empty{font-size:12px;color:var(--text-faint);padding:14px 0;text-align:center;}
+.position-card{background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
+.position-row{margin-bottom:10px;}
+.badge{font-family:var(--sans);font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:0.03em;}
+.badge.long{background:var(--red-soft);color:var(--red);}
+.badge.short{background:var(--blue-soft);color:var(--blue);}
+.position-grid{display:flex;flex-direction:column;gap:8px;}
+.position-grid div{display:flex;justify-content:space-between;font-size:12px;}
+.position-grid span{color:var(--text-dim);}
+.position-grid b{font-family:var(--mono);font-weight:600;color:var(--text);}
+
+/* =========================================================================
+ * 이번 단계(실시간 손익 계산)에서 추가된 스타일.
+ * 요구사항 10: 수익 = 초록색, 손실 = 빨간색
+ * (차트 캔들/등락률에 쓰는 기존 red/blue 관례와는 별개로,
+ *  포지션의 손익 표시는 이 색상 규칙을 명시적으로 따릅니다)
+ * ========================================================================= */
+.position-grid .pnl-row{padding-top:6px;border-top:1px dashed var(--border-soft);margin-top:2px;}
+.pnl-positive{color:#34D399 !important;}
+.pnl-negative{color:var(--red) !important;}
+
+/* =========================================================================
+ * 이번 단계(포지션 종료 / 강제청산 / 거래내역)에서 추가된 스타일.
+ * ========================================================================= */
+.close-btn{
+  width:100%;margin-top:12px;padding:10px 0;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface3);color:var(--text);font-family:var(--sans);font-weight:700;font-size:13px;
+  cursor:pointer;transition:.12s;
+}
+.close-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+.history-panel{margin-top:14px;}
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+th{text-align:right;color:var(--text-dim);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--border-soft);font-family:var(--mono);white-space:nowrap;}
+tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);padding:26px 0;}
+.badge-reason{font-family:var(--sans);font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface3);color:var(--text-dim);}
+.badge-reason.reason-forced{background:var(--red-soft);color:var(--red);}
+
+/* =========================================================================
+ * 실시간 호가창(Order Book) — 이번에 새로 추가된 스타일.
+ * 위쪽의 다른 규칙은 전혀 수정하지 않았습니다. 캔들/거래량과 동일한
+ * Binance 배색(상승/매수=초록, 하락/매도=빨강)을 그대로 재사용합니다.
+ * ========================================================================= */
+.chart-column{display:flex;flex-direction:column;gap:14px;min-width:0;}
+
+.orderbook-panel{padding:14px 16px;}
+.ob-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:8px;font-size:12px;color:var(--text-dim);
+}
+.ob-title{font-weight:600;color:var(--text);flex:0 0 auto;margin-right:12px;}
+.ob-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;flex:1;max-width:360px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--text-faint);}
+
+.ob-asks,.ob-bids{display:flex;flex-direction:column;}
+
+.ob-row{
+  position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
+  padding:4px 2px;font-family:var(--mono);font-size:12.5px;overflow:hidden;border-radius:4px;
+  cursor:pointer;
+}
+.ob-depth-bar{
+  position:absolute;top:0;right:0;bottom:0;width:0%;
+  transition:width .25s ease;z-index:0;
+}
+.ob-ask .ob-depth-bar{background:rgba(246,70,93,0.16);}
+.ob-bid .ob-depth-bar{background:rgba(14,203,129,0.16);}
+
+.ob-price,.ob-qty,.ob-cum{position:relative;z-index:1;text-align:right;}
+.ob-ask .ob-price{color:#F6465D;font-weight:600;}
+.ob-bid .ob-price{color:#0ECB81;font-weight:600;}
+.ob-qty{color:var(--text-dim);}
+.ob-cum{color:var(--text-faint);}
+
+.ob-row:hover{background:var(--surface2);}
+
+.ob-current-price{
+  text-align:center;font-family:var(--mono);font-weight:700;font-size:14px;
+  color:var(--gold);padding:7px 0;margin:4px 0;background:var(--gold-soft);border-radius:6px;
+}
+
+@media (max-width:1050px){
+  .ob-cols{width:auto;}
+}
+@media (max-width:600px){
+  .orderbook-panel{padding:10px 12px;}
+  .ob-row{font-size:11.5px;padding:3px 2px;}
+  .ob-current-price{font-size:13px;}
+}
+
+/* =========================================================================
+ * 하단 5탭(포지션/미체결/주문내역/거래내역/자산) — 이번에 새로 추가.
+ * 위쪽 규칙은 전혀 수정하지 않았고, 기존 gold 강조 색(.interval-btn.active와
+ * 동일한 톤)을 그대로 재사용해 디자인 일관성을 유지했습니다.
+ * ========================================================================= */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap;}
+.tab-btn{
+  background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);
+  font-size:13px;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;
+}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+.asset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+.asset-item{background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
+.asset-item .field-label{margin-bottom:6px;}
+.asset-item b{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);}
+
+/* =========================================================================
+ * MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현. 새로 추가된
+ * 컴포넌트라 재사용할 기존 클래스가 없어서 여기서부터는 전부 새 규칙입니다.
+ * 색상 규칙(요청대로 고정): 매수(BUY)=빨강, 매도(SELL)=파랑.
+ * 바로 위 호가창의 배색(매수=초록/매도=빨강, Binance 관례)과는 의도적으로
+ * 다릅니다 — 호가창 자체 색상은 이 작업에서 전혀 건드리지 않았습니다.
+ * ========================================================================= */
+
+.market-war-panel{padding:14px 16px;}
+
+.mw-power-label{display:flex;gap:14px;font-family:var(--mono);font-size:12px;}
+.mw-buy-label{color:var(--mw-buy);}
+.mw-sell-label{color:var(--mw-sell);}
+.mw-buy-label b,.mw-sell-label b{font-weight:700;}
+
+.mw-power-bar{
+  display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface3);
+  margin:10px 0 14px;
+}
+.mw-power-buy{background:var(--mw-buy);transition:width .3s ease;}
+.mw-power-sell{background:var(--mw-sell);transition:width .3s ease;}
+
+.mw-canvas-wrap{
+  position:relative;width:100%;height:260px;border-radius:10px;overflow:hidden;
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border-soft);
+}
+.mw-canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none;}
+.mw-canvas:active{cursor:grabbing;}
+
+.mw-controls-hint{
+  position:absolute;bottom:8px;right:10px;font-family:var(--mono);font-size:10px;
+  color:rgba(237,239,244,0.55);text-shadow:0 1px 3px rgba(0,0,0,0.7);pointer-events:none;
+}
+
+.mw-hud{
+  position:absolute;top:10px;left:0;right:0;display:flex;flex-direction:column;
+  align-items:center;gap:2px;pointer-events:none;text-align:center;
+}
+.mw-hud-price{
+  font-family:var(--mono);font-weight:700;font-size:20px;color:#EDEFF4;
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+}
+.mw-hud-status{
+  font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:0.04em;
+  color:var(--gold);text-shadow:0 1px 4px rgba(0,0,0,0.7);
+}
+
+.mw-feed{
+  margin-top:10px;display:flex;flex-direction:column;gap:4px;
+  max-height:96px;overflow-y:auto;font-family:var(--mono);font-size:11px;
+}
+.mw-feed-item{
+  display:flex;gap:8px;color:var(--text-dim);padding:2px 0;
+  border-bottom:1px solid var(--border-soft);
+}
+.mw-feed-item .mw-feed-time{color:var(--text-faint);flex:0 0 auto;}
+.mw-feed-item.mw-feed-buy{color:var(--mw-buy);}
+.mw-feed-item.mw-feed-sell{color:var(--mw-sell);}
+
+@media (max-width:600px){
+  .mw-canvas-wrap{height:180px;}
+  .mw-power-label{font-size:11px;gap:10px;}
+  .mw-feed{max-height:70px;font-size:10px;}
+}
+
+/* =========================================================================
+ * 닉네임 게이트 — 기존 스타일은 전혀 안 건드리고 새로 추가만 했습니다.
+ * .app에 .pending-auth가 붙으면 뒤의 거래 화면을 숨겨서, 닉네임 입력
+ * 전에는 실수로라도 조작할 수 없게 합니다.
+ * ========================================================================= */
+.app.pending-auth{display:none;}
+
+.auth-gate{
+  display:none; /* 기본 숨김 — js/auth.js가 필요할 때만 flex로 보여줌 */
+  position:fixed;inset:0;z-index:1000;
+  align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 30%,var(--surface2) 0%,var(--bg) 70%);
+  padding:20px;
+}
+.auth-card{
+  width:100%;max-width:360px;padding:32px 28px;text-align:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+.auth-mark{
+  width:48px;height:48px;margin:0 auto 14px;border-radius:13px;
+  background:conic-gradient(from 220deg,var(--gold),#8a611f 40%,var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;color:#14100a;font-size:20px;
+}
+.auth-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.auth-sub{font-size:12px;color:var(--text-dim);margin-bottom:22px;}
+.auth-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  color:var(--text);font-family:var(--sans);font-size:15px;font-weight:600;
+  padding:13px 14px;outline:none;text-align:center;margin-bottom:6px;
+}
+.auth-input:focus{border-color:var(--gold);}
+.auth-err{font-size:11.5px;color:var(--red);min-height:16px;margin-bottom:10px;}
+.auth-start-btn{
+  width:100%;padding:14px 0;border-radius:9px;border:none;background:var(--gold);
+  color:#14100a;font-family:var(--sans);font-weight:800;font-size:15px;
+  letter-spacing:0.02em;cursor:pointer;transition:.15s;
+}
+.auth-start-btn:hover{filter:brightness(1.06);}
+.auth-start-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
+.auth-loading{
+  display:none;font-size:12px;color:var(--text-dim);margin-top:10px;font-family:var(--mono);
+}
+.auth-note{font-size:11px;color:var(--text-faint);margin-top:16px;line-height:1.5;}
+
+.auth-nickname-badge{
+  font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600;margin-right:10px;
+}
+
+/* =========================================================================
+ * 투자 랭킹 — table/panel/badge 등 기존 클래스를 그대로 재사용하고,
+ * "내 행" 강조 하나만 새로 추가했습니다.
+ * ========================================================================= */
+.leaderboard-row-me{background:var(--gold-soft);}
+.leaderboard-row-me td{color:var(--text);font-weight:700;}
+.leaderboard-me-badge{
+  font-family:var(--sans);font-size:10px;font-weight:700;color:var(--gold);
+  background:var(--gold-soft);padding:1px 6px;border-radius:4px;margin-left:4px;
+}
+.leaderboard-my-rank{
+  margin-top:10px;font-size:12px;color:var(--text-dim);font-family:var(--mono);
+  min-height:14px;
+}
+
+/* =========================================================================
+ * 실시간 채팅 — 메시지 목록 레이아웃은 기존에 재사용할 클래스가 없어서
+ * 새로 만들었고, 입력창/버튼 색감은 기존 톤(--gold 강조)을 그대로 맞췄습니다.
+ * ========================================================================= */
+.chat-messages{
+  height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
+  padding:4px 2px;margin-bottom:10px;
+}
+.chat-msg{font-size:12.5px;line-height:1.4;}
+.chat-msg-nick{font-weight:700;color:var(--gold);margin-right:6px;}
+.chat-msg-time{color:var(--text-faint);font-size:10.5px;font-family:var(--mono);}
+.chat-msg-text{color:var(--text);margin-top:2px;word-break:break-word;white-space:pre-wrap;}
+.chat-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:80px 0;}
+
+.chat-input-row{display:flex;gap:6px;}
+.chat-input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  color:var(--text);font-family:var(--sans);font-size:13px;padding:10px 12px;outline:none;min-width:0;
+}
+.chat-input:focus{border-color:var(--gold);}
+.chat-send-btn{
+  flex:0 0 auto;padding:0 16px;border-radius:9px;border:none;background:var(--gold);
+  color:#14100a;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;transition:.12s;
+}
+.chat-send-btn:hover{filter:brightness(1.06);}
+.chat-send-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
+.chat-err{font-size:11.5px;color:var(--red);margin-top:6px;min-height:14px;}
+
+@media (max-width:600px){
+  .chat-messages,
+  .page-chat-panel .chat-messages{height:180px;}
+}

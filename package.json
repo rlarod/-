@@ -1,0 +1,13 @@
+{
+  "name": "btc-mock-trading",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BTCUSDT 선물 모의투자 플랫폼 — 순수 정적 사이트(빌드 과정 없음). 로컬에서 확인할 때만 정적 서버가 필요합니다.",
+  "scripts": {
+    "start": "serve -l 3000",
+    "dev": "serve -l 3000"
+  },
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}
