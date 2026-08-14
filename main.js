@@ -66,7 +66,15 @@
     const modules = ["Chart", "OrderBook", "RecentTrades", "MarketWar", "Trading", "SupabaseSync", "TradeHistory", "Leaderboard", "Chat", "Admin", "UI", "WS"];
     modules.forEach((name) => {
       if (App[name] && typeof App[name].init === "function") {
-        App[name].init();
+        // 버그 수정: 여기 try/catch가 없으면 앞쪽 모듈(예: MarketWar) 하나가
+        // init() 도중 에러를 던졌을 때 forEach 전체가 멈춰서, 뒤에 있는
+        // Trading/UI/WS(진짜 거래 기능)가 아예 초기화되지 않습니다.
+        // 장식 기능 하나의 오류가 핵심 거래 기능을 막으면 안 됩니다.
+        try {
+          App[name].init();
+        } catch (err) {
+          console.error("[main.js] App." + name + " 초기화 실패(다른 모듈은 계속 진행):", err);
+        }
       } else {
         console.warn("[main.js] App." + name + " 모듈이 없거나 init()이 없습니다.");
       }
