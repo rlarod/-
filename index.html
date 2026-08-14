@@ -36,12 +36,18 @@
   <div class="auth-card">
     <div class="auth-mark">₿</div>
     <div class="auth-title">BTCUSDT 모의투자</div>
-    <div class="auth-sub">닉네임만 입력하면 바로 시작합니다 — 회원가입 없음</div>
-    <input type="text" id="auth-nickname-input" class="auth-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off">
+    <div class="auth-sub">닉네임과 비밀번호로 로그인/회원가입하세요</div>
+    <input type="text" id="auth-nickname-input" class="auth-input" maxlength="12" placeholder="닉네임" autocomplete="off">
+    <input type="password" id="auth-password-input" class="auth-input" placeholder="비밀번호" autocomplete="off">
+    <input type="password" id="auth-password-confirm-input" class="auth-input" placeholder="비밀번호 확인" autocomplete="off" style="display:none;">
     <div class="auth-err" id="auth-err"></div>
-    <button id="auth-start-btn" class="auth-start-btn">모의투자 시작하기</button>
+    <button id="auth-submit-btn" class="auth-start-btn">로그인</button>
     <div class="auth-loading" id="auth-loading">연결 중...</div>
-    <div class="auth-note">최초 접속 시 10,000 USDT가 자동으로 지급됩니다.</div>
+    <div class="auth-toggle-row">
+      <span id="auth-toggle-text">처음 방문하셨나요?</span>
+      <a href="#" id="auth-toggle-link">회원가입</a>
+    </div>
+    <div class="auth-note" id="auth-note">닉네임과 비밀번호로 로그인하세요.</div>
   </div>
 </div>
 
@@ -54,6 +60,10 @@
         <div class="name">BTCUSDT 실시간 차트</div>
         <div class="tag">실제 시장 가격 기반 · 선물 모의투자 (실제 주문 전송 없음, 전부 브라우저 내부 계산)</div>
       </div>
+    </div>
+    <div class="auth-user-badge" id="auth-user-badge" style="display:none;">
+      <span>👤 <span id="auth-user-nickname-text"></span></span>
+      <button id="auth-logout-btn" class="auth-logout-btn">로그아웃</button>
     </div>
     <div class="ws-status">
       <span class="ws-dot pending" id="ws-dot"></span>
@@ -248,10 +258,40 @@
     <div class="mw-feed" id="mw-feed"></div>
   </div>
 
+  <!-- ===== 관리자 전용(기본 숨김) — am_i_admin() RPC가 true를 반환할 때만 보여짐 ===== -->
+  <div class="panel admin-panel" id="admin-panel" style="display:none;">
+    <div class="field-label"><span>⚠️ 관리자</span></div>
+    <button id="admin-reset-btn" class="admin-reset-btn">전체 시즌 초기화</button>
+  </div>
+
   <div class="disclaimer">
     <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
     BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
     수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
+  </div>
+</div>
+
+<!-- ===== 시즌 초기화 확인창(기본 숨김) — "정말 초기화"를 눌러야만 실행됩니다 ===== -->
+<div class="admin-confirm-overlay" id="admin-confirm-overlay">
+  <div class="admin-confirm-card">
+    <div class="admin-confirm-title">⚠️ 전체 시즌 초기화</div>
+    <div class="admin-confirm-body">
+      모든 사용자의:
+      <ul>
+        <li>잔고</li>
+        <li>포지션</li>
+        <li>주문</li>
+        <li>거래내역</li>
+        <li>랭킹</li>
+      </ul>
+      이 초기화됩니다.<br>
+      닉네임과 채팅 기록은 유지됩니다.<br><br>
+      <b>이 작업은 되돌릴 수 없습니다.</b>
+    </div>
+    <div class="admin-confirm-actions">
+      <button id="admin-confirm-cancel" class="admin-confirm-cancel-btn">취소</button>
+      <button id="admin-confirm-ok" class="admin-confirm-ok-btn">정말 초기화</button>
+    </div>
   </div>
 </div>
 
@@ -262,10 +302,12 @@
 <script src="main.js"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/season.js"></script>
 <script src="js/supabase-sync.js"></script>
 <script src="js/trade-history.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/admin.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>

@@ -63,7 +63,7 @@
    * 모든 구독자가 준비된 상태에서 첫 tick부터 놓치지 않고 반영됩니다.
    * ------------------------------------------------ */
   function boot() {
-    const modules = ["Chart", "OrderBook", "RecentTrades", "MarketWar", "Trading", "SupabaseSync", "TradeHistory", "Leaderboard", "Chat", "UI", "WS"];
+    const modules = ["Chart", "OrderBook", "RecentTrades", "MarketWar", "Trading", "SupabaseSync", "TradeHistory", "Leaderboard", "Chat", "Admin", "UI", "WS"];
     modules.forEach((name) => {
       if (App[name] && typeof App[name].init === "function") {
         App[name].init();
@@ -75,7 +75,22 @@
   // js/auth.js(닉네임/익명 로그인 게이트)가 준비되면 이 함수를 호출해서
   // 기존 부팅 순서를 그대로 실행합니다 — boot() 자체의 내용/순서는 전혀
   // 안 바뀌었고, "언제 호출되는지"만 auth.js가 결정하게 됐습니다.
-  App.bootApp = boot;
+  //
+  // App.bootApp 자체는 이번에 딱 하나 더 추가됐습니다: 실제 모듈을 부팅하기
+  // "직전"에 App.Season.checkAndReset()을 한 번 기다립니다 — trading.js가
+  // localStorage를 읽어서 메모리에 올리기 전에 시즌이 바뀌었는지 먼저
+  // 확인해야 하기 때문입니다(관리자가 "전체 시즌 초기화"를 실행한 경우).
+  // auth.js는 이 변경을 몰라도 됩니다 — 여전히 App.bootApp()만 호출하면 됩니다.
+  App.bootApp = async function () {
+    if (App.Season && typeof App.Season.checkAndReset === "function") {
+      try {
+        await App.Season.checkAndReset();
+      } catch (err) {
+        console.warn("[main.js] 시즌 체크 실패(기존 로컬 데이터 유지하고 계속 진행):", err);
+      }
+    }
+    boot();
+  };
 
   function start() {
     // Auth 모듈이 있으면 닉네임 게이트를 먼저 거치고, 없으면(로드 실패 등)
