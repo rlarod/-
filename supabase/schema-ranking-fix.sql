@@ -17,7 +17,15 @@
 -- 무수정입니다(realized_pnl은 이미 올바르게 계산되고 있었음).
 -- =========================================================================
 
-create or replace view public.leaderboard as
+-- 버그 수정: CREATE OR REPLACE VIEW는 기존 뷰의 컬럼 "이름"을 바꾸는 걸
+-- 허용하지 않습니다(Postgres 자체 제약 — 실제로 실행해보고 에러로
+-- 확인했습니다: "cannot change name of view column balance to total_asset").
+-- 뷰는 실제 데이터를 저장하지 않고 그냥 "저장된 쿼리"라서, 지우고
+-- 다시 만들어도 trading_accounts/profiles 등 실제 테이블 데이터는
+-- 전혀 안 건드립니다 — DROP TABLE과는 완전히 다릅니다.
+drop view if exists public.leaderboard;
+
+create view public.leaderboard as
   select
     p.nickname,
     ta.initial_balance,
@@ -29,7 +37,13 @@ create or replace view public.leaderboard as
   join public.profiles p on p.id = ta.user_id
   order by roe_percent desc nulls last, profit_amount desc, total_asset desc;
 
-create or replace function public.get_leaderboard(limit_count int default 100)
+-- 버그 수정(미리 대응): CREATE OR REPLACE FUNCTION도 반환 컬럼 구성이
+-- 바뀌면 똑같이 막힙니다(Postgres 규칙). 함수도 뷰처럼 데이터를 저장하지
+-- 않는 "저장된 계산 로직"이라, 지우고 다시 만들어도 안전합니다.
+drop function if exists public.get_leaderboard(int);
+drop function if exists public.get_my_rank();
+
+create function public.get_leaderboard(limit_count int default 100)
 returns table (nickname text, roe_percent numeric, total_asset numeric, profit_amount numeric)
 language sql
 security definer
@@ -42,7 +56,7 @@ $$;
 
 grant execute on function public.get_leaderboard to authenticated;
 
-create or replace function public.get_my_rank()
+create function public.get_my_rank()
 returns table (rank bigint, nickname text, roe_percent numeric, total_asset numeric, profit_amount numeric)
 language sql
 security definer
