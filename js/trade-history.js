@@ -62,13 +62,16 @@ App.TradeHistory = (function () {
   function renderRows(rows) {
     if (!dom.body) return;
     if (!rows || rows.length === 0) {
-      dom.body.innerHTML = '<tr class="empty"><td colspan="11">아직 거래내역이 없습니다.</td></tr>';
+      dom.body.innerHTML = '<tr class="empty"><td colspan="12">아직 거래내역이 없습니다.</td></tr>';
       return;
     }
     dom.body.innerHTML = rows
       .map((t) => {
         const pnlClass = Number(t.pnl) >= 0 ? "pnl-positive" : "pnl-negative";
         const reasonClass = t.close_reason === "강제청산" ? "reason-forced" : "";
+        // return_rate는 이 컬럼 추가 이전 거래엔 없을 수 있어서(null) "-"로 안전 처리
+        const returnRateClass = typeof t.return_rate === "number" ? (t.return_rate >= 0 ? "pnl-positive" : "pnl-negative") : "";
+        const returnRateText = typeof t.return_rate === "number" ? fmtSignedPercent(t.return_rate) : "-";
         return (
           "<tr>" +
           '<td style="font-family:var(--sans)">' + fmtDateTime(t.created_at) + "</td>" +
@@ -79,6 +82,7 @@ App.TradeHistory = (function () {
           "<td>" + t.leverage + "x</td>" +
           "<td>" + App.Utils.formatCurrency(t.margin) + "</td>" +
           '<td class="' + pnlClass + '">' + App.Utils.formatCurrencySigned(t.pnl) + "</td>" +
+          '<td class="' + returnRateClass + '">' + returnRateText + "</td>" +
           '<td class="' + pnlClass + '">' + fmtSignedPercent(t.roe) + "</td>" +
           "<td>" + App.Utils.formatCurrency(t.fee) + "</td>" +
           '<td><span class="badge-reason ' + reasonClass + '">' + (t.close_reason || "-") + "</span></td>" +

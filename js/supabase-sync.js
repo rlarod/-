@@ -113,6 +113,7 @@ App.SupabaseSync = (function () {
       margin: t.margin,
       pnl: t.pnl,
       roe: t.pnlPercent,
+      return_rate: typeof t.returnRate === "number" ? t.returnRate : null, // 레버리지 미포함 일반 수익률(신규)
       fee: t.fee,
       close_reason: t.reason,
       created_at: new Date(t.closeTime).toISOString(),
