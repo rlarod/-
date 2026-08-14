@@ -133,18 +133,13 @@ body{
  * 속하기 때문에 top/bottom이 항상 정확히 일치합니다.
  * ========================================================================= */
 .main-grid{
-  display:grid;grid-template-columns:2fr 0.85fr 1fr 1fr;gap:14px;
+  display:grid;grid-template-columns:2.2fr 1fr 1fr;gap:14px;
   margin-top:14px;
   height:78vh;min-height:520px;
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
 .main-grid .chart-column .chart-container{height:100%;} /* 이 안에서는 78vh 대신 부모(행) 높이를 그대로 채움 */
-
-/* 호가창(+최근체결) — 바이낸스처럼 차트 옆에 항상 보이도록. 두 패널을
-   합친 높이가 행 높이를 넘으면 내부 스크롤(패널 자체는 안 잘림). */
-.orderbook-column{min-width:0;height:100%;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
-.orderbook-column .orderbook-panel{flex:0 0 auto;}
 
 .side-column{min-width:0;height:100%;display:flex;flex-direction:column;gap:14px;min-height:0;}
 .order-panel{height:100%;overflow-y:auto;display:flex;flex-direction:column;}
@@ -156,9 +151,8 @@ body{
 @media (max-width:1050px){
   .main-grid{grid-template-columns:1fr;height:auto;}
   .main-grid .chart-column,
-  .orderbook-column,
   .side-column,
-  .page-chat-col{height:auto;overflow-y:visible;}
+  .page-chat-col{height:auto;}
   .main-grid .chart-column .chart-container{height:78vh;} /* 1열로 쌓일 때는 각자 자연스러운 높이로 복귀 */
   .order-panel{height:auto;overflow-y:visible;}
   .page-chat-panel .chat-messages{flex:none;height:220px;} /* 모바일에선 기존처럼 고정 높이로 복귀 */
