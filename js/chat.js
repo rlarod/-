@@ -134,24 +134,58 @@ App.Chat = (function () {
     }
   }
 
-  /* ---------------- Realtime 구독 ---------------- */
+  /* ---------------- Realtime 구독(자동 재연결 포함) ----------------
+   * 버그 수정: 예전엔 연결이 끊기면(CHANNEL_ERROR/TIMED_OUT/CLOSED)
+   * 에러 메시지만 띄우고 사용자가 직접 새로고침해야만 복구됐습니다.
+   * 이제 지수 백오프로 자동 재연결을 시도하고, 재연결에 성공하면 그
+   * 사이에 놓쳤을 수 있는 메시지를 다시 불러옵니다(seenIds로 중복 방지).
+   * ------------------------------------------------------------- */
+  const RECONNECT_BASE_DELAY_MS = 1000;
+  const RECONNECT_MAX_DELAY_MS = 15000;
+  let reconnectAttempts = 0;
+  let reconnectTimer = null;
+
   function subscribeRealtime(client) {
     try {
+      if (channel) {
+        try {
+          client.removeChannel(channel);
+        } catch (e) {
+          /* noop */
+        }
+      }
       channel = client
-        .channel("chat_messages_live")
+        .channel("chat_messages_live_" + Date.now()) // 매번 새 이름 — 이전 좀비 구독과 안 겹치게
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
           appendMessageEl(payload.new);
         })
         .subscribe((status) => {
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.warn("[chat.js] 실시간 채팅 연결에 문제가 발생했습니다(상태: " + status + ").");
-            setErr("실시간 연결이 불안정합니다. 새로고침해보세요.");
+          if (status === "SUBSCRIBED") {
+            if (reconnectAttempts > 0) {
+              loadRecent(client); // 끊겨있던 동안 놓친 메시지 보충(중복은 seenIds가 막아줌)
+            }
+            reconnectAttempts = 0;
+            setErr("");
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            console.warn("[chat.js] 실시간 채팅 연결 끊김(상태: " + status + ") — 자동 재연결 시도합니다.");
+            scheduleReconnect(client);
           }
         });
     } catch (e) {
       console.warn("[chat.js] Realtime 구독 실패:", e);
-      setErr("실시간 채팅 연결에 실패했습니다.");
+      scheduleReconnect(client);
     }
+  }
+
+  function scheduleReconnect(client) {
+    if (reconnectTimer) return; // 이미 재연결이 예약돼 있으면 중복 예약 방지
+    reconnectAttempts++;
+    const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.6, reconnectAttempts - 1), RECONNECT_MAX_DELAY_MS);
+    setErr("실시간 연결이 끊겼습니다. 자동으로 재연결 중...");
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      subscribeRealtime(client);
+    }, delay);
   }
 
   /* ---------------- 메시지 전송 ---------------- */
