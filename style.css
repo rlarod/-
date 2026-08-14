@@ -597,3 +597,16 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   margin-left:auto;font-size:10.5px;color:var(--text-faint);background:none;border:none;cursor:pointer;
 }
 .board-comment-delete-btn:hover{color:var(--red);}
+
+/* =========================================================================
+ * 상단 페이지 네비게이션 — 거래소/게시판을 완전히 분리된 페이지처럼 전환.
+ * 기존 .interval-btn과 같은 톤(금색 강조)을 그대로 맞췄습니다.
+ * ========================================================================= */
+.page-nav{margin-top:12px;display:flex;gap:8px;}
+.page-nav-btn{
+  background:var(--surface);border:1px solid var(--border-soft);color:var(--text-dim);
+  padding:9px 18px;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:700;
+  cursor:pointer;transition:.12s;
+}
+.page-nav-btn:hover{border-color:var(--text-faint);color:var(--text);}
+.page-nav-btn.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);}

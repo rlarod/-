@@ -74,6 +74,14 @@
     </div>
   </div>
 
+  <!-- ===== 페이지 네비게이션 — 거래소/게시판을 완전히 분리된 페이지처럼 전환 ===== -->
+  <div class="page-nav">
+    <button class="page-nav-btn active" id="page-nav-exchange" data-page="exchange">💹 거래소</button>
+    <button class="page-nav-btn" id="page-nav-board" data-page="board">📝 게시판</button>
+  </div>
+
+  <div id="page-exchange">
+
   <div class="stats-bar">
     <div class="stat-block main-price-block">
       <span class="stat-label">BTCUSDT</span>
@@ -259,64 +267,6 @@
     <div class="mw-feed" id="mw-feed"></div>
   </div>
 
-  <!-- ===== 자유게시판(Supabase) — 기존 거래엔진/채팅/랭킹과 완전히 독립 ===== -->
-  <div class="panel" id="board-panel">
-    <div class="field-label"><span>📝 자유게시판</span></div>
-
-    <div id="board-list-view">
-      <div class="board-toolbar">
-        <button id="board-write-btn" class="chat-send-btn">글쓰기</button>
-      </div>
-      <div id="board-popular-section" style="display:none;">
-        <div class="board-section-title">🔥 인기글</div>
-        <div id="board-popular-list"></div>
-      </div>
-      <div class="board-section-title">최신글</div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr>
-            <th style="text-align:left;">제목</th><th>글쓴이</th><th>추천</th><th>댓글</th><th>조회</th><th>작성시간</th>
-          </tr></thead>
-          <tbody id="board-list-body"><tr class="empty"><td colspan="6">불러오는 중...</td></tr></tbody>
-        </table>
-      </div>
-      <button id="board-load-more-btn" class="close-btn" style="display:none;">더 보기</button>
-    </div>
-
-    <div id="board-write-view" style="display:none;">
-      <input type="text" id="board-title-input" class="auth-input" style="text-align:left;" placeholder="제목" maxlength="200">
-      <textarea id="board-content-input" class="board-textarea" placeholder="내용을 입력하세요" maxlength="10000"></textarea>
-      <div class="chat-err" id="board-write-err"></div>
-      <div class="board-write-actions">
-        <button id="board-write-cancel-btn" class="admin-confirm-cancel-btn">취소</button>
-        <button id="board-write-submit-btn" class="chat-send-btn">등록</button>
-      </div>
-    </div>
-
-    <div id="board-detail-view" style="display:none;">
-      <button id="board-back-btn" class="close-btn">← 목록으로</button>
-      <div class="board-detail-title" id="board-detail-title"></div>
-      <div class="board-detail-meta" id="board-detail-meta"></div>
-      <div class="board-detail-content" id="board-detail-content"></div>
-      <div class="board-detail-actions" id="board-detail-owner-actions" style="display:none;">
-        <button id="board-edit-btn" class="close-btn">수정</button>
-        <button id="board-delete-btn" class="admin-reset-btn">삭제</button>
-      </div>
-      <div class="board-vote-row">
-        <button id="board-like-btn" class="board-vote-btn">👍 추천 <span id="board-like-count">0</span></button>
-        <button id="board-dislike-btn" class="board-vote-btn">👎 비추천 <span id="board-dislike-count">0</span></button>
-      </div>
-      <div class="board-comments-section">
-        <div class="board-section-title">댓글</div>
-        <div id="board-comments-list"></div>
-        <div class="chat-input-row">
-          <input type="text" id="board-comment-input" class="chat-input" maxlength="1000" placeholder="댓글을 입력하세요...">
-          <button id="board-comment-submit-btn" class="chat-send-btn">등록</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ===== 관리자 전용(기본 숨김) — am_i_admin() RPC가 true를 반환할 때만 보여짐 ===== -->
   <div class="panel admin-panel" id="admin-panel" style="display:none;">
     <div class="field-label"><span>⚠️ 관리자</span></div>
@@ -328,6 +278,69 @@
     <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
     BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
     수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
+  </div>
+
+  </div>
+  <!-- ===== #page-exchange 끝 ===== -->
+
+  <!-- ===== 게시판 페이지(기본 숨김) — page-nav.js가 전환을 담당, board.js는 완전히 그대로 ===== -->
+  <div id="page-board" style="display:none;">
+    <div class="panel" id="board-panel">
+      <div class="field-label"><span>📝 자유게시판</span></div>
+
+      <div id="board-list-view">
+        <div class="board-toolbar">
+          <button id="board-write-btn" class="chat-send-btn">글쓰기</button>
+        </div>
+        <div id="board-popular-section" style="display:none;">
+          <div class="board-section-title">🔥 인기글</div>
+          <div id="board-popular-list"></div>
+        </div>
+        <div class="board-section-title">최신글</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th style="text-align:left;">제목</th><th>글쓴이</th><th>추천</th><th>댓글</th><th>조회</th><th>작성시간</th>
+            </tr></thead>
+            <tbody id="board-list-body"><tr class="empty"><td colspan="6">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+        <button id="board-load-more-btn" class="close-btn" style="display:none;">더 보기</button>
+      </div>
+
+      <div id="board-write-view" style="display:none;">
+        <input type="text" id="board-title-input" class="auth-input" style="text-align:left;" placeholder="제목" maxlength="200">
+        <textarea id="board-content-input" class="board-textarea" placeholder="내용을 입력하세요" maxlength="10000"></textarea>
+        <div class="chat-err" id="board-write-err"></div>
+        <div class="board-write-actions">
+          <button id="board-write-cancel-btn" class="admin-confirm-cancel-btn">취소</button>
+          <button id="board-write-submit-btn" class="chat-send-btn">등록</button>
+        </div>
+      </div>
+
+      <div id="board-detail-view" style="display:none;">
+        <button id="board-back-btn" class="close-btn">← 목록으로</button>
+        <div class="board-detail-title" id="board-detail-title"></div>
+        <div class="board-detail-meta" id="board-detail-meta"></div>
+        <div class="board-detail-content" id="board-detail-content"></div>
+        <div class="board-detail-actions" id="board-detail-owner-actions" style="display:none;">
+          <button id="board-edit-btn" class="close-btn">수정</button>
+          <button id="board-delete-btn" class="admin-reset-btn">삭제</button>
+        </div>
+        <div class="board-vote-row">
+          <button id="board-like-btn" class="board-vote-btn">👍 추천 <span id="board-like-count">0</span></button>
+          <button id="board-dislike-btn" class="board-vote-btn">👎 비추천 <span id="board-dislike-count">0</span></button>
+        </div>
+        <div class="board-comments-section">
+          <div class="board-section-title">댓글</div>
+          <div id="board-comments-list"></div>
+          <div class="chat-input-row">
+            <input type="text" id="board-comment-input" class="chat-input" maxlength="1000" placeholder="댓글을 입력하세요...">
+            <button id="board-comment-submit-btn" class="chat-send-btn">등록</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -369,6 +382,7 @@
 <script src="js/chat.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
+<script src="js/page-nav.js"></script>
 <script src="js/storage.js"></script>
 <!-- ===== 다종목 확장(PHASE 2/4) — 아직 어떤 기존 기능도 이 파일들을 참조하지 않습니다.
      지금은 기반만 깔아두는 단계라 로드되어도 기존 BTC 동작에 영향이 없습니다. ===== -->
