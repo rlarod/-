@@ -172,8 +172,10 @@ body{
   .ws-status{font-size:12px;}
   .mw-canvas-wrap-battle{height:52vh;min-height:340px;}
   /* 포지션 카드 — 3열은 좁은 화면에서 글씨가 눌려 보여서 2열로 줄임 */
-  .position-grid{gap:14px 18px;}
+  .position-grid{gap:10px 16px;}
   .position-grid b{font-size:13px;}
+  .position-table th{font-size:10px;padding-right:14px;}
+  .position-table td{font-size:13px;padding-right:14px;}
   .position-grid .pnl-row b{font-size:15px;}
   .mypage-grid{grid-template-columns:1fr 1fr;}
   .mypage-nickname-value{font-size:17px;}
@@ -256,39 +258,31 @@ input[type=range]::-webkit-slider-thumb{
 .badge.long{background:var(--red-soft);color:var(--red);}
 .badge.short{background:var(--blue-soft);color:var(--blue);}
 
-/* 버그 아님, 디자인 개선: 예전엔 라벨:값이 세로로 쭉 나열되어 조잡해
-   보였는데, 바이낸스처럼 작은 통계 카드들을 grid로 압축했습니다.
-   ui.js는 여기 있는 #pos-entry 같은 id에 텍스트만 넣지, 배치 방식은
-   전혀 신경 안 쓰는 구조라서 CSS만 바꿔도 안전합니다. TP/SL/진입수수료도
-   ui.js가 이 .position-grid 안에 같은 모양(<div><span>-<b>)으로 동적
-   삽입하기 때문에 이 규칙이 자동으로 그것들에도 적용됩니다. */
-/* =========================================================================
- * 포지션 카드 — 이 컴포넌트는 좁은 주문창(사이드바)과 넓은 하단
- * 5탭(포지션/미체결/주문내역/거래내역/자산) 패널 양쪽에서 다 쓰입니다
- * (ui.js가 같은 #position-card를 상황에 따라 옮겨서 재사용).
- *
- * 버그 수정: 고정 2열 + 우측정렬로 만들었더니, 넓은 컨테이너(하단 5탭
- * 패널)에서는 두 칸이 화면 양 끝으로 벌어지고 가운데가 텅 비어버렸습니다
- * (실제 스크린샷으로 확인). auto-fit + 좌측정렬로 바꿔서, 좁으면 2~3열
- * 넓으면 5~6열까지 자동으로 늘어나며 어느 너비에서든 자연스럽게
- * 흐르도록 했습니다.
- * ========================================================================= */
-/* CSS Grid auto-fill이 여러 줄에서 예상과 다르게 동작해서(줄마다 트랙이
-   안 맞음), 훨씬 단순하고 예측 가능한 flexbox 줄바꿈으로 교체했습니다.
-   각 항목이 고정폭이라 항상 왼쪽부터 순서대로 쌓이고, 줄이 넘치면 그냥
-   다음 줄로 넘어갑니다 — 넓은 화면이든 좁은 화면이든 동일하게 동작. */
-.position-grid{display:flex;flex-wrap:wrap;gap:16px 28px;}
-.position-grid > div{flex:0 0 120px;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:4px;text-align:right;}
+/* .position-grid는 미체결 지정가 카드(#pending-order-card, 항목 3개뿐이라
+   간단함)에서만 씁니다. 실제 포지션(항목 9개, 넓은 화면에서도 쓰임)은
+   여러 방식(grid auto-fit → auto-fill → flexbox)이 전부 넓은 컨테이너에서
+   예측 불가능하게 벌어져서, 결국 이 앱에서 이미 잘 검증된 패턴(표 +
+   .table-scroll — 호가창/거래내역/랭킹에서 이미 씀)으로 바꿨습니다. */
+.position-grid{display:flex;flex-wrap:wrap;gap:14px 24px;}
+.position-grid > div{flex:0 0 100px;display:flex;flex-direction:column-reverse;gap:3px;}
 .position-grid span{font-size:12px;color:var(--text-faint);}
-.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:15px;}
+.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:14px;}
 
-.position-grid .pnl-row{
-  flex:1 1 100%;display:flex !important;flex-direction:row;justify-content:flex-start;gap:16px;
-  align-items:baseline;
+/* =========================================================================
+ * 포지션 테이블 — 바이낸스 포지션 창 그대로: 얇은 헤더 라벨 행 + 값 한 줄.
+ * 항목이 많아도 그냥 가로로 나열되고, 화면이 좁으면 .table-scroll이
+ * 알아서 가로 스크롤 처리합니다(다른 표들과 동일한, 이미 검증된 패턴).
+ * ========================================================================= */
+.position-table{width:100%;border-collapse:collapse;white-space:nowrap;}
+.position-table th{
+  font-size:11px;font-weight:600;color:var(--text-faint);text-align:right;
+  padding:0 18px 6px 0;
 }
-.position-grid .pnl-row:first-of-type{margin-top:2px;padding-top:14px;border-top:1px solid var(--border-soft);}
-.position-grid .pnl-row span{font-size:12px;min-width:70px;}
-.position-grid .pnl-row b{font-size:16px;}
+.position-table td{
+  font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);
+  text-align:right;padding:0 18px 0 0;
+}
+.position-table th:first-child,.position-table td:first-child{text-align:left;padding-left:0;}
 .pnl-positive{color:#34D399 !important;}
 .pnl-negative{color:var(--red) !important;}
 

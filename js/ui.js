@@ -132,23 +132,45 @@ App.UI = (function () {
       positionSection.parentNode.insertBefore(card, positionSection);
     }
 
-    // 포지션 카드: 청산가 행 뒤에 TP/SL 표시
-    const liqRow = el("pos-liq") ? el("pos-liq").parentElement : null;
-    if (liqRow && !el("pos-tp")) {
-      const tpRow = document.createElement("div");
-      tpRow.innerHTML = "<span>TP</span><b id=\"pos-tp\">-</b>";
-      const slRow = document.createElement("div");
-      slRow.innerHTML = "<span>SL</span><b id=\"pos-sl\">-</b>";
-      liqRow.parentNode.insertBefore(tpRow, liqRow.nextSibling);
-      tpRow.parentNode.insertBefore(slRow, tpRow.nextSibling);
+    // 포지션 카드: 청산가 뒤에 TP/SL 표 컬럼 추가(헤더+본문 둘 다, 표 구조로 변경됨)
+    const posLiqTd = el("pos-liq");
+    const theadRow = el("position-thead-row");
+    const tbodyRow = el("position-tbody-row");
+    if (posLiqTd && theadRow && tbodyRow && !el("pos-tp")) {
+      const liqIndex = Array.prototype.indexOf.call(tbodyRow.children, posLiqTd);
+      const liqTh = theadRow.children[liqIndex];
+
+      const tpTh = document.createElement("th");
+      tpTh.textContent = "TP";
+      const slTh = document.createElement("th");
+      slTh.textContent = "SL";
+      liqTh.parentNode.insertBefore(tpTh, liqTh.nextSibling);
+      tpTh.parentNode.insertBefore(slTh, tpTh.nextSibling);
+
+      const tpTd = document.createElement("td");
+      tpTd.id = "pos-tp";
+      tpTd.textContent = "-";
+      const slTd = document.createElement("td");
+      slTd.id = "pos-sl";
+      slTd.textContent = "-";
+      posLiqTd.parentNode.insertBefore(tpTd, posLiqTd.nextSibling);
+      tpTd.parentNode.insertBefore(slTd, tpTd.nextSibling);
     }
 
-    // 포지션 카드: ROE(=손익률) 행 이름을 명확히 하고, 증거금 뒤에 진입 수수료 표시
-    const marginRow = el("pos-margin") ? el("pos-margin").parentElement : null;
-    if (marginRow && !el("pos-entry-fee")) {
-      const feeRow = document.createElement("div");
-      feeRow.innerHTML = "<span>진입 수수료</span><b id=\"pos-entry-fee\">-</b>";
-      marginRow.parentNode.insertBefore(feeRow, marginRow.nextSibling);
+    // 포지션 카드: 증거금 뒤에 진입 수수료 표 컬럼 추가(헤더+본문 둘 다)
+    const posMarginTd = el("pos-margin");
+    if (posMarginTd && theadRow && tbodyRow && !el("pos-entry-fee")) {
+      const marginIndex = Array.prototype.indexOf.call(tbodyRow.children, posMarginTd);
+      const marginTh = theadRow.children[marginIndex];
+
+      const feeTh = document.createElement("th");
+      feeTh.textContent = "진입수수료";
+      marginTh.parentNode.insertBefore(feeTh, marginTh.nextSibling);
+
+      const feeTd = document.createElement("td");
+      feeTd.id = "pos-entry-fee";
+      feeTd.textContent = "-";
+      posMarginTd.parentNode.insertBefore(feeTd, posMarginTd.nextSibling);
     }
 
     // 부분청산 버튼 (25% / 50% / 75% / 100%) + 직접 입력
