@@ -155,6 +155,15 @@ App.Chat = (function () {
   }
 
   /* ---------------- 메시지 전송 ---------------- */
+  const MIN_SEND_INTERVAL_MS = 1500; // 서버 트리거(1.5초)와 동일하게 맞춰서 즉각적인 피드백을 줌
+  const BASIC_BANNED_WORDS = ["시발", "씨발", "씨팔", "병신", "ㅅㅂ", "ㅂㅅ", "좆", "개새끼", "fuck", "shit"];
+  let lastSentAt = 0;
+
+  function containsBannedWord(text) {
+    const lower = text.toLowerCase();
+    return BASIC_BANNED_WORDS.some((w) => lower.includes(w.toLowerCase()));
+  }
+
   async function sendMessage() {
     setErr("");
     const raw = (dom.input.value || "").trim();
@@ -165,6 +174,18 @@ App.Chat = (function () {
     }
     if (raw.length > MAX_MESSAGE_LEN) {
       setErr("메시지는 " + MAX_MESSAGE_LEN + "자 이내로 입력해주세요.");
+      return;
+    }
+    // 클라이언트 쪽 즉각 피드백용 검사 — 진짜 강제력은 서버 트리거
+    // (schema-chat-safety-patch.sql)가 담당합니다. 이 검사를 우회해도
+    // 서버에서 다시 막힙니다.
+    const sinceLastSend = Date.now() - lastSentAt;
+    if (lastSentAt > 0 && sinceLastSend < MIN_SEND_INTERVAL_MS) {
+      setErr("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    if (containsBannedWord(raw)) {
+      setErr("부적절한 표현이 포함되어 있어 전송할 수 없습니다.");
       return;
     }
 
@@ -189,13 +210,21 @@ App.Chat = (function () {
         message: raw,
       });
       if (error) throw error;
+      lastSentAt = Date.now();
       dom.input.value = "";
       // 화면에는 여기서 직접 추가하지 않습니다 — 본인 메시지도 Realtime
       // 구독으로 되돌아와서 표시되므로, 다른 사용자 메시지와 동일한
       // 경로로만 렌더링되게 해서 중복/불일치 위험을 없앴습니다.
     } catch (e) {
       console.warn("[chat.js] 메시지 전송 실패:", e);
-      setErr("메시지 전송에 실패했습니다. 다시 시도해주세요.");
+      const msg = (e && e.message) || "";
+      if (msg.includes("rate_limited")) {
+        setErr("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.");
+      } else if (msg.includes("profanity_detected")) {
+        setErr("부적절한 표현이 포함되어 있어 전송할 수 없습니다.");
+      } else {
+        setErr("메시지 전송에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       dom.sendBtn.disabled = false;
       dom.input.focus();
