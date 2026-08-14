@@ -241,15 +241,25 @@ input[type=range]::-webkit-slider-thumb{
 
 /* ---------- 현재 포지션 ---------- */
 .position-empty{font-size:12px;color:var(--text-faint);padding:14px 0;text-align:center;}
-.position-card{background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
-.position-row{margin-bottom:10px;}
+.position-card{background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;padding:14px;}
+.position-row{margin-bottom:12px;}
 .badge{font-family:var(--sans);font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:0.03em;}
 .badge.long{background:var(--red-soft);color:var(--red);}
 .badge.short{background:var(--blue-soft);color:var(--blue);}
-.position-grid{display:flex;flex-direction:column;gap:8px;}
-.position-grid div{display:flex;justify-content:space-between;font-size:12px;}
-.position-grid span{color:var(--text-dim);}
-.position-grid b{font-family:var(--mono);font-weight:600;color:var(--text);}
+
+/* 버그 아님, 디자인 개선: 예전엔 라벨:값이 세로로 쭉 나열되어 조잡해
+   보였는데, 바이낸스처럼 작은 통계 카드들을 grid로 압축했습니다.
+   ui.js는 여기 있는 #pos-entry 같은 id에 텍스트만 넣지, 배치 방식은
+   전혀 신경 안 쓰는 구조라서 CSS만 바꿔도 안전합니다. TP/SL/진입수수료도
+   ui.js가 이 .position-grid 안에 같은 모양(<div><span>-<b>)으로 동적
+   삽입하기 때문에 이 규칙이 자동으로 그것들에도 적용됩니다. */
+.position-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.position-grid > div{
+  display:flex;flex-direction:column;gap:3px;
+  background:var(--surface3);border-radius:7px;padding:8px 9px;
+}
+.position-grid span{font-size:10px;color:var(--text-faint);}
+.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:13.5px;}
 
 /* =========================================================================
  * 이번 단계(실시간 손익 계산)에서 추가된 스타일.
@@ -257,7 +267,10 @@ input[type=range]::-webkit-slider-thumb{
  * (차트 캔들/등락률에 쓰는 기존 red/blue 관례와는 별개로,
  *  포지션의 손익 표시는 이 색상 규칙을 명시적으로 따릅니다)
  * ========================================================================= */
-.position-grid .pnl-row{padding-top:6px;border-top:1px dashed var(--border-soft);margin-top:2px;}
+.position-grid .pnl-row{
+  background:var(--surface2);border:1px solid var(--border-soft);
+}
+.position-grid .pnl-row b{font-size:15px;}
 .pnl-positive{color:#34D399 !important;}
 .pnl-negative{color:var(--red) !important;}
 
