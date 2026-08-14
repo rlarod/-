@@ -18,7 +18,7 @@
 -- 절대 이 SQL을 다시 실행하면 안 됩니다(진짜 사용자까지 지워짐).
 -- =========================================================================
 
-delete from auth.users;
+delete from auth.users where id is not null;
 
 -- app_meta(season_version 등)는 auth.users와 무관하게 독립적으로
 -- 남아있습니다 — 필요 없으면 그대로 두셔도 되고, 시즌 번호도 1로

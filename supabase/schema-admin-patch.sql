@@ -65,19 +65,26 @@ begin
     raise exception 'permission denied: admin only';
   end if;
 
+  -- 버그 수정: Supabase는 기본적으로 pg-safeupdate 확장을 켜둬서, WHERE
+  -- 절이 없는 UPDATE/DELETE는 SECURITY DEFINER 함수 안에서도 무조건
+  -- 막힙니다("UPDATE requires a WHERE clause" 에러로 실제 확인했습니다).
+  -- 모든 행을 대상으로 하고 싶어도 "user_id is not null"처럼 항상 참인
+  -- WHERE를 명시적으로 붙여야 합니다.
+
   -- 1) trading_accounts — 값만 초기화(행 자체는 삭제 안 함, profiles와의
   --    연결 유지)
   update public.trading_accounts
-  set balance = 10000, initial_balance = 10000, realized_pnl = 0, updated_at = now();
+  set balance = 10000, initial_balance = 10000, realized_pnl = 0, updated_at = now()
+  where user_id is not null;
 
   -- 2) positions — 전체 삭제(테이블 자체는 유지, DELETE만 사용)
-  delete from public.positions;
+  delete from public.positions where user_id is not null;
 
   -- 3) orders — 전체 삭제
-  delete from public.orders;
+  delete from public.orders where user_id is not null;
 
   -- 4) trades — 전체 삭제
-  delete from public.trades;
+  delete from public.trades where user_id is not null;
 
   -- 5) leaderboard 뷰는 trading_accounts를 그대로 계산하는 뷰라서
   --    1번이 반영되면 자동으로 전부 0%로 돌아갑니다(별도 작업 불필요).
