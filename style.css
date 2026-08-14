@@ -172,10 +172,10 @@ body{
   .ws-status{font-size:12px;}
   .mw-canvas-wrap-battle{height:52vh;min-height:340px;}
   /* 포지션 카드 — 3열은 좁은 화면에서 글씨가 눌려 보여서 2열로 줄임 */
-  .position-grid{grid-template-columns:repeat(2,1fr);}
-  .position-grid b{font-size:12.5px;}
-  .position-grid .pnl-row b{font-size:14px;}
-  .mypage-grid{grid-template-columns:1fr;} /* 카드 폭이 확보 안 되면 1열로(auto-fit 안전장치) */
+  .position-grid{gap:14px 18px;}
+  .position-grid b{font-size:13px;}
+  .position-grid .pnl-row b{font-size:15px;}
+  .mypage-grid{grid-template-columns:1fr 1fr;}
   .mypage-nickname-value{font-size:17px;}
   .leaderboard-rank-badge{font-size:12px;}
 }
@@ -183,8 +183,7 @@ body{
   .stats-bar{gap:14px;}
   .top-banner-inner{padding:12px 14px;}
   .top-banner-nav-btn{padding:7px 10px;font-size:13px;}
-  .position-grid{grid-template-columns:1fr 1fr;gap:6px;}
-  .position-grid > div{padding:7px 8px;}
+  .mypage-grid{grid-template-columns:1fr;}
 }
 
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
@@ -262,13 +261,10 @@ input[type=range]::-webkit-slider-thumb{
    전혀 신경 안 쓰는 구조라서 CSS만 바꿔도 안전합니다. TP/SL/진입수수료도
    ui.js가 이 .position-grid 안에 같은 모양(<div><span>-<b>)으로 동적
    삽입하기 때문에 이 규칙이 자동으로 그것들에도 적용됩니다. */
-.position-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.position-grid > div{
-  display:flex;flex-direction:column;gap:3px;
-  background:var(--surface3);border-radius:7px;padding:8px 9px;
-}
-.position-grid span{font-size:10px;color:var(--text-faint);}
-.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:13.5px;}
+.position-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px 24px;}
+.position-grid > div{display:flex;flex-direction:column;gap:4px;}
+.position-grid span{font-size:11px;color:var(--text-faint);}
+.position-grid b{font-family:var(--mono);font-weight:600;color:var(--text);font-size:14px;}
 
 /* =========================================================================
  * 이번 단계(실시간 손익 계산)에서 추가된 스타일.
@@ -276,10 +272,10 @@ input[type=range]::-webkit-slider-thumb{
  * (차트 캔들/등락률에 쓰는 기존 red/blue 관례와는 별개로,
  *  포지션의 손익 표시는 이 색상 규칙을 명시적으로 따릅니다)
  * ========================================================================= */
-.position-grid .pnl-row{
-  background:var(--surface2);border:1px solid var(--border-soft);
-}
-.position-grid .pnl-row b{font-size:15px;}
+.position-grid .pnl-row{grid-column:1 / -1;}
+.position-grid .pnl-row:first-of-type{margin-top:6px;padding-top:16px;border-top:1px solid var(--border-soft);}
+.position-grid .pnl-row{display:flex !important;flex-direction:row;justify-content:space-between;align-items:baseline;}
+.position-grid .pnl-row b{font-size:16px;}
 .pnl-positive{color:#34D399 !important;}
 .pnl-negative{color:var(--red) !important;}
 
@@ -667,11 +663,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .mypage-nickname-label{font-size:12px;color:var(--text-faint);}
 .mypage-nickname-value{font-size:20px;font-weight:800;color:var(--gold);}
-.mypage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-.mypage-item{
-  background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;
-  padding:14px 16px;display:flex;flex-direction:column;gap:6px;
-}
-.mypage-item-highlight{border-color:var(--gold);background:var(--gold-soft);}
+.mypage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px 28px;}
+.mypage-item{display:flex;flex-direction:column;gap:6px;}
+.mypage-item-highlight .mypage-value{color:var(--gold);font-size:22px;}
 .mypage-item-label{font-size:12px;color:var(--text-dim);}
-.mypage-value{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);}
+.mypage-value{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
