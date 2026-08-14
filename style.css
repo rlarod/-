@@ -164,10 +164,18 @@ body{
   .stats-bar{gap:20px;}
   .app{padding:14px 12px 32px;} /* 좁은 화면에서 좌우 여백을 줄여 콘텐츠 폭을 더 확보 */
   .chip{padding:9px 0;} /* 터치 타겟을 조금 더 키움(6px→9px) */
+  /* 배너 글씨를 키운 뒤라, 좁은 화면에서 4개 탭+로고+로그인상태가 한 줄에
+     안 들어가서 줄바꿈되는데, 이때 버튼 크기를 살짝 줄여서 덜 답답하게 함 */
+  .top-banner-nav-btn{padding:8px 12px;font-size:14px;}
+  .brand .name{font-size:17px;}
+  .auth-user-badge{font-size:13px;gap:6px;margin-right:0;}
+  .ws-status{font-size:12px;}
+  .mw-canvas-wrap-battle{height:52vh;min-height:340px;}
 }
 @media (max-width:400px){
   .stats-bar{gap:14px;}
   .top-banner-inner{padding:12px 14px;}
+  .top-banner-nav-btn{padding:7px 10px;font-size:13px;}
 }
 
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
@@ -183,6 +191,12 @@ body{
 /* ---------- 입력 필드 공통 ---------- */
 .field{margin-bottom:16px;}
 .field-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:7px;}
+.leverage-field-top{
+  background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  padding:10px 12px 12px;margin-bottom:16px;
+}
+.leverage-field-top .field-label{margin-bottom:8px;}
+.leverage-field-top .lev-val{font-size:15px;}
 .field-label .lev-val{font-family:var(--mono);color:var(--gold);font-weight:700;}
 
 .margin-input-wrap{
@@ -621,3 +635,21 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   margin-left:auto;font-size:10.5px;color:var(--text-faint);background:none;border:none;cursor:pointer;
 }
 .board-comment-delete-btn:hover{color:var(--red);}
+
+/* =========================================================================
+ * 마이페이지 — 기존 acc-balance/panel 톤을 그대로 재사용, 카드형 그리드만 추가.
+ * ========================================================================= */
+.mypage-nickname-row{
+  display:flex;align-items:baseline;gap:10px;padding-bottom:16px;margin-bottom:18px;
+  border-bottom:1px solid var(--border-soft);
+}
+.mypage-nickname-label{font-size:12px;color:var(--text-faint);}
+.mypage-nickname-value{font-size:20px;font-weight:800;color:var(--gold);}
+.mypage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.mypage-item{
+  background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:6px;
+}
+.mypage-item-highlight{border-color:var(--gold);background:var(--gold-soft);}
+.mypage-item-label{font-size:12px;color:var(--text-dim);}
+.mypage-value{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);}

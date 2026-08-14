@@ -31,10 +31,12 @@ App.PageNav = (function () {
     if (dom.rankingPage) dom.rankingPage.style.display = page === "ranking" ? "" : "none";
     if (dom.battlePage) dom.battlePage.style.display = page === "battle" ? "" : "none";
     if (dom.boardPage) dom.boardPage.style.display = page === "board" ? "" : "none";
+    if (dom.mypagePage) dom.mypagePage.style.display = page === "mypage" ? "" : "none";
     if (dom.exchangeBtn) dom.exchangeBtn.classList.toggle("active", page === "exchange");
     if (dom.rankingBtn) dom.rankingBtn.classList.toggle("active", page === "ranking");
     if (dom.battleBtn) dom.battleBtn.classList.toggle("active", page === "battle");
     if (dom.boardBtn) dom.boardBtn.classList.toggle("active", page === "board");
+    if (dom.mypageBtn) dom.mypageBtn.classList.toggle("active", page === "mypage");
 
     if (page === "battle" && App.MarketWar && typeof App.MarketWar.resize === "function") {
       // 방금 display:none이 풀린 직후라 레이아웃이 아직 안 정착됐을 수 있어서
@@ -50,10 +52,12 @@ App.PageNav = (function () {
       rankingPage: el("page-ranking"),
       battlePage: el("page-battle"),
       boardPage: el("page-board"),
+      mypagePage: el("page-mypage"),
       exchangeBtn: el("page-nav-exchange"),
       rankingBtn: el("page-nav-ranking"),
       battleBtn: el("page-nav-battle"),
       boardBtn: el("page-nav-board"),
+      mypageBtn: el("page-nav-mypage"),
     };
     if (!dom.exchangePage) return; // 마크업 없으면 조용히 종료
 
@@ -61,6 +65,7 @@ App.PageNav = (function () {
     if (dom.rankingBtn) dom.rankingBtn.addEventListener("click", () => showPage("ranking"));
     if (dom.battleBtn) dom.battleBtn.addEventListener("click", () => showPage("battle"));
     if (dom.boardBtn) dom.boardBtn.addEventListener("click", () => showPage("board"));
+    if (dom.mypageBtn) dom.mypageBtn.addEventListener("click", () => showPage("mypage"));
   }
 
   return { init };

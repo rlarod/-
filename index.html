@@ -64,6 +64,7 @@
         <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
         <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
         <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
+        <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
       </nav>
     </div>
     <div class="top-banner-right">
@@ -130,6 +131,13 @@
           <span class="balance-value" id="balance-value">-</span>
         </div>
 
+        <!-- ===== 레버리지를 상단에 항상 노출(바이낸스 스타일) — ui.js는 id로만
+             #lev-slider/#lev-display를 찾기 때문에 위치를 옮겨도 무수정입니다. ===== -->
+        <div class="field leverage-field-top">
+          <div class="field-label"><span>레버리지</span><span class="lev-val"><span id="lev-display">10</span>x</span></div>
+          <input type="range" id="lev-slider" min="1" max="100" value="10">
+        </div>
+
         <div class="field">
           <div class="field-label"><span>증거금</span></div>
           <div class="margin-input-wrap">
@@ -142,11 +150,6 @@
             <div class="chip" data-margin="10000">10,000</div>
             <div class="chip" data-margin="max">MAX</div>
           </div>
-        </div>
-
-        <div class="field">
-          <div class="field-label"><span>레버리지</span><span class="lev-val"><span id="lev-display">10</span>x</span></div>
-          <input type="range" id="lev-slider" min="1" max="100" value="10">
         </div>
 
         <div class="order-buttons">
@@ -352,6 +355,48 @@
       <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
     </div>
   </div>
+
+  <!-- ===== 마이페이지(기본 숨김) — page-nav.js가 전환 담당, mypage.js는 trading.js의
+       기존 'trading:update' 이벤트만 구독(trading.js/ui.js 무수정) ===== -->
+  <div id="page-mypage" style="display:none;">
+    <div class="panel" id="mypage-panel">
+      <div class="field-label"><span>👤 마이페이지</span></div>
+      <div class="mypage-nickname-row">
+        <span class="mypage-nickname-label">닉네임</span>
+        <span class="mypage-nickname-value" id="mypage-nickname">-</span>
+      </div>
+      <div class="mypage-grid">
+        <div class="mypage-item mypage-item-highlight">
+          <span class="mypage-item-label">총자산(Equity)</span>
+          <span class="mypage-value" id="mypage-equity">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">가용 잔고</span>
+          <span class="mypage-value" id="mypage-balance">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">사용중 증거금</span>
+          <span class="mypage-value" id="mypage-used-margin">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">미실현 손익</span>
+          <span class="mypage-value" id="mypage-unrealized">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">실현 손익(누적)</span>
+          <span class="mypage-value" id="mypage-realized">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">누적 수수료</span>
+          <span class="mypage-value" id="mypage-fees">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">누적 펀딩비</span>
+          <span class="mypage-value" id="mypage-funding">-</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== 시즌 초기화 확인창(기본 숨김) — "정말 초기화"를 눌러야만 실행됩니다 ===== -->
@@ -393,6 +438,7 @@
 <script src="js/trade-events-chat.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
+<script src="js/mypage.js"></script>
 <script src="js/page-nav.js"></script>
 <script src="js/storage.js"></script>
 <!-- ===== 다종목 확장(PHASE 2/4) — 아직 어떤 기존 기능도 이 파일들을 참조하지 않습니다.
