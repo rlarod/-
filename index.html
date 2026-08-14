@@ -89,7 +89,13 @@
 
   <div class="stats-bar">
     <div class="stat-block main-price-block">
-      <span class="stat-label">BTCUSDT</span>
+      <div class="symbol-select-wrap">
+        <button class="symbol-select-btn" id="symbol-select-btn">
+          <span class="stat-label">BTCUSDT</span>
+          <span class="symbol-select-arrow">▾</span>
+        </button>
+        <div class="symbol-select-dropdown" id="symbol-select-dropdown" style="display:none;"></div>
+      </div>
       <span class="stat-value price" id="stat-price">-</span>
     </div>
     <div class="stat-block">
@@ -442,6 +448,7 @@
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
 <script src="js/mypage.js"></script>
+<script src="js/symbol-selector.js"></script>
 <script src="js/page-nav.js"></script>
 <script src="js/storage.js"></script>
 <!-- ===== 다종목 확장(PHASE 2/4) — 아직 어떤 기존 기능도 이 파일들을 참조하지 않습니다.

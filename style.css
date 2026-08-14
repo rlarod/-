@@ -677,3 +677,35 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .mypage-item-highlight .mypage-value{color:var(--gold);font-size:22px;}
 .mypage-item-label{font-size:12px;color:var(--text-dim);}
 .mypage-value{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
+
+/* =========================================================================
+ * 종목 선택 드롭다운 — 구조만(다종목 데이터 연동은 보류 중). BTC만 실제
+ * 거래 가능, 나머지는 "준비중" 배지만 보여주고 눌러도 안내만 뜸.
+ * ========================================================================= */
+.symbol-select-wrap{position:relative;display:inline-block;}
+.symbol-select-btn{
+  background:none;border:none;cursor:pointer;padding:0;
+  display:flex;align-items:center;gap:5px;
+}
+.symbol-select-arrow{font-size:11px;color:var(--text-faint);}
+.symbol-select-dropdown{
+  position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:240px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.4);overflow:hidden;
+}
+.symbol-option{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 14px;cursor:pointer;transition:.1s;border-bottom:1px solid var(--border-soft);
+}
+.symbol-option:last-child{border-bottom:none;}
+.symbol-option:hover{background:var(--surface3);}
+.symbol-option-name{font-size:13px;font-weight:600;color:var(--text);}
+.symbol-option-code{font-size:11px;color:var(--text-faint);font-family:var(--mono);margin-right:auto;margin-left:8px;}
+.symbol-option-badge{
+  font-size:10px;font-weight:700;color:var(--text-faint);background:var(--surface3);
+  padding:2px 8px;border-radius:20px;white-space:nowrap;
+}
+.symbol-option-badge-active{color:var(--gold);background:var(--gold-soft);}
+.symbol-option-disabled{opacity:0.55;}
+.symbol-option-disabled:hover{background:none;cursor:not-allowed;}
+.symbol-option-active .symbol-option-name{color:var(--gold);}
