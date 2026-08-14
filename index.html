@@ -51,34 +51,36 @@
   </div>
 </div>
 
-<div class="app">
-
-  <div class="topbar">
-    <div class="brand">
-      <div class="mark">₿</div>
-      <div>
-        <div class="name">BTCUSDT 실시간 차트</div>
-        <div class="tag">실제 시장 가격 기반 · 선물 모의투자 (실제 주문 전송 없음, 전부 브라우저 내부 계산)</div>
+<!-- ===== 상단 풀폭 배너 — .app 바깥에 둬서 화면 끝까지 꽉 차게(거래소 사이트 스타일) ===== -->
+<div class="top-banner">
+  <div class="top-banner-inner">
+    <div class="top-banner-left">
+      <div class="brand">
+        <div class="mark">₿</div>
+        <div class="name">BTC 모의투자</div>
+      </div>
+      <nav class="top-banner-nav">
+        <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">거래소</button>
+        <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
+      </nav>
+    </div>
+    <div class="top-banner-right">
+      <div class="ws-status">
+        <span class="ws-dot pending" id="ws-dot"></span>
+        <span id="ws-status-text">연결 중...</span>
+        <span class="ws-sep">·</span>
+        <span>마지막 갱신</span>
+        <span id="last-update-text" class="mono-strong">-</span>
+      </div>
+      <div class="auth-user-badge" id="auth-user-badge" style="display:none;">
+        <span>👤 <span id="auth-user-nickname-text"></span></span>
+        <button id="auth-logout-btn" class="auth-logout-btn">로그아웃</button>
       </div>
     </div>
-    <div class="auth-user-badge" id="auth-user-badge" style="display:none;">
-      <span>👤 <span id="auth-user-nickname-text"></span></span>
-      <button id="auth-logout-btn" class="auth-logout-btn">로그아웃</button>
-    </div>
-    <div class="ws-status">
-      <span class="ws-dot pending" id="ws-dot"></span>
-      <span id="ws-status-text">연결 중...</span>
-      <span class="ws-sep">·</span>
-      <span>마지막 갱신</span>
-      <span id="last-update-text" class="mono-strong">-</span>
-    </div>
   </div>
+</div>
 
-  <!-- ===== 페이지 네비게이션 — 거래소/게시판을 완전히 분리된 페이지처럼 전환 ===== -->
-  <div class="page-nav">
-    <button class="page-nav-btn active" id="page-nav-exchange" data-page="exchange">💹 거래소</button>
-    <button class="page-nav-btn" id="page-nav-board" data-page="board">📝 게시판</button>
-  </div>
+<div class="app">
 
   <div id="page-exchange">
 
