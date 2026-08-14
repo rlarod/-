@@ -61,6 +61,7 @@
       </div>
       <nav class="top-banner-nav">
         <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">거래소</button>
+        <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
         <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
         <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
       </nav>
@@ -208,19 +209,6 @@
   </div>
 
   <!-- ===== 서버 거래내역(Supabase) — 위의 로컬 거래내역과는 별개, 기기가 바뀌어도 유지됨 ===== -->
-  <!-- ===== 투자 랭킹(Supabase) — 다른 사용자 데이터는 SECURITY DEFINER 함수로만 조회, user_id/이메일 노출 없음 ===== -->
-  <div class="panel" id="leaderboard-panel">
-    <div class="field-label"><span>🏆 투자 랭킹 (실현 손익 기준)</span></div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr>
-          <th>순위</th><th>닉네임</th><th>총자산</th><th>수익금</th><th>수익률</th>
-        </tr></thead>
-        <tbody id="leaderboard-body"><tr class="empty"><td colspan="5">불러오는 중...</td></tr></tbody>
-      </table>
-    </div>
-    <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
-  </div>
 
   <div class="panel" id="cloud-history-panel">
     <div class="field-label"><span>☁ 거래내역 (서버 저장 · 새로고침해도 유지)</span></div>
@@ -346,6 +334,22 @@
         <div class="mw-controls-hint">드래그 회전 · 휠 확대</div>
       </div>
       <div class="mw-feed" id="mw-feed"></div>
+    </div>
+  </div>
+
+  <!-- ===== 랭킹 페이지(기본 숨김) — page-nav.js가 전환 담당, leaderboard.js도 id로만 요소를 찾아서 무수정 ===== -->
+  <div id="page-ranking" style="display:none;">
+    <div class="panel" id="leaderboard-panel">
+      <div class="field-label"><span>🏆 투자 랭킹 (실현 손익 기준)</span></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>순위</th><th>닉네임</th><th>총자산</th><th>수익금</th><th>수익률</th>
+          </tr></thead>
+          <tbody id="leaderboard-body"><tr class="empty"><td colspan="5">불러오는 중...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
     </div>
   </div>
 </div>

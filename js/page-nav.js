@@ -28,9 +28,11 @@ App.PageNav = (function () {
 
   function showPage(page) {
     if (dom.exchangePage) dom.exchangePage.style.display = page === "exchange" ? "" : "none";
+    if (dom.rankingPage) dom.rankingPage.style.display = page === "ranking" ? "" : "none";
     if (dom.battlePage) dom.battlePage.style.display = page === "battle" ? "" : "none";
     if (dom.boardPage) dom.boardPage.style.display = page === "board" ? "" : "none";
     if (dom.exchangeBtn) dom.exchangeBtn.classList.toggle("active", page === "exchange");
+    if (dom.rankingBtn) dom.rankingBtn.classList.toggle("active", page === "ranking");
     if (dom.battleBtn) dom.battleBtn.classList.toggle("active", page === "battle");
     if (dom.boardBtn) dom.boardBtn.classList.toggle("active", page === "board");
 
@@ -45,15 +47,18 @@ App.PageNav = (function () {
   function init() {
     dom = {
       exchangePage: el("page-exchange"),
+      rankingPage: el("page-ranking"),
       battlePage: el("page-battle"),
       boardPage: el("page-board"),
       exchangeBtn: el("page-nav-exchange"),
+      rankingBtn: el("page-nav-ranking"),
       battleBtn: el("page-nav-battle"),
       boardBtn: el("page-nav-board"),
     };
     if (!dom.exchangePage) return; // 마크업 없으면 조용히 종료
 
     if (dom.exchangeBtn) dom.exchangeBtn.addEventListener("click", () => showPage("exchange"));
+    if (dom.rankingBtn) dom.rankingBtn.addEventListener("click", () => showPage("ranking"));
     if (dom.battleBtn) dom.battleBtn.addEventListener("click", () => showPage("battle"));
     if (dom.boardBtn) dom.boardBtn.addEventListener("click", () => showPage("board"));
   }
