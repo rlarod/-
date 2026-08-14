@@ -149,6 +149,12 @@ body{
   .main-grid .chart-column .chart-container{height:62vh;min-height:380px;}
   .main-price-block .stat-value.price{font-size:20px;}
   .stats-bar{gap:20px;}
+  .app{padding:14px 12px 32px;} /* 좁은 화면에서 좌우 여백을 줄여 콘텐츠 폭을 더 확보 */
+  .chip{padding:9px 0;} /* 터치 타겟을 조금 더 키움(6px→9px) */
+}
+@media (max-width:400px){
+  .stats-bar{gap:14px;}
+  .topbar{padding:12px 14px;}
 }
 
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
