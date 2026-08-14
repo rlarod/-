@@ -54,18 +54,9 @@
 <!-- ===== 상단 풀폭 배너 — .app 바깥에 둬서 화면 끝까지 꽉 차게(거래소 사이트 스타일) ===== -->
 <div class="top-banner">
   <div class="top-banner-inner">
-    <div class="top-banner-left">
-      <div class="brand">
-        <div class="mark">₿</div>
-        <div class="name">BTC 모의투자</div>
-      </div>
-      <nav class="top-banner-nav">
-        <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">거래소</button>
-        <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
-        <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
-        <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
-        <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
-      </nav>
+    <div class="brand">
+      <div class="mark">₿</div>
+      <div class="name">BTC 모의투자</div>
     </div>
     <div class="top-banner-right">
       <div class="ws-status">
@@ -83,9 +74,39 @@
   </div>
 </div>
 
+<!-- ===== 메뉴 바 — 로고/상태 줄과 분리된 별도 바(개미톡 구조 참고), 다크 테마 색은 유지 ===== -->
+<div class="menu-bar">
+  <div class="menu-bar-inner">
+    <nav class="top-banner-nav">
+      <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">거래소</button>
+      <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
+      <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
+      <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
+      <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
+    </nav>
+  </div>
+</div>
+
+<!-- ===== 공지/이벤트 배너 — 순수 안내용, 여러 메시지를 자동으로 돌려 보여줌 ===== -->
+<div class="notice-banner" id="notice-banner">
+  <span class="notice-banner-icon">📢</span>
+  <span class="notice-banner-text" id="notice-banner-text">공지사항을 불러오는 중...</span>
+</div>
+
 <div class="app">
 
   <div id="page-exchange">
+
+  <!-- ===== 전광판 — 여러 종목을 표로 한눈에(BTC는 실시간, 나머지는 준비중 배지) ===== -->
+  <div class="panel ticker-board-panel" id="ticker-board-panel">
+    <div class="field-label"><span>📊 전광판</span></div>
+    <div class="table-scroll">
+      <table class="ticker-board-table">
+        <thead><tr><th style="text-align:left;">종목</th><th>현재가</th><th>등락률</th><th>고가</th><th>저가</th></tr></thead>
+        <tbody id="ticker-board-body"></tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="stats-bar">
     <div class="stat-block main-price-block">
@@ -460,6 +481,8 @@
 <script src="js/market-data/binance-adapter.js"></script>
 <script src="js/market-data/mock-adapter.js"></script>
 <script src="js/market-data.js"></script>
+<script src="js/notice-banner.js"></script>
+<script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
