@@ -273,7 +273,7 @@ input[type=range]::-webkit-slider-thumb{
  * 넓으면 5~6열까지 자동으로 늘어나며 어느 너비에서든 자연스럽게
  * 흐르도록 했습니다.
  * ========================================================================= */
-.position-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:18px 22px;}
+.position-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,140px));gap:16px 28px;justify-content:flex-start;}
 .position-grid > div{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:4px;text-align:right;}
 .position-grid span{font-size:12px;color:var(--text-faint);}
 .position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:15px;}
