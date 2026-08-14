@@ -72,6 +72,17 @@ App.Chart = (function () {
         '<span class="stat-value" id="stat-funding">-</span>';
       statsBar.appendChild(block);
     }
+    // 마크가격(Mark Price) — 바이낸스처럼 심볼 정보 근처에 상시 노출.
+    // 같은 markPrice 스트림을 이미 받고 있어서(펀딩비와 동일 이벤트),
+    // 별도 요청 없이 표시만 추가합니다 — 실제 Binance 값 그대로.
+    if (statsBar && !el("stat-mark-price")) {
+      const block = document.createElement("div");
+      block.className = "stat-block";
+      block.innerHTML =
+        '<span class="stat-label">마크가격</span>' +
+        '<span class="stat-value" id="stat-mark-price">-</span>';
+      statsBar.appendChild(block);
+    }
 
     dom = {
       chartContainer: el("chart_container"),
@@ -81,6 +92,7 @@ App.Chart = (function () {
       statLow: el("stat-low"),
       statVolume: el("stat-volume"),
       statFunding: el("stat-funding"),
+      statMarkPrice: el("stat-mark-price"),
       wsDot: el("ws-dot"),
       wsStatusText: el("ws-status-text"),
       lastUpdateText: el("last-update-text"),
@@ -95,13 +107,17 @@ App.Chart = (function () {
    * ------------------------------------------------------------------- */
   function onFundingUpdate(payload) {
     if (payload.symbol !== App.Config.getActiveSymbol()) return;
-    if (!dom.statFunding) return;
-    const pct = (payload.fundingRate * 100).toFixed(4) + "%";
-    const remainMs = payload.nextFundingTime - Date.now();
-    const remainStr = remainMs > 0 ? formatRemain(remainMs) : "-";
-    dom.statFunding.textContent = pct + " (" + remainStr + ")";
-    dom.statFunding.classList.toggle("up", payload.fundingRate >= 0);
-    dom.statFunding.classList.toggle("down", payload.fundingRate < 0);
+    if (dom.statFunding) {
+      const pct = (payload.fundingRate * 100).toFixed(4) + "%";
+      const remainMs = payload.nextFundingTime - Date.now();
+      const remainStr = remainMs > 0 ? formatRemain(remainMs) : "-";
+      dom.statFunding.textContent = pct + " (" + remainStr + ")";
+      dom.statFunding.classList.toggle("up", payload.fundingRate >= 0);
+      dom.statFunding.classList.toggle("down", payload.fundingRate < 0);
+    }
+    if (dom.statMarkPrice && App.Utils && typeof payload.markPrice === "number") {
+      dom.statMarkPrice.textContent = App.Utils.formatCurrencyPlain(payload.markPrice);
+    }
   }
   function formatRemain(ms) {
     const totalMin = Math.floor(ms / 60000);
