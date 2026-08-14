@@ -324,6 +324,7 @@ App.UI = (function () {
       slUnitLabel: el("sl-unit-label"),
       posPnl: el("pos-pnl"),
       posPnlPct: el("pos-pnl-pct"),
+      posReturnRate: el("pos-return-rate"),
       btnClosePosition: el("btn-close-position"),
       historyBody: el("history-body"),
       posEntryFee: el("pos-entry-fee"),
@@ -412,6 +413,14 @@ App.UI = (function () {
       dom.posPnl.className = pnlClass;
       dom.posPnlPct.textContent = fmtSignedPercent(snapshot.roe);
       dom.posPnlPct.className = pnlClass;
+      // 버그 수정: 기존엔 이 자리(원래 "손익률")에 ROE(레버리지 반영)를 보여줘서
+      // 진입 직후에도 고배율에선 수백%가 뜨는 것처럼 보였습니다. 레버리지
+      // 미포함 일반 수익률을 별도 행("수익률")으로 새로 추가합니다.
+      if (dom.posReturnRate) {
+        const returnClass = snapshot.returnRate >= 0 ? "pnl-positive" : "pnl-negative";
+        dom.posReturnRate.textContent = fmtSignedPercent(snapshot.returnRate);
+        dom.posReturnRate.className = returnClass;
+      }
     }
 
     renderHistory(snapshot.closedTrades);
@@ -432,7 +441,7 @@ App.UI = (function () {
     lastHistoryLength = list.length;
 
     if (list.length === 0) {
-      dom.historyBody.innerHTML = '<tr class="empty"><td colspan="10">거래 내역이 없습니다.</td></tr>';
+      dom.historyBody.innerHTML = '<tr class="empty"><td colspan="11">거래 내역이 없습니다.</td></tr>';
       return;
     }
     dom.historyBody.innerHTML = list
@@ -440,6 +449,11 @@ App.UI = (function () {
       .map((t) => {
         const pnlClass = t.pnl >= 0 ? "pnl-positive" : "pnl-negative";
         const reasonClass = t.reason === "강제청산" ? "reason-forced" : "";
+        // 버그 수정: returnRate(레버리지 미포함 일반 수익률)를 pnlPercent(ROE)와
+        // 별도 컬럼으로 표시합니다. 이 필드 추가 이전에 저장된 옛 거래 기록은
+        // returnRate가 없을 수 있어서 그 경우 "-"로 안전하게 처리합니다.
+        const returnRateClass = typeof t.returnRate === "number" ? (t.returnRate >= 0 ? "pnl-positive" : "pnl-negative") : "";
+        const returnRateText = typeof t.returnRate === "number" ? fmtSignedPercent(t.returnRate) : "-";
         return (
           "<tr>" +
           '<td style="font-family:var(--sans)">' + fmtTime(t.closeTime) + "</td>" +
@@ -449,6 +463,7 @@ App.UI = (function () {
           "<td>" + App.Utils.formatCurrencyPlain(t.exit) + "</td>" +
           "<td>" + App.Utils.formatCurrency(t.margin) + "</td>" +
           '<td class="' + pnlClass + '">' + App.Utils.formatCurrencySigned(t.pnl) + "</td>" +
+          '<td class="' + returnRateClass + '">' + returnRateText + "</td>" +
           '<td class="' + pnlClass + '">' + fmtSignedPercent(t.pnlPercent) + "</td>" +
           "<td>" + App.Utils.formatCurrency(t.fee) + "</td>" +
           '<td><span class="badge-reason ' + reasonClass + '">' + t.reason + "</span></td>" +

@@ -446,6 +446,7 @@ App.Trading = (function () {
     // 강제청산은 청산되는 증거금 전액 손실 처리 — 돌려주지 않음
 
     const pnlPercent = closingMargin > 0 ? (netPnl / closingMargin) * 100 : 0; // ROE
+    const returnRate = pos.entry > 0 ? ((pos.side === "long" ? exitPrice - pos.entry : pos.entry - exitPrice) / pos.entry) * 100 : 0; // 레버리지 미포함 일반 수익률(신규)
     const totalFee = isForced ? closingEntryFee : closingEntryFee + exitFee;
 
     state.closedTrades.unshift({
@@ -456,7 +457,8 @@ App.Trading = (function () {
       qty: closingQty,
       margin: closingMargin,
       pnl: netPnl,
-      pnlPercent, // ROE(%) = 실현손익 / 청산된 증거금 × 100
+      pnlPercent, // ROE(%) = 실현손익 / 청산된 증거금 × 100 — 기존 이름/의미 유지
+      returnRate, // 레버리지 미포함 일반 수익률(%) — 신규 필드
       fee: totalFee,
       reason: reason || (ratio < 1 ? "부분청산" : "수동청산"),
       closeTime: Date.now(),
@@ -512,6 +514,22 @@ App.Trading = (function () {
   function calcRoe(pos, pnl) {
     if (!pos || pos.margin <= 0) return 0;
     return (pnl / pos.margin) * 100;
+  }
+
+  /* ---------------- 일반 수익률(레버리지 미포함, 기초자산 가격변동률) ----------------
+   * 버그 수정: 지금까지 화면에 "손익률"이라는 이름으로 실제로는 ROE(증거금
+   * 대비, 레버리지 반영)를 보여주고 있었습니다. 그래서 100배 레버리지로
+   * 진입 직후 가격이 거의 안 움직여도 화면엔 "손익률 +80%" 같은 숫자가
+   * 떴습니다 — 계산 자체(calcRoe)는 ROE로서는 맞는 값이라 안 건드리고,
+   * 레버리지를 아예 곱하지 않는 완전히 별개의 값을 새로 추가합니다.
+   *
+   * LONG  : (현재가 - 진입가) / 진입가 × 100
+   * SHORT : (진입가 - 현재가) / 진입가 × 100
+   * ------------------------------------------------------------------- */
+  function calcReturnRate(pos, currentPrice) {
+    if (!pos || pos.entry <= 0 || currentPrice === null) return 0;
+    const diff = pos.side === "long" ? currentPrice - pos.entry : pos.entry - currentPrice;
+    return (diff / pos.entry) * 100;
   }
 
   /* ---------------- 브라우저 영구 저장 ---------------- */
@@ -603,6 +621,7 @@ App.Trading = (function () {
     const pos = state.position;
     const unrealizedPnl = pos ? calcPnl(pos, state.currentPrice) : 0;
     const roe = pos ? calcRoe(pos, unrealizedPnl) : 0;
+    const returnRate = pos ? calcReturnRate(pos, state.currentPrice) : 0; // 레버리지 미포함 일반 수익률(버그 수정으로 신규 추가)
     const usedMargin = (pos ? pos.margin : 0) + (state.pendingOrder ? state.pendingOrder.margin : 0);
     // 총자산(Equity) = 가용 잔고 + 사용 중 증거금(포지션+미체결) + 미실현 손익 (전부 USDT)
     const equity = state.balance + usedMargin + unrealizedPnl;
@@ -632,8 +651,9 @@ App.Trading = (function () {
       totalFundingPaid,
       currentPrice: state.currentPrice,
       unrealizedPnl,
-      pnlPercent: roe, // ROE(%)
+      pnlPercent: roe, // ROE(%) — 기존 이름/의미 그대로 유지(다른 모듈이 참조 중이라 안 바꿈)
       roe,
+      returnRate, // 레버리지 미포함 일반 수익률(%) — 신규 필드
       realizedPnl,
       totalFeesPaid,
       feeRate: FEE_RATE,

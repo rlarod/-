@@ -158,7 +158,8 @@
               <div><span>포지션 수량</span><b id="pos-qty">-</b></div>
               <div><span>청산가</span><b id="pos-liq">-</b></div>
               <div class="pnl-row"><span>미실현 손익</span><b id="pos-pnl">-</b></div>
-              <div class="pnl-row"><span>손익률</span><b id="pos-pnl-pct">-</b></div>
+              <div class="pnl-row"><span>수익률</span><b id="pos-return-rate">-</b></div>
+              <div class="pnl-row"><span>ROE</span><b id="pos-pnl-pct">-</b></div>
             </div>
             <button class="close-btn" id="btn-close-position">포지션 종료</button>
           </div>
@@ -188,9 +189,9 @@
       <table>
         <thead><tr>
           <th>종료시각</th><th>방향</th><th>레버리지</th><th>진입가</th><th>종료가</th>
-          <th>증거금</th><th>손익</th><th>손익률</th><th id="history-th-fee">수수료</th><th>사유</th>
+          <th>증거금</th><th>손익</th><th>수익률</th><th>ROE</th><th id="history-th-fee">수수료</th><th>사유</th>
         </tr></thead>
-        <tbody id="history-body"><tr class="empty"><td colspan="10">거래 내역이 없습니다.</td></tr></tbody>
+        <tbody id="history-body"><tr class="empty"><td colspan="11">거래 내역이 없습니다.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -216,7 +217,7 @@
       <table>
         <thead><tr>
           <th>거래시간</th><th>방향</th><th>진입가</th><th>청산가</th><th>수량</th>
-          <th>레버리지</th><th>증거금</th><th>손익</th><th>손익률</th><th>수수료</th><th>사유</th>
+          <th>레버리지</th><th>증거금</th><th>손익</th><th>ROE</th><th>수수료</th><th>사유</th>
         </tr></thead>
         <tbody id="cloud-history-body"><tr class="empty"><td colspan="11">아직 거래내역이 없습니다.</td></tr></tbody>
       </table>
