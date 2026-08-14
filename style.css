@@ -7,7 +7,7 @@
   --border-soft:#1D212C;
   --text:#EDEFF4;
   --text-dim:#8791A8;
-  --text-faint:#565D70;
+  --text-faint:#7B84A0;
   --gold:#E3B341;
   --gold-soft:rgba(227,179,65,0.14);
   --red:#F5464B;
@@ -80,7 +80,7 @@ body{
   border-radius:12px;display:flex;gap:32px;flex-wrap:wrap;align-items:baseline;
 }
 .stat-block{display:flex;flex-direction:column;gap:4px;}
-.stat-label{font-size:11px;color:var(--text-faint);}
+.stat-label{font-size:12.5px;color:var(--text-faint);}
 .stat-value{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);}
 .main-price-block .stat-value.price{font-size:26px;font-weight:700;color:var(--gold);}
 .stat-value.up{color:var(--red);}
@@ -193,7 +193,7 @@ body{
   display:flex;flex-direction:column;gap:4px;padding-bottom:14px;margin-bottom:14px;
   border-bottom:1px solid var(--border-soft);
 }
-.acc-balance .field-label{font-size:11px;color:var(--text-faint);}
+.acc-balance .field-label{font-size:12px;color:var(--text-faint);}
 .balance-value{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);}
 
 /* ---------- 입력 필드 공통 ---------- */
@@ -276,7 +276,7 @@ input[type=range]::-webkit-slider-thumb{
  * ========================================================================= */
 .position-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px;}
 .position-grid > div{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:3px;text-align:right;}
-.position-grid span{font-size:11px;color:var(--text-faint);}
+.position-grid span{font-size:12px;color:var(--text-faint);}
 .position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:15px;}
 
 .position-grid .pnl-row{
