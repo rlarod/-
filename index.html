@@ -61,6 +61,7 @@
       </div>
       <nav class="top-banner-nav">
         <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">거래소</button>
+        <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
         <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
       </nav>
     </div>
@@ -209,13 +210,13 @@
   <!-- ===== 서버 거래내역(Supabase) — 위의 로컬 거래내역과는 별개, 기기가 바뀌어도 유지됨 ===== -->
   <!-- ===== 투자 랭킹(Supabase) — 다른 사용자 데이터는 SECURITY DEFINER 함수로만 조회, user_id/이메일 노출 없음 ===== -->
   <div class="panel" id="leaderboard-panel">
-    <div class="field-label"><span>🏆 투자 랭킹 (총자산 기준)</span></div>
+    <div class="field-label"><span>🏆 투자 랭킹 (실현 손익 기준)</span></div>
     <div class="table-scroll">
       <table>
         <thead><tr>
-          <th>순위</th><th>닉네임</th><th>총자산</th><th>수익률</th>
+          <th>순위</th><th>닉네임</th><th>총자산</th><th>수익금</th><th>수익률</th>
         </tr></thead>
-        <tbody id="leaderboard-body"><tr class="empty"><td colspan="4">불러오는 중...</td></tr></tbody>
+        <tbody id="leaderboard-body"><tr class="empty"><td colspan="5">불러오는 중...</td></tr></tbody>
       </table>
     </div>
     <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
@@ -246,29 +247,6 @@
   </div>
 
   <!-- ===== MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현 (신규) ===== -->
-  <div class="panel market-war-panel" id="market-war-panel">
-    <div class="ob-header">
-      <span class="ob-title">⚔ MARKET WAR</span>
-      <span class="mw-power-label">
-        <span class="mw-buy-label">BUY <b id="mw-buy-pct">50%</b></span>
-        <span class="mw-sell-label">SELL <b id="mw-sell-pct">50%</b></span>
-      </span>
-    </div>
-    <div class="mw-power-bar">
-      <div class="mw-power-buy" id="mw-power-buy" style="width:50%;"></div>
-      <div class="mw-power-sell" id="mw-power-sell" style="width:50%;"></div>
-    </div>
-    <div class="mw-canvas-wrap">
-      <canvas id="mw-canvas" class="mw-canvas"></canvas>
-      <div class="mw-hud">
-        <div class="mw-hud-price" id="mw-hud-price">-</div>
-        <div class="mw-hud-status" id="mw-hud-status">SYNCING</div>
-      </div>
-      <div class="mw-controls-hint">드래그 회전 · 휠 확대</div>
-    </div>
-    <div class="mw-feed" id="mw-feed"></div>
-  </div>
-
   <!-- ===== 관리자 전용(기본 숨김) — am_i_admin() RPC가 true를 반환할 때만 보여짐 ===== -->
   <div class="panel admin-panel" id="admin-panel" style="display:none;">
     <div class="field-label"><span>⚠️ 관리자</span></div>
@@ -344,6 +322,32 @@
       </div>
     </div>
   </div>
+
+  <!-- ===== 전쟁터 페이지(기본 숨김) — page-nav.js가 전환 담당, market-war.js도 id로만 요소를 찾아서 무수정 ===== -->
+  <div id="page-battle" style="display:none;">
+    <div class="panel market-war-panel" id="market-war-panel">
+      <div class="ob-header">
+        <span class="ob-title">⚔ 전쟁터 (MARKET WAR)</span>
+        <span class="mw-power-label">
+          <span class="mw-buy-label">BUY <b id="mw-buy-pct">50%</b></span>
+          <span class="mw-sell-label">SELL <b id="mw-sell-pct">50%</b></span>
+        </span>
+      </div>
+      <div class="mw-power-bar">
+        <div class="mw-power-buy" id="mw-power-buy" style="width:50%;"></div>
+        <div class="mw-power-sell" id="mw-power-sell" style="width:50%;"></div>
+      </div>
+      <div class="mw-canvas-wrap mw-canvas-wrap-battle">
+        <canvas id="mw-canvas" class="mw-canvas"></canvas>
+        <div class="mw-hud">
+          <div class="mw-hud-price" id="mw-hud-price">-</div>
+          <div class="mw-hud-status" id="mw-hud-status">SYNCING</div>
+        </div>
+        <div class="mw-controls-hint">드래그 회전 · 휠 확대</div>
+      </div>
+      <div class="mw-feed" id="mw-feed"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== 시즌 초기화 확인창(기본 숨김) — "정말 초기화"를 눌러야만 실행됩니다 ===== -->
@@ -382,6 +386,7 @@
 <script src="js/trade-history.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/trade-events-chat.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
 <script src="js/page-nav.js"></script>

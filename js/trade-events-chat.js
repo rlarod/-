@@ -1,0 +1,90 @@
+/* =========================================================================
+ * js/trade-events-chat.js — App.TradeEventsChat
+ * =========================================================================
+ * 실제로 포지션이 청산됐을 때만(주문 버튼을 눌렀다고 X) 채팅에 자동
+ * 메시지를 올립니다. trading.js/chat.js/supabase-sync.js는 전혀
+ * 안 건드립니다 — 기존 'trading:persisted' 이벤트(실제 거래 이벤트
+ * 발생 시에만 발생)를 구독해서 closedTrades가 늘어난 걸 감지하는
+ * 방식으로, supabase-sync.js의 거래내역 동기화와 똑같은 원리입니다.
+ *
+ * ── 왜 여기서 직접 chat_messages에 insert 하는지 ─────────────────────
+ * chat.js가 이미 chat_messages 테이블을 Realtime으로 구독하고 있어서,
+ * 여기서 insert만 하면 chat.js 쪽 코드를 전혀 안 건드리고도(id로만
+ * 요소를 찾는 구조 유지) 자동으로 채팅창에 나타납니다 — chat.js에는
+ * message_type에 따라 스타일만 다르게 그리는 부분만 추가했습니다.
+ * ========================================================================= */
+
+window.App = window.App || {};
+
+App.TradeEventsChat = (function () {
+  "use strict";
+
+  let lastSeenClosedCount = 0;
+
+  function sb() {
+    return App.SupabaseClient ? App.SupabaseClient.get() : null;
+  }
+  async function getUserId(client) {
+    try {
+      const { data, error } = await client.auth.getSession();
+      if (error || !data.session) return null;
+      return data.session.user.id;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function onTradingPersisted(snapshot) {
+    const list = snapshot.closedTrades || [];
+    if (list.length <= lastSeenClosedCount) {
+      lastSeenClosedCount = list.length; // 줄어든 경우(예: 다른 탭 초기화) 기준 재조정
+      return;
+    }
+    const newCount = list.length - lastSeenClosedCount;
+    const newTrades = list.slice(0, newCount); // 앞쪽이 최신
+    lastSeenClosedCount = list.length;
+
+    const client = sb();
+    if (!client) return;
+    const userId = await getUserId(client);
+    if (!userId) return;
+    const nickname = App.Auth ? App.Auth.getNickname() : null;
+    if (!nickname) return;
+
+    // 오래된 것부터 순서대로(여러 개가 한꺼번에 청산됐을 때 시간 순서 유지)
+    const ordered = newTrades.slice().reverse();
+    for (const t of ordered) {
+      const message = buildMessage(nickname, t);
+      try {
+        const { error } = await client.from("chat_messages").insert({
+          user_id: userId,
+          nickname, // 실제 저장값은 서버 트리거가 profiles 기준으로 덮어씀(기존과 동일)
+          message,
+          message_type: "trade_event",
+        });
+        if (error) console.warn("[trade-events-chat.js] 이벤트 메시지 전송 실패:", error);
+      } catch (e) {
+        console.warn("[trade-events-chat.js] 이벤트 메시지 전송 중 오류:", e);
+      }
+    }
+  }
+
+  function buildMessage(nickname, t) {
+    const sideLabel = t.side === "long" ? "LONG" : "SHORT";
+    const amountText = App.Utils ? App.Utils.formatCurrencySigned(t.pnl) : (t.pnl >= 0 ? "+" : "") + t.pnl.toFixed(2);
+    if (t.reason === "강제청산") {
+      return nickname + "님의 BTC " + sideLabel + " 포지션이 강제청산되었습니다 (" + amountText + ")";
+    }
+    if (t.pnl >= 0) {
+      return nickname + "님이 BTC " + sideLabel + " 포지션을 " + amountText + " 익절했습니다";
+    }
+    return nickname + "님이 BTC " + sideLabel + " 포지션을 " + amountText + " 손절했습니다";
+  }
+
+  function init() {
+    // DOM 요소가 필요 없는 순수 데이터 모듈이라, App.Bus만 있으면 항상 동작합니다.
+    App.Bus.on("trading:persisted", onTradingPersisted);
+  }
+
+  return { init };
+})();

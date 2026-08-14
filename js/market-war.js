@@ -1241,5 +1241,9 @@ App.MarketWar = (function () {
     }
   }
 
-  return { init };
+  // 전쟁터가 별도 페이지로 분리되면서, 부팅 시점엔 이 패널이 숨겨져
+  // 있을 수 있습니다(display:none인 동안엔 getBoundingClientRect()가
+  // 0x0을 반환해서 캔버스가 찌그러진 채로 시작함) — 탭을 눌러서 실제로
+  // 보이게 된 다음 이 resize를 다시 호출하면 정상 크기로 잡힙니다.
+  return { init, resize };
 })();

@@ -92,11 +92,21 @@ App.Chat = (function () {
     }
 
     const row = document.createElement("div");
-    row.className = "chat-msg";
-    row.innerHTML =
-      '<span class="chat-msg-nick">' + escapeHtml(msg.nickname) + "</span>" +
-      '<span class="chat-msg-time">' + fmtTime(msg.created_at) + "</span>" +
-      '<div class="chat-msg-text">' + escapeHtml(msg.message) + "</div>";
+    // 거래 이벤트(청산 시 자동 생성, js/trade-events-chat.js)는 일반 채팅과
+    // 색상/아이콘을 다르게 — 요구사항: 일반 채팅과 거래 이벤트를 명확히 구분
+    const isTradeEvent = msg.message_type === "trade_event";
+    row.className = isTradeEvent ? "chat-msg chat-msg-event" : "chat-msg";
+    if (isTradeEvent) {
+      row.innerHTML =
+        '<span class="chat-event-icon">⚡</span>' +
+        '<span class="chat-msg-time">' + fmtTime(msg.created_at) + "</span>" +
+        '<div class="chat-msg-text">' + escapeHtml(msg.message) + "</div>";
+    } else {
+      row.innerHTML =
+        '<span class="chat-msg-nick">' + escapeHtml(msg.nickname) + "</span>" +
+        '<span class="chat-msg-time">' + fmtTime(msg.created_at) + "</span>" +
+        '<div class="chat-msg-text">' + escapeHtml(msg.message) + "</div>";
+    }
     dom.messages.appendChild(row);
 
     if (wasNearBottom) scrollToBottom();
