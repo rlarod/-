@@ -263,28 +263,27 @@ input[type=range]::-webkit-slider-thumb{
    ui.js가 이 .position-grid 안에 같은 모양(<div><span>-<b>)으로 동적
    삽입하기 때문에 이 규칙이 자동으로 그것들에도 적용됩니다. */
 /* =========================================================================
- * 포지션 카드 — 업비트 "보유자산" 카드 참고 레퍼런스 그대로 재현.
- *   - 상세 수치(진입가/현재가/레버리지 등): 값이 크게 위, 라벨이 작게
- *     아래(업비트의 "3.54218751 ETH" 위 "보유수량" 패턴). DOM 순서는
- *     그대로 <span>라벨</span><b>값</b>이고, flex-direction:column-reverse로
- *     시각적으로만 뒤집었습니다 — ui.js가 TP/SL/진입수수료를 동적으로
- *     넣을 때도 똑같은 순서(span 먼저)로 만들기 때문에 이 규칙이
- *     자동으로 적용됩니다(ui.js 무수정).
- *   - 손익 요약(미실현손익/수익률/ROE): 라벨-왼쪽, 값-오른쪽인 가로 행
- *     (업비트의 "평가손익 ... 1,010,086" 패턴).
- *   - 박스/테두리 없이 얇은 구분선 하나로만 영역을 나눔.
+ * 포지션 카드 — 이 컴포넌트는 좁은 주문창(사이드바)과 넓은 하단
+ * 5탭(포지션/미체결/주문내역/거래내역/자산) 패널 양쪽에서 다 쓰입니다
+ * (ui.js가 같은 #position-card를 상황에 따라 옮겨서 재사용).
+ *
+ * 버그 수정: 고정 2열 + 우측정렬로 만들었더니, 넓은 컨테이너(하단 5탭
+ * 패널)에서는 두 칸이 화면 양 끝으로 벌어지고 가운데가 텅 비어버렸습니다
+ * (실제 스크린샷으로 확인). auto-fit + 좌측정렬로 바꿔서, 좁으면 2~3열
+ * 넓으면 5~6열까지 자동으로 늘어나며 어느 너비에서든 자연스럽게
+ * 흐르도록 했습니다.
  * ========================================================================= */
-.position-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px;}
-.position-grid > div{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:3px;text-align:right;}
+.position-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:18px 22px;}
+.position-grid > div{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:4px;text-align:right;}
 .position-grid span{font-size:12px;color:var(--text-faint);}
 .position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:15px;}
 
 .position-grid .pnl-row{
-  grid-column:1 / -1;display:flex !important;flex-direction:row;justify-content:space-between;
-  align-items:baseline;text-align:left;
+  grid-column:1 / -1;display:flex !important;flex-direction:row;justify-content:flex-start;gap:16px;
+  align-items:baseline;
 }
 .position-grid .pnl-row:first-of-type{margin-top:2px;padding-top:14px;border-top:1px solid var(--border-soft);}
-.position-grid .pnl-row span{font-size:12px;}
+.position-grid .pnl-row span{font-size:12px;min-width:70px;}
 .position-grid .pnl-row b{font-size:16px;}
 .pnl-positive{color:#34D399 !important;}
 .pnl-negative{color:var(--red) !important;}
