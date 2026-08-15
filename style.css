@@ -286,11 +286,13 @@ body{
 /* ---------- 입력 필드 공통 ---------- */
 .field{margin-bottom:16px;}
 .field-label{display:flex;justify-content:space-between;font-size:15.5px;color:var(--text-dim);margin-bottom:7px;}
-.margin-mode-row{margin-bottom:6px;}
+.top-mode-row{display:flex;gap:8px;margin-bottom:10px;}
 .margin-mode-badge{
-  display:inline-block;font-size:14px;font-weight:700;color:var(--text-dim);
-  background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;
+  flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--text-dim);
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;
 }
+.margin-mode-badge-lev{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
+.mode-badge-arrow{font-size:10px;opacity:0.7;}
 .leverage-field-top{
   background:var(--surface2);border:1px solid var(--border);border-radius:9px;
   padding:10px 12px 12px;margin-bottom:16px;
@@ -444,6 +446,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .ob-row:hover{background:var(--surface2);}
 
 .ob-current-price-row{display:flex;align-items:center;gap:6px;margin:4px 0;}
+.ob-mark-price-row{
+  text-align:center;font-size:12px;color:var(--text-faint);margin-bottom:4px;
+}
+.ob-mark-price-row b{font-family:var(--mono);font-weight:600;color:var(--text-dim);}
 .ob-current-price-row .ob-current-price{margin:0;flex:1;}
 .ob-price-arrow{font-size:16px;font-weight:700;color:var(--text-faint);width:14px;text-align:center;}
 .ob-price-arrow-up{color:var(--green);}
