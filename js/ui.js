@@ -424,7 +424,10 @@ App.UI = (function () {
       dom.posCurrent.textContent = App.Utils.formatCurrencyPlain(snapshot.currentPrice);
       dom.posLeverage.textContent = pos.leverage + "x";
       dom.posMargin.textContent = App.Utils.formatCurrency(pos.margin);
-      dom.posQty.textContent = App.Utils.formatQty(pos.qty);
+      // 바이낸스 포지션 표의 "Size" 컬럼처럼 방향을 부호+색으로 표시(LONG=+, SHORT=-).
+      // pos.qty 자체(계산에 쓰이는 값)는 그대로 양수이고, 여기선 표시 문자열만 만듭니다.
+      dom.posQty.textContent = (pos.side === "long" ? "+" : "-") + App.Utils.formatQty(pos.qty);
+      dom.posQty.className = pos.side === "long" ? "qty-long" : "qty-short";
       dom.posLiq.textContent = App.Utils.formatCurrencyPlain(pos.liq);
       dom.posTp.textContent = pos.tp ? App.Utils.formatCurrencyPlain(pos.tp) : "-";
       dom.posSl.textContent = pos.sl ? App.Utils.formatCurrencyPlain(pos.sl) : "-";

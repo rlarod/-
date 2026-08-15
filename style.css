@@ -281,14 +281,21 @@ input[type=range]::-webkit-slider-thumb{
 
 .account-divider{height:1px;background:var(--border-soft);margin:16px 0;}
 
-/* ---------- 현재 포지션 ---------- */
+/* ---------- 현재 포지션 — 바이낸스 실제 포지션 표 참고, 컬럼 순서/구성 그대로 재현 ---------- */
 .position-empty{font-size:12px;color:var(--text-faint);padding:14px 0;text-align:center;}
 .position-card{padding-top:8px;}
-.position-row{margin-bottom:14px;display:flex;align-items:center;gap:10px;}
-.position-symbol{font-size:13px;color:var(--text-dim);font-weight:600;}
 .badge{font-family:var(--sans);font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:0.03em;}
 .badge.long{background:var(--red-soft);color:var(--red);}
 .badge.short{background:var(--blue-soft);color:var(--blue);}
+
+.position-symbol-cell{white-space:nowrap;}
+.position-symbol-name{font-size:14px;font-weight:700;color:var(--text);}
+.position-symbol-sub{font-size:11px;color:var(--text-faint);margin-top:2px;}
+/* 수량(Size) 부호/색 — LONG=+(빨강), SHORT=-(파랑). 기존 배지 색 규칙과 동일하게 맞춤 */
+.qty-long{color:var(--red) !important;}
+.qty-short{color:var(--blue) !important;}
+.position-roe-inline{font-size:12px;margin-left:2px;}
+.position-roe-inline #pos-pnl-pct{font-family:var(--mono);}
 
 /* .position-grid는 미체결 지정가 카드(#pending-order-card, 항목 3개뿐이라
    간단함)에서만 씁니다. 실제 포지션(항목 9개, 넓은 화면에서도 쓰임)은

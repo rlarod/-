@@ -191,21 +191,28 @@
           <div class="field-label"><span>현재 포지션</span></div>
           <div id="position-empty" class="position-empty">보유 중인 포지션이 없습니다.</div>
           <div id="position-card" class="position-card" style="display:none;">
-            <div class="position-row">
-              <span class="badge long" id="pos-side-badge">LONG</span>
-              <span class="position-symbol">BTCUSDT</span>
-            </div>
+            <span class="badge long" id="pos-side-badge" style="display:none;">LONG</span>
             <div class="table-scroll">
               <table class="position-table">
                 <thead><tr id="position-thead-row">
-                  <th>진입가격</th><th>현재가격</th><th>레버리지</th><th>증거금</th>
-                  <th>포지션 수량</th><th>청산가</th>
-                  <th>미실현손익</th><th>수익률</th><th>ROE</th>
+                  <th>심볼</th><th>수량</th><th>진입가격</th><th>현재가격</th>
+                  <th>청산가</th><th>증거금</th><th>손익(ROE%)</th><th>수익률</th>
                 </tr></thead>
                 <tbody><tr id="position-tbody-row">
-                  <td id="pos-entry">-</td><td id="pos-current">-</td><td id="pos-leverage">-</td><td id="pos-margin">-</td>
-                  <td id="pos-qty">-</td><td id="pos-liq">-</td>
-                  <td id="pos-pnl">-</td><td id="pos-return-rate">-</td><td id="pos-pnl-pct">-</td>
+                  <td class="position-symbol-cell">
+                    <div class="position-symbol-name">BTCUSDT</div>
+                    <div class="position-symbol-sub"><span id="pos-leverage">-</span> · 무기한</div>
+                  </td>
+                  <td id="pos-qty">-</td>
+                  <td id="pos-entry">-</td>
+                  <td id="pos-current">-</td>
+                  <td id="pos-liq">-</td>
+                  <td id="pos-margin">-</td>
+                  <td>
+                    <span id="pos-pnl">-</span>
+                    <span class="position-roe-inline">(<span id="pos-pnl-pct">-</span>)</span>
+                  </td>
+                  <td id="pos-return-rate">-</td>
                 </tr></tbody>
               </table>
             </div>
