@@ -208,7 +208,7 @@ body{
    주문창은 내용이 많아질 수 있어(포지션 펼치기 등) 최대 높이를 두고
    내부 스크롤, 채팅은 남는 공간을 전부 차지합니다. */
 .side-column{min-width:0;height:100%;display:flex;flex-direction:column;gap:10px;min-height:0;}
-.order-panel{flex:0 1 auto;max-height:58%;overflow-y:auto;display:flex;flex-direction:column;}
+.order-panel{flex:0 0 auto;overflow:visible;display:flex;flex-direction:column;}
 
 .page-chat-col{flex:1;min-height:0;display:flex;min-width:0;}
 .page-chat-panel{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;}
@@ -221,7 +221,7 @@ body{
   .side-column,
   .page-chat-col{height:auto;overflow-y:visible;}
   .main-grid .chart-column .chart-container{height:78vh;} /* 1열로 쌓일 때는 각자 자연스러운 높이로 복귀 */
-  .order-panel{max-height:none;height:auto;overflow-y:visible;}
+  .order-panel{height:auto;}
   .page-chat-panel .chat-messages{flex:none;height:220px;} /* 모바일에선 기존처럼 고정 높이로 복귀 */
 }
 @media (max-width:700px){
