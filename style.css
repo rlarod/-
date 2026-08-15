@@ -443,6 +443,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .ob-row:hover{background:var(--surface2);}
 
+.ob-current-price-row{display:flex;align-items:center;gap:6px;margin:4px 0;}
+.ob-current-price-row .ob-current-price{margin:0;flex:1;}
+.ob-price-arrow{font-size:16px;font-weight:700;color:var(--text-faint);width:14px;text-align:center;}
+.ob-price-arrow-up{color:var(--green);}
+.ob-price-arrow-down{color:var(--red);}
 .ob-current-price{
   text-align:center;font-family:var(--mono);font-weight:700;font-size:18px;
   color:var(--gold);padding:7px 0;margin:4px 0;background:var(--gold-soft);border-radius:6px;
@@ -849,6 +854,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 주문창 매수/매도 비율 바 — MARKET WAR와 같은 값을 재사용, 색은 초록(매수)/빨강(매도) */
 .order-pressure-bar{margin-bottom:12px;}
+
+.order-preview-rows,.order-account-rows{margin-bottom:10px;display:flex;flex-direction:column;gap:3px;}
+.order-preview-row,.order-account-row{
+  display:flex;justify-content:space-between;font-size:13px;color:var(--text-faint);
+}
+.order-preview-row b,.order-account-row b{font-family:var(--mono);font-weight:600;color:var(--text-dim);}
 .order-pressure-track{
   display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--surface3);
 }

@@ -208,7 +208,10 @@
               <span class="ob-cols"><span>가격(USDT)</span><span>수량(BTC)</span><span>총수량(BTC)</span></span>
             </div>
             <div class="ob-asks" id="ob-asks"></div>
-            <div class="ob-current-price" id="ob-current-price">현재가 -</div>
+            <div class="ob-current-price-row">
+              <span class="ob-price-arrow" id="ob-price-arrow"></span>
+              <div class="ob-current-price" id="ob-current-price">현재가 -</div>
+            </div>
             <div class="ob-bids" id="ob-bids"></div>
           </div>
         </div>
@@ -259,11 +262,31 @@
           </div>
         </div>
 
+        <!-- ===== 매수/매도가 미리보기 — 호가창의 최우선 매도/매수 호가 + 현재 증거금×레버리지
+             기준 명목가치. trading.js의 실제 체결 계산과는 별개인 "참고용 미리보기"입니다. ===== -->
+        <div class="order-preview-rows">
+          <div class="order-preview-row"><span>매수가격</span><b id="preview-ask-price">-</b></div>
+          <div class="order-preview-row"><span>매도가격</span><b id="preview-bid-price">-</b></div>
+          <div class="order-preview-row"><span>매수금액</span><b id="preview-buy-amount">-</b></div>
+          <div class="order-preview-row"><span>매도금액</span><b id="preview-sell-amount">-</b></div>
+        </div>
+
         <div class="order-buttons">
           <button class="order-btn long" id="btn-long">LONG</button>
           <button class="order-btn short" id="btn-short">SHORT</button>
         </div>
         <div class="err-msg" id="order-err"></div>
+
+        <!-- ===== 계좌 요약 — 전부 trading.js의 실제 snapshot 값(평가=총자산, 보유=잔고,
+             가능=주문가능 잔고)과 실제 수수료율(FEE_RATE)만 사용합니다. 환율은 저희가
+             가진 데이터 소스가 없어서 임의로 만들지 않고 뺐습니다. ===== -->
+        <div class="order-account-rows">
+          <div class="order-account-row"><span>평가</span><b id="acc-equity">-</b></div>
+          <div class="order-account-row"><span>보유</span><b id="acc-balance-holding">-</b></div>
+          <div class="order-account-row"><span>가능</span><b id="acc-available">-</b></div>
+          <div class="order-account-row"><span>강제청산</span><b>보유, 유지증거금 기준</b></div>
+          <div class="order-account-row"><span>수수료</span><b id="acc-fee-rate">-</b></div>
+        </div>
 
         <div class="account-divider"></div>
 
@@ -567,6 +590,8 @@
 <script src="js/websocket.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/orderbook.js"></script>
+<script src="js/orderbook-price-arrow.js"></script>
+<script src="js/order-info-panel.js"></script>
 <script src="js/orderbook-click-order.js"></script>
 <script src="js/trades.js"></script>
 <script src="js/orderbook-tabs.js"></script>

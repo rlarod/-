@@ -63,7 +63,7 @@
    * 모든 구독자가 준비된 상태에서 첫 tick부터 놓치지 않고 반영됩니다.
    * ------------------------------------------------ */
   function boot() {
-    const modules = ["Chart", "OrderBook", "RecentTrades", "OrderbookTabs", "MarketWar", "OrderPressureBar", "Trading", "SupabaseSync", "TradeHistory", "Leaderboard", "Chat", "TradeEventsChat", "Admin", "Board", "MyPage", "SymbolSelector", "NoticeBoard", "TickerBoard", "PageNav", "UI", "OrderbookClickOrder", "WS"];
+    const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "RecentTrades", "OrderbookTabs", "MarketWar", "OrderPressureBar", "Trading", "OrderInfoPanel", "SupabaseSync", "TradeHistory", "Leaderboard", "Chat", "TradeEventsChat", "Admin", "Board", "MyPage", "SymbolSelector", "NoticeBoard", "TickerBoard", "PageNav", "UI", "OrderbookClickOrder", "WS"];
     modules.forEach((name) => {
       if (App[name] && typeof App[name].init === "function") {
         // 버그 수정: 여기 try/catch가 없으면 앞쪽 모듈(예: MarketWar) 하나가
