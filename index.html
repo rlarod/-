@@ -282,14 +282,25 @@
   </div>
 
   <!-- 요청: 호가창을 하단 탭(포지션/미체결/주문내역/거래내역/자산)보다도 더 아래, 페이지 맨 밑으로 -->
-  <div class="panel orderbook-panel" id="orderbook-panel">
-    <div class="ob-header">
-      <span class="ob-title">호가창 (BTCUSDT)</span>
-      <span class="ob-cols"><span>가격</span><span>수량</span><span>누적</span></span>
+  <!-- ===== 호가창/최근체결 탭 — trades.js가 #orderbook-panel 바로 다음 형제로
+       #recent-trades-panel을 자동 삽입하는 기존 로직을 그대로 유지한 채,
+       그 삽입 위치를 이 탭 컨텐츠 wrapper 안으로 옮겼습니다(trades.js 무수정). ===== -->
+  <div class="orderbook-tabs-wrap">
+    <div class="orderbook-tabs" id="orderbook-tabs">
+      <button class="ob-tab-btn active" data-tab="orderbook">호가창</button>
+      <button class="ob-tab-btn" data-tab="trades">최근거래</button>
     </div>
-    <div class="ob-asks" id="ob-asks"></div>
-    <div class="ob-current-price" id="ob-current-price">현재가 -</div>
-    <div class="ob-bids" id="ob-bids"></div>
+    <div id="orderbook-tabs-content">
+      <div class="panel orderbook-panel" id="orderbook-panel">
+        <div class="ob-header">
+          <span class="ob-title">호가창 (BTCUSDT)</span>
+          <span class="ob-cols"><span>가격</span><span>수량</span><span>누적</span></span>
+        </div>
+        <div class="ob-asks" id="ob-asks"></div>
+        <div class="ob-current-price" id="ob-current-price">현재가 -</div>
+        <div class="ob-bids" id="ob-bids"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현 (신규) ===== -->
@@ -512,6 +523,7 @@
 <script src="js/chart.js"></script>
 <script src="js/orderbook.js"></script>
 <script src="js/trades.js"></script>
+<script src="js/orderbook-tabs.js"></script>
 <script src="js/market-war.js"></script>
 <script src="js/trading.js"></script>
 <script src="js/ui.js"></script>
