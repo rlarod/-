@@ -286,6 +286,11 @@ body{
 /* ---------- 입력 필드 공통 ---------- */
 .field{margin-bottom:16px;}
 .field-label{display:flex;justify-content:space-between;font-size:15.5px;color:var(--text-dim);margin-bottom:7px;}
+.margin-mode-row{margin-bottom:6px;}
+.margin-mode-badge{
+  display:inline-block;font-size:14px;font-weight:700;color:var(--text-dim);
+  background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;
+}
 .leverage-field-top{
   background:var(--surface2);border:1px solid var(--border);border-radius:9px;
   padding:10px 12px 12px;margin-bottom:16px;
@@ -420,7 +425,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .ob-row{
   position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
-  padding:4px 2px;font-family:var(--mono);font-size:16px;overflow:hidden;border-radius:4px;
+  padding:2px 2px;font-family:var(--mono);font-size:14px;overflow:hidden;border-radius:3px;
   cursor:pointer;
 }
 .ob-depth-bar{

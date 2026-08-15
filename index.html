@@ -205,7 +205,7 @@
           <div class="panel orderbook-panel" id="orderbook-panel">
             <div class="ob-header">
               <span class="ob-title">호가창 (BTCUSDT)</span>
-              <span class="ob-cols"><span>가격</span><span>수량</span><span>누적</span></span>
+              <span class="ob-cols"><span>가격(USDT)</span><span>수량(BTC)</span><span>총수량(BTC)</span></span>
             </div>
             <div class="ob-asks" id="ob-asks"></div>
             <div class="ob-current-price" id="ob-current-price">현재가 -</div>
@@ -225,6 +225,10 @@
 
         <!-- ===== 레버리지를 상단에 항상 노출(바이낸스 스타일) — ui.js는 id로만
              #lev-slider/#lev-display를 찾기 때문에 위치를 옮겨도 무수정입니다. ===== -->
+        <div class="margin-mode-row">
+          <span class="margin-mode-badge">교차(Cross)</span>
+        </div>
+
         <div class="field leverage-field-top">
           <div class="field-label"><span>레버리지</span><span class="lev-val"><span id="lev-display">10</span>x</span></div>
           <input type="range" id="lev-slider" min="1" max="100" value="10">
