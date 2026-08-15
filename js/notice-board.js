@@ -16,10 +16,10 @@ App.NoticeBoard = (function () {
   "use strict";
 
   const STATIC_NOTICES = [
-    "이 사이트는 실제 자금이 오가지 않는 모의투자 플랫폼입니다.",
-    "🏆 랭킹은 청산된 거래(실현 손익) 기준으로만 계산됩니다.",
-    "⚔ 전쟁터에서 실시간 매수/매도 세력 대결을 확인해보세요.",
-    "👤 마이페이지에서 내 자산 현황을 한눈에 확인할 수 있습니다.",
+    "[공지] 실제 자금이 오가지 않는 모의투자 플랫폼입니다",
+    "[공지] 랭킹은 청산된 거래(실현 손익) 기준으로 계산됩니다",
+    "[안내] 전쟁터에서 실시간 매수/매도 세력 대결을 확인해보세요",
+    "[안내] 마이페이지에서 내 자산 현황을 한눈에 확인하세요",
   ];
 
   let dom = {};
@@ -35,7 +35,12 @@ App.NoticeBoard = (function () {
 
   function renderNotices() {
     if (!dom.notice) return;
-    dom.notice.innerHTML = STATIC_NOTICES.map((t) => "<li>" + escapeHtml(t) + "</li>").join("");
+    dom.notice.innerHTML = STATIC_NOTICES.map((t) => {
+      const m = t.match(/^\[(.+?)\]\s*(.*)$/);
+      if (!m) return "<li>" + escapeHtml(t) + "</li>";
+      const tagClass = m[1] === "공지" ? "notice-tag-notice" : "notice-tag-info";
+      return '<li><span class="notice-line"><span class="notice-tag ' + tagClass + '">[' + escapeHtml(m[1]) + "]</span>" + escapeHtml(m[2]) + "</span></li>";
+    }).join("");
   }
 
   function renderPostList(container, posts, emptyText) {

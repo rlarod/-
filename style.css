@@ -98,6 +98,10 @@ body{
   font-size:16px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   display:flex;justify-content:space-between;gap:8px;
 }
+.notice-line{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notice-tag{font-weight:700;margin-right:5px;}
+.notice-tag-notice{color:var(--red);}
+.notice-tag-info{color:var(--gold);}
 .notice-board-post{cursor:pointer;}
 .notice-board-post:hover{color:var(--gold);}
 .notice-board-post-likes{flex:0 0 auto;font-family:var(--mono);font-size:13.5px;color:var(--text-faint);}
@@ -818,13 +822,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 
 /* 상품 카테고리 탭(모의투자/해외선물/코인선물) */
-.product-tabs{display:flex;gap:18px;margin-top:12px;border-bottom:1px solid var(--border-soft);}
+.product-tabs{display:flex;gap:10px;margin-top:12px;padding-bottom:10px;border-bottom:1px solid var(--border-soft);}
 .product-tab-btn{
-  background:none;border:none;color:var(--text-dim);font-family:var(--sans);
-  font-size:16px;font-weight:700;padding:8px 2px 10px;cursor:pointer;
-  border-bottom:2px solid transparent;
+  background:none;border:1px solid transparent;color:var(--text-dim);font-family:var(--sans);
+  font-size:16px;font-weight:700;padding:6px 12px;cursor:pointer;border-radius:5px;
 }
-.product-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+.product-tab-btn.active{color:var(--red);border-color:var(--red);background:var(--red-soft);}
 .product-tab-btn:not(.active):hover{color:var(--text);}
 
 /* 호가창/최근거래 탭 */
