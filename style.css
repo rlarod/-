@@ -191,13 +191,18 @@ body{
  * 속하기 때문에 top/bottom이 항상 정확히 일치합니다.
  * ========================================================================= */
 .main-grid{
-  display:grid;grid-template-columns:2.6fr 1fr;gap:10px;
+  display:grid;grid-template-columns:2.2fr 0.85fr 1fr;gap:10px;
   margin-top:10px;
   height:80vh;min-height:560px;
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
 .main-grid .chart-column .chart-container{height:100%;} /* 이 안에서는 78vh 대신 부모(행) 높이를 그대로 채움 */
+
+/* 가운데 열 — 호가창/최근체결 탭. 내용이 행 높이를 넘으면 내부 스크롤 */
+.orderbook-column{min-width:0;height:100%;overflow-y:auto;display:flex;flex-direction:column;}
+.orderbook-tabs-wrap{display:flex;flex-direction:column;flex:1;min-height:0;}
+#orderbook-tabs-content{flex:1;min-height:0;overflow-y:auto;}
 
 /* 오른쪽 열 — 주문창(포지션 포함)이 위, 채팅이 아래로 세로 배치.
    주문창은 내용이 많아질 수 있어(포지션 펼치기 등) 최대 높이를 두고
@@ -212,8 +217,9 @@ body{
 @media (max-width:1050px){
   .main-grid{grid-template-columns:1fr;height:auto;}
   .main-grid .chart-column,
+  .orderbook-column,
   .side-column,
-  .page-chat-col{height:auto;}
+  .page-chat-col{height:auto;overflow-y:visible;}
   .main-grid .chart-column .chart-container{height:78vh;} /* 1열로 쌓일 때는 각자 자연스러운 높이로 복귀 */
   .order-panel{max-height:none;height:auto;overflow-y:visible;}
   .page-chat-panel .chat-messages{flex:none;height:220px;} /* 모바일에선 기존처럼 고정 높이로 복귀 */
