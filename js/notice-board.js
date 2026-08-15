@@ -72,19 +72,16 @@ App.NoticeBoard = (function () {
   }
 
   function switchTab(tabName) {
+    if (tabName !== "notice" && tabName !== "latest") return; // 인기글은 왼쪽 박스와 무관, 오른쪽 박스의 유일한 실제 탭이라 토글 불필요
     if (dom.notice) dom.notice.style.display = tabName === "notice" ? "" : "none";
     if (dom.latest) dom.latest.style.display = tabName === "latest" ? "" : "none";
-    if (dom.popular) dom.popular.style.display = tabName === "popular" ? "" : "none";
-    if (dom.tabsContainer) {
-      dom.tabsContainer.querySelectorAll(".notice-tab-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.tab === tabName);
-      });
-    }
+    document.querySelectorAll('.notice-tab-btn[data-tab="notice"], .notice-tab-btn[data-tab="latest"]').forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabName);
+    });
   }
 
   function bindTabs() {
-    if (!dom.tabsContainer) return;
-    dom.tabsContainer.querySelectorAll(".notice-tab-btn").forEach((btn) => {
+    document.querySelectorAll(".notice-tab-btn[data-tab]").forEach((btn) => {
       btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
   }
@@ -94,7 +91,6 @@ App.NoticeBoard = (function () {
       notice: el("notice-list-notice"),
       latest: el("notice-list-latest"),
       popular: el("notice-list-popular"),
-      tabsContainer: el("notice-board-tabs"),
     };
     if (!dom.notice) return; // 마크업 없으면 조용히 종료
 
