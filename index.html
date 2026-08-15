@@ -91,18 +91,14 @@
 
 <!-- ===== 공지/이벤트 배너 — 순수 안내용, 여러 메시지를 자동으로 돌려 보여줌 ===== -->
 <div class="notice-board" id="notice-board">
-  <div class="notice-board-col">
-    <div class="notice-board-title">📢 공지사항</div>
-    <ul class="notice-board-list" id="notice-list-notice"></ul>
+  <div class="notice-board-tabs" id="notice-board-tabs">
+    <button class="notice-tab-btn active" data-tab="notice">📢 공지사항</button>
+    <button class="notice-tab-btn" data-tab="latest">🆕 최신게시물</button>
+    <button class="notice-tab-btn" data-tab="popular">🔥 인기글</button>
   </div>
-  <div class="notice-board-col">
-    <div class="notice-board-title">🆕 최신게시물</div>
-    <ul class="notice-board-list" id="notice-list-latest"></ul>
-  </div>
-  <div class="notice-board-col">
-    <div class="notice-board-title">🔥 인기글</div>
-    <ul class="notice-board-list" id="notice-list-popular"></ul>
-  </div>
+  <ul class="notice-board-list" id="notice-list-notice"></ul>
+  <ul class="notice-board-list" id="notice-list-latest" style="display:none;"></ul>
+  <ul class="notice-board-list" id="notice-list-popular" style="display:none;"></ul>
 </div>
 
 <div class="app">

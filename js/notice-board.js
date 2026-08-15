@@ -71,16 +71,36 @@ App.NoticeBoard = (function () {
     }
   }
 
+  function switchTab(tabName) {
+    if (dom.notice) dom.notice.style.display = tabName === "notice" ? "" : "none";
+    if (dom.latest) dom.latest.style.display = tabName === "latest" ? "" : "none";
+    if (dom.popular) dom.popular.style.display = tabName === "popular" ? "" : "none";
+    if (dom.tabsContainer) {
+      dom.tabsContainer.querySelectorAll(".notice-tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+    }
+  }
+
+  function bindTabs() {
+    if (!dom.tabsContainer) return;
+    dom.tabsContainer.querySelectorAll(".notice-tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+  }
+
   function init() {
     dom = {
       notice: el("notice-list-notice"),
       latest: el("notice-list-latest"),
       popular: el("notice-list-popular"),
+      tabsContainer: el("notice-board-tabs"),
     };
     if (!dom.notice) return; // 마크업 없으면 조용히 종료
 
     renderNotices();
     loadBoardLists();
+    bindTabs();
   }
 
   return { init };
