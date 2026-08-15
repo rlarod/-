@@ -758,3 +758,5 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .symbol-option-disabled{opacity:0.55;}
 .symbol-option-disabled:hover{background:none;cursor:not-allowed;}
 .symbol-option-active .symbol-option-name{color:var(--gold);}
+
+/* cache-bust: 1786786110 */
