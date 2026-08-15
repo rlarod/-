@@ -86,8 +86,12 @@
       <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">게시판</button>
       <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
+      <!-- 개미톡 레퍼런스에 맞춰 화면에서만 숨김(코드는 보존 — 나중에 다시 켤 수 있음).
+           page-nav.js의 .nav-coming-soon 처리 로직은 그대로 두고, 여기서만 마크업을 뺐습니다. -->
+      <!--
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-stock">주식선물 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-support">고객센터 <span class="nav-soon-badge">준비중</span></button>
+      -->
     </nav>
   </div>
 </div>
@@ -109,13 +113,15 @@
   <div id="page-exchange">
 
   <!-- ===== 이벤트/공지 배너 — 순수 안내용, 실제 이벤트 없어도 문구는 정직하게(실제 진행중 대회 없음 명시) ===== -->
-  <div class="event-banner">
+  <!-- 화면에서만 숨김(코드 보존) -->
+  <div class="event-banner" style="display:none;">
     <span class="event-banner-title">📣 BTC 모의투자 커뮤니티</span>
     <span class="event-banner-sub">가상 자금으로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
   </div>
 
   <!-- ===== 전광판 — 여러 종목을 표로 한눈에(BTC는 실시간, 나머지는 준비중 배지) ===== -->
-  <div class="panel ticker-board-panel" id="ticker-board-panel">
+  <!-- 화면에서만 숨김(코드 보존) -->
+  <div class="panel ticker-board-panel" id="ticker-board-panel" style="display:none;">
     <div class="field-label"><span>📊 전광판</span></div>
     <div class="table-scroll">
       <table class="ticker-board-table">
