@@ -805,18 +805,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 이벤트/공지 배너 */
 .event-banner{
-  margin-top:10px;padding:22px 24px;border-radius:10px;position:relative;overflow:hidden;
+  margin-top:10px;padding:44px 24px;border-radius:10px;position:relative;overflow:hidden;
   background:linear-gradient(120deg,#6D5BD0 0%,var(--gold) 55%,#5B8DEF 100%);
   color:#fff;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
 }
 .event-banner::before,.event-banner::after{
   content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,0.14);
 }
-.event-banner::before{width:120px;height:120px;top:-50px;left:6%;}
-.event-banner::after{width:90px;height:90px;bottom:-40px;right:8%;}
-.event-banner-icon{font-size:23px;position:relative;z-index:1;}
-.event-banner-title{font-size:23px;font-weight:800;position:relative;z-index:1;}
-.event-banner-sub{font-size:16px;opacity:0.92;position:relative;z-index:1;}
+.event-banner::before{width:220px;height:220px;top:-90px;left:6%;}
+.event-banner::after{width:170px;height:170px;bottom:-80px;right:8%;}
+.event-banner-icon{font-size:34px;position:relative;z-index:1;}
+.event-banner-title{font-size:34px;font-weight:800;position:relative;z-index:1;}
+.event-banner-sub{font-size:22px;opacity:0.92;position:relative;z-index:1;}
 @media (max-width:700px){
   .event-banner{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:4px;}
 }
