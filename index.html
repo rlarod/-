@@ -168,7 +168,7 @@
       </div>
     </div>
 
-    <!-- ===== 가운데: 주문창(포지션 진입) — 차트/실시간 시세 코드는 그대로 유지 ===== -->
+    <!-- ===== 오른쪽 열: 주문창(포지션 진입) 위, 실시간 채팅 아래로 세로 배치 ===== -->
     <div class="side-column">
       <div class="panel order-panel">
         <div class="acc-balance">
@@ -239,19 +239,19 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ===== 오른쪽: 실시간 채팅 — chat.js는 id로만 요소를 찾기 때문에
-         위치를 옮겨도 채팅 로직/Realtime 구독은 전혀 영향 없습니다. ===== -->
-    <div class="page-chat-col">
-      <div class="panel page-chat-panel" id="chat-panel">
-        <div class="field-label"><span>💬 실시간 채팅</span></div>
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
-          <button id="chat-send-btn" class="chat-send-btn">전송</button>
+      <!-- ===== 채팅 — 주문창/포지션 바로 아래로 이동. chat.js는 id로만 요소를 찾기
+           때문에 위치를 옮겨도 채팅 로직/Realtime 구독은 전혀 영향 없습니다. ===== -->
+      <div class="page-chat-col">
+        <div class="panel page-chat-panel" id="chat-panel">
+          <div class="field-label"><span>💬 실시간 채팅</span></div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button id="chat-send-btn" class="chat-send-btn">전송</button>
+          </div>
+          <div class="chat-err" id="chat-err"></div>
         </div>
-        <div class="chat-err" id="chat-err"></div>
       </div>
     </div>
 
