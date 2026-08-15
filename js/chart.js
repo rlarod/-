@@ -45,10 +45,10 @@ App.Chart = (function () {
     down: "#F6465D", // 하락 = 빨강
     volUp: "rgba(14,203,129,0.5)",
     volDown: "rgba(246,70,93,0.5)",
-    grid: "rgba(255,255,255,0.05)",
-    text: "#8791A8",
+    grid: "rgba(0,0,0,0.06)", // 라이트 테마 배경 기준 — 흰 배경 위 흰 그리드선이면 안 보여서 어두운 색으로
+    text: "#5B6472", // 라이트 테마 축 라벨 색(어두운 배경 기준 회색은 흰 배경에서 너무 흐릿함)
     current: "#FF5252", // 요청: 현재가 선은 빨간색 하나만
-    entryLine: "#E3B341", // 진입가 라인(골드) — 현재가 라인(빨강)과 구분되도록
+    entryLine: "#1D5FD6", // 진입가 라인 — 사이트 전체 강조색(이제 파랑)과 통일
     tpLine: "#34D399", // TP(익절) 라인 — 초록
     slLine: "#FB923C", // SL(손절) 라인 — 주황
   };
@@ -195,11 +195,11 @@ App.Chart = (function () {
         horzLines: { color: COLORS.grid },
       },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: "rgba(0,0,0,0.10)",
         visible: true,
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: "rgba(0,0,0,0.10)",
         timeVisible: true,
         secondsVisible: false,
         visible: true,
