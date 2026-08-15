@@ -1245,5 +1245,17 @@ App.MarketWar = (function () {
   // 있을 수 있습니다(display:none인 동안엔 getBoundingClientRect()가
   // 0x0을 반환해서 캔버스가 찌그러진 채로 시작함) — 탭을 눌러서 실제로
   // 보이게 된 다음 이 resize를 다시 호출하면 정상 크기로 잡힙니다.
-  return { init, resize };
+  //
+  // getBuySellRatio(): 주문창의 매수/매도 비율 바가 이 값을 그대로
+  // 재사용합니다(별도 계산 안 만듦) — buyIntensity/sellIntensity 자체는
+  // 이미 위에서 실시간 체결마다 갱신되고 있는 내부 상태이고, 여기선
+  // 읽기 전용으로만 꺼내줍니다. MARKET WAR 페이지를 안 보고 있어도
+  // 이 값들은 계속 갱신됩니다(모듈이 항상 백그라운드에서 살아있음).
+  function getBuySellRatio() {
+    const total = buyIntensity + sellIntensity;
+    const buyPct = total > 0 ? (buyIntensity / total) * 100 : 50;
+    return { buyPct: Math.round(buyPct), sellPct: Math.round(100 - buyPct) };
+  }
+
+  return { init, resize, getBuySellRatio };
 })();

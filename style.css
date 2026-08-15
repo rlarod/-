@@ -813,4 +813,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .ob-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
 #orderbook-tabs-content .orderbook-panel{margin-top:0;}
 
+/* 주문창 매수/매도 비율 바 — MARKET WAR와 같은 값을 재사용, 색은 초록(매수)/빨강(매도) */
+.order-pressure-bar{margin-bottom:12px;}
+.order-pressure-track{
+  display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--surface3);
+}
+.order-pressure-buy{background:var(--green);transition:width .3s;}
+.order-pressure-sell{background:var(--red);transition:width .3s;}
+.order-pressure-labels{
+  display:flex;justify-content:space-between;font-size:10.5px;font-family:var(--mono);
+  margin-top:4px;
+}
+.order-pressure-labels span:first-child{color:var(--green);}
+.order-pressure-labels span:last-child{color:var(--red);}
+
 /* cache-bust: 1786786110 */
