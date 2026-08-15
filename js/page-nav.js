@@ -66,6 +66,11 @@ App.PageNav = (function () {
     if (dom.battleBtn) dom.battleBtn.addEventListener("click", () => showPage("battle"));
     if (dom.boardBtn) dom.boardBtn.addEventListener("click", () => showPage("board"));
     if (dom.mypageBtn) dom.mypageBtn.addEventListener("click", () => showPage("mypage"));
+
+    // 준비중 메뉴 — 페이지 전환 없이 안내만(요구사항: 실제 기능 없는 메뉴는 UI만 만들고 "준비중" 처리)
+    document.querySelectorAll(".nav-coming-soon").forEach((btn) => {
+      btn.addEventListener("click", () => alert("준비 중인 메뉴입니다."));
+    });
   }
 
   return { init };
