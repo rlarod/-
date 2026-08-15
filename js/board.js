@@ -469,5 +469,5 @@ App.Board = (function () {
     loadList(true);
   }
 
-  return { init, getPopularPosts, getLatestPosts, getPost, createPost, updatePost, deletePost, votePost };
+  return { init, getPopularPosts, getLatestPosts, getPost, createPost, updatePost, deletePost, votePost, openDetail };
 })();

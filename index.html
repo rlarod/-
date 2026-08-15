@@ -88,9 +88,19 @@
 </div>
 
 <!-- ===== 공지/이벤트 배너 — 순수 안내용, 여러 메시지를 자동으로 돌려 보여줌 ===== -->
-<div class="notice-banner" id="notice-banner">
-  <span class="notice-banner-icon">📢</span>
-  <span class="notice-banner-text" id="notice-banner-text">공지사항을 불러오는 중...</span>
+<div class="notice-board" id="notice-board">
+  <div class="notice-board-col">
+    <div class="notice-board-title">📢 공지사항</div>
+    <ul class="notice-board-list" id="notice-list-notice"></ul>
+  </div>
+  <div class="notice-board-col">
+    <div class="notice-board-title">🆕 최신게시물</div>
+    <ul class="notice-board-list" id="notice-list-latest"></ul>
+  </div>
+  <div class="notice-board-col">
+    <div class="notice-board-title">🔥 인기글</div>
+    <ul class="notice-board-list" id="notice-list-popular"></ul>
+  </div>
 </div>
 
 <div class="app">
@@ -489,7 +499,7 @@
 <script src="js/market-data/binance-adapter.js"></script>
 <script src="js/market-data/mock-adapter.js"></script>
 <script src="js/market-data.js"></script>
-<script src="js/notice-banner.js"></script>
+<script src="js/notice-board.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
