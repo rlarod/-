@@ -209,6 +209,15 @@ body{
   .position-table th{font-size:10px;padding-right:14px;}
   .position-table td{font-size:13px;padding-right:14px;}
   .position-grid .pnl-row b{font-size:15px;}
+  /* 모바일 컬럼 우선순위 — 심볼/수량/진입가/현재가/손익(ROE%)만 먼저 보이고
+     나머지(청산가/증거금/TP/SL/진입수수료/수익률)는 "더보기"로 펼쳐야 보임 */
+  .position-table .mobile-hide{display:none;}
+  .position-table.expanded .mobile-hide{display:table-cell;}
+  .position-expand-btn{
+    display:block;width:100%;margin-top:8px;padding:8px 0;background:none;
+    border:1px dashed var(--border);border-radius:8px;color:var(--text-faint);
+    font-family:var(--sans);font-size:12px;cursor:pointer;
+  }
   .mypage-grid{grid-template-columns:1fr 1fr;}
   .mypage-nickname-value{font-size:17px;}
   .leaderboard-rank-badge{font-size:12px;}
@@ -329,6 +338,7 @@ input[type=range]::-webkit-slider-thumb{
 /* =========================================================================
  * 이번 단계(포지션 종료 / 강제청산 / 거래내역)에서 추가된 스타일.
  * ========================================================================= */
+.position-expand-btn{display:none;} /* 기본(넓은 화면)은 숨김 — 700px 이하에서만 보임(아래 미디어쿼리) */
 .close-btn{
   width:100%;margin-top:10px;padding:10px 0;border-radius:8px;border:1px solid var(--border);
   background:var(--surface3);color:var(--text);font-family:var(--sans);font-weight:700;font-size:13px;

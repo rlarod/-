@@ -193,10 +193,10 @@
           <div id="position-card" class="position-card" style="display:none;">
             <span class="badge long" id="pos-side-badge" style="display:none;">LONG</span>
             <div class="table-scroll">
-              <table class="position-table">
+              <table class="position-table" id="position-table">
                 <thead><tr id="position-thead-row">
                   <th>심볼</th><th>수량</th><th>진입가격</th><th>현재가격</th>
-                  <th>청산가</th><th>증거금</th><th>손익(ROE%)</th><th>수익률</th>
+                  <th class="mobile-hide">청산가</th><th class="mobile-hide">증거금</th><th>손익(ROE%)</th><th class="mobile-hide">수익률</th>
                 </tr></thead>
                 <tbody><tr id="position-tbody-row">
                   <td class="position-symbol-cell">
@@ -206,16 +206,17 @@
                   <td id="pos-qty">-</td>
                   <td id="pos-entry">-</td>
                   <td id="pos-current">-</td>
-                  <td id="pos-liq">-</td>
-                  <td id="pos-margin">-</td>
+                  <td id="pos-liq" class="mobile-hide">-</td>
+                  <td id="pos-margin" class="mobile-hide">-</td>
                   <td>
                     <span id="pos-pnl">-</span>
                     <span class="position-roe-inline">(<span id="pos-pnl-pct">-</span>)</span>
                   </td>
-                  <td id="pos-return-rate">-</td>
+                  <td id="pos-return-rate" class="mobile-hide">-</td>
                 </tr></tbody>
               </table>
             </div>
+            <button class="position-expand-btn" id="position-expand-btn">더보기 ▾</button>
             <button class="close-btn" id="btn-close-position">포지션 종료</button>
           </div>
         </div>

@@ -142,17 +142,21 @@ App.UI = (function () {
 
       const tpTh = document.createElement("th");
       tpTh.textContent = "TP";
+      tpTh.className = "mobile-hide";
       const slTh = document.createElement("th");
       slTh.textContent = "SL";
+      slTh.className = "mobile-hide";
       liqTh.parentNode.insertBefore(tpTh, liqTh.nextSibling);
       tpTh.parentNode.insertBefore(slTh, tpTh.nextSibling);
 
       const tpTd = document.createElement("td");
       tpTd.id = "pos-tp";
       tpTd.textContent = "-";
+      tpTd.className = "mobile-hide";
       const slTd = document.createElement("td");
       slTd.id = "pos-sl";
       slTd.textContent = "-";
+      slTd.className = "mobile-hide";
       posLiqTd.parentNode.insertBefore(tpTd, posLiqTd.nextSibling);
       tpTd.parentNode.insertBefore(slTd, tpTd.nextSibling);
     }
@@ -165,11 +169,13 @@ App.UI = (function () {
 
       const feeTh = document.createElement("th");
       feeTh.textContent = "진입수수료";
+      feeTh.className = "mobile-hide";
       marginTh.parentNode.insertBefore(feeTh, marginTh.nextSibling);
 
       const feeTd = document.createElement("td");
       feeTd.id = "pos-entry-fee";
       feeTd.textContent = "-";
+      feeTd.className = "mobile-hide";
       posMarginTd.parentNode.insertBefore(feeTd, posMarginTd.nextSibling);
     }
 
@@ -243,9 +249,9 @@ App.UI = (function () {
     tabs.className = "tabs";
     tabs.id = "info-tabs";
     tabs.innerHTML =
-      '<button class="tab-btn active" data-tab="position">포지션</button>' +
-      '<button class="tab-btn" data-tab="pending">미체결</button>' +
-      '<button class="tab-btn" data-tab="orders">주문내역</button>' +
+      '<button class="tab-btn active" data-tab="position" id="tab-btn-position">포지션(0)</button>' +
+      '<button class="tab-btn" data-tab="pending" id="tab-btn-pending">미체결(0)</button>' +
+      '<button class="tab-btn" data-tab="orders" id="tab-btn-orders">주문내역(0)</button>' +
       '<button class="tab-btn" data-tab="history">거래내역</button>' +
       '<button class="tab-btn" data-tab="assets">자산</button>';
 
@@ -330,6 +336,9 @@ App.UI = (function () {
       btnShort: el("btn-short"),
       orderErr: el("order-err"),
       positionEmpty: el("position-empty"),
+      tabBtnPosition: el("tab-btn-position"),
+      tabBtnPending: el("tab-btn-pending"),
+      tabBtnOrders: el("tab-btn-orders"),
       positionCard: el("position-card"),
       posSideBadge: el("pos-side-badge"),
       posEntry: el("pos-entry"),
@@ -391,6 +400,12 @@ App.UI = (function () {
   function render(snapshot) {
     lastSnapshot = snapshot;
     dom.balanceValue.textContent = App.Utils.formatCurrency(snapshot.equity);
+
+    // 탭 건수 표시(바이낸스 "Positions(1)/Open Orders(0)/Order History(0)" 참고) —
+    // 전부 이미 있는 snapshot 값 개수만 세는 것이라 새 계산이 전혀 아닙니다.
+    if (dom.tabBtnPosition) dom.tabBtnPosition.textContent = "포지션(" + (snapshot.position ? 1 : 0) + ")";
+    if (dom.tabBtnPending) dom.tabBtnPending.textContent = "미체결(" + (snapshot.pendingOrder ? 1 : 0) + ")";
+    if (dom.tabBtnOrders) dom.tabBtnOrders.textContent = "주문내역(" + ((snapshot.orderHistory && snapshot.orderHistory.length) || 0) + ")";
 
     const busy = !!snapshot.position || !!snapshot.pendingOrder; // 포지션 또는 미체결 주문 중 하나라도 있으면 신규 진입 불가
     dom.btnLong.disabled = busy;
@@ -603,6 +618,17 @@ App.UI = (function () {
 
   /* ---------------- 이벤트 바인딩 ---------------- */
   function bindOrderPanel() {
+    // 모바일에서 숨겨진 저우선순위 컬럼(청산가/증거금/TP/SL/진입수수료/수익률)을
+    // "더보기"로 펼쳐볼 수 있게. 순수 표시 토글이라 데이터/계산과 무관합니다.
+    const expandBtn = el("position-expand-btn");
+    const posTable = el("position-table");
+    if (expandBtn && posTable) {
+      expandBtn.addEventListener("click", () => {
+        const expanded = posTable.classList.toggle("expanded");
+        expandBtn.textContent = expanded ? "접기 ▴" : "더보기 ▾";
+      });
+    }
+
     document.querySelectorAll(".interval-btn[data-order-type]").forEach((chip) => {
       chip.addEventListener("click", () => {
         orderType = chip.dataset.orderType;
