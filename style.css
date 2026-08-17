@@ -328,12 +328,14 @@ body{
      차트가 여전히 주 영역이되(56%) 우측 두 칼럼에 충분한 폭을 줍니다. */
   display:grid;grid-template-columns:56fr 21fr 23fr;gap:4px;
   margin-top:5px;
-  /* 한 화면에 억지로 맞추지 않습니다 — 차트가 충분히 크도록 최소 높이를
-     넉넉히 잡고, 모자라면 페이지가 스크롤되게 둡니다(가독성 우선).
-     height를 고정하면 주문창(내용 높이 약 1180px)이 행 밖으로 삐져나와
-     아래 포지션/거래내역 영역을 덮습니다. min-height만 주고 실제 높이는
-     가장 긴 칼럼에 맞춰 늘어나게 합니다. */
-  min-height:max(760px, calc(100vh - 380px));
+  /* 행 높이는 반드시 "확정값"이어야 합니다.
+     js/chart.js가 autoSize:true(ResizeObserver로 컨테이너에 맞춰 리사이즈)라서,
+     행 높이를 내용 기준(min-height만)으로 두면
+       차트가 커짐 -> 행이 커짐 -> 차트가 또 커짐
+     의 되먹임이 생겨 차트가 무한히 늘어납니다. 실제로 그 버그가 있었습니다.
+     주문창이 이 높이보다 길 때는 .side-column 안에서만 스크롤되게 해
+     아래 포지션/거래내역 영역을 덮지 않습니다. */
+  height:max(760px, calc(100vh - 380px));
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
