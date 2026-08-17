@@ -1495,12 +1495,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    화면 상단에 붙어서 스크롤을 따라 내려옵니다(position:sticky).
    align-self:start가 없으면 grid가 칸 높이를 꽉 채워 sticky가 동작하지 않습니다.
    높이는 화면 높이에 맞추고, 스크롤은 채팅 메시지 영역 안에서만 생깁니다. */
-.side-chat-panel,.side-ad-panel{
-  position:sticky;top:6px;align-self:start;
-}
-.side-chat-panel{height:calc(100vh - 12px);max-height:calc(100vh - 12px);}
-.side-ad-panel{max-height:calc(100vh - 12px);overflow-y:auto;scrollbar-width:none;}
-.side-ad-panel::-webkit-scrollbar{display:none;}
+/* 상단 고정 방식 — position:sticky가 아니라 fixed를 씁니다.
+   sticky는 "부모 높이 - 자기 높이"만큼만 움직일 수 있는데, 거래 페이지 전체
+   높이가 화면 높이와 별 차이가 없어서 움직일 여지가 80px 남짓밖에 없었습니다
+   (실측: 스크롤 710px 중 569px을 내려야 겨우 상단에 닿음 = 사실상 안 붙음).
+   좌우 패널은 본문 흐름 밖 여백에 있으므로 fixed로 둬도 본문 스크롤과
+   충돌하지 않습니다. 자리(grid 트랙)는 그대로 남겨서 폭이 흔들리지 않습니다. */
+.side-ad-panel{overflow:visible;}
 .side-chat-panel > .page-chat-col{height:100%;min-height:0;display:flex;flex:1;}
 .side-chat-panel .page-chat-panel{flex:1;min-height:0;display:flex;flex-direction:column;}
 .side-chat-panel .chat-messages{flex:1;min-height:0;overflow-y:auto;}
@@ -1513,25 +1514,35 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    밑돌아 호가창 라벨이 넘칩니다(1660px에서 실제로 확인). */
 @media (min-width:1720px){
   .exchange-shell{grid-template-columns:0 minmax(0,1fr) 340px;gap:6px;}
-  .side-chat-panel{display:flex;}
+  .side-chat-panel{display:block;}
+  /* 채팅 본체만 화면에 고정. 바깥 aside는 grid 트랙 자리를 지키는 역할만 합니다. */
+  .side-chat-panel > .page-chat-col{
+    position:fixed;top:6px;bottom:6px;right:8px;width:340px;
+    height:auto;  /* 위 규칙의 height:100%(=화면 높이)를 풀어야 top/bottom이 적용됩니다 */
+    display:flex;flex-direction:column;z-index:20;
+  }
 }
 /* 2000px 이상: 가운데 거래 화면을 --content-max로 고정합니다. 다른 블록
    (시세바/거래내역 등)도 같은 폭이라 세로줄이 어긋나지 않습니다. */
 @media (min-width:2000px){
-  .exchange-shell{
-    grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) minmax(340px,1fr);
-    gap:8px;
-  }
+  /* 가운데 거래 화면은 --content-max로 제한하고(내용은 가운데 정렬),
+     남는 폭은 좌측 광고 자리로 갑니다. */
+  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;}
+  .exchange-main{max-width:var(--content-max);margin:0 auto;width:100%;}
+  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) 340px;}
 }
 /* 2600px 이상: 좌측 광고까지. 가운데 거래 화면을 --content-max로 고정하고
    광고/채팅은 그 바깥에 남는 공간만 나눠 갖습니다 — 광고 때문에 거래 화면이
    좁아지지 않게 하기 위한 조건입니다. */
 @media (min-width:2600px){
-  .exchange-shell{
-    grid-template-columns:minmax(200px,1fr) minmax(0,var(--content-max)) minmax(340px,1fr);
-    gap:8px;
+  .exchange-shell{grid-template-columns:320px minmax(0,1fr) 340px;gap:8px;}
+  .side-ad-panel{display:block;}
+  /* 광고도 같은 이유로 화면에 고정 — 스크롤해도 계속 보입니다. */
+  .side-ad-panel > .side-ad-slot{
+    position:fixed;left:8px;width:320px;
   }
-  .side-ad-panel{display:flex;}
+  .side-ad-panel > #left-ad-slot-1{top:6px;}
+  .side-ad-panel > #left-ad-slot-2{top:264px;}
 }
 
 /* cache-bust: 1786968300 */

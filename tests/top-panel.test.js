@@ -573,6 +573,7 @@ section("[5] 기존 기능 보존");
 
     // 소재가 없으면 빈 띠/빈 칸이 남지 않아야 함
     ok(/\.side-ad-slot:empty\{display:none;\}/.test(css), "빈 광고 슬롯은 숨겨야 함");
+    ok(/\.exchange-main\{max-width:var\(--content-max\)/.test(css.replace(/\s+/g, " ")) || /\.exchange-main\{[^}]*max-width:var\(--content-max\)/.test(css), "거래 화면 폭 상한 필요");
     ok(/\.top-ad-banner:has\(\.top-ad-slot:empty\)\{display:none;\}/.test(css), "소재 없으면 상단 배너 자체를 숨겨야 함");
 
     // 칸 배치가 명시적이어야 함(숨겨진 패널 때문에 거래 화면이 0px 칸으로 밀리는 버그 방지)
@@ -582,25 +583,29 @@ section("[5] 기존 기능 보존");
 
     // 광고는 채팅보다 늦게(더 넓은 화면에서) 켜져야 함 — 우선순위 거래 > 채팅 > 광고
     const chatBp = parseInt(css.match(/@media \(min-width:(\d+)px\)\{\s*\.exchange-shell\{grid-template-columns:0 minmax/)[1], 10);
-    const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:flex;\}/g);
+    const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:(?:flex|block);\}/g);
     ok(adBlocks && adBlocks.length, "광고 표시 미디어쿼리를 찾을 수 없음");
     const adBp = parseInt(adBlocks[adBlocks.length - 1].match(/min-width:(\d+)px/)[1], 10);
     ok(adBp > chatBp, "광고(" + adBp + "px)가 채팅(" + chatBp + "px)보다 넓은 화면에서 켜져야 함");
   });
 
-  t("채팅/광고가 상단에 붙어 스크롤을 따라옴(sticky)", () => {
+  t("채팅/광고가 화면 상단에 고정되어 스크롤해도 따라옴", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const rule = css.match(/\.side-chat-panel,\.side-ad-panel\{[^}]*\}/);
-    ok(rule, "채팅/광고 sticky 규칙 없음");
-    ok(/position:sticky/.test(rule[0]), "position:sticky 필요");
-    ok(/top:\d+px/.test(rule[0]), "붙을 위치(top) 지정 필요");
-    // align-self:start가 없으면 grid가 칸 높이를 꽉 채워 sticky가 동작하지 않습니다
-    ok(/align-self:start/.test(rule[0]), "align-self:start가 없으면 sticky가 동작하지 않음");
-    // sticky가 움직일 여지를 가지려면 셸이 거래 영역 전체를 감싸야 합니다
+    // sticky는 "부모 높이 - 자기 높이"만큼만 움직이는데 거래 페이지가 화면 높이와
+    // 별 차이가 없어 사실상 붙지 않았습니다. 그래서 fixed로 고정합니다.
+    const chat = css.match(/\.side-chat-panel > \.page-chat-col\{[^}]*position:fixed[^}]*\}/);
+    ok(chat, "채팅 본체가 fixed로 고정되어야 함");
+    ok(/top:\d+px/.test(chat[0]) && /bottom:\d+px/.test(chat[0]), "top/bottom으로 화면 높이에 맞춰야 함");
+    ok(/height:auto/.test(chat[0]), "height:100%가 남아 있으면 top/bottom이 무시됨");
+    ok(/width:\d+px/.test(chat[0]), "fixed는 폭을 직접 지정해야 함");
+
+    const ad = css.match(/\.side-ad-panel > \.side-ad-slot\{[^}]*position:fixed[^}]*\}/);
+    ok(ad, "좌측 광고도 고정되어야 함");
+
+    // 고정하더라도 grid 트랙(자리)은 남겨서 거래 화면 폭이 흔들리지 않아야 함
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
-    const shell = html.slice(html.indexOf('class="exchange-shell"'), html.indexOf('id="right-chat-panel"'));
-    ok(/class="main-grid"/.test(shell), "셸 안에 거래 그리드 필요");
-    ok(/history-panel/.test(shell), "셸이 거래내역까지 감싸야 sticky가 움직일 여지가 생김");
+    ok(/class="side-chat-panel"/.test(html), "채팅 자리(aside)가 남아 있어야 함");
+    ok(/grid-template-columns:0 minmax\(0,1fr\) 340px/.test(css), "채팅 폭만큼 트랙을 잡아둬야 함");
   });
 
   t("광고 슬롯에 실제 소재가 들어 있고 클릭하면 기존 메뉴로 이동", () => {
