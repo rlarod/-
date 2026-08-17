@@ -1937,3 +1937,51 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .page-right .up-label{font-size:clamp(15px, 0.6vw, 21px);}
   .page-right .up-nav button{font-size:clamp(13.5px, 0.55vw, 19px);}
 }
+
+/* =========================================================================
+ * 실시간 채팅 — 레퍼런스 스타일
+ * =========================================================================
+ * 실측: 헤더 파란 띠 rgb(21,107,175), 높이 = 패널 폭의 14.1%,
+ *       메시지 줄 간격 = 폭의 7.8%, 촘촘한 목록형.
+ * 거래 이벤트(청산/익절/손절) 메시지는 js/trade-events-chat.js가 이미
+ * 자동으로 올리고 있어, 여기서는 손익 부호에 따라 색만 구분합니다.
+ * ========================================================================= */
+.page-right .page-chat-panel{padding:0;overflow:hidden;}
+
+/* 파란 헤더 띠 */
+.page-right .page-chat-panel > .field-label{
+  /* 레퍼런스 헤더 높이 = 패널 폭의 14.1%. 채팅 패널 폭 656px 기준 약 92px. */
+  margin:0;padding:clamp(16px, 1.05vw, 32px) clamp(10px, 0.6vw, 18px);
+  background:#1769B3;color:#fff;border-radius:0;
+  font-size:clamp(15px, 0.62vw, 22px);font-weight:700;
+}
+.page-right .page-chat-panel > .field-label span{color:#fff;}
+
+/* 메시지 목록 — 촘촘하게 */
+.page-right .chat-messages{
+  padding:clamp(8px, 0.4vw, 14px) clamp(10px, 0.55vw, 18px);
+  display:flex;flex-direction:column;gap:clamp(7px, 0.35vw, 12px);
+}
+.page-right .chat-msg{font-size:clamp(15px, 0.62vw, 21px);line-height:1.45;}
+.page-right .chat-msg-nick{font-size:clamp(15px, 0.62vw, 21px);}
+.page-right .chat-msg-time{font-size:clamp(13px, 0.5vw, 18px);}
+
+/* 거래 이벤트 — 손익 부호에 따라 색 구분(레퍼런스도 금액이 색으로 강조됨) */
+.page-right .chat-msg-event{
+  background:none;border:none;border-left:3px solid var(--border);
+  padding:2px 0 2px 8px;border-radius:0;
+}
+.page-right .chat-msg-event .chat-msg-text{
+  color:var(--text-dim);font-weight:500;font-size:clamp(14.5px, 0.6vw, 20px);
+}
+.page-right .chat-msg-event.chat-event-profit{border-left-color:var(--green);}
+.page-right .chat-msg-event.chat-event-loss{border-left-color:var(--red);}
+.page-right .chat-msg-event.chat-event-liq{border-left-color:var(--red);}
+.page-right .chat-event-amount-up{color:var(--green);font-weight:700;}
+.page-right .chat-event-amount-down{color:var(--red);font-weight:700;}
+
+/* 입력 줄 */
+.page-right .chat-input-row{
+  padding:clamp(8px, 0.4vw, 14px) clamp(10px, 0.55vw, 18px);
+  border-top:1px solid var(--border-soft);gap:6px;
+}

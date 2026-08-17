@@ -51,7 +51,7 @@ function boot(opts) {
     };})();
   `);
 
-  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js"].forEach((f) => {
+  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js"].forEach((f) => {
     win.eval(fs.readFileSync(path.join(REPO, f), "utf8"));
   });
 
@@ -525,6 +525,39 @@ section("[5] 기존 기능 보존");
     const app = css.match(/\n\.app\{[\s\S]*?\}/)[0];
     const pad = app.match(/padding:(\d+)px (\d+)px/);
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
+  });
+
+  t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {
+    // js/chat.js(수정 금지)는 그대로 두고, 그려진 뒤 DOM만 꾸미는 방식
+    const js = fs.readFileSync(path.join(REPO, "js/chat-event-style.js"), "utf8");
+    ok(/MutationObserver/.test(js), "chat.js를 고치지 않고 DOM 관찰로 처리해야 함");
+    ok(/decorateForTest/.test(js), "테스트용 진입점 필요");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const mk = (text) => {
+      const row = doc.createElement("div");
+      row.className = "chat-msg chat-msg-event";
+      const t = doc.createElement("div");
+      t.className = "chat-msg-text";
+      t.textContent = text;
+      row.appendChild(t);
+      App.ChatEventStyle.decorateForTest(row);
+      return row;
+    };
+    const win = mk("홍길동님이 BTC LONG 포지션을 +$1,204.55 익절했습니다");
+    ok(win.classList.contains("chat-event-profit"), "익절은 초록 계열로 구분");
+    ok(win.querySelector(".chat-event-amount-up"), "이익 금액 강조 필요");
+
+    const lose = mk("홍길동님이 BTC SHORT 포지션을 -$832.10 손절했습니다");
+    ok(lose.classList.contains("chat-event-loss"), "손절은 빨강 계열로 구분");
+    ok(lose.querySelector(".chat-event-amount-down"), "손실 금액 강조 필요");
+
+    const liq = mk("홍길동님의 BTC LONG 포지션이 강제청산되었습니다 (-$5,000.00)");
+    ok(liq.classList.contains("chat-event-liq"), "강제청산 구분 필요");
+
+    // 문구·데이터는 바꾸지 않아야 함
+    eq(win.querySelector(".chat-msg-text").textContent,
+      "홍길동님이 BTC LONG 포지션을 +$1,204.55 익절했습니다");
   });
 
   t("내 정보 박스 내부: 남는 공간이 한 곳에 몰리지 않고 값 행이 나눠 가짐", () => {
