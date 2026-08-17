@@ -110,7 +110,7 @@
      js/notice-board.js와 js/board.js는 한 줄도 수정하지 않았습니다.
      세 칼럼은 폭이 정확히 같고, 좁은 화면에서는 세로로 쌓입니다. -->
 <div class="notice-board-wrap">
-  <!-- [왼쪽] 공지사항 -->
+  <!-- [왼쪽 30%] 공지사항 -->
   <div class="notice-box">
     <div class="notice-board-tabs">
       <button class="notice-tab-btn active" data-tab="notice">📢 공지사항</button>
@@ -118,26 +118,29 @@
     <ul class="notice-board-list" id="notice-list-notice"></ul>
   </div>
 
-  <!-- [가운데 좌] 최신게시물 -->
+  <!-- [가운데 43%] 게시판 — 하나의 박스 안에서 탭으로 전환.
+       기존 목록 id(notice-list-latest / notice-list-popular)를 그대로 써서
+       js/board.js는 수정하지 않습니다. 자유/분석 게시판은 posts 테이블에
+       분류(카테고리) 컬럼 자체가 없어 실제 데이터가 없으므로, 가짜 목록을
+       만들지 않고 준비중 안내만 표시합니다(탭·자리는 그대로 보존). -->
   <div class="notice-box">
     <div class="notice-board-tabs">
       <button class="notice-tab-btn active" data-tab="latest">📰 최신게시물</button>
-      <!-- 아직 실제 게시판 분류가 없어서 준비중으로 명시(기능/코드는 그대로 보존) -->
-      <button class="notice-tab-btn nav-coming-soon">자유게시판 <span class="nav-soon-badge">준비중</span></button>
-      <button class="notice-tab-btn nav-coming-soon">분석게시판 <span class="nav-soon-badge">준비중</span></button>
+      <button class="notice-tab-btn" data-tab="popular">🔥 인기글</button>
+      <button class="notice-tab-btn" data-tab="free">자유게시판 <span class="nav-soon-badge">준비중</span></button>
+      <button class="notice-tab-btn" data-tab="analysis">분석게시판 <span class="nav-soon-badge">준비중</span></button>
     </div>
     <ul class="notice-board-list" id="notice-list-latest"></ul>
+    <ul class="notice-board-list" id="notice-list-popular" style="display:none;"></ul>
+    <ul class="notice-board-list" id="notice-list-free" style="display:none;">
+      <li class="notice-board-empty">자유게시판은 준비중입니다. 지금은 커뮤니티 게시판 하나로 운영됩니다.</li>
+    </ul>
+    <ul class="notice-board-list" id="notice-list-analysis" style="display:none;">
+      <li class="notice-board-empty">분석게시판은 준비중입니다. 지금은 커뮤니티 게시판 하나로 운영됩니다.</li>
+    </ul>
   </div>
 
-  <!-- [가운데 우] 인기글 -->
-  <div class="notice-box">
-    <div class="notice-board-tabs">
-      <button class="notice-tab-btn active" data-tab="popular">🔥 인기글</button>
-    </div>
-    <ul class="notice-board-list" id="notice-list-popular"></ul>
-  </div>
-
-  <!-- [오른쪽] 로그인 사용자 정보 — js/user-panel.js가 채웁니다 -->
+  <!-- [오른쪽 27%] 내 정보 — js/user-panel.js가 채웁니다 -->
   <div class="notice-box user-panel-box">
     <div class="notice-board-tabs">
       <button class="notice-tab-btn active" type="button">🪖 내 정보</button>

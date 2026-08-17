@@ -43,15 +43,26 @@ App.NoticeBoard = (function () {
     }).join("");
   }
 
-  function renderPostList(container, posts, emptyText) {
+  // 개미톡처럼 인기글은 "인기글 N위 · 제목 · (추천수)" 형태로 순위를 매겨 표시하고,
+  // 최신게시물은 제목 + 추천수만 표시합니다. 정렬/조회는 전부 board.js의 기존
+  // 함수 결과를 그대로 쓰며(추천수 내림차순), 여기서 다시 계산하지 않습니다.
+  function renderPostList(container, posts, emptyText, opts) {
     if (!container) return;
+    const o = opts || {};
     if (!posts || posts.length === 0) {
       container.innerHTML = '<li class="notice-board-empty">' + emptyText + "</li>";
       return;
     }
     container.innerHTML = posts
       .slice(0, 5)
-      .map((p) => '<li class="notice-board-post" data-id="' + p.id + '">' + escapeHtml(p.title) + '<span class="notice-board-post-likes">👍' + p.like_count + "</span></li>")
+      .map((p, i) => {
+        const rank = o.ranked ? '<span class="notice-rank">인기글 ' + (i + 1) + "위</span>" : "";
+        return (
+          '<li class="notice-board-post" data-id="' + p.id + '">' +
+          '<span class="notice-line">' + rank + escapeHtml(p.title) + "</span>" +
+          '<span class="notice-board-post-likes">👍' + p.like_count + "</span></li>"
+        );
+      })
       .join("");
     container.querySelectorAll(".notice-board-post").forEach((li) => {
       li.addEventListener("click", () => {
@@ -70,16 +81,15 @@ App.NoticeBoard = (function () {
     try {
       const [latest, popular] = await Promise.all([App.Board.getLatestPosts(0), App.Board.getPopularPosts()]);
       renderPostList(dom.latest, latest, "아직 게시글이 없습니다.");
-      renderPostList(dom.popular, popular, "아직 인기글이 없습니다.");
+      renderPostList(dom.popular, popular, "아직 인기글이 없습니다.", { ranked: true });
     } catch (e) {
       console.warn("[notice-board.js] 게시판 목록 조회 실패:", e);
     }
   }
 
-  // 상단이 4분할(공지 / 최신게시물 / 인기글 / 내 정보)이 되면서 각 목록이
-  // 자기 칼럼을 하나씩 갖게 됐습니다. 즉 서로 숨겼다 보였다 할 일이 없습니다.
-  // 다만 나중에 다시 한 박스에 여러 탭을 넣더라도 동작하도록, "같은 박스 안에
-  // 있는 탭끼리만" 토글하게 구현해둡니다(다른 칼럼은 영향받지 않음).
+  // 가운데 박스가 4탭(최신게시물/인기글/자유게시판/분석게시판)이 되면서,
+  // "같은 박스 안의 탭끼리만" 서로 전환하도록 구현합니다. 왼쪽(공지)과
+  // 오른쪽(내 정보)은 탭이 하나뿐이라 영향을 받지 않습니다.
   function switchTab(tabName, btn) {
     const box = btn ? btn.closest(".notice-box") : null;
     if (!box) return;
@@ -111,5 +121,6 @@ App.NoticeBoard = (function () {
     bindTabs();
   }
 
-  return { init };
+  // 테스트에서 목록 렌더링만 따로 검증하기 위한 통로(내부 로직은 동일 함수 사용)
+  return { init, renderForTest: renderPostList };
 })();

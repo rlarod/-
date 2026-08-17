@@ -66,52 +66,80 @@ function boot(opts) {
 }
 
 /* ===================================================================== */
-section("[1] 상단 4분할 레이아웃");
+section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
 {
   const { doc } = boot();
   const boxes = doc.querySelectorAll(".notice-board-wrap > .notice-box");
 
-  t("상단이 정확히 4개 칼럼", () => eq(boxes.length, 4));
+  t("박스 3개(공지 / 게시판 / 내 정보)", () => eq(boxes.length, 3));
 
-  t("CSS가 30/30/20/20으로 선언됨", () => {
+  t("CSS 비율이 30 / 43 / 27", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.notice-board-wrap\{[\s\S]*?\}/);
     ok(m, ".notice-board-wrap 규칙 없음");
-    ok(/grid-template-columns:30fr 30fr 20fr 20fr/.test(m[0]), "4분할 선언 필요: " + m[0]);
+    ok(/grid-template-columns:30fr 43fr 27fr/.test(m[0]), "30/43/27 선언 필요: " + m[0]);
+    ok(!/grid-template-columns:repeat\(4/.test(m[0]), "단순 4등분이면 안 됨");
   });
 
-  t("① 공지사항", () => {
+  t("① 공지사항 — 기존 데이터 유지", () => {
     ok(/공지사항/.test(boxes[0].textContent));
-    ok(boxes[0].querySelector("#notice-list-notice"), "공지 목록 유지");
+    ok(boxes[0].querySelector("#notice-list-notice"));
+    // [공지]/[안내] 앞부분이 색상 구분용 태그로 렌더링되는지
+    const tags = boxes[0].querySelectorAll(".notice-tag");
+    ok(tags.length >= 4, "공지 태그 렌더링 필요");
+    ok(boxes[0].querySelector(".notice-tag-notice"), "[공지] 색상 구분");
+    ok(boxes[0].querySelector(".notice-tag-info"), "[안내] 색상 구분");
   });
 
-  t("② 최신게시물 (+ 준비중 게시판 탭 보존)", () => {
-    const txt = boxes[1].textContent;
-    ok(/최신게시물/.test(txt));
-    ok(/자유게시판/.test(txt) && /분석게시판/.test(txt), "기존 탭 보존 필요");
-    ok(boxes[1].querySelector("#notice-list-latest"));
+  t("② 게시판은 박스 하나 + 탭 4개", () => {
+    const tabs = boxes[1].querySelectorAll(".notice-tab-btn[data-tab]");
+    eq(tabs.length, 4);
+    eq(Array.prototype.map.call(tabs, (b) => b.dataset.tab).join(","), "latest,popular,free,analysis");
+    ["latest", "popular", "free", "analysis"].forEach((k) => {
+      ok(boxes[1].querySelector("#notice-list-" + k), k + " 내용 영역 필요");
+    });
   });
 
-  t("③ 인기글", () => {
-    ok(/인기글/.test(boxes[2].textContent));
-    ok(boxes[2].querySelector("#notice-list-popular"));
+  t("③ 내 정보", () => {
+    ok(boxes[2].classList.contains("user-panel-box"));
+    ok(boxes[2].querySelector("#user-panel-body"));
   });
 
-  t("④ 사용자 정보 패널", () => {
-    ok(boxes[3].classList.contains("user-panel-box"));
-    ok(boxes[3].querySelector("#user-panel-body"));
-  });
-
-  t("칼럼마다 목록이 따로 있어 서로 숨기지 않음", () => {
+  t("탭 전환 — 한 번에 하나만 보이고 공지/내 정보는 영향 없음", () => {
     const { doc: d } = boot();
-    eq(d.getElementById("notice-list-notice").style.display, "");
-    eq(d.getElementById("notice-list-latest").style.display, "");
-    eq(d.getElementById("notice-list-popular").style.display, "");
-    // 탭이 하나뿐인 칼럼의 탭을 눌러도 다른 칼럼이 사라지면 안 됨
-    d.querySelector('.notice-tab-btn[data-tab="popular"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
-    eq(d.getElementById("notice-list-notice").style.display, "");
-    eq(d.getElementById("notice-list-latest").style.display, "");
-    eq(d.getElementById("notice-list-popular").style.display, "");
+    const ids = ["latest", "popular", "free", "analysis"];
+    ids.forEach((target) => {
+      d.querySelector('.notice-tab-btn[data-tab="' + target + '"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
+      ids.forEach((k) => {
+        const shown = d.getElementById("notice-list-" + k).style.display !== "none";
+        eq(shown, k === target, k + " 표시 상태");
+      });
+      // 다른 칼럼은 절대 숨겨지면 안 됨
+      eq(d.getElementById("notice-list-notice").style.display, "");
+      eq(d.getElementById("user-panel-body").style.display, "");
+    });
+  });
+
+  t("자유/분석 게시판 — 분류 컬럼이 없어 가짜 목록 대신 준비중 안내", () => {
+    const { doc: d } = boot();
+    ["free", "analysis"].forEach((k) => {
+      const list = d.getElementById("notice-list-" + k);
+      ok(/준비중/.test(list.textContent), k + " 준비중 안내 필요");
+      eq(list.querySelectorAll(".notice-board-post").length, 0, k + " 가짜 게시글이 있으면 안 됨");
+    });
+    ["free", "analysis"].forEach((k) => {
+      ok(d.querySelector('.notice-tab-btn[data-tab="' + k + '"] .nav-soon-badge'), k + " 탭에 준비중 배지 필요");
+    });
+  });
+
+  t("디자인: 둥근 카드/큰 여백을 걷어낸 촘촘한 패널", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const box = css.match(/\n\.notice-box\{[\s\S]*?\}/)[0];
+    const radius = parseFloat(box.match(/border-radius:([\d.]+)px/)[1]);
+    ok(radius <= 3, "border-radius가 너무 큼: " + radius);
+    const li = css.match(/\.notice-board-list li\{[\s\S]*?\}/)[0];
+    const fsz = parseFloat(li.match(/font-size:([\d.]+)px/)[1]);
+    ok(fsz <= 15, "목록 글자가 너무 큼: " + fsz);
   });
 }
 
@@ -358,6 +386,26 @@ section("[4] 사용자 정보 패널");
       doc.querySelector('.up-nav button[data-nav="' + key + '"]').dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
       ok(clicked[key], key + " → 기존 버튼이 눌려야 함");
     });
+  });
+
+  t("인기글은 '인기글 N위' 순위 표기 + 추천수", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    // board.js의 실제 반환 형태(제목 + like_count)를 그대로 넣어 렌더링만 확인
+    const posts = [
+      { id: "a", title: "첫 번째 글", like_count: 42 },
+      { id: "b", title: "두 번째 글", like_count: 31 },
+      { id: "c", title: "세 번째 글", like_count: 12 },
+    ];
+    App.NoticeBoard.renderForTest(doc.getElementById("notice-list-popular"), posts, "비어있음", { ranked: true });
+    const items = doc.querySelectorAll("#notice-list-popular .notice-board-post");
+    eq(items.length, 3);
+    eq(items[0].querySelector(".notice-rank").textContent, "인기글 1위");
+    eq(items[1].querySelector(".notice-rank").textContent, "인기글 2위");
+    ok(/첫 번째 글/.test(items[0].textContent));
+    ok(/42/.test(items[0].textContent), "추천수 표시 필요");
+    // 최신게시물에는 순위 표기가 붙지 않아야 함
+    App.NoticeBoard.renderForTest(doc.getElementById("notice-list-latest"), posts, "비어있음");
+    eq(doc.querySelectorAll("#notice-list-latest .notice-rank").length, 0);
   });
 
   t("계급이 오르면 패널 표시도 바뀜", () => {
