@@ -1831,3 +1831,36 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .stats-bar::-webkit-scrollbar{display:none;}
 .stats-bar .stat-block{flex:0 0 auto;}
+
+/* =========================================================================
+ * 칸 단차 정리 — 패널 상하 경계를 서로 맞춥니다
+ * =========================================================================
+ * 실측으로 찾은 어긋남 3가지:
+ *   ① 내 정보 top 199 vs 공지 박스 top 205        (우측 칼럼에 위 여백이 없었음)
+ *   ② 호가창 박스 top 744 vs 차트 박스 top 687     (호가 탭이 박스 밖에 떠 있었음)
+ *   ③ 하단 차트 1837 / 최근체결 1827 / 주문창 1772 (칼럼을 끝까지 채우지 않았음)
+ * ========================================================================= */
+
+/* ① 우측 칼럼 위 여백을 공지 박스와 동일하게 */
+.page-right{padding-top:6px;}
+
+/* ② 호가창 탭을 박스 안으로 — 탭 줄에 박스 테두리를 주고 아래 패널과 이어 붙입니다.
+      이러면 호가창 칼럼의 박스 윗변이 차트 박스 윗변과 같은 높이에서 시작합니다. */
+.orderbook-tabs-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:2px;
+  overflow:hidden;margin-bottom:0;
+}
+.orderbook-tabs-wrap > .orderbook-tabs{margin-bottom:0;}
+#orderbook-tabs-content.ob-stacked > #orderbook-panel,
+#orderbook-tabs-content.ob-stacked > #recent-trades-panel{
+  border-left:none;border-right:none;border-radius:0;
+}
+#orderbook-tabs-content.ob-stacked > #orderbook-panel{border-top:none;}
+#orderbook-tabs-content.ob-stacked > #recent-trades-panel{border-bottom:none;}
+/* 마지막 1px — 최근체결 패널이 아래 테두리만큼 짧게 끝나던 것 보정 */
+#orderbook-tabs-content.ob-stacked{padding-bottom:0;}
+.orderbook-tabs-wrap > #orderbook-tabs-content{flex:1;min-height:0;}
+
+/* ③ 세 칼럼의 아랫변을 칼럼 끝까지 맞춤 */
+.main-grid .side-column > .order-panel{flex:1;min-height:0;}
+#orderbook-tabs-content.ob-stacked{gap:0;}

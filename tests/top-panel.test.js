@@ -527,6 +527,18 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("칸 단차: 패널 상하좌우 경계가 서로 맞음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // ① 우측 칼럼 위 여백 = 공지 박스 위 여백
+    ok(/\.page-right\{padding-top:6px;\}/.test(css), "우측 칼럼 위 여백이 공지 박스와 달라 단차가 생김");
+    // ② 호가창 탭이 박스 밖에 있으면 윗변이 차트 박스보다 아래에서 시작함
+    const wrap = css.match(/\n\.orderbook-tabs-wrap\{[\s\S]*?\}/g);
+    ok(wrap && wrap.some((w) => /border:1px solid var\(--border\)/.test(w)),
+      "호가창 탭 줄이 박스 안으로 들어와야 윗변이 맞음");
+    // ③ 주문창이 칼럼 끝까지 채워야 아랫변이 맞음
+    ok(/\.main-grid \.side-column > \.order-panel\{flex:1/.test(css), "주문창이 칼럼 아래까지 채워야 함");
+  });
+
   t("4칼럼 비율: 차트 42.4 / 호가 16.8 / 주문 16.0 / 채팅 23.0 (레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const em = css.match(/\n\.exchange-main\{[\s\S]*?\}/)[0];
