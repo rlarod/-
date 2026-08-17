@@ -2007,16 +2007,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .page-right .up-value{
   background:#fff;border-top:1px solid var(--border-soft);
   /* 자산 값(평가/가용)은 사이트 강조색 — 레퍼런스도 값마다 색이 들어갑니다.
-     수익금/수익률은 기존대로 부호에 따라 초록/빨강(pnl-positive/negative). */
+     수익률은 부호에 따라 색이 바뀝니다(아래 규칙에서 지정). */
   color:var(--gold);
 }
-.page-right .up-value.pnl-positive{color:var(--green);}
-.page-right .up-value.pnl-negative{color:var(--red);}
-/* 자산(평가/가용)은 강조색, 손익(수익금/수익률)은 부호에 따라 초록/빨강.
-   0일 때는 중립 회색 — 레퍼런스도 값이 0인 칸은 회색입니다. */
+/* 자산(선물/USDT)과 포인트는 강조색, 수익률은 0이면 중립 회색.
+   상승/하락 색은 국내 증시 관례를 따릅니다 — 상승 빨강(+), 하락 파랑(-).
+   사이트의 다른 곳(호가창/주문 버튼/포지션 손익)은 기존 크립토 관례
+   (LONG 초록 / SHORT 빨강)를 그대로 두었습니다. */
 .page-right #user-panel-equity,
 .page-right #user-panel-available{color:var(--gold);}
 .page-right #user-panel-points{color:var(--gold);}
 .page-right #user-panel-roe{color:var(--text-dim);}
-.page-right .up-value.pnl-positive{color:var(--green);}
-.page-right .up-value.pnl-negative{color:var(--red);}
+/* 전역 .pnl-positive/.pnl-negative가 !important라, 같은 강도로 덮어씁니다.
+   전역 규칙 자체는 그대로 둡니다(호가창/포지션 손익 등이 그대로 쓰고 있음). */
+.page-right .up-value.pnl-positive{color:var(--red) !important;}
+.page-right .up-value.pnl-negative{color:var(--blue) !important;}

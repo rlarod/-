@@ -334,7 +334,7 @@ section("[4] 사용자 정보 패널");
     ok(/홍길동/.test(body.textContent), "닉네임");
     ok(/이병/.test(body.textContent), "계급");
     ok(body.querySelector(".rank-badge svg"), "계급장 SVG");
-    eq(doc.getElementById("user-panel-equity").textContent, "$100,000.00");
+    eq(doc.getElementById("user-panel-equity").textContent, "100,000.00", "자산은 통화 기호 없이 숫자만");
     // 라벨을 레퍼런스 구성(선물/포인트/USDT/수익률)으로 바꾸면서 수익금 칸은
     // 포인트(계급 점수)로 교체됐습니다. 실현손익 검증은 수익률로 이어갑니다.
     eq(doc.getElementById("user-panel-roe").textContent, "+0.00%");
@@ -351,7 +351,7 @@ section("[4] 사용자 정보 패널");
     const snap = App.Trading.getSnapshot();
     eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
     eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
-    eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrency(snap.equity));
+    eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.equity));
   });
 
   t("수익률은 랭킹 뷰와 같은 산식(실현손익 / 100,000)", () => {
@@ -399,7 +399,7 @@ section("[4] 사용자 정보 패널");
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     App.Trading.openPosition("long", 5000, null, null);
     const snap = App.Trading.getSnapshot();
-    eq(doc.getElementById("user-panel-available").textContent, App.Utils.formatCurrency(snap.balance));
+    eq(doc.getElementById("user-panel-available").textContent, App.Utils.formatCurrencyPlain(snap.balance));
     ok(snap.balance < snap.equity, "증거금이 묶였으므로 가용 < 평가");
   });
 
@@ -563,8 +563,11 @@ section("[5] 기존 기능 보존");
     ok(/\.page-right #user-panel-roe\{color:var\(--text-dim\)/.test(css),
       "손익 0일 때는 중립색이어야 함(가짜 강조 방지)");
     ok(/\.page-right #user-panel-points\{color:var\(--gold\)/.test(css), "포인트는 강조색");
-    ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--green\)/.test(css), "이익은 초록");
-    ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--red\)/.test(css), "손실은 빨강");
+    // 내 정보 값 표는 국내 증시 관례 — 상승 빨강(+) / 하락 파랑(-)
+    ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--red\) !important;\}/.test(css), "이익은 빨강");
+    ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--blue\) !important;\}/.test(css), "손실은 파랑");
+    // 거래 화면(호가창/포지션)의 기존 색 관례는 건드리지 않았는지 확인
+    ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
   t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {

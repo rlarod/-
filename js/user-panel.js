@@ -128,8 +128,10 @@ App.UserPanel = (function () {
     const realized = snapshot.realizedPnl || 0;
     const roe = (realized / INITIAL_BALANCE) * 100;
 
-    eq.textContent = App.Utils.formatCurrency(snapshot.equity);
-    el("user-panel-available").textContent = App.Utils.formatCurrency(snapshot.balance);
+    // 자산 값은 통화 기호 없이 숫자만 (레퍼런스와 동일).
+    // formatCurrencyPlain은 기존에 있던 함수로, USDT/KRW 전환도 그대로 따릅니다.
+    eq.textContent = App.Utils.formatCurrencyPlain(snapshot.equity);
+    el("user-panel-available").textContent = App.Utils.formatCurrencyPlain(snapshot.balance);
 
     // 포인트 = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
     // 없는 수치를 지어내지 않고, 이미 계급 계산에 쓰는 값을 그대로 보여줍니다.
