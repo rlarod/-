@@ -518,6 +518,24 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("4칼럼 비율: 차트 42.4 / 호가 16.8 / 주문 16.0 / 채팅 23.0 (레퍼런스 실측)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const em = css.match(/\n\.exchange-main\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(em), "채팅은 콘텐츠의 23%");
+    const mg = css.match(/\.main-grid\{[\s\S]*?\}/)[0];
+    const cols = mg.match(/grid-template-columns:(\d+)fr (\d+)fr (\d+)fr/);
+    ok(cols, "거래 3열 비율 선언 필요");
+    const [c, o, s2] = [+cols[1], +cols[2], +cols[3]];
+    const sum = c + o + s2;
+    // 채팅을 뺀 77% 안에서의 비율 -> 전체 대비로 환산해 검사
+    const pct = (v) => (v / sum) * 77;
+    const near = (a, b, tol) => Math.abs(a - b) <= tol;
+    ok(near(pct(c), 42.4, 1.5), "차트 비율이 레퍼런스에서 벗어남: " + pct(c).toFixed(1));
+    ok(near(pct(o), 16.8, 1.5), "호가창 비율이 레퍼런스에서 벗어남: " + pct(o).toFixed(1));
+    ok(near(pct(s2), 16.0, 1.5), "주문창 비율이 레퍼런스에서 벗어남: " + pct(s2).toFixed(1));
+    ok(c > o && c > s2, "차트가 가장 넓어야 함");
+  });
+
   t("레이아웃: 차트가 주 영역이고 호가/주문창도 충분한 폭", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.main-grid\{[\s\S]*?\}/);
@@ -525,10 +543,11 @@ section("[5] 기존 기능 보존");
     const cols = m[0].match(/grid-template-columns:(\d+)fr (\d+)fr (\d+)fr/);
     ok(cols, "3열 비율 선언 필요");
     const [chart, ob, order] = [+cols[1], +cols[2], +cols[3]];
-    ok(chart >= 55, "차트가 주 영역이어야 함(현재 " + chart + "%)");
+    const sum = chart + ob + order;
+    ok(chart / sum >= 0.55, "차트가 주 영역이어야 함");
     ok(chart >= ob && chart >= order, "차트가 가장 넓어야 함");
-    ok(ob >= 20, "호가창 폭이 부족함: " + ob);
-    ok(order >= 22, "주문창 폭이 부족함: " + order);
+    ok(ob / sum >= 0.20, "호가창 폭이 부족함");
+    ok(order / sum >= 0.19, "주문창 폭이 부족함");
     const mh = m[0].match(/\bheight:max\((\d+)px/);
     ok(mh, "행 높이는 확정값(height)이어야 함 — min-height만 주면 차트가 무한히 커짐");
     // 주문창 기본 상태가 폭에 따라 1182~1260px이라, 행이 그보다 낮으면
@@ -780,7 +799,7 @@ section("[5] 기존 기능 보존");
     // 채팅은 가운데 콘텐츠(.exchange-main) 안의 두 번째 칸입니다.
     // 셸 바깥 칸에 두면 숨겨진 좌측 광고 칸 때문에 가운데가 밀려 정렬이 깨집니다.
     const em = css.match(/\n\.exchange-main\{[\s\S]*?\}/)[0];
-    ok(/grid-template-columns:minmax\(0,1fr\) 23\.6%/.test(em), "우측 사이드는 콘텐츠의 23.6%여야 함");
+    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(em), "우측 사이드는 콘텐츠의 23%여야 함(레퍼런스 실측)");
     ok(/gap:14px/.test(em), "영역 사이 간격은 레퍼런스 0.73%(=14px)");
     ok(/\.exchange-main > \.side-chat-panel\{grid-column:2/.test(css), "채팅은 가운데 콘텐츠 안에 있어야 함");
     // 셸 좌우 칸이 같아야 가운데가 화면 정중앙에 놓입니다

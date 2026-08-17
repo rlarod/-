@@ -355,7 +355,10 @@ a:hover{text-decoration:underline;}
 .main-grid{
   /* 폰트를 20% 키우면서 호가창/주문창이 좁아 글자가 넘쳤습니다.
      차트가 여전히 주 영역이되(56%) 우측 두 칼럼에 충분한 폭을 줍니다. */
-  display:grid;grid-template-columns:56fr 21fr 23fr;gap:4px;
+  /* 레퍼런스 실측(콘텐츠 686px 기준: 차트 291 / 호가 115 / 주문 110 / 채팅 158)
+     = 차트 42.4% · 호가 16.8% · 주문 16.0% · 채팅 23.0%.
+     채팅을 뺀 나머지(77%) 안에서의 비율로 환산하면 55.6 : 22.0 : 21.0 입니다. */
+  display:grid;grid-template-columns:556fr 220fr 210fr;gap:4px;
   margin-top:5px;
   /* 행 높이는 반드시 "확정값"이어야 합니다.
      js/chart.js가 autoSize:true(ResizeObserver로 컨테이너에 맞춰 리사이즈)라서,
@@ -371,7 +374,7 @@ a:hover{text-decoration:underline;}
       .side-column의 내부 스크롤이 잠깐 나타납니다.) */
   /* 주문창 실측 필요 높이 1088~1116px(준비중 항목 숨김 + 여백 압축 후).
      1280px는 차트가 화면 아래로 지나치게 길어져 1130px으로 낮춥니다. */
-  height:max(1130px, calc(100vh - 380px));
+  height:max(1150px, calc(100vh - 380px));
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
@@ -1187,7 +1190,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .amitalk-order .ami-type-tabs #order-type-row{display:flex;gap:5px;margin:0;flex-wrap:nowrap;}
 .amitalk-order .interval-btn[data-order-type]{
-  padding:8px 18px;border-radius:3px;font-family:var(--sans);font-size:20px;font-weight:500;
+  /* 주문창 폭이 레퍼런스 비율(16.0%)로 좁아지면서 "지정가/시장가"가 두 줄로
+     깨졌습니다. 글자·패딩을 줄이고 줄바꿈을 막습니다. */
+  padding:8px 12px;border-radius:3px;font-family:var(--sans);font-size:17px;font-weight:500;
+  white-space:nowrap;
   background:#fff;border:1px solid var(--ami-line);color:#6B727F;letter-spacing:-0.01em;
 }
 .amitalk-order .interval-btn[data-order-type].active{
@@ -1545,7 +1551,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    공지/배너/시세바와 거래 화면의 세로 기준선이 어긋났습니다(실측 확인).
    이제 exchange-main이 다른 블록과 정확히 같은 폭·같은 위치를 갖습니다. */
 .exchange-main{
-  display:grid;grid-template-columns:minmax(0,1fr) 23.6%;gap:14px;
+  display:grid;grid-template-columns:minmax(0,1fr) 23%;gap:14px;
   align-items:start;
 }
 .exchange-main > *{grid-column:1;min-width:0;}
