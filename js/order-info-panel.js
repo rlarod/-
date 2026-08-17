@@ -57,8 +57,8 @@ App.OrderInfoPanel = (function () {
       dom.previewBuyAmount.textContent = notionalText;
       dom.previewSellAmount.textContent = notionalText;
     } else {
-      dom.previewBuyAmount.textContent = "-";
-      dom.previewSellAmount.textContent = "-";
+      dom.previewBuyAmount.textContent = "0";
+      dom.previewSellAmount.textContent = "0";
     }
   }
 
