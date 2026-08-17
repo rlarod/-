@@ -335,7 +335,12 @@ body{
      의 되먹임이 생겨 차트가 무한히 늘어납니다. 실제로 그 버그가 있었습니다.
      주문창이 이 높이보다 길 때는 .side-column 안에서만 스크롤되게 해
      아래 포지션/거래내역 영역을 덮지 않습니다. */
-  height:max(760px, calc(100vh - 380px));
+  /* 760px -> 1280px: 주문창 기본 상태 높이가 폭에 따라 1182~1260px이라 760px 행에서는
+     아래쪽(재충전/종목)이 잘려 칼럼에 스크롤바가 생겼습니다. 스크롤 없이
+     한 번에 보이도록 행을 주문창에 맞춥니다. 차트도 같은 행이라 함께 커집니다.
+     (TP/SL·레버리지 슬라이더를 펼치면 1358px까지 늘어나므로, 그때만
+      .side-column의 내부 스크롤이 잠깐 나타납니다.) */
+  height:max(1280px, calc(100vh - 380px));
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}

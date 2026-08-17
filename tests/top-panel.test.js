@@ -521,7 +521,9 @@ section("[5] 기존 기능 보존");
     ok(order >= 22, "주문창 폭이 부족함: " + order);
     const mh = m[0].match(/\bheight:max\((\d+)px/);
     ok(mh, "행 높이는 확정값(height)이어야 함 — min-height만 주면 차트가 무한히 커짐");
-    ok(parseInt(mh[1], 10) >= 700, "차트 영역 최소 높이 700px 이상 필요: " + mh[1]);
+    // 주문창 기본 상태가 폭에 따라 1182~1260px이라, 행이 그보다 낮으면
+    // 주문창 칼럼에 스크롤바가 생깁니다.
+    ok(parseInt(mh[1], 10) >= 1280, "행 높이가 주문창보다 낮아 스크롤바가 생김: " + mh[1]);
     // chart.js가 autoSize:true(ResizeObserver)라서, 행 높이가 내용에 따라 늘어나면
     // 차트가 커짐 -> 행이 커짐 -> 차트가 또 커짐 의 되먹임이 생깁니다.
     ok(!/min-height:max\(/.test(m[0]), "행 높이를 내용 기준으로 두면 차트가 무한히 늘어남");
