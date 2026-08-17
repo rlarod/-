@@ -469,20 +469,27 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     ok(xSize < levSize, "x(" + xSize + "px)가 숫자(" + levSize + "px)보다 작아야 함");
   });
 
-  t("Spoqa Han Sans Neo 웹폰트가 실제로 선언되어 있음", () => {
+  t("본문 웹폰트가 실제로 로드되고 폴백이 갖춰져 있음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const faces = css.match(/@font-face\{[\s\S]*?\}/g) || [];
-    const spoqa = faces.filter((f) => /Spoqa Han Sans Neo/.test(f));
-    ok(spoqa.length >= 4, "@font-face 선언이 4개 이상이어야 함 (실제=" + spoqa.length + ")");
-    spoqa.forEach((f) => {
-      ok(/\.woff2['"]\) format\('woff2'\)/.test(f), "woff2 우선 제공 필요");
-      ok(/font-display:swap/.test(f), "font-display:swap 필요(글자 안 보이는 구간 방지)");
-      ok(/local\(/.test(f), "설치된 로컬 폰트 우선 사용 필요");
-    });
-    // Spoqa에는 600 굵기가 없어서 Medium을 500~600 구간으로 잡아야 함
-    ok(/font-weight:500 600/.test(css), "600이 Bold로 튀지 않도록 Medium을 500~600으로 선언해야 함");
-    ok(/--sans:'Spoqa Han Sans Neo'/.test(css), "--sans 첫 순위가 Spoqa 여야 함");
-    ok(/--sans:[^;]*Pretendard/.test(css), "CDN 장애 대비 Pretendard 폴백 유지 필요");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+    const root = css.replace(/\/\*[\s\S]*?\*\//g, "").match(/:root\{[\s\S]*?\n\}/)[0];
+
+    // --sans 첫 순위 글꼴이 실제로 어딘가에서 로드되어야 합니다
+    // (index.html의 <link> 또는 style.css의 @font-face 중 하나).
+    const first = root.match(/--sans:\s*'([^']+)'/);
+    ok(first, "--sans 첫 순위 글꼴 선언 필요");
+    const family = first[1];
+    const loadedByLink = new RegExp(family.replace(/ /g, "\\+")).test(html);
+    const loadedByFace = new RegExp("@font-face\\{[^}]*" + family).test(css.replace(/\s+/g, " "));
+    ok(loadedByLink || loadedByFace, family + " 를 실제로 불러오는 코드가 없음");
+
+    // 숫자 폰트도 본문과 같은 글꼴이어야 합니다(화면이 따로 놀지 않게)
+    ok(new RegExp("--mono:\\s*'" + family + "'").test(root), "--mono도 본문과 같은 글꼴이어야 함");
+
+    // CDN 장애 대비 폴백이 최소 3단계
+    const chain = root.match(/--sans:([^;]+);/)[1].split(",");
+    ok(chain.length >= 4, "폴백 글꼴이 부족함: " + chain.length);
+    ok(/sans-serif/.test(chain[chain.length - 1]), "마지막 폴백은 sans-serif 여야 함");
   });
 
   t("과도한 볼드 금지 — 주문창에 font-weight:800 이상 없음", () => {

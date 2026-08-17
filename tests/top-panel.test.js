@@ -537,8 +537,12 @@ section("[5] 기존 기능 보존");
     const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
     ok(!/JetBrains Mono/.test(root), "JetBrains Mono가 남아있으면 안 됨");
     ok(!/monospace/.test(root), "monospace 폴백이 남아있으면 안 됨");
-    ok(/--mono:'Spoqa Han Sans Neo'/.test(root), "--mono도 본문과 같은 글꼴이어야 함");
-    ok(/--sans:'Spoqa Han Sans Neo'/.test(root), "--sans도 동일");
+    // 특정 글꼴 이름을 박아두지 않고 "둘이 같은 글꼴"인지만 검사합니다
+    // (글꼴을 바꿔도 이 테스트가 깨지지 않도록).
+    const sans = root.match(/--sans:\s*'([^']+)'/);
+    const mono = root.match(/--mono:\s*'([^']+)'/);
+    ok(sans && mono, "--sans / --mono 선언 필요");
+    eq(mono[1], sans[1], "--mono가 본문 글꼴과 달라서 화면이 따로 놉니다");
     // 모노스페이스를 뺀 대신 숫자 정렬은 tabular-nums로 유지되어야 함
     const body = css.match(/\nbody\{[\s\S]*?\n\}/)[0];
     ok(/tabular-nums/.test(body), "body에 tabular-nums 필요(호가창/표 자릿수 정렬)");

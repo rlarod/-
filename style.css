@@ -63,8 +63,11 @@
      .notice-board-wrap 네 곳이 함께 움직입니다.
      참고값: 업비트 실측 1400px / 이전 기본값 1920px. */
   --content-max:1920px;
-  --mono:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
-  --sans:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --mono:'Noto Sans KR','Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  /* 본문 글꼴 — 개미톡 화면의 인상에 맞춰 Noto Sans KR로.
+     뒤쪽은 CDN 장애 대비 폴백 순서입니다. 이 한 줄만 바꾸면 사이트 전체가
+     같이 바뀝니다(--mono도 같은 값을 씁니다). */
+  --sans:'Noto Sans KR','Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   /* MARKET WAR 전용 색상 — 매수(BUY)=빨강, 매도(SELL)=파랑 (호가창의 초록/빨강 관례와는 별개) */
   --mw-buy:#F6465D;
   --mw-buy-soft:rgba(246,70,93,0.16);
@@ -117,8 +120,8 @@ body{
 .top-banner-nav-btn{
   flex:0 0 auto;white-space:nowrap;
   background:transparent;border:none;color:rgba(255,255,255,0.82);
-  padding:13px 11px;border-radius:0;font-family:var(--sans);font-size:26px;font-weight:700;
-  cursor:pointer;transition:.12s;border-bottom:3px solid transparent;
+  padding:13px 14px;border-radius:0;font-family:var(--sans);font-size:22px;font-weight:700;
+  cursor:pointer;transition:.12s;border-bottom:3px solid transparent;letter-spacing:-0.02em;
 }
 /* 1366px 이하(노트북 기본 해상도)에서도 9개가 한 줄에 다 들어가도록 좌우 여백만 축소 */
 @media (max-width:1366px){
@@ -127,11 +130,15 @@ body{
 }
 .top-banner-nav-btn:hover{color:#fff;background:rgba(255,255,255,0.08);}
 .top-banner-nav-btn.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,0.10);}
-.top-banner-nav-btn.nav-coming-soon{color:rgba(255,255,255,0.55);}
+.top-banner-nav-btn.nav-coming-soon{color:rgba(255,255,255,0.62);font-weight:500;}
+/* "준비중" 표시 — 메뉴 9개 중 7개에 흰 알약 배지가 붙어 있어 화면 전체가
+   미완성처럼 보였습니다(개미톡 메뉴에는 배지가 하나도 없습니다).
+   배지를 지우지 않고, 배경·테두리를 걷어낸 작은 보조 글씨로 낮췄습니다.
+   클릭하면 여전히 "준비 중인 메뉴입니다" 안내가 뜹니다(page-nav.js 무수정). */
 .nav-soon-badge{
   display:inline-block;white-space:nowrap;
-  font-size:14.5px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.18);
-  padding:1px 5px;border-radius:20px;margin-left:4px;vertical-align:middle;
+  font-size:11px;font-weight:400;color:rgba(255,255,255,0.5);background:none;
+  padding:0;border-radius:0;margin-left:4px;vertical-align:super;letter-spacing:-0.02em;
 }
 
 .brand{display:flex;align-items:center;gap:9px;}
@@ -189,7 +196,7 @@ body{
   border-bottom:2px solid transparent;transition:.12s;
 }
 .notice-tab-btn + .notice-tab-btn{border-left:1px solid var(--border-soft);}
-.notice-board-tabs .nav-soon-badge{font-size:11.5px;padding:1px 4px;margin-left:3px;}
+.notice-board-tabs .nav-soon-badge{font-size:11px;color:var(--text-faint);margin-left:3px;}
 .notice-tab-btn:hover{color:var(--text-dim);}
 .notice-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--surface);}
 
@@ -1004,7 +1011,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .event-banner{display:none !important;}
 
 /* 상품 카테고리 탭(모의투자/해외선물/코인선물) */
-.product-tabs{display:flex;gap:8px;margin-top:0;padding-bottom:6px;border-bottom:1px solid var(--border-soft);}
+.product-tabs{display:flex;gap:8px;margin-top:0;padding-bottom:6px;border-bottom:1px solid var(--border-soft);align-items:center;}
+.product-tabs .nav-soon-badge{color:var(--text-faint);}
 .product-tab-btn{
   background:none;border:1px solid transparent;color:var(--text-dim);font-family:var(--sans);
   font-size:18px;font-weight:700;padding:4px 10px;cursor:pointer;border-radius:3px;
