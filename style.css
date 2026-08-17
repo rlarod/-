@@ -329,8 +329,11 @@ body{
   display:grid;grid-template-columns:56fr 21fr 23fr;gap:4px;
   margin-top:5px;
   /* 한 화면에 억지로 맞추지 않습니다 — 차트가 충분히 크도록 최소 높이를
-     넉넉히 잡고, 모자라면 페이지가 스크롤되게 둡니다(가독성 우선). */
-  height:calc(100vh - 380px);min-height:760px;
+     넉넉히 잡고, 모자라면 페이지가 스크롤되게 둡니다(가독성 우선).
+     height를 고정하면 주문창(내용 높이 약 1180px)이 행 밖으로 삐져나와
+     아래 포지션/거래내역 영역을 덮습니다. min-height만 주고 실제 높이는
+     가장 긴 칼럼에 맞춰 늘어나게 합니다. */
+  min-height:max(760px, calc(100vh - 380px));
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
@@ -344,7 +347,10 @@ body{
 /* 오른쪽 열 — 주문창(포지션 포함)이 위, 채팅이 아래로 세로 배치.
    주문창은 내용이 많아질 수 있어(포지션 펼치기 등) 최대 높이를 두고
    내부 스크롤, 채팅은 남는 공간을 전부 차지합니다. */
-.side-column{min-width:0;height:100%;display:flex;flex-direction:column;gap:10px;min-height:0;}
+.side-column{
+  min-width:0;height:100%;display:flex;flex-direction:column;gap:10px;min-height:0;
+  overflow-y:auto;  /* 내용이 더 길어져도 아래 영역을 덮지 않고 칼럼 안에서 스크롤 */
+}
 .order-panel{flex:0 0 auto;overflow:visible;display:flex;flex-direction:column;}
 
 .page-chat-col{flex:1;min-height:0;display:flex;min-width:0;}

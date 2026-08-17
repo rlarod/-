@@ -519,8 +519,12 @@ section("[5] 기존 기능 보존");
     ok(chart >= ob && chart >= order, "차트가 가장 넓어야 함");
     ok(ob >= 20, "호가창 폭이 부족함: " + ob);
     ok(order >= 22, "주문창 폭이 부족함: " + order);
-    const mh = m[0].match(/min-height:(\d+)px/);
+    const mh = m[0].match(/min-height:max\((\d+)px/);
     ok(mh && parseInt(mh[1], 10) >= 700, "차트 영역 최소 높이 700px 이상 필요: " + (mh && mh[1]));
+    // height를 고정하면 주문창이 행 밖으로 넘쳐 아래 영역을 덮습니다.
+    ok(!/\bheight:calc\(100vh/.test(m[0]), "행 높이를 고정하면 주문창이 아래 영역을 덮음");
+    const side = css.match(/\.side-column\{[\s\S]*?\}/)[0];
+    ok(/overflow-y:auto/.test(side), "주문창 칼럼은 넘칠 때 내부 스크롤로 막아야 함");
   });
 
   t("타이포 스케일: 숫자가 일반 텍스트보다 한 단계 큼", () => {
