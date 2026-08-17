@@ -424,18 +424,69 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     eq(doc.getElementById("preview-sell-amount").textContent, "0");
   });
 
+  t("숫자에 모노스페이스를 쓰지 않고 tabular-nums로 정렬", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const block = css.slice(css.indexOf("주문창(Order Panel)"));
+    ok(!/var\(--mono\)/.test(block), "주문창에 모노스페이스(--mono)가 남아있으면 안 됨");
+    ["\\.margin-input-wrap input", "\\.order-preview-row b", "\\.order-account-row b"].forEach((sel) => {
+      const m = block.match(new RegExp("\\.amitalk-order " + sel + "\\{[\\s\\S]*?\\}"));
+      ok(m, sel + " 규칙 없음");
+      ok(/tabular-nums/.test(m[0]), sel + " 에 tabular-nums 필요(자릿수 정렬)");
+      ok(/font-family:var\(--sans\)/.test(m[0]), sel + " 는 본문과 같은 산세리프여야 함");
+    });
+  });
+
+  t("매수는 초록 / 매도는 빨강으로 구분", () => {
+    const { doc } = fresh(68394);
+    eq(doc.getElementById("preview-ask-price").closest(".order-preview-row").classList.contains("ami-row-buy"), true, "매수가격");
+    eq(doc.getElementById("preview-buy-amount").closest(".order-preview-row").classList.contains("ami-row-buy"), true, "매수금액");
+    eq(doc.getElementById("preview-bid-price").closest(".order-preview-row").classList.contains("ami-row-sell"), true, "매도가격");
+    eq(doc.getElementById("preview-sell-amount").closest(".order-preview-row").classList.contains("ami-row-sell"), true, "매도금액");
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/\.ami-row-buy b\{color:var\(--ami-green\)\}/.test(css.replace(/;\}/g, "}")), "매수 초록 규칙 필요");
+    ok(/\.ami-row-sell b\{color:var\(--ami-red\)\}/.test(css.replace(/;\}/g, "}")), "매도 빨강 규칙 필요");
+  });
+
+  t("값이 0이거나 없으면 색 강조를 빼고 중립 처리", () => {
+    const { doc } = fresh(68394);
+    // 호가 데이터가 없는 상태 → "-" 이므로 is-idle 이어야 함
+    ["preview-ask-price", "preview-bid-price"].forEach((id) => {
+      const b = doc.getElementById(id);
+      eq(b.textContent, "-", id);
+      ok(b.classList.contains("is-idle"), id + " 는 값이 없을 때 is-idle 이어야 함");
+    });
+  });
+
+  t("레버리지: 숫자 강조, x는 더 작게", () => {
+    const { doc } = fresh();
+    ok(doc.querySelector(".lev-dec"), ".lev-dec 없음");
+    ok(doc.querySelector(".lev-x"), ".lev-x 없음");
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const lev = css.match(/\.amitalk-order \.margin-mode-badge-lev\{[\s\S]*?\}/)[0];
+    const x = css.match(/\.amitalk-order \.lev-x\{[^}]*\}/)[0];
+    const levSize = parseInt(lev.match(/font-size:(\d+)px/)[1], 10);
+    const xSize = parseInt(x.match(/font-size:(\d+)px/)[1], 10);
+    ok(xSize < levSize, "x(" + xSize + "px)가 숫자(" + levSize + "px)보다 작아야 함");
+  });
+
+  t("과도한 볼드 금지 — 주문창에 font-weight:800 이상 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const block = css.slice(css.indexOf("주문창(Order Panel)"));
+    ok(!/font-weight:(800|900)/.test(block), "800/900 굵기는 쓰지 않음");
+  });
+
   t("주문창 폰트 크기가 개미톡 비율(사이트 기본 크기대)로 유지", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const block = css.slice(css.indexOf("주문창(Order Panel) — 개미톡 정밀 매칭"));
+    const block = css.slice(css.indexOf("주문창(Order Panel)"));
     ok(/\.amitalk-order\{[^}]*font-size:16px/.test(block), "주문창 기본 폰트 16px");
-    ok(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:19px/.test(block), "주문 버튼 19px");
-    ok(/\.amitalk-order \.field-label\{font-size:15px/.test(block), "필드 라벨 15px");
+    ok(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:17px/.test(block), "주문 버튼 17px");
+    ok(/\.amitalk-order \.field-label\{[\s\S]*?font-size:14px/.test(block), "필드 라벨 14px");
     // 본문 텍스트(라벨/값/버튼/입력)는 14px 미만으로 줄어들면 안 됩니다.
     // 배지·화살표 같은 장식 요소는 예외입니다.
     [
       [/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:(\d+)px/, "입력값"],
-      [/\.amitalk-order \.order-preview-row\{font-size:(\d+)px/, "계산정보 라벨"],
-      [/\.amitalk-order \.order-account-row\{font-size:(\d+)px/, "계좌 라벨"],
+      [/\.amitalk-order \.order-preview-row\{\s*font-size:(\d+)px/, "계산정보 라벨"],
+      [/\.amitalk-order \.order-account-row\{\s*font-size:(\d+)px/, "계좌 라벨"],
       [/\.amitalk-order \.interval-btn\[data-order-type\]\{[\s\S]*?font-size:(\d+)px/, "주문유형 탭"],
       [/\.amitalk-order \.ami-symbol-row\{[\s\S]*?font-size:(\d+)px/, "하단 종목"],
     ].forEach(([re, label]) => {

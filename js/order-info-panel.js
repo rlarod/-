@@ -42,6 +42,14 @@ App.OrderInfoPanel = (function () {
     return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
+  // 값이 아직 없거나 0이면 색 강조를 빼고 중립 회색으로 둡니다(타이포 위계).
+  function setValue(node, text) {
+    if (!node) return;
+    node.textContent = text;
+    const idle = text === "-" || text === "0";
+    node.classList.toggle("is-idle", idle);
+  }
+
   function updatePreview() {
     if (!dom.previewAskPrice) return;
 
@@ -60,8 +68,8 @@ App.OrderInfoPanel = (function () {
       if (first && first.dataset.price) bestBid = parseFloat(first.dataset.price);
     }
 
-    dom.previewAskPrice.textContent = bestAsk !== null ? plain(bestAsk, 2) : "-";
-    dom.previewBidPrice.textContent = bestBid !== null ? plain(bestBid, 2) : "-";
+    setValue(dom.previewAskPrice, bestAsk !== null ? plain(bestAsk, 2) : "-");
+    setValue(dom.previewBidPrice, bestBid !== null ? plain(bestBid, 2) : "-");
 
     const marginInput = el("margin-input");
     const levDisplay = el("lev-display");
@@ -70,11 +78,11 @@ App.OrderInfoPanel = (function () {
     if (!isNaN(margin) && !isNaN(leverage) && margin > 0) {
       const notional = margin * leverage;
       const notionalText = plain(notional, 2);
-      dom.previewBuyAmount.textContent = notionalText;
-      dom.previewSellAmount.textContent = notionalText;
+      setValue(dom.previewBuyAmount, notionalText);
+      setValue(dom.previewSellAmount, notionalText);
     } else {
-      dom.previewBuyAmount.textContent = "0";
-      dom.previewSellAmount.textContent = "0";
+      setValue(dom.previewBuyAmount, "0");
+      setValue(dom.previewSellAmount, "0");
     }
   }
 
