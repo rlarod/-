@@ -57,9 +57,12 @@ App.NoticeBoard = (function () {
       .slice(0, 5)
       .map((p, i) => {
         const rank = o.ranked ? '<span class="notice-rank">인기글 ' + (i + 1) + "위</span>" : "";
+        // 개미톡처럼 제목 뒤에 댓글 수 (n), 오른쪽 끝에 추천 수를 붙입니다.
+        // 두 값 모두 posts_with_meta 뷰가 이미 계산해 주는 실제 값입니다.
+        const comments = Number(p.comment_count) > 0 ? '<span class="notice-comment-count">(' + p.comment_count + ")</span>" : "";
         return (
           '<li class="notice-board-post" data-id="' + p.id + '">' +
-          '<span class="notice-line">' + rank + escapeHtml(p.title) + "</span>" +
+          '<span class="notice-line">' + rank + escapeHtml(p.title) + comments + "</span>" +
           '<span class="notice-board-post-likes">👍' + p.like_count + "</span></li>"
         );
       })

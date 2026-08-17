@@ -166,7 +166,10 @@ body{
 .notice-board-wrap{
   width:100%;background:var(--bg);border-bottom:1px solid var(--border-soft);
   max-width:var(--content-max);margin:0 auto;padding:6px 8px;
-  display:grid;grid-template-columns:30fr 43fr 27fr;gap:6px;align-items:stretch;
+  /* 공지 30% / 커뮤니티 45% / 내 정보 25%.
+     minmax(0,...)이 없으면 내 정보 칼럼이 내용 최소폭에 걸려 25%보다 넓어집니다. */
+  display:grid;grid-template-columns:minmax(0,30fr) minmax(0,45fr) minmax(0,25fr);
+  gap:6px;align-items:stretch;
 }
 .notice-box{
   background:var(--surface);border:1px solid var(--border);border-radius:2px;overflow:hidden;
@@ -190,20 +193,21 @@ body{
 }
 .notice-board-tabs::-webkit-scrollbar{display:none;}
 .notice-tab-btn{
-  background:transparent;border:none;color:var(--text-faint);font-family:var(--sans);
-  font-size:16px;font-weight:600;padding:9px 10px;cursor:pointer;
+  /* 개미톡: 비활성 탭은 연회색 배경 + 어두운 회색 글씨, 활성 탭만 흰 배경 */
+  background:var(--surface2);border:none;color:var(--text-dim);font-family:var(--sans);
+  font-size:16.5px;font-weight:600;padding:11px 10px;cursor:pointer;
   flex:1 0 auto;min-width:0;white-space:nowrap;
   border-bottom:2px solid transparent;transition:.12s;
 }
 .notice-tab-btn + .notice-tab-btn{border-left:1px solid var(--border-soft);}
 .notice-board-tabs .nav-soon-badge{font-size:11px;color:var(--text-faint);margin-left:3px;}
-.notice-tab-btn:hover{color:var(--text-dim);}
-.notice-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--surface);}
+.notice-tab-btn:hover{color:var(--text);}
+.notice-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--surface);font-weight:700;}
 
 /* 목록 — 한 줄에 하나, 촘촘하게 */
 .notice-board-list{list-style:none;margin:0;padding:9px 13px 11px;display:flex;flex-direction:column;gap:6px;}
 .notice-board-list li{
-  font-size:17px;line-height:1.55;color:var(--text-dim);
+  font-size:17.5px;line-height:1.6;color:var(--text-dim);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   display:flex;justify-content:space-between;gap:8px;
 }
@@ -215,6 +219,8 @@ body{
 .notice-board-post:hover{color:var(--gold);}
 /* 인기글 순위 — 개미톡의 "인기글 N위" 표기 */
 .notice-rank{color:var(--red);font-weight:700;margin-right:6px;}
+/* 개미톡처럼 제목 옆 댓글 수는 빨간 작은 숫자 */
+.notice-comment-count{color:var(--red);font-size:14.5px;font-weight:600;margin-left:5px;}
 .notice-board-post-likes{flex:0 0 auto;font-size:15px;color:var(--text-faint);}
 .notice-board-empty{color:var(--text-faint);font-size:16px;white-space:normal;}
 

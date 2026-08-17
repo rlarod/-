@@ -73,12 +73,43 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
 
   t("박스 3개(공지 / 게시판 / 내 정보)", () => eq(boxes.length, 3));
 
-  t("CSS 비율이 30 / 43 / 27", () => {
+  t("CSS 비율이 30 / 45 / 25 (공지 / 커뮤니티 / 내 정보)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.notice-board-wrap\{[\s\S]*?\}/);
     ok(m, ".notice-board-wrap 규칙 없음");
-    ok(/grid-template-columns:30fr 43fr 27fr/.test(m[0]), "30/43/27 선언 필요: " + m[0]);
-    ok(!/grid-template-columns:repeat\(4/.test(m[0]), "단순 4등분이면 안 됨");
+    const cols = m[0].match(/grid-template-columns:minmax\(0,(\d+)fr\) minmax\(0,(\d+)fr\) minmax\(0,(\d+)fr\)/);
+    ok(cols, "3열 비율 선언 필요: " + m[0]);
+    eq([+cols[1], +cols[2], +cols[3]].join("/"), "30/45/25");
+    // minmax(0,...)이 빠지면 내 정보 칼럼이 내용 최소폭에 걸려 비율이 어긋납니다
+    ok(/minmax\(0,/.test(m[0]), "minmax(0,...)로 축소를 허용해야 함");
+  });
+
+  t("탭 색: 비활성은 연회색 배경, 활성은 흰 배경 + 파란 글씨/밑줄", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const base = css.match(/\n\.notice-tab-btn\{[\s\S]*?\}/)[0];
+    ok(/background:var\(--surface2\)/.test(base), "비활성 탭은 연회색 배경이어야 함");
+    ok(/color:var\(--text-dim\)/.test(base), "비활성 탭은 어두운 회색 글씨여야 함");
+    const active = css.match(/\.notice-tab-btn\.active\{[^}]*\}/)[0];
+    ok(/background:var\(--surface\)/.test(active), "활성 탭은 흰 배경이어야 함");
+    ok(/color:var\(--gold\)/.test(active), "활성 탭은 파란 글씨여야 함");
+    ok(/border-bottom-color:var\(--gold\)/.test(active), "활성 탭은 파란 밑줄이어야 함");
+  });
+
+  t("게시물에 추천 수와 댓글 수가 함께 표시됨", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    App.NoticeBoard.renderForTest(
+      doc.getElementById("notice-list-latest"),
+      [
+        { id: "a", title: "댓글 있는 글", like_count: 7, comment_count: 23 },
+        { id: "b", title: "댓글 없는 글", like_count: 2, comment_count: 0 },
+      ],
+      "없음"
+    );
+    const items = doc.querySelectorAll("#notice-list-latest .notice-board-post");
+    eq(items[0].querySelector(".notice-comment-count").textContent, "(23)");
+    ok(/👍7/.test(items[0].textContent), "추천 수 표시 필요");
+    // 댓글이 0이면 (0)을 붙이지 않습니다
+    eq(items[1].querySelector(".notice-comment-count"), null);
   });
 
   t("① 공지사항 — 기존 데이터 유지", () => {
