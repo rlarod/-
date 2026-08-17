@@ -508,10 +508,10 @@ section("[5] 기존 기능 보존");
     ok(input > acct, "가격 입력값(" + input + ")이 가장 커야 함");
   });
 
-  t("레이아웃: 어떤 해상도에서도 좌우 여백이 남지 않음", () => {
+  t("레이아웃: 콘텐츠가 가운데 정렬되고 폭은 변수 하나로 관리됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    // 1920px 상한이 있으면 그보다 넓은 모니터에서 좌우에 빈 공간이 생깁니다.
-    // 전체 폭을 쓰는 컨테이너 네 곳 모두 상한이 없어야 합니다.
+    // 폭 상한이 여러 곳에 흩어져 있으면 한쪽만 고쳐서 배치가 어긋납니다.
+    // 네 컨테이너가 모두 같은 변수를 쓰고 가운데 정렬되어야 합니다.
     [
       [/\.app\{[\s\S]*?\}/, ".app"],
       [/\.top-banner-inner\{[\s\S]*?\}/, ".top-banner-inner"],
@@ -520,10 +520,15 @@ section("[5] 기존 기능 보존");
     ].forEach(([re, label]) => {
       const m = css.match(re);
       ok(m, label + " 규칙 없음");
-      const mw = m[0].match(/max-width:([^;]+);/);
-      ok(mw, label + " 에 max-width 선언이 없음");
-      ok(/none/.test(mw[1]), label + " 의 폭 상한을 없애야 함(현재: " + mw[1].trim() + ")");
+      ok(/max-width:var\(--content-max\)/.test(m[0]), label + " 는 --content-max를 써야 함");
+      ok(/margin:0 auto/.test(m[0]), label + " 는 가운데 정렬되어야 함");
     });
+    const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
+    const v = root.match(/--content-max:(\d+)px/);
+    ok(v, ":root에 --content-max 정의 필요");
+    const px = parseInt(v[1], 10);
+    // 너무 좁으면 차트/호가창/주문창 3열이 눌립니다(1310px에서 최소 동작 확인됨)
+    ok(px >= 1350, "콘텐츠 폭이 너무 좁아 3열이 눌림: " + px);
   });
 
   t("폰트: 사이트 전체가 한 글꼴 — 모노스페이스 잔재 없음", () => {
