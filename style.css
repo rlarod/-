@@ -1878,8 +1878,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 레퍼런스 박스 높이 = 콘텐츠 폭의 11.27%(실측 103px / 914px).
    고정 px으로 두면 넓은 모니터에서 상대적으로 작아 보입니다(2870px에서 7.70%).
    폭에 비례하되, 로그인 상태 내 정보가 들어가는 최소 221px과
-   지나치게 커지지 않도록 최대 340px 사이로 제한합니다. */
-:root{ --top-box-h:clamp(221px, 11.27vw, 340px); }
+   지나치게 커지지 않도록 최대 340px 사이로 제한합니다.
+   최소값은 탭 줄(63px) + 내 정보 내용(174px) + 테두리가 들어가는 245px입니다. */
+:root{ --top-box-h:clamp(245px, 11.27vw, 340px); }
 @media (min-width:1800px){
   .notice-board-wrap > .notice-box,
   .page-right > .user-panel-box{height:var(--top-box-h);}
@@ -1893,4 +1894,21 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 @media (min-width:1800px){
   .notice-board-wrap > .notice-box > .notice-board-list{justify-content:space-evenly;}
   .page-right > .user-panel-box > .user-panel-body{justify-content:space-between;}
+}
+
+/* =========================================================================
+ * 탭 줄 높이 — 박스 높이에 비례하도록
+ * =========================================================================
+ * 레퍼런스 실측: 탭 줄 = 박스 높이의 26.7% (28px / 105px)
+ * 변경 전      : 탭 줄 = 박스 높이의 13.9% (30px / 216px)
+ * 박스는 폭에 비례해 커지는데 탭 줄만 고정이라 갈수록 얇아 보였습니다.
+ * 탭 줄도 같은 방식으로 폭에 비례하게 만듭니다.
+ * ========================================================================= */
+@media (min-width:1800px){
+  .notice-board-wrap .notice-tab-btn,
+  .page-right .user-panel-box .notice-tab-btn{
+    padding-top:clamp(13px, 0.95vw, 30px);
+    padding-bottom:clamp(13px, 0.95vw, 30px);
+    font-size:clamp(18px, 0.72vw, 26px);
+  }
 }

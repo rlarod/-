@@ -535,7 +535,12 @@ section("[5] 기존 기능 보존");
     const vw = parseFloat(v[2]);
     ok(Math.abs(vw - 11.27) <= 1, "박스 높이 비율이 레퍼런스(11.27%)에서 벗어남: " + vw);
     // 로그인 상태 내 정보가 들어가는 최소 높이는 유지되어야 함
-    ok(parseInt(v[1], 10) >= 221, "최소 높이가 내 정보 내용보다 작음: " + v[1]);
+    ok(parseInt(v[1], 10) >= 245, "최소 높이가 탭 줄 + 내 정보 내용보다 작음: " + v[1]);
+
+    // 레퍼런스 실측: 탭 줄 = 박스 높이의 26.7%. 박스만 커지고 탭이 고정이면 얇아 보입니다.
+    const tab = css.match(/\.notice-board-wrap \.notice-tab-btn,[\s\S]*?padding-top:clamp\([^)]*\)/);
+    ok(tab, "탭 줄 높이도 폭에 비례해야 함");
+    ok(/vw/.test(tab[0]), "탭 줄 패딩이 고정 px이면 넓은 화면에서 얇아 보임");
     const mq = css.match(/@media \(min-width:1800px\)\{[\s\S]*?height:var\(--top-box-h\);/);
     ok(mq, "2단 레이아웃에서 세 박스 높이를 고정해야 함");
     ok(/\.notice-board-wrap > \.notice-box,\s*\n\s*\.page-right > \.user-panel-box\{height:var\(--top-box-h\);\}/.test(css),
