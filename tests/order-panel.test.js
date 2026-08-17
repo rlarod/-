@@ -464,8 +464,8 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const lev = css.match(/\.amitalk-order \.margin-mode-badge-lev\{[\s\S]*?\}/)[0];
     const x = css.match(/\.amitalk-order \.lev-x\{[^}]*\}/)[0];
-    const levSize = parseInt(lev.match(/font-size:(\d+)px/)[1], 10);
-    const xSize = parseInt(x.match(/font-size:(\d+)px/)[1], 10);
+    const levSize = parseFloat(lev.match(/font-size:([\d.]+)px/)[1]);
+    const xSize = parseFloat(x.match(/font-size:([\d.]+)px/)[1]);
     ok(xSize < levSize, "x(" + xSize + "px)가 숫자(" + levSize + "px)보다 작아야 함");
   });
 
@@ -491,24 +491,39 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     ok(!/font-weight:(800|900)/.test(block), "800/900 굵기는 쓰지 않음");
   });
 
-  t("주문창 폰트 크기가 개미톡 비율(사이트 기본 크기대)로 유지", () => {
+  // 전체 크기는 앞으로도 일괄 조정될 수 있으므로, 절대 px가 아니라
+  // "최소 크기"와 "요소 간 상대 위계"로 검사합니다.
+  t("주문창 폰트 크기 — 최소 크기와 위계가 유지됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const block = css.slice(css.indexOf("주문창(Order Panel)"));
-    ok(/\.amitalk-order\{[^}]*font-size:16px/.test(block), "주문창 기본 폰트 16px");
-    ok(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:17px/.test(block), "주문 버튼 17px");
-    ok(/\.amitalk-order \.field-label\{[\s\S]*?font-size:14px/.test(block), "필드 라벨 14px");
+    const size = (re, label) => {
+      const m = block.match(re);
+      ok(m, label + " 규칙을 찾을 수 없음");
+      return parseFloat(m[1]);
+    };
+    const base = size(/\.amitalk-order\{[^}]*font-size:([\d.]+)px/, "주문창 기본");
+    const label = size(/\.amitalk-order \.field-label\{[\s\S]*?font-size:([\d.]+)px/, "필드 라벨");
+    const input = size(/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:([\d.]+)px/, "입력값");
+    const btn = size(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:([\d.]+)px/, "주문 버튼");
+    const acc = size(/\.amitalk-order \.order-account-row b\{[\s\S]*?font-size:([\d.]+)px/, "계좌 값");
+    ok(base >= 16, "주문창 기본 폰트가 너무 작음: " + base);
+    ok(label >= 14, "필드 라벨이 너무 작음: " + label);
+    // 위계: 입력값 > 계좌 값 > 라벨,  버튼 > 라벨
+    ok(input > acc, "입력값(" + input + ")이 계좌 값(" + acc + ")보다 커야 함");
+    ok(acc > label, "계좌 값(" + acc + ")이 라벨(" + label + ")보다 커야 함");
+    ok(btn > label, "주문 버튼(" + btn + ")이 라벨(" + label + ")보다 커야 함");
     // 본문 텍스트(라벨/값/버튼/입력)는 14px 미만으로 줄어들면 안 됩니다.
     // 배지·화살표 같은 장식 요소는 예외입니다.
     [
-      [/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:(\d+)px/, "입력값"],
-      [/\.amitalk-order \.order-preview-row\{\s*font-size:(\d+)px/, "계산정보 라벨"],
-      [/\.amitalk-order \.order-account-row\{\s*font-size:(\d+)px/, "계좌 라벨"],
-      [/\.amitalk-order \.interval-btn\[data-order-type\]\{[\s\S]*?font-size:(\d+)px/, "주문유형 탭"],
-      [/\.amitalk-order \.ami-symbol-row\{[\s\S]*?font-size:(\d+)px/, "하단 종목"],
+      [/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:([\d.]+)px/, "입력값"],
+      [/\.amitalk-order \.order-preview-row\{\s*font-size:([\d.]+)px/, "계산정보 라벨"],
+      [/\.amitalk-order \.order-account-row\{\s*font-size:([\d.]+)px/, "계좌 라벨"],
+      [/\.amitalk-order \.interval-btn\[data-order-type\]\{[\s\S]*?font-size:([\d.]+)px/, "주문유형 탭"],
+      [/\.amitalk-order \.ami-symbol-row\{[\s\S]*?font-size:([\d.]+)px/, "하단 종목"],
     ].forEach(([re, label]) => {
       const m = block.match(re);
       ok(m, label + " 규칙을 찾을 수 없음");
-      ok(parseInt(m[1], 10) >= 14, label + " 가 너무 작음: " + m[1] + "px");
+      ok(parseFloat(m[1]) >= 14, label + " 가 너무 작음: " + m[1] + "px");
     });
   });
 }
