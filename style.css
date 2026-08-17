@@ -119,7 +119,7 @@ a:hover{text-decoration:underline;}
 }
 .top-banner-inner{
   max-width:var(--content-max);margin:0 auto;padding:7px 12px;
-  display:flex;align-items:center;gap:16px;flex-wrap:nowrap;
+  display:flex;align-items:center;gap:16px;flex-wrap:nowrap;min-width:0;
 }
 .top-banner-right{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-left:auto;flex:0 0 auto;}
 
@@ -381,14 +381,11 @@ a:hover{text-decoration:underline;}
 .page-chat-panel{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;height:100%;}
 .page-chat-panel .chat-messages{flex:1;height:auto;min-height:0;} /* 메시지 영역만 내부 스크롤, 입력창은 항상 하단 고정 */
 
+/* 01단계 정리 — 이 블록의 grid/height 규칙은 아래쪽 @media(max-width:1300px)가
+   같은 내용을 더 뒤에서 다시 선언해 항상 덮어쓰고 있었습니다(죽은 코드).
+   특히 chart-container의 78vh는 1300px 블록의 70vh/min 520px에 가려 한 번도
+   적용되지 않았습니다. 중복을 걷어내고 이 구간에만 필요한 규칙만 남깁니다. */
 @media (max-width:1050px){
-  .main-grid{grid-template-columns:1fr;height:auto;}
-  .main-grid .chart-column,
-  .orderbook-column,
-  .side-column,
-  .page-chat-col{height:auto;overflow-y:visible;}
-  .main-grid .chart-column .chart-container{height:78vh;} /* 1열로 쌓일 때는 각자 자연스러운 높이로 복귀 */
-  .order-panel{height:auto;}
   .page-chat-panel .chat-messages{flex:none;height:220px;} /* 모바일에선 기존처럼 고정 높이로 복귀 */
 }
 @media (max-width:700px){
@@ -1670,4 +1667,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    차트 시간봉 버튼과 같은 클래스라, 헤더 안에 있는 것만 작게 맞춥니다(ui.js 무수정). */
 #currency-toggle .interval-btn{
   font-size:13px;font-weight:600;padding:4px 10px;border-radius:3px;
+}
+
+/* 좁은 화면 헤더 — 02단계에서 nowrap으로 바꾸면서 390px에서 가로 스크롤이
+   262px 생겼습니다. 모바일에서는 다시 줄바꿈을 허용하고 우측 상태 표시를
+   접어 한 줄에 로고만 남깁니다(요소는 숨기기만 하고 삭제하지 않음). */
+@media (max-width:760px){
+  .top-banner-inner{flex-wrap:wrap;gap:8px;}
+  .top-banner-right{margin-left:0;flex-wrap:wrap;gap:8px;}
+  .ws-status{display:none;}
+  .brand .name{font-size:17px;}
+  .brand-tagline{display:none;}
 }

@@ -702,6 +702,16 @@ section("[5] 기존 기능 보존");
     // 기본 링크 스타일(브라우저 기본 파란 밑줄/보라 방문색 방지)
     ok(/\na\{color:var\(--gold\);text-decoration:none;\}/.test(css), "a 기본 스타일 필요");
     ok(/a:visited\{/.test(css) && /a:hover\{/.test(css), "a:visited / a:hover 필요");
+
+    // 좁은 화면에서 헤더가 가로로 넘치지 않도록(nowrap 회귀 방지)
+    ok(/@media \(max-width:760px\)\{[\s\S]*?\.top-banner-inner\{flex-wrap:wrap/.test(css),
+      "모바일에서 헤더 줄바꿈 허용 필요");
+
+    // 같은 규칙을 두 미디어쿼리가 겹쳐 선언해 뒤엣것이 항상 이기는 죽은 코드 금지
+    const mq1050 = css.match(/@media \(max-width:1050px\)\{[\s\S]*?\n\}/);
+    ok(mq1050, "1050px 미디어쿼리 없음");
+    ok(!/chart-container\{height:78vh/.test(mq1050[0]),
+      "1300px 블록에 가려 적용되지 않는 죽은 규칙이 남아 있음");
   });
 
   t("디자인 시스템: 과도한 둥근 모서리·그림자가 없음", () => {
