@@ -369,7 +369,9 @@ a:hover{text-decoration:underline;}
      한 번에 보이도록 행을 주문창에 맞춥니다. 차트도 같은 행이라 함께 커집니다.
      (TP/SL·레버리지 슬라이더를 펼치면 1358px까지 늘어나므로, 그때만
       .side-column의 내부 스크롤이 잠깐 나타납니다.) */
-  height:max(1280px, calc(100vh - 380px));
+  /* 주문창 실측 필요 높이 1088~1116px(준비중 항목 숨김 + 여백 압축 후).
+     1280px는 차트가 화면 아래로 지나치게 길어져 1130px으로 낮춥니다. */
+  height:max(1130px, calc(100vh - 380px));
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
@@ -1198,13 +1200,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .ami-sound input{width:16px;height:16px;margin:0;accent-color:#2F6FE4;cursor:pointer;}
 
 /* ---- [3][4] 주문가격 / 주문수량 — 1순위 값 ---- */
-.amitalk-order .field{margin-bottom:12px;}
+.amitalk-order .field{margin-bottom:8px;}
 .amitalk-order .field-label{
   font-size:18.5px;color:var(--ami-label);margin-bottom:6px;
   font-weight:500;letter-spacing:-0.01em;
 }
 .amitalk-order .margin-input-wrap{
-  background:#fff;border:1px solid var(--ami-line);border-radius:3px;padding:0 12px;gap:8px;height:48px;
+  background:#fff;border:1px solid var(--ami-line);border-radius:3px;padding:0 12px;gap:8px;height:44px;
 }
 .amitalk-order .margin-input-wrap input{
   font-family:var(--sans);font-size:27.5px;font-weight:600;padding:0;color:var(--ami-value);
@@ -1247,7 +1249,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order #qty-percent-row .chip:hover{color:var(--ami-accent);background:#FFF8F0;}
 
 /* ---- [6] 매수/매도 비율 바 ---- */
-.amitalk-order .order-pressure-bar{margin:14px 0;}
+.amitalk-order .order-pressure-bar{margin:10px 0;}
 .amitalk-order .order-pressure-labels{
   font-size:18.5px;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em;
   font-variant-numeric:tabular-nums lining-nums;
@@ -1260,7 +1262,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* ---- [7] 매수·매도 가격 / 금액 — 2순위 ---- */
 .amitalk-order .ami-calc-block{
-  margin:0 0 8px;gap:0;padding:9px 11px;
+  margin:0 0 6px;gap:0;padding:7px 11px;
   border:1px solid var(--ami-line-soft);border-radius:3px;background:#fff;
 }
 .amitalk-order .order-preview-row{
@@ -1280,7 +1282,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .order-preview-row b.is-idle{color:#A8AEB9;font-weight:500;}
 
 /* ---- TP/SL ---- */
-.amitalk-order .ami-tpsl{margin:12px 0;}
+.amitalk-order .ami-tpsl{margin:8px 0;}
 .amitalk-order .ami-tpsl-toggle{
   width:100%;display:flex;align-items:center;justify-content:space-between;
   background:#FAFBFC;border:1px solid var(--ami-line);border-radius:3px;
@@ -1293,9 +1295,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order #tp-sl-field .margin-input-wrap span{font-size:17.5px;}
 
 /* ---- [8] 매수 / 매도 버튼 — 한글·영문 같은 크기/굵기로 한 덩어리처럼 ---- */
-.amitalk-order .order-buttons{flex-direction:row;gap:8px;margin-top:12px;}
+.amitalk-order .order-buttons{flex-direction:row;gap:8px;margin-top:8px;}
 .amitalk-order .order-btn{
-  flex:1;width:auto;padding:0;height:52px;border-radius:3px;
+  flex:1;width:auto;padding:0;height:46px;border-radius:3px;
   font-family:var(--sans);font-size:22px;font-weight:600;
   letter-spacing:-0.01em;word-spacing:0.02em;text-align:center;
 }
@@ -1304,7 +1306,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .err-msg{font-size:18.5px;font-weight:500;margin-top:8px;min-height:0;}
 
 /* ---- [9] 평가 / 보유 / 가능 — 1순위 계좌 정보 ---- */
-.amitalk-order .order-account-rows{margin:14px 0 0;gap:0;}
+.amitalk-order .order-account-rows{margin:10px 0 0;gap:0;}
 .amitalk-order .order-account-row{
   font-size:18.5px;color:var(--ami-label-strong);padding:4px 0;gap:8px;
   font-weight:500;letter-spacing:-0.01em;align-items:baseline;
@@ -1325,6 +1327,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 
 /* ---- [11] 하단 프로모션 / 종목 ---- */
+/* 재충전/아이템·이더리움은 미구현(준비중) 항목이라, 메뉴/탭과 같은 원칙으로
+   화면에서만 숨깁니다. 마크업과 클릭 안내는 그대로라 이 두 줄만 지우면 복구됩니다.
+   덕분에 주문창이 약 160px 짧아져 거래 행(=차트) 높이도 함께 줄일 수 있습니다. */
+.amitalk-order .ami-promo{display:none;}
+.amitalk-order .ami-symbol-row:not(.active){display:none;}
 .amitalk-order .ami-promo{
   display:flex;align-items:baseline;justify-content:center;gap:6px;
   margin-top:16px;padding:13px 10px;border-radius:3px;cursor:pointer;
@@ -1527,12 +1534,22 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    순서에만 의존하면 거래 화면이 0px 칸으로 밀려납니다(실제로 그 버그가 있었음). */
 .exchange-shell{
   display:grid;
-  grid-template-columns:0 minmax(0,1fr) 0;
+  grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) minmax(0,1fr);
   gap:0;align-items:stretch;margin-top:5px;
 }
 .exchange-shell > .side-ad-panel{grid-column:1;grid-row:1;}
-.exchange-shell > .exchange-main{grid-column:2;grid-row:1;min-width:0;display:flex;flex-direction:column;}
-.exchange-shell > .side-chat-panel{grid-column:3;grid-row:1;}
+.exchange-shell > .exchange-main{grid-column:2;grid-row:1;min-width:0;}
+
+/* 채팅을 셸의 바깥 칸이 아니라 "가운데 콘텐츠 안"에 둡니다.
+   바깥 칸에 두면 숨겨진 좌측 광고 칸(320px) 때문에 가운데가 66px 밀려,
+   공지/배너/시세바와 거래 화면의 세로 기준선이 어긋났습니다(실측 확인).
+   이제 exchange-main이 다른 블록과 정확히 같은 폭·같은 위치를 갖습니다. */
+.exchange-main{
+  display:grid;grid-template-columns:minmax(0,1fr) 23.6%;gap:14px;
+  align-items:start;
+}
+.exchange-main > *{grid-column:1;min-width:0;}
+.exchange-main > .side-chat-panel{grid-column:2;grid-row:1 / -1;}
 .exchange-main > .main-grid{margin-top:0;}
 
 .side-ad-panel,.side-chat-panel{
@@ -1583,7 +1600,6 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    (좌:우 = 3.20:1). 사이드 폭을 23.6%로 잡으면 남는 메인 폭이 3열 최소치
    1300px를 밑도는 구간이 생겨, 표시 시작 폭을 1720 -> 1800px로 올렸습니다. */
 @media (min-width:1800px){
-  .exchange-shell{grid-template-columns:0 minmax(0,1fr) 23.6%;gap:14px;}
   .side-chat-panel{display:block;}
   /* 채팅은 자기 grid 트랙 안에서 상단에 붙습니다(sticky).
      fixed로 두면 1920px처럼 여백이 없는 화면에서 가운데 콘텐츠(내 정보 패널)를
@@ -1603,13 +1619,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   /* 가운데가 --content-max로 고정되는 구간 — 사이드는 그 폭의 23.6%(=453px)로 고정해
      레퍼런스의 좌:우 = 3.20:1 비율을 유지합니다. */
   .exchange-main{max-width:var(--content-max);margin:0 auto;width:100%;}
-  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) 453px;gap:14px;}
+  /* 좌우 칸을 같은 1fr로 둬야 가운데 콘텐츠가 화면 정중앙에 놓여
+     공지/배너/시세바와 세로선이 맞습니다. */
+  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) minmax(0,1fr);gap:0;}
 }
 /* 2600px 이상: 좌측 광고까지. 가운데 거래 화면을 --content-max로 고정하고
    광고/채팅은 그 바깥에 남는 공간만 나눠 갖습니다 — 광고 때문에 거래 화면이
    좁아지지 않게 하기 위한 조건입니다. */
 @media (min-width:2600px){
-  .exchange-shell{grid-template-columns:320px minmax(0,1fr) 453px;gap:14px;}
+  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) minmax(0,1fr);gap:0;}
   .side-ad-panel{display:flex;align-self:start;position:sticky;top:6px;}
 }
 
@@ -1736,4 +1754,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .up-nav{grid-template-columns:repeat(2,minmax(0,1fr));}
   .up-nav button:nth-child(-n+2){border-bottom:1px solid var(--border-soft);}
   .up-nav button:nth-child(2n+1){border-left:none;}
+}
+
+/* 1800px 미만: 채팅 칸을 없애고 거래 화면이 전폭을 씁니다(기존 동작 유지) */
+@media (max-width:1799px){
+  .exchange-main{grid-template-columns:minmax(0,1fr);gap:0;}
 }

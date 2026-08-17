@@ -523,7 +523,8 @@ section("[5] 기존 기능 보존");
     ok(mh, "행 높이는 확정값(height)이어야 함 — min-height만 주면 차트가 무한히 커짐");
     // 주문창 기본 상태가 폭에 따라 1182~1260px이라, 행이 그보다 낮으면
     // 주문창 칼럼에 스크롤바가 생깁니다.
-    ok(parseInt(mh[1], 10) >= 1280, "행 높이가 주문창보다 낮아 스크롤바가 생김: " + mh[1]);
+    // 주문창 실측 필요 높이(준비중 항목 숨김 + 여백 압축 후) 1088~1116px
+    ok(parseInt(mh[1], 10) >= 1120, "행 높이가 주문창보다 낮아 스크롤바가 생김: " + mh[1]);
     // chart.js가 autoSize:true(ResizeObserver)라서, 행 높이가 내용에 따라 늘어나면
     // 차트가 커짐 -> 행이 커짐 -> 차트가 또 커짐 의 되먹임이 생깁니다.
     ok(!/min-height:max\(/.test(m[0]), "행 높이를 내용 기준으로 두면 차트가 무한히 늘어남");
@@ -587,10 +588,12 @@ section("[5] 기존 기능 보존");
     // 칸 배치가 명시적이어야 함(숨겨진 패널 때문에 거래 화면이 0px 칸으로 밀리는 버그 방지)
     ok(/\.exchange-shell > \.exchange-main\{grid-column:2/.test(css), "거래 화면은 2번 칸에 고정되어야 함");
     ok(/\.exchange-shell > \.side-ad-panel\{grid-column:1/.test(css), "광고는 1번 칸");
-    ok(/\.exchange-shell > \.side-chat-panel\{grid-column:3/.test(css), "채팅은 3번 칸");
+    ok(/\.exchange-main > \.side-chat-panel\{grid-column:2/.test(css), "채팅은 가운데 콘텐츠의 2번 칸");
 
     // 광고는 채팅보다 늦게(더 넓은 화면에서) 켜져야 함 — 우선순위 거래 > 채팅 > 광고
-    const chatBp = parseInt(css.match(/@media \(min-width:(\d+)px\)\{\s*\.exchange-shell\{grid-template-columns:0 minmax/)[1], 10);
+    const chatBlocks = css.match(/@media \(min-width:(\d+)px\)\{(?:(?!@media)[\s\S])*?\.side-chat-panel\{display:block;\}/);
+    ok(chatBlocks, "채팅 표시 미디어쿼리를 찾을 수 없음");
+    const chatBp = parseInt(chatBlocks[1], 10);
     const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:(?:flex|block)[^}]*\}/g);
     ok(adBlocks && adBlocks.length, "광고 표시 미디어쿼리를 찾을 수 없음");
     const adBp = parseInt(adBlocks[adBlocks.length - 1].match(/min-width:(\d+)px/)[1], 10);
@@ -763,11 +766,16 @@ section("[5] 기존 기능 보존");
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
 
     // 사이드 폭 23.6% — 레퍼런스 실측(좌 75.7% / gap 0.73% / 우 23.6%)
-    const mq = css.match(/@media \(min-width:1800px\)\{[\s\S]*?\n\}/);
-    ok(mq, "사이드 표시 미디어쿼리 없음");
-    ok(/grid-template-columns:0 minmax\(0,1fr\) 23\.6%/.test(mq[0]),
-      "우측 사이드는 콘텐츠의 23.6%여야 함");
-    ok(/gap:14px/.test(mq[0]), "영역 사이 간격은 레퍼런스 0.73%(=14px)");
+    // 채팅은 가운데 콘텐츠(.exchange-main) 안의 두 번째 칸입니다.
+    // 셸 바깥 칸에 두면 숨겨진 좌측 광고 칸 때문에 가운데가 밀려 정렬이 깨집니다.
+    const em = css.match(/\n\.exchange-main\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:minmax\(0,1fr\) 23\.6%/.test(em), "우측 사이드는 콘텐츠의 23.6%여야 함");
+    ok(/gap:14px/.test(em), "영역 사이 간격은 레퍼런스 0.73%(=14px)");
+    ok(/\.exchange-main > \.side-chat-panel\{grid-column:2/.test(css), "채팅은 가운데 콘텐츠 안에 있어야 함");
+    // 셸 좌우 칸이 같아야 가운데가 화면 정중앙에 놓입니다
+    const shell = css.match(/\n\.exchange-shell\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:minmax\(0,1fr\) minmax\(0,var\(--content-max\)\) minmax\(0,1fr\)/.test(shell),
+      "셸 좌우 칸이 비대칭이면 거래 화면이 다른 블록과 어긋남");
 
     // 공통 컨테이너 재사용 — 메인 콘텐츠만 별도 max-width를 만들지 않음
     const main = css.match(/\.exchange-main\{[^}]*\}/);
