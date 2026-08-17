@@ -699,6 +699,30 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
+  t("메뉴: 레퍼런스 실측 비율(헤더/메뉴=1.69, 글자 14px, 배경 #1769B3)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+
+    // 배경색 — 레퍼런스에서 실측한 값. 사이트 강조색(--gold)은 건드리지 않음
+    ok(/\.menu-bar\{width:100%;background:#1769B3;\}/.test(css), "메뉴바 배경은 실측색 #1769B3");
+
+    const btn = css.match(/\n\.top-banner-nav-btn\{[\s\S]*?\}/)[0];
+    const fsz = parseFloat(btn.match(/font-size:([\d.]+)px/)[1]);
+    ok(fsz >= 13 && fsz <= 15, "메뉴 글자가 레퍼런스 비율(약 14px)에서 벗어남: " + fsz);
+    const pad = btn.match(/padding:([\d.]+)px ([\d.]+)px/);
+    ok(pad, "메뉴 버튼 패딩 필요");
+    ok(parseFloat(pad[2]) >= 20 && parseFloat(pad[2]) <= 24, "item 좌우 패딩이 레퍼런스(약 22px)와 다름: " + pad[2]);
+
+    // 레퍼런스 메뉴바에는 active 배경/밑줄이 없음 — 글자 밝기·굵기로만 표시
+    const act = css.match(/\.top-banner-nav-btn\.active\{[^}]*\}/)[0];
+    ok(/background:transparent/.test(act), "레퍼런스에 없는 active 배경을 쓰면 안 됨");
+    ok(!/border-bottom-color/.test(act), "레퍼런스에 없는 active 밑줄을 쓰면 안 됨");
+    ok(/font-weight:700/.test(act), "선택 상태는 글자 굵기로 표시");
+
+    // 헤더 로고와 메뉴 글자 시작점이 어긋나지 않도록 첫 항목만 왼쪽 여백 축소
+    ok(/\.top-banner-nav > \.top-banner-nav-btn:first-child\{padding-left:8px;\}/.test(css),
+      "첫 메뉴의 시작점 정렬 규칙 필요");
+  });
+
   t("기본 규격: body에 font-size / line-height / 글자색이 명시됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const body = css.match(/\nbody\{[\s\S]*?\n\}/)[0];
