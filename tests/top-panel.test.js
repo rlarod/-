@@ -462,6 +462,20 @@ section("[5] 기존 기능 보존");
     ok(!/drop\s+function\s+if\s+exists\s+public\.get_leaderboard/i.test(sql), "기존 랭킹 함수 건드리면 안 됨");
   });
 
+  t("레이아웃: 화면 위쪽에 낭비되는 장식 영역이 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 데이터가 없는 장식 배너는 화면에서 숨겨져 있어야 하고,
+    // 마크업/코드는 삭제하지 않고 남아 있어야 합니다.
+    ok(/\.event-banner\{display:none !important;\}/.test(css), "장식 배너는 화면에서 숨김 처리되어야 함");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    ok(/class="event-banner"/.test(html), "배너 마크업은 삭제하지 않고 보존해야 함");
+    ok(/\.event-banner\{\n\s*margin-top/.test(css), "배너 원래 스타일도 보존해야 함(복구 가능)");
+    // 바깥 여백이 다시 커지지 않도록 고정
+    const app = css.match(/\.app\{[\s\S]*?\}/)[0];
+    const pad = app.match(/padding:(\d+)px (\d+)px/);
+    ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
+  });
+
   t("레이아웃: 거래 3열 비율 60/19/21 + 차트 최소 650px", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.main-grid\{[\s\S]*?\}/);
@@ -492,6 +506,20 @@ section("[5] 기존 기능 보존");
     ok(/tabular-nums/.test(body), "body에 tabular-nums 필요(호가창/표 자릿수 정렬)");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
     ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
+  });
+
+  t("호가창 빈 공간 — 가짜 호가를 늘리지 않고 최근거래로 채움", () => {
+    const ob = fs.readFileSync(path.join(REPO, "js/orderbook.js"), "utf8");
+    // 호가 단계는 수정 금지 파일의 값 그대로여야 함(늘려서 공간을 메우면 안 됨)
+    ok(/const DEPTH_LEVELS = 5;/.test(ob), "orderbook.js의 호가 단계를 바꾸면 안 됨");
+    const tabs = fs.readFileSync(path.join(REPO, "js/orderbook-tabs.js"), "utf8");
+    ok(/function showStacked/.test(tabs), "호가창+최근거래 상하 배치 필요");
+    ok(/function showTab/.test(tabs), "좁은 화면용 탭 전환은 그대로 남아 있어야 함");
+    ok(/addEventListener\("resize", apply\)/.test(tabs), "창 크기 변경 시 재적용 필요");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    ok(/data-tab="orderbook"/.test(html) && /data-tab="trades"/.test(html), "탭 버튼은 삭제하지 않고 보존");
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/#orderbook-tabs-content\.ob-stacked\{/.test(css), "상하 배치 CSS 필요");
   });
 
   t("SQL의 19단계와 코드의 19단계가 일치", () => {
