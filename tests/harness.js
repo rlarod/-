@@ -49,6 +49,7 @@ function boot(opts) {
     "js/symbol-registry.js",
     "js/trading.js",
     "js/ui.js",
+    "js/order-info-panel.js",
     "js/qty-price-order.js",
     "js/order-panel-amitalk.js",
   ];
@@ -61,7 +62,7 @@ function boot(opts) {
     }
   }
 
-  const order = ["Trading", "UI", "QtyPriceOrder", "AmiTalkOrderPanel"];
+  const order = ["Trading", "OrderInfoPanel", "UI", "QtyPriceOrder", "AmiTalkOrderPanel"];
   for (const name of order) {
     if (win.App[name] && typeof win.App[name].init === "function") win.App[name].init();
   }

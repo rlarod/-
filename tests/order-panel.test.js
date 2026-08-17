@@ -399,6 +399,54 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
 }
 
 /* ===================================================================== */
+section("[9] 개미톡식 숫자 표기 / 크기 회귀");
+{
+  t("평가/보유/가능은 통화기호 없이 소수점 4자리", () => {
+    const { doc } = fresh(68394);
+    ["acc-equity", "acc-balance-holding", "acc-available"].forEach((id) => {
+      const v = doc.getElementById(id).textContent;
+      eq(v, "100,000.0000", id);
+      ok(!/[$₩]/.test(v), id + " 에 통화기호가 있으면 안 됨");
+    });
+  });
+
+  t("매수금액/매도금액: 통화기호 없이 콤마+2자리, 값이 0이면 '0'", async () => {
+    const { doc } = fresh(68394);
+    ["preview-buy-amount", "preview-sell-amount"].forEach((id) => {
+      const v = doc.getElementById(id).textContent;
+      ok(!/[$₩]/.test(v), id + " 에 통화기호가 있으면 안 됨: " + v);
+      ok(/^[\d,]+\.\d{2}$|^0$/.test(v), id + " 형식이 다름: " + v);
+    });
+    // 수량을 비우면(증거금 0) 개미톡처럼 "0"으로 표시 — 미리보기는 1초 주기 갱신
+    setInput(doc.getElementById("order-qty-input"), "");
+    await tick(1300);
+    eq(doc.getElementById("preview-buy-amount").textContent, "0");
+    eq(doc.getElementById("preview-sell-amount").textContent, "0");
+  });
+
+  t("주문창 폰트 크기가 개미톡 비율(사이트 기본 크기대)로 유지", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const block = css.slice(css.indexOf("주문창(Order Panel) — 개미톡 정밀 매칭"));
+    ok(/\.amitalk-order\{[^}]*font-size:16px/.test(block), "주문창 기본 폰트 16px");
+    ok(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:19px/.test(block), "주문 버튼 19px");
+    ok(/\.amitalk-order \.field-label\{font-size:15px/.test(block), "필드 라벨 15px");
+    // 본문 텍스트(라벨/값/버튼/입력)는 14px 미만으로 줄어들면 안 됩니다.
+    // 배지·화살표 같은 장식 요소는 예외입니다.
+    [
+      [/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:(\d+)px/, "입력값"],
+      [/\.amitalk-order \.order-preview-row\{font-size:(\d+)px/, "계산정보 라벨"],
+      [/\.amitalk-order \.order-account-row\{font-size:(\d+)px/, "계좌 라벨"],
+      [/\.amitalk-order \.interval-btn\[data-order-type\]\{[\s\S]*?font-size:(\d+)px/, "주문유형 탭"],
+      [/\.amitalk-order \.ami-symbol-row\{[\s\S]*?font-size:(\d+)px/, "하단 종목"],
+    ].forEach(([re, label]) => {
+      const m = block.match(re);
+      ok(m, label + " 규칙을 찾을 수 없음");
+      ok(parseInt(m[1], 10) >= 14, label + " 가 너무 작음: " + m[1] + "px");
+    });
+  });
+}
+
+/* ===================================================================== */
 runQueue().then(() => {
   console.log("\n" + "=".repeat(58));
   console.log("통과 " + pass + " / 실패 " + fail);
@@ -408,4 +456,5 @@ runQueue().then(() => {
     process.exit(1);
   }
   console.log("전체 통과 ✅");
+  process.exit(0); // OrderInfoPanel의 1초 주기 타이머가 살아있어서 명시적으로 종료
 });

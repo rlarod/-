@@ -11,6 +11,10 @@
  *  - 평가/보유/가능: App.Trading.getSnapshot()의 equity/balance
  *  - 수수료: App.Trading.getSnapshot().feeRate(실제 taker/maker 요율)
  *  - 환율: 저희가 가진 데이터 소스가 없어서 표시하지 않습니다(임의 값 금지)
+ *
+ * 표기 형식은 개미톡과 동일하게 통화기호 없이 숫자만 씁니다(평가/보유/가능은
+ * 소수점 4자리, 가격/금액은 2자리). 값 자체는 전부 기존과 동일하며 표시만
+ * 바뀝니다. KRW 표시 모드일 때는 App.Config의 환율 설정을 그대로 따릅니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -24,6 +28,18 @@ App.OrderInfoPanel = (function () {
 
   function el(id) {
     return document.getElementById(id);
+  }
+
+  // 개미톡식 표기 — 통화기호 없이 숫자만. 내부 값은 항상 USDT이므로
+  // App.Utils.formatCurrencyPlain과 동일한 방식으로 표시 통화만 반영합니다.
+  function plain(value, digits) {
+    if (value === null || value === undefined || isNaN(value)) return "-";
+    if (value === 0) return "0"; // 개미톡은 0일 때 "0.0000"이 아니라 "0"으로 표시
+    const cur = App.Config.getDisplayCurrency();
+    if (cur === "KRW") {
+      return Math.round(value * App.Config.USD_KRW).toLocaleString("ko-KR");
+    }
+    return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
   function updatePreview() {
@@ -44,8 +60,8 @@ App.OrderInfoPanel = (function () {
       if (first && first.dataset.price) bestBid = parseFloat(first.dataset.price);
     }
 
-    dom.previewAskPrice.textContent = bestAsk !== null ? App.Utils.formatCurrencyPlain(bestAsk) : "-";
-    dom.previewBidPrice.textContent = bestBid !== null ? App.Utils.formatCurrencyPlain(bestBid) : "-";
+    dom.previewAskPrice.textContent = bestAsk !== null ? plain(bestAsk, 2) : "-";
+    dom.previewBidPrice.textContent = bestBid !== null ? plain(bestBid, 2) : "-";
 
     const marginInput = el("margin-input");
     const levDisplay = el("lev-display");
@@ -53,7 +69,7 @@ App.OrderInfoPanel = (function () {
     const leverage = levDisplay ? parseFloat(levDisplay.textContent) : NaN;
     if (!isNaN(margin) && !isNaN(leverage) && margin > 0) {
       const notional = margin * leverage;
-      const notionalText = App.Utils.formatCurrency(notional);
+      const notionalText = plain(notional, 2);
       dom.previewBuyAmount.textContent = notionalText;
       dom.previewSellAmount.textContent = notionalText;
     } else {
@@ -64,9 +80,10 @@ App.OrderInfoPanel = (function () {
 
   function updateAccountInfo(snapshot) {
     if (!dom.accEquity) return;
-    dom.accEquity.textContent = App.Utils.formatCurrency(snapshot.equity);
-    dom.accBalanceHolding.textContent = App.Utils.formatCurrency(snapshot.balance);
-    dom.accAvailable.textContent = App.Utils.formatCurrency(snapshot.balance);
+    // 개미톡과 동일하게 소수점 4자리(예: 100,000.0000)
+    dom.accEquity.textContent = plain(snapshot.equity, 4);
+    dom.accBalanceHolding.textContent = plain(snapshot.balance, 4);
+    dom.accAvailable.textContent = plain(snapshot.balance, 4);
     if (dom.accFeeRate && snapshot.feeRate) {
       dom.accFeeRate.textContent = (snapshot.feeRate.maker * 100).toFixed(2) + "% / " + (snapshot.feeRate.taker * 100).toFixed(3) + "%";
     }
