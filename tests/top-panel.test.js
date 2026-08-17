@@ -699,6 +699,30 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
+  t("박스 공통 규격: 모서리·테두리·배경이 한 가지로 통일됨", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const box = css.match(/\n\.notice-box\{[\s\S]*?\}/)[0];
+    const panel = css.match(/\n\.panel\{[^}]*\}/)[0];
+    const r1 = box.match(/border-radius:([\d.]+)px/)[1];
+    const r2 = panel.match(/border-radius:([\d.]+)px/)[1];
+    eq(r2, r1, "박스마다 모서리가 다르면 화면이 제각각으로 보임");
+    ok(/border:1px solid var\(--border\)/.test(box) && /border:1px solid var\(--border\)/.test(panel),
+      "테두리 두께·색이 같아야 함");
+    ok(/background:var\(--surface\)/.test(box) && /background:var\(--surface\)/.test(panel),
+      "박스 배경이 같아야 함");
+
+    // 레퍼런스 실측 환산: 제목 약 19px, 목록 약 19px, 행 간격 33px
+    const tab = css.match(/\n\.notice-tab-btn\{[\s\S]*?\}/)[0];
+    const li = css.match(/\.notice-board-list li\{[\s\S]*?\}/)[0];
+    const tfs = parseFloat(tab.match(/font-size:([\d.]+)px/)[1]);
+    const lfs = parseFloat(li.match(/font-size:([\d.]+)px/)[1]);
+    ok(tfs >= 17 && tfs <= 20, "제목 글자가 레퍼런스(약 19px)에서 벗어남: " + tfs);
+    ok(lfs >= 17 && lfs <= 20, "목록 글자가 레퍼런스(약 19px)에서 벗어남: " + lfs);
+
+    // 레퍼런스 목록에는 행 구분선이 없음(실측: 행 사이 가로선 0개)
+    ok(!/\.notice-board-list li\{[^}]*border-bottom/.test(css), "레퍼런스에 없는 행 구분선을 넣으면 안 됨");
+  });
+
   t("메인 콘텐츠 구조: 레퍼런스 좌:우 = 3.20:1, gap 0.73%", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
 
