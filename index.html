@@ -120,6 +120,12 @@
      notice-list-popular, .notice-tab-btn[data-tab])를 그대로 유지해서
      js/notice-board.js와 js/board.js는 한 줄도 수정하지 않았습니다.
      세 칼럼은 폭이 정확히 같고, 좁은 화면에서는 세로로 쌓입니다. -->
+<!-- ===== 페이지 좌우 2단 =====
+     레퍼런스(개미톡) 구조: 왼쪽 77%에 공지/게시판·배너·시세·차트가 들어가고,
+     오른쪽 23%는 [내 정보] + [실시간 채팅]이 위에서 아래까지 이어집니다.
+     그래서 배너도 화면 끝까지 가지 않고 주문창 오른쪽 끝에서 멈춥니다. -->
+<div class="page-shell">
+  <div class="page-left">
 <div class="notice-board-wrap">
   <!-- [박스1 34.4%] 공지사항 | 최신게시물 -->
   <div class="notice-box">
@@ -149,13 +155,6 @@
     </ul>
   </div>
 
-  <!-- [박스3 30%] 내 정보 -->
-  <div class="notice-box user-panel-box">
-    <div class="notice-board-tabs">
-      <button class="notice-tab-btn active" type="button">🪖 내 정보</button>
-    </div>
-    <div class="user-panel-body" id="user-panel-body"></div>
-  </div>
 </div>
 
 <!-- ===== TopAdBanner — 공지/게시판 박스 바로 아래 가로형 광고 배너 =====
@@ -275,8 +274,11 @@
   <div class="main-grid">
 
     <div class="chart-column">
+      <!-- 차트도 호가창/주문창처럼 테두리 있는 별도 박스로(레퍼런스 구조) -->
+      <div class="panel chart-panel">
       <div class="chart-wrap">
         <div id="chart_container" class="chart-container"></div>
+      </div>
       </div>
     </div>
 
@@ -512,22 +514,6 @@
     BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
     수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
   </div>
-
-    <!-- 실시간 채팅 — 거래 화면 오른쪽. exchange-main 안에 두어야 공지/배너/시세바와
-         세로 기준선이 맞습니다. 마크업/id는 그대로라 js/chat.js는 무수정입니다. -->
-    <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
-      <div class="page-chat-col">
-        <div class="panel page-chat-panel" id="chat-panel">
-          <div class="field-label"><span>💬 실시간 채팅</span></div>
-          <div class="chat-messages" id="chat-messages"></div>
-          <div class="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
-            <button id="chat-send-btn" class="chat-send-btn">전송</button>
-          </div>
-          <div class="chat-err" id="chat-err"></div>
-        </div>
-      </div>
-    </aside>
   </div>
 
   </div>
@@ -679,6 +665,34 @@
     </div>
   </div>
 </div>
+  </div>
+
+  <aside class="page-right">
+  <div class="notice-box user-panel-box">
+    <div class="notice-board-tabs">
+      <button class="notice-tab-btn active" type="button">🪖 내 정보</button>
+    </div>
+    <div class="user-panel-body" id="user-panel-body"></div>
+  </div>
+
+    <!-- 실시간 채팅 — 거래 화면 오른쪽. exchange-main 안에 두어야 공지/배너/시세바와
+         세로 기준선이 맞습니다. 마크업/id는 그대로라 js/chat.js는 무수정입니다. -->
+    <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
+      <div class="page-chat-col">
+        <div class="panel page-chat-panel" id="chat-panel">
+          <div class="field-label"><span>💬 실시간 채팅</span></div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button id="chat-send-btn" class="chat-send-btn">전송</button>
+          </div>
+          <div class="chat-err" id="chat-err"></div>
+        </div>
+      </div>
+    </aside>
+  </aside>
+</div>
+
 
 <!-- ===== 시즌 초기화 확인창(기본 숨김) — "정말 초기화"를 눌러야만 실행됩니다 ===== -->
 <div class="admin-confirm-overlay" id="admin-confirm-overlay">

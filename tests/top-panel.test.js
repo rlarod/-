@@ -72,7 +72,15 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
   const { doc } = boot();
   const boxes = doc.querySelectorAll(".notice-board-wrap > .notice-box");
 
-  t("박스 3개(공지 / 게시판 / 내 정보)", () => eq(boxes.length, 3));
+  t("상단은 박스 2개 — 내 정보는 우측 칼럼으로 이동(레퍼런스 구조)", () => {
+    eq(boxes.length, 2);
+    const right = doc.querySelector(".page-right");
+    ok(right, "우측 칼럼 필요");
+    ok(right.querySelector(".user-panel-box"), "내 정보는 우측 칼럼에 있어야 함");
+    ok(right.querySelector("#chat-panel"), "채팅은 내 정보 아래에 있어야 함");
+    const kids = [].map.call(right.children, (e) => e.className.split(" ")[0]);
+    ok(kids.indexOf("notice-box") < kids.indexOf("side-chat-panel"), "내 정보가 채팅보다 위");
+  });
 
   t("CSS 비율이 34.4 / 34.5 / 30 (레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
@@ -135,9 +143,10 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
     ["popular", "free", "analysis"].forEach((k) => ok(boxes[1].querySelector("#notice-list-" + k), k + " 없음"));
   });
 
-  t("③ 내 정보", () => {
-    ok(boxes[2].classList.contains("user-panel-box"));
-    ok(boxes[2].querySelector("#user-panel-body"));
+  t("③ 내 정보 (우측 칼럼)", () => {
+    const box = doc.querySelector(".page-right .user-panel-box");
+    ok(box, "우측 칼럼의 내 정보 박스 필요");
+    ok(box.querySelector("#user-panel-body"));
   });
 
   t("탭 전환 — 같은 박스 안에서만 바뀌고 다른 박스는 영향 없음", () => {

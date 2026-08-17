@@ -1757,3 +1757,68 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 @media (max-width:1799px){
   .exchange-main{grid-template-columns:minmax(0,1fr);gap:0;}
 }
+
+/* =========================================================================
+ * 페이지 좌우 2단 (레퍼런스 구조)
+ * =========================================================================
+ * 왼쪽 77%  : 공지/게시판 · 배너 · 상품탭 · 시세 · 차트|호가창|주문창 · 거래내역
+ * 오른쪽 23%: 내 정보 + 실시간 채팅 (위에서 아래까지 이어짐)
+ * 배너가 화면 끝까지 가지 않고 주문창 오른쪽 끝에서 멈추는 이유가 이 구조입니다.
+ * ========================================================================= */
+.page-shell{
+  max-width:var(--content-max);margin:0 auto;padding:0 8px;
+  display:grid;grid-template-columns:minmax(0,1fr) 23%;gap:14px;align-items:start;
+}
+.page-left{min-width:0;display:flex;flex-direction:column;}
+.page-right{min-width:0;display:flex;flex-direction:column;gap:6px;}
+
+/* 좌우 2단 안에서는 각 블록이 부모 폭을 그대로 씁니다(개별 max-width 제거) */
+.page-left .notice-board-wrap,
+.page-left .top-ad-banner,
+.page-left .app,
+.page-left .page-center{max-width:none;padding-left:0;padding-right:0;}
+.page-left .app{padding-top:5px;padding-bottom:10px;}
+
+/* 공지/게시판은 이제 2박스 */
+.page-left .notice-board-wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+
+/* 우측 칼럼 — 내 정보 아래로 채팅이 화면 끝까지 */
+.page-right .user-panel-box{flex:0 0 auto;}
+.page-right .side-chat-panel{display:block;flex:1;min-height:0;}
+.page-right .side-chat-panel > .page-chat-col{
+  position:sticky;top:6px;height:calc(100vh - 12px);max-height:calc(100vh - 12px);
+  display:flex;flex-direction:column;
+}
+
+/* 차트 박스 — 호가창/주문창과 같은 규격 */
+.chart-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px;}
+.chart-panel > .chart-wrap{flex:1;min-height:0;}
+
+/* 좁은 화면: 2단을 1단으로 내려 기존 동작 유지 */
+/* 1800px 미만: 좌우 2단을 풀고 세로로 쌓습니다.
+   2단일 때 왼쪽이 77%라 1440px에서는 거래 3열(주문창)이 눌려 넘쳤습니다. */
+@media (max-width:1799px){
+  .page-shell{grid-template-columns:minmax(0,1fr);gap:0;}
+  .page-right{gap:6px;margin-top:6px;}
+  .page-right .side-chat-panel > .page-chat-col{position:static;height:auto;max-height:none;}
+}
+
+/* 채팅이 우측 칼럼으로 빠졌으므로, 거래 영역은 왼쪽 폭을 전부 씁니다.
+   (이전의 [광고|본문|광고] 3칸 셸과 [본문|채팅] 2칸 구성은 더 이상 필요 없음)
+   좌측 광고 슬롯은 page-shell 바깥 여백으로 옮겨야 하므로, 실제 소재가
+   들어올 때 위치를 다시 잡습니다. 지금은 비어 있어 표시되지 않습니다. */
+.page-left .exchange-shell{display:block;}
+.page-left .exchange-main{display:block;max-width:none;margin:0;}
+.page-left .side-ad-panel{display:none;}
+
+/* 좌우 2단으로 왼쪽 폭이 좁아지면서, 컬럼이 많은 표(포지션/거래내역 등)가
+   왼쪽 칼럼을 넘쳐 페이지에 가로 스크롤을 만들었습니다.
+   표를 감싼 영역 안에서만 가로로 스크롤되게 막습니다(컬럼은 그대로 유지). */
+.page-left .position-table-wrap,
+.page-left .table-scroll{overflow-x:auto;max-width:100%;}
+.page-left .bottom-tab-pane{min-width:0;overflow-x:auto;}
+.page-left .app,
+.page-left .exchange-shell,
+.page-left .exchange-main,
+.page-left .main-grid,
+.page-left #page-exchange{min-width:0;max-width:100%;}
