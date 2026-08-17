@@ -601,6 +601,11 @@ section("[5] 기존 기능 보존");
 
   t("칸 단차: 패널 상하좌우 경계가 서로 맞음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 배너 슬롯에 위 여백이 있으면 파란 배너 윗변이 오른쪽 채팅 헤더보다 아래에서 시작함
+    ok(/\.top-ad-slot:not\(:empty\)\{margin:0;\}/.test(css),
+      "배너 슬롯 여백이 있으면 채팅 헤더와 윗변이 어긋남");
+    ok(/\.page-left > \.top-ad-banner\{margin-top:-1px;\}/.test(css),
+      "좌우 세로 간격(6px) 통일 보정 필요");
     // ① 우측 칼럼 위 여백 = 공지 박스 위 여백
     ok(/\.page-right\{padding-top:6px;\}/.test(css), "우측 칼럼 위 여백이 공지 박스와 달라 단차가 생김");
     // ② 호가창 탭이 박스 밖에 있으면 윗변이 차트 박스보다 아래에서 시작함

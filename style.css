@@ -1587,7 +1587,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .top-ad-slot img{display:block;width:100%;height:auto;}
 .top-ad-slot:empty{display:none;}
 .top-ad-banner:has(.top-ad-slot:empty){display:none;}
-.top-ad-slot:not(:empty){margin:14px 0 0;}
+/* 배너 슬롯의 위 여백 14px 때문에 파란 배너 윗변이 오른쪽 채팅 헤더보다
+   15px 아래에서 시작해 단차가 보였습니다. 여백은 바깥 래퍼가 담당하게 하고
+   슬롯 자체 여백은 없앱니다. */
+.top-ad-slot:not(:empty){margin:0;}
 
 /* ---- 우측 실시간 채팅 패널 ----
    화면 상단에 붙어서 스크롤을 따라 내려옵니다(position:sticky).
@@ -1843,6 +1846,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* ① 우측 칼럼 위 여백을 공지 박스와 동일하게 */
 .page-right{padding-top:6px;}
+/* 좌우 세로 간격을 6px로 통일 — 배너 윗변과 채팅 헤더 윗변이 1px 어긋나던 것 보정.
+   왼쪽은 (공지 박스 아래 여백 6px + 배너 래퍼 여백)로 7px가 되고 있었습니다. */
+.page-left > .top-ad-banner{margin-top:-1px;}
 
 /* ② 호가창 탭을 박스 안으로 — 탭 줄에 박스 테두리를 주고 아래 패널과 이어 붙입니다.
       이러면 호가창 칼럼의 박스 윗변이 차트 박스 윗변과 같은 높이에서 시작합니다. */
