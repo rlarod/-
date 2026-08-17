@@ -529,7 +529,13 @@ section("[5] 기존 기능 보존");
 
   t("상단 박스 3개 높이 통일 — 내 정보만 내용 따라 변하지 않음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    ok(/--top-box-h:\s*\d+px/.test(css), "상단 박스 공통 높이 변수 필요");
+    const v = css.match(/--top-box-h:\s*clamp\((\d+)px,\s*([\d.]+)vw,\s*(\d+)px\)/);
+    ok(v, "상단 박스 높이는 폭에 비례해야 함(고정 px이면 넓은 화면에서 작아 보임)");
+    // 레퍼런스 실측: 박스 높이 = 콘텐츠 폭의 11.27%
+    const vw = parseFloat(v[2]);
+    ok(Math.abs(vw - 11.27) <= 1, "박스 높이 비율이 레퍼런스(11.27%)에서 벗어남: " + vw);
+    // 로그인 상태 내 정보가 들어가는 최소 높이는 유지되어야 함
+    ok(parseInt(v[1], 10) >= 221, "최소 높이가 내 정보 내용보다 작음: " + v[1]);
     const mq = css.match(/@media \(min-width:1800px\)\{[\s\S]*?height:var\(--top-box-h\);/);
     ok(mq, "2단 레이아웃에서 세 박스 높이를 고정해야 함");
     ok(/\.notice-board-wrap > \.notice-box,\s*\n\s*\.page-right > \.user-panel-box\{height:var\(--top-box-h\);\}/.test(css),
