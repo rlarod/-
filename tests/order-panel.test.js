@@ -469,6 +469,22 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     ok(xSize < levSize, "x(" + xSize + "px)가 숫자(" + levSize + "px)보다 작아야 함");
   });
 
+  t("Spoqa Han Sans Neo 웹폰트가 실제로 선언되어 있음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const faces = css.match(/@font-face\{[\s\S]*?\}/g) || [];
+    const spoqa = faces.filter((f) => /Spoqa Han Sans Neo/.test(f));
+    ok(spoqa.length >= 4, "@font-face 선언이 4개 이상이어야 함 (실제=" + spoqa.length + ")");
+    spoqa.forEach((f) => {
+      ok(/\.woff2['"]\) format\('woff2'\)/.test(f), "woff2 우선 제공 필요");
+      ok(/font-display:swap/.test(f), "font-display:swap 필요(글자 안 보이는 구간 방지)");
+      ok(/local\(/.test(f), "설치된 로컬 폰트 우선 사용 필요");
+    });
+    // Spoqa에는 600 굵기가 없어서 Medium을 500~600 구간으로 잡아야 함
+    ok(/font-weight:500 600/.test(css), "600이 Bold로 튀지 않도록 Medium을 500~600으로 선언해야 함");
+    ok(/--sans:'Spoqa Han Sans Neo'/.test(css), "--sans 첫 순위가 Spoqa 여야 함");
+    ok(/--sans:[^;]*Pretendard/.test(css), "CDN 장애 대비 Pretendard 폴백 유지 필요");
+  });
+
   t("과도한 볼드 금지 — 주문창에 font-weight:800 이상 없음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const block = css.slice(css.indexOf("주문창(Order Panel)"));

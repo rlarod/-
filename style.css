@@ -1,3 +1,40 @@
+/* =========================================================================
+ * 웹폰트 — Spoqa Han Sans Neo (SIL Open Font License, 상업적 사용 무료)
+ * =========================================================================
+ * 기존 Pretendard(index.html에서 jsDelivr로 로드 중)에서 교체했습니다.
+ * Pretendard 링크는 제거하지 않고 남겨둬서, 폰트 CDN 장애 시 곧바로
+ * 다음 순위로 떨어지게 했습니다(--sans 폴백 체인).
+ *
+ * Spoqa Han Sans Neo에는 600(SemiBold) 굵기가 없습니다(100/300/400/500/700).
+ * 그래서 Medium을 500~600 구간으로 선언해서, CSS에서 쓰는 font-weight:600이
+ * Bold로 튀지 않고 Medium으로 자연스럽게 떨어지게 했습니다.
+ * font-display:swap — 폰트 내려받는 동안 글자가 안 보이는 현상 방지.
+ * ========================================================================= */
+@font-face{
+  font-family:'Spoqa Han Sans Neo';font-style:normal;font-weight:700;font-display:swap;
+  src:local('Spoqa Han Sans Neo Bold'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Bold.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Bold.woff') format('woff');
+}
+@font-face{
+  font-family:'Spoqa Han Sans Neo';font-style:normal;font-weight:500 600;font-display:swap;
+  src:local('Spoqa Han Sans Neo Medium'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Medium.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Medium.woff') format('woff');
+}
+@font-face{
+  font-family:'Spoqa Han Sans Neo';font-style:normal;font-weight:400;font-display:swap;
+  src:local('Spoqa Han Sans Neo Regular'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Regular.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Regular.woff') format('woff');
+}
+@font-face{
+  font-family:'Spoqa Han Sans Neo';font-style:normal;font-weight:300;font-display:swap;
+  src:local('Spoqa Han Sans Neo Light'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Light.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans@latest/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Light.woff') format('woff');
+}
+
 :root{
   --bg:#F3F4F7;
   --surface:#FFFFFF;
@@ -17,7 +54,7 @@
   --green:#0ECB81;
   --green-soft:rgba(14,203,129,0.11);
   --mono:'JetBrains Mono', ui-monospace, monospace;
-  --sans:'Pretendard Variable','Pretendard',-apple-system,system-ui,sans-serif;
+  --sans:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   /* MARKET WAR 전용 색상 — 매수(BUY)=빨강, 매도(SELL)=파랑 (호가창의 초록/빨강 관례와는 별개) */
   --mw-buy:#F6465D;
   --mw-buy-soft:rgba(246,70,93,0.16);
