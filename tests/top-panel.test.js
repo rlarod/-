@@ -335,7 +335,10 @@ section("[4] 사용자 정보 패널");
     ok(/이병/.test(body.textContent), "계급");
     ok(body.querySelector(".rank-badge svg"), "계급장 SVG");
     eq(doc.getElementById("user-panel-equity").textContent, "$100,000.00");
-    eq(doc.getElementById("user-panel-profit").textContent, "+$0.00");
+    // 라벨을 레퍼런스 구성(선물/포인트/USDT/수익률)으로 바꾸면서 수익금 칸은
+    // 포인트(계급 점수)로 교체됐습니다. 실현손익 검증은 수익률로 이어갑니다.
+    eq(doc.getElementById("user-panel-roe").textContent, "+0.00%");
+    ok(doc.getElementById("user-panel-points"), "포인트 칸 필요");
     eq(doc.getElementById("user-panel-roe").textContent, "+0.00%");
   });
 
@@ -346,7 +349,7 @@ section("[4] 사용자 정보 패널");
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
     App.Trading.closePosition("수동청산");
     const snap = App.Trading.getSnapshot();
-    eq(doc.getElementById("user-panel-profit").textContent, App.Utils.formatCurrencySigned(snap.realizedPnl));
+    eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
     eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
     eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrency(snap.equity));
   });
@@ -368,7 +371,7 @@ section("[4] 사용자 정보 패널");
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     App.Trading.openPosition("long", 5000, null, null);
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
-    eq(doc.getElementById("user-panel-profit").textContent, "+$0.00", "청산 전 수익금은 0");
+    eq(doc.getElementById("user-panel-roe").textContent, "+0.00%", "청산 전 수익률은 0");
     eq(doc.getElementById("user-panel-roe").textContent, "+0.00%", "청산 전 수익률은 0");
   });
 
@@ -383,7 +386,10 @@ section("[4] 사용자 정보 패널");
     eq(grid.querySelectorAll(".up-value").length, 4, "값 4칸");
     eq(
       Array.prototype.map.call(grid.querySelectorAll(".up-label"), (l) => l.textContent).join(","),
-      "평가,수익금,가용,수익률"
+      // 레퍼런스(개미톡) 구성: 선물 / 벅스 / USDT / 지갑
+      //   벅스 -> 포인트(계급 점수, 실제 값)
+      //   지갑 -> 대응 데이터가 없어 수익률 유지
+      "선물,포인트,USDT,수익률"
     );
     eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
@@ -527,6 +533,25 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("포인트는 실제 계급 점수 — 진입만으로는 늘지 않음(핵심 원칙)", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const before = doc.getElementById("user-panel-points").textContent;
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    eq(doc.getElementById("user-panel-points").textContent, before,
+      "포지션만 열었는데 포인트가 늘면 안 됨");
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+    App.Trading.closePosition();
+    const after = doc.getElementById("user-panel-points").textContent;
+    ok(after !== before, "청산 후에는 포인트가 반영되어야 함");
+    // 지어낸 수치가 아니라 rank.js가 계산한 실제 점수여야 함
+    const snap = App.Trading.getSnapshot();
+    const pts = Math.round(App.Rank.getUserRank(snap).points);
+    eq(after, pts.toLocaleString() + " P");
+  });
+
   t("내 정보 값 표: 라벨 셀 회색 + 값마다 색(레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     // 레퍼런스 실측: 라벨 셀 #EEEEEE, 값 셀 흰색
@@ -535,8 +560,9 @@ section("[5] 기존 기능 보존");
     // 자산은 강조색, 손익은 부호에 따라, 0이면 중립
     ok(/#user-panel-equity,\s*\n\s*\.page-right #user-panel-available\{color:var\(--gold\)/.test(css),
       "자산 값은 강조색");
-    ok(/#user-panel-profit,\s*\n\s*\.page-right #user-panel-roe\{color:var\(--text-dim\)/.test(css),
+    ok(/\.page-right #user-panel-roe\{color:var\(--text-dim\)/.test(css),
       "손익 0일 때는 중립색이어야 함(가짜 강조 방지)");
+    ok(/\.page-right #user-panel-points\{color:var\(--gold\)/.test(css), "포인트는 강조색");
     ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--green\)/.test(css), "이익은 초록");
     ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--red\)/.test(css), "손실은 빨강");
   });

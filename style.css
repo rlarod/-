@@ -2016,7 +2016,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    0일 때는 중립 회색 — 레퍼런스도 값이 0인 칸은 회색입니다. */
 .page-right #user-panel-equity,
 .page-right #user-panel-available{color:var(--gold);}
-.page-right #user-panel-profit,
+.page-right #user-panel-points{color:var(--gold);}
 .page-right #user-panel-roe{color:var(--text-dim);}
 .page-right .up-value.pnl-positive{color:var(--green);}
 .page-right .up-value.pnl-negative{color:var(--red);}

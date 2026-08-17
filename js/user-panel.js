@@ -86,9 +86,14 @@ App.UserPanel = (function () {
       "</span></div>" +
 
       '<div class="up-grid">' +
-      '<span class="up-label">평가</span><b class="up-value" id="user-panel-equity">-</b>' +
-      '<span class="up-label">수익금</span><b class="up-value" id="user-panel-profit">-</b>' +
-      '<span class="up-label">가용</span><b class="up-value" id="user-panel-available">-</b>' +
+      // 라벨은 레퍼런스(개미톡)의 선물 / 벅스 / USDT / 지갑 구성을 따릅니다.
+      //   선물   = 선물 계좌 평가자산   (레퍼런스와 동일 이름)
+      //   포인트 = 계급 점수            (레퍼런스의 "벅스" 자리 — 우리 실제 값)
+      //   USDT   = 주문 가능 잔고       (레퍼런스와 동일 이름)
+      //   수익률 = 실현 수익률          (레퍼런스의 "지갑"에 해당하는 데이터가 없어 유지)
+      '<span class="up-label">선물</span><b class="up-value" id="user-panel-equity">-</b>' +
+      '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
+      '<span class="up-label">USDT</span><b class="up-value" id="user-panel-available">-</b>' +
       '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
       "</div>" +
 
@@ -126,9 +131,13 @@ App.UserPanel = (function () {
     eq.textContent = App.Utils.formatCurrency(snapshot.equity);
     el("user-panel-available").textContent = App.Utils.formatCurrency(snapshot.balance);
 
-    const profit = el("user-panel-profit");
-    profit.textContent = App.Utils.formatCurrencySigned(realized);
-    profit.className = "up-value " + (realized > 0 ? "pnl-positive" : realized < 0 ? "pnl-negative" : "");
+    // 포인트 = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
+    // 없는 수치를 지어내지 않고, 이미 계급 계산에 쓰는 값을 그대로 보여줍니다.
+    const pointsEl = el("user-panel-points");
+    if (pointsEl) {
+      const r = App.Rank ? App.Rank.getUserRank(snapshot) : null;
+      pointsEl.textContent = r && typeof r.points === "number" ? Math.round(r.points).toLocaleString() + " P" : "-";
+    }
 
     const roeEl = el("user-panel-roe");
     roeEl.textContent = App.Utils.formatPercent(roe);
