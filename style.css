@@ -882,4 +882,161 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .order-pressure-labels span:first-child{color:var(--green);}
 .order-pressure-labels span:last-child{color:var(--red);}
 
-/* cache-bust: 1786786110 */
+/* cache-bust: 1786952000 */
+
+/* =========================================================================
+ * 주문창(Order Panel) — 개미톡 정밀 매칭
+ * =========================================================================
+ * 전부 .amitalk-order 하위로만 스코프를 잡아서, 차트/호가창/게시판/랭킹 등
+ * 다른 영역의 스타일에는 전혀 영향이 없습니다. 위쪽 기존 규칙은 한 줄도
+ * 수정하지 않았고, 여기서 주문창에 해당하는 값만 덮어씁니다.
+ * ========================================================================= */
+.amitalk-order{
+  padding:10px;font-size:12px;
+  --ami-accent:#F5820B;          /* 개미톡 주황 강조(레버리지/Last) */
+  --ami-line:#DCDFE5;
+  --ami-label:#8C93A0;
+  --ami-green:#22B14C;
+  --ami-red:#E0293B;
+}
+
+/* ---- [1] 교차(Cross) / 레버리지 ---- */
+.amitalk-order .top-mode-row{gap:6px;margin-bottom:8px;}
+.amitalk-order .margin-mode-badge{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:0;
+  height:30px;padding:0 8px;font-family:var(--sans);font-size:12px;font-weight:600;
+  color:#4A5160;background:#fff;border:1px solid var(--ami-line);border-radius:4px;cursor:pointer;
+}
+.amitalk-order .margin-mode-badge-lev{
+  color:var(--ami-accent);border-color:var(--ami-accent);background:#fff;font-family:var(--mono);
+}
+.amitalk-order .mode-badge-arrow{font-size:9px;opacity:.65;margin-left:5px;}
+.amitalk-order .leverage-field-top{
+  background:#FAFBFC;border:1px solid var(--ami-line);border-radius:4px;
+  padding:10px 10px 8px;margin-bottom:8px;
+}
+
+/* ---- [2] 지정가/시장가 탭 + 알림음 ---- */
+.amitalk-order .ami-type-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;
+}
+.amitalk-order .ami-type-tabs #order-type-row{display:flex;gap:4px;margin:0;flex-wrap:nowrap;}
+.amitalk-order .interval-btn[data-order-type]{
+  padding:5px 13px;border-radius:3px;font-family:var(--sans);font-size:12px;font-weight:600;
+  background:#fff;border:1px solid var(--ami-line);color:#6B727F;
+}
+.amitalk-order .interval-btn[data-order-type].active{
+  background:#5C636E;border-color:#5C636E;color:#fff;
+}
+.amitalk-order .ami-sound{
+  display:flex;align-items:center;gap:4px;font-size:12px;color:#4A5160;cursor:pointer;user-select:none;
+}
+.amitalk-order .ami-sound input{width:13px;height:13px;margin:0;accent-color:#5C636E;cursor:pointer;}
+
+/* ---- [3][4] 주문가격 / 주문수량 입력 ---- */
+.amitalk-order .field{margin-bottom:10px;}
+.amitalk-order .field-label{font-size:11px;color:var(--ami-label);margin-bottom:4px;font-weight:500;}
+.amitalk-order .margin-input-wrap{
+  background:#fff;border:1px solid var(--ami-line);border-radius:3px;padding:0 8px;gap:6px;height:34px;
+}
+.amitalk-order .margin-input-wrap input{
+  font-family:var(--mono);font-size:13px;font-weight:600;padding:0;color:#22262E;
+}
+.amitalk-order .margin-input-wrap input::placeholder{color:#C2C7D0;}
+.amitalk-order .margin-input-wrap span{font-size:11px;color:var(--ami-label);flex:0 0 auto;}
+.amitalk-order .qty-price-last-btn{
+  font-size:12px;font-weight:700;color:var(--ami-accent);padding:2px 4px;
+}
+.amitalk-order .ami-price-step{
+  display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--ami-line);padding-left:6px;margin-left:2px;
+}
+.amitalk-order .ami-price-step button{
+  width:18px;height:13px;line-height:11px;padding:0;font-size:11px;cursor:pointer;
+  background:#F4F5F7;border:1px solid var(--ami-line);border-radius:2px;color:#6B727F;
+}
+/* 개미톡 주문가격 칸에는 통화 단위 표기가 없습니다 — 화면에서만 숨기고
+   요소/기능(ui.js의 통화 전환 라벨 갱신)은 그대로 둡니다. */
+.amitalk-order #limit-price-unit-label{display:none;}
+.amitalk-order .ami-market-price-field .margin-input-wrap{background:#F7F8FA;}
+.amitalk-order .ami-market-price-field input{color:#4A5160;cursor:default;}
+.amitalk-order .ami-market-tag{color:var(--ami-accent) !important;font-weight:700;}
+
+/* ---- [5] 10/25/50/75/100% ---- */
+.amitalk-order .chip-row{gap:0;margin-top:6px;flex-wrap:nowrap;border-top:1px solid #EEF0F3;padding-top:2px;}
+.amitalk-order #qty-percent-row .chip{
+  flex:1;min-width:0;padding:5px 0;border:none;background:transparent;border-radius:0;
+  color:var(--ami-label);font-family:var(--sans);font-size:11px;font-weight:500;
+}
+.amitalk-order #qty-percent-row .chip + .chip{border-left:1px solid #EEF0F3;}
+.amitalk-order #qty-percent-row .chip:hover{color:var(--ami-accent);background:#FFF7EE;}
+
+/* ---- [6] 매수/매도 비율 바 ---- */
+.amitalk-order .order-pressure-bar{margin-bottom:8px;}
+.amitalk-order .order-pressure-labels{font-size:11px;font-weight:700;margin:0 0 3px;}
+.amitalk-order .order-pressure-labels span:first-child{color:var(--ami-green);}
+.amitalk-order .order-pressure-labels span:last-child{color:var(--ami-red);}
+.amitalk-order .order-pressure-track{height:4px;border-radius:0;}
+.amitalk-order .order-pressure-buy{background:var(--ami-green);}
+.amitalk-order .order-pressure-sell{background:var(--ami-red);}
+
+/* ---- [7] 주문 계산 정보 ---- */
+.amitalk-order .ami-calc-block{margin:0;gap:0;padding:5px 0;border-bottom:1px solid #EEF0F3;}
+.amitalk-order .ami-calc-block:first-of-type{border-top:1px solid #EEF0F3;}
+.amitalk-order .order-preview-row{font-size:11px;color:var(--ami-label);padding:2px 0;}
+.amitalk-order .order-preview-row b{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ami-green);}
+
+/* ---- TP/SL(개미톡엔 없는 항목이라 접이식) ---- */
+.amitalk-order .ami-tpsl{margin:8px 0;}
+.amitalk-order .ami-tpsl-toggle{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  background:#F7F8FA;border:1px solid var(--ami-line);border-radius:3px;
+  padding:6px 8px;font-family:var(--sans);font-size:11px;color:#6B727F;cursor:pointer;
+}
+.amitalk-order .ami-tpsl-toggle.open .mode-badge-arrow{transform:rotate(180deg);}
+.amitalk-order #ami-tpsl-anchor{padding-top:8px;}
+
+/* ---- [8] 매수 / 매도 버튼 ---- */
+.amitalk-order .order-buttons{flex-direction:row;gap:6px;margin-top:8px;}
+.amitalk-order .order-btn{
+  flex:1;width:auto;padding:0;height:38px;border-radius:3px;
+  font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0;
+}
+.amitalk-order .order-btn.long{background:var(--ami-green);}
+.amitalk-order .order-btn.short{background:var(--ami-red);}
+.amitalk-order .err-msg{font-size:11px;margin-top:5px;min-height:0;}
+
+/* ---- [9][10] 계좌 상태 / 강제청산·수수료 ---- */
+.amitalk-order .order-account-rows{margin:8px 0 0;gap:0;}
+.amitalk-order .ami-acc-sub{margin-top:6px;padding-top:6px;border-top:1px solid #EEF0F3;}
+.amitalk-order .order-account-row{font-size:11px;color:var(--ami-label);padding:2px 0;}
+.amitalk-order .order-account-row b{font-family:var(--mono);font-size:11px;font-weight:700;color:#22262E;}
+.amitalk-order .ami-acc-sub .order-account-row b{font-weight:600;color:#4A5160;}
+
+/* ---- [11] 하단 프로모션 / 종목 ---- */
+.amitalk-order .ami-promo{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  margin-top:10px;padding:9px 8px;border-radius:3px;cursor:pointer;
+  background:#FBE3EA;color:#C2415C;font-size:11.5px;font-weight:700;
+}
+.amitalk-order .ami-promo-badge{
+  background:#fff;color:#C2415C;border:1px solid #E9AEBE;border-radius:2px;
+  padding:1px 5px;font-size:10px;font-weight:600;
+}
+.amitalk-order .ami-symbols{margin-top:6px;display:flex;flex-direction:column;gap:4px;}
+.amitalk-order .ami-symbol-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 9px;border:1px solid var(--ami-line);border-radius:3px;
+  background:#fff;font-size:11.5px;color:#4A5160;cursor:pointer;
+}
+.amitalk-order .ami-symbol-row.active{border-color:var(--gold);color:var(--gold);font-weight:700;cursor:default;}
+.amitalk-order .ami-symbol-badge{
+  font-size:10px;color:var(--ami-label);background:#F4F5F7;border-radius:2px;padding:1px 5px;
+}
+.amitalk-order .ami-symbol-badge.on{color:#fff;background:var(--gold);}
+
+/* ---- 모바일: 폭이 좁아져도 한 줄 구성이 깨지지 않게 ---- */
+@media (max-width:900px){
+  .amitalk-order .interval-btn[data-order-type]{padding:5px 10px;}
+  .amitalk-order .order-btn{height:42px;font-size:14px;}
+  .amitalk-order #qty-percent-row .chip{padding:8px 0;}
+}

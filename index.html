@@ -221,24 +221,28 @@
 
     <!-- ===== 오른쪽 열: 주문창(포지션 진입) 위, 실시간 채팅 아래로 세로 배치 ===== -->
     <div class="side-column">
-      <div class="panel order-panel">
+      <div class="panel order-panel amitalk-order">
         <div class="acc-balance" style="display:none;">
           <span class="field-label">총 자산</span>
           <span class="balance-value" id="balance-value">-</span>
         </div>
 
-        <!-- ===== 레버리지를 상단에 항상 노출(바이낸스 스타일) — ui.js는 id로만
-             #lev-slider/#lev-display를 찾기 때문에 위치를 옮겨도 무수정입니다. ===== -->
+        <!-- ===== [1] 교차(Cross) / 레버리지 — 개미톡 1행. ui.js는 #lev-display를
+             id로만 찾기 때문에 위치/태그를 바꿔도 무수정입니다. ===== -->
         <div class="top-mode-row">
-          <span class="margin-mode-badge">교차(Cross) <span class="mode-badge-arrow">▾</span></span>
-          <span class="margin-mode-badge margin-mode-badge-lev"><span id="lev-display">10</span>.00x <span class="mode-badge-arrow">▾</span></span>
+          <button type="button" class="margin-mode-badge" id="margin-mode-badge">교차(Cross) <span class="mode-badge-arrow">▾</span></button>
+          <button type="button" class="margin-mode-badge margin-mode-badge-lev" id="lev-mode-badge"><span id="lev-display">10</span>.00x <span class="mode-badge-arrow">▾</span></button>
         </div>
 
-        <div class="field leverage-field-top">
+        <!-- 레버리지 슬라이더 — 개미톡 주문창에는 없는 UI라 기본 접힘 상태입니다.
+             기능은 그대로 살아있고, 위 레버리지 배지를 누르면 펼쳐집니다. -->
+        <div class="field leverage-field-top" id="leverage-field-top" style="display:none;">
           <input type="range" id="lev-slider" min="1" max="100" value="10">
         </div>
 
-        <div class="field" style="display:none;">
+        <!-- 증거금 입력 — 화면에서만 숨김. ui.js/trading.js가 여전히 이 값을 읽어
+             주문을 넣고, qty-price-order.js가 수량×가격÷레버리지로 채워줍니다. -->
+        <div class="field" id="margin-field-hidden" style="display:none;">
           <div class="field-label"><span>증거금</span></div>
           <div class="margin-input-wrap">
             <input type="text" inputmode="numeric" id="margin-input" placeholder="0" value="1000">
@@ -252,49 +256,86 @@
           </div>
         </div>
 
-        <!-- ===== 가격/수량 입력 UI(개미톡 스타일) — qty-price-order.js가 여기에
-             동적으로 주문수량 입력+비율버튼을 만들고, ui.js가 만든 기존
-             #limit-price-input(지정가 전용 필드)에 "Last" 버튼도 붙입니다.
-             ui.js는 여전히 위에 숨겨둔 #margin-input만 읽어서 주문을 넣기 때문에
-             무수정입니다 — 이 모듈이 계산한 증거금을 그 필드에 대신 채워줍니다. ===== -->
+        <!-- ===== [2] 지정가/시장가 탭 + 알림음 — 탭은 ui.js가 만든 #order-type-row를
+             order-panel-amitalk.js가 여기로 옮겨옵니다(ui.js 무수정). ===== -->
+        <div class="ami-type-row">
+          <div class="ami-type-tabs" id="ami-type-tabs"></div>
+          <label class="ami-sound"><input type="checkbox" id="order-sound-toggle"><span>알림음</span></label>
+        </div>
+
+        <!-- ===== [3] 주문가격 — 지정가 모드에서는 ui.js가 만든 #limit-price-field가
+             여기로 이동해서 표시되고(Last / ± 버튼 부착), 시장가 모드에서는 아래
+             읽기전용 실시간 현재가 필드가 대신 표시됩니다. ===== -->
+        <div id="ami-price-anchor"></div>
+        <div class="field ami-market-price-field" id="ami-market-price-field">
+          <div class="field-label"><span>주문가격</span></div>
+          <div class="margin-input-wrap">
+            <input type="text" id="ami-market-price-input" value="-" readonly>
+            <span class="ami-market-tag">시장가</span>
+          </div>
+        </div>
+
+        <!-- ===== [4][5] 주문수량(BTC) + 10/25/50/75/100% — qty-price-order.js가 렌더 ===== -->
         <div id="qty-price-order-anchor"></div>
 
+        <!-- ===== [6] 매수/매도 비율 바 ===== -->
         <div class="order-pressure-bar">
-          <div class="order-pressure-track">
-            <div class="order-pressure-buy" id="order-pressure-buy" style="width:50%;"></div>
-            <div class="order-pressure-sell" id="order-pressure-sell" style="width:50%;"></div>
-          </div>
           <div class="order-pressure-labels">
             <span id="order-pressure-buy-text">매수 50%</span>
             <span id="order-pressure-sell-text">매도 50%</span>
           </div>
+          <div class="order-pressure-track">
+            <div class="order-pressure-buy" id="order-pressure-buy" style="width:50%;"></div>
+            <div class="order-pressure-sell" id="order-pressure-sell" style="width:50%;"></div>
+          </div>
         </div>
 
-        <!-- ===== 매수/매도가 미리보기 — 호가창의 최우선 매도/매수 호가 + 현재 증거금×레버리지
-             기준 명목가치. trading.js의 실제 체결 계산과는 별개인 "참고용 미리보기"입니다. ===== -->
-        <div class="order-preview-rows">
-          <div class="order-preview-row"><span>매수가격</span><b id="preview-ask-price">-</b></div>
-          <div class="order-preview-row"><span>매도가격</span><b id="preview-bid-price">-</b></div>
-          <div class="order-preview-row"><span>매수금액</span><b id="preview-buy-amount">-</b></div>
-          <div class="order-preview-row"><span>매도금액</span><b id="preview-sell-amount">-</b></div>
+        <!-- ===== [7] 주문 계산 정보 — 호가창 최우선 호가 + 증거금×레버리지 명목가치.
+             전부 실제 값이며 trading.js의 체결 계산과는 별개인 참고용 미리보기입니다. ===== -->
+        <div class="order-preview-rows ami-calc-block">
+          <div class="order-preview-row"><span>매수가격</span><b id="preview-ask-price">0</b></div>
+          <div class="order-preview-row"><span>매도가격</span><b id="preview-bid-price">0</b></div>
+        </div>
+        <div class="order-preview-rows ami-calc-block">
+          <div class="order-preview-row"><span>매수금액</span><b id="preview-buy-amount">0</b></div>
+          <div class="order-preview-row"><span>매도금액</span><b id="preview-sell-amount">0</b></div>
         </div>
 
+        <!-- TP/SL — 개미톡 주문창에는 없는 항목이라 기본 접힘. ui.js가 만든
+             #tp-sl-field를 order-panel-amitalk.js가 여기로 옮겨옵니다(기능 유지). -->
+        <div class="ami-tpsl">
+          <button type="button" class="ami-tpsl-toggle" id="ami-tpsl-toggle">TP / SL (선택) <span class="mode-badge-arrow">▾</span></button>
+          <div id="ami-tpsl-anchor" style="display:none;"></div>
+        </div>
+
+        <!-- ===== [8] 매수/매도 버튼 — id 그대로라 ui.js 주문 로직 그대로 연결됩니다 ===== -->
         <div class="order-buttons">
-          <button class="order-btn long" id="btn-long">LONG</button>
-          <button class="order-btn short" id="btn-short">SHORT</button>
+          <button class="order-btn long" id="btn-long">매수 / Long</button>
+          <button class="order-btn short" id="btn-short">매도 / Short</button>
         </div>
         <div class="err-msg" id="order-err"></div>
 
-        <!-- ===== 계좌 요약 — 전부 trading.js의 실제 snapshot 값(평가=총자산, 보유=잔고,
-             가능=주문가능 잔고)과 실제 수수료율(FEE_RATE)만 사용합니다. 환율은 저희가
-             가진 데이터 소스가 없어서 임의로 만들지 않고 뺐습니다. ===== -->
+        <!-- ===== [9] 계좌 상태 — 전부 App.Trading.getSnapshot()의 실제 값 ===== -->
         <div class="order-account-rows">
           <div class="order-account-row"><span>평가</span><b id="acc-equity">-</b></div>
           <div class="order-account-row"><span>보유</span><b id="acc-balance-holding">-</b></div>
           <div class="order-account-row"><span>가능</span><b id="acc-available">-</b></div>
-          <div class="order-account-row"><span>강제청산</span><b>보유, 유지증거금 기준</b></div>
+        </div>
+
+        <!-- ===== [10] 강제청산 / 수수료 — trading.js의 실제 유지증거금률(MMR=0.5%)과
+             실제 FEE_RATE를 표시합니다. 환율은 저희 시스템에 데이터 소스가 없어서
+             임의의 숫자를 만들지 않고 항목 자체를 뺐습니다(가짜 데이터 금지 원칙). ===== -->
+        <div class="order-account-rows ami-acc-sub">
+          <div class="order-account-row"><span>강제청산</span><b>보유, 유지증거금률 0.5%</b></div>
           <div class="order-account-row"><span>수수료</span><b id="acc-fee-rate">-</b></div>
         </div>
+
+        <!-- ===== [11] 하단 프로모션 영역 — 재충전/아이템은 실제로 구현된 기능이
+             아니라서 "준비중"으로 두고 클릭 시 안내만 뜹니다(가짜 수치 금지). ===== -->
+        <div class="ami-promo" id="ami-promo">
+          <span>재충전 무료 / 아이템</span><span class="ami-promo-badge">준비중</span>
+        </div>
+        <div class="ami-symbols" id="ami-symbols"></div>
 
         <div class="account-divider"></div>
 
@@ -609,5 +650,6 @@
 <script src="js/trading.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/qty-price-order.js"></script>
+<script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>

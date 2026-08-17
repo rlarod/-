@@ -20,6 +20,9 @@ App.SymbolRegistry = (function () {
 
   const SYMBOLS = [
     { symbol: "BTCUSDT", name: "비트코인", type: "crypto", dataSource: "binance" },
+    // ETH는 아직 websocket.js/chart.js/trading.js가 BTC 단일 심볼로 동작하기 때문에
+    // 실제 거래 연결이 안 돼 있습니다. "준비중"으로만 노출됩니다(가짜 시세 금지).
+    { symbol: "ETHUSDT", name: "이더리움", type: "crypto", dataSource: "mock" },
     { symbol: "005930", name: "삼성전자", type: "stock", dataSource: "mock" },
     { symbol: "000660", name: "SK하이닉스", type: "stock", dataSource: "mock" },
     { symbol: "NDX", name: "NASDAQ 100", type: "index", dataSource: "mock" },
