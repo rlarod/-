@@ -1645,7 +1645,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 가로형(상단) */
 .ad-creative-wide{
-  align-items:center;gap:14px;padding:0 26px;height:115px;  /* 레퍼런스 높이 비율 5.98% */
+  /* 04단계에서 레퍼런스 비율(5.98% = 115px)에 맞췄지만, 레퍼런스 배너는 그래픽이
+     꽉 찬 이미지인 반면 우리 소재는 문구 한 줄이라 가운데가 크게 비어 보였습니다.
+     소재가 이미지로 바뀌면 슬롯은 height:auto라 원본 비율대로 커집니다.
+     지금 문구형 소재에 맞춰 82px로 낮춥니다. */
+  align-items:center;gap:14px;padding:0 26px;height:82px;
   border-radius:0;                                          /* 레퍼런스 모서리: 직각 */
 }
 .ad-creative-wide .ad-creative-mark{width:40px;height:40px;font-size:22px;}
@@ -1710,4 +1714,26 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .ws-status{display:none;}
   .brand .name{font-size:17px;}
   .brand-tagline{display:none;}
+}
+
+/* =========================================================================
+ * 미구현(준비중) 항목 — 화면에서만 숨김
+ * =========================================================================
+ * 준비중 배지 자체는 프로젝트 원칙(미구현 기능은 준비중 표기 + 클릭 시 안내)이라
+ * 떼지 않습니다. 대신 한 화면에 배지가 11개나 노출돼 사이트가 미완성으로만
+ * 보이는 문제를 해결하기 위해, 준비중 "항목 자체"를 화면에서 숨깁니다.
+ * 마크업·이벤트·클릭 안내(page-nav.js)는 전부 그대로라 이 규칙 몇 줄만
+ * 지우면 즉시 되돌아옵니다.
+ * ========================================================================= */
+.top-banner-nav-btn.nav-coming-soon{display:none;}
+.product-tab-btn.nav-coming-soon{display:none;}
+.notice-tab-btn[data-tab="free"],
+.notice-tab-btn[data-tab="analysis"]{display:none;}
+.up-nav .up-nav-soon{display:none;}
+/* 하단 메뉴가 6개 -> 4개가 되므로 칸 수도 맞춥니다 */
+.up-nav{grid-template-columns:repeat(4,minmax(0,1fr));}
+@media (max-width:1799px){
+  .up-nav{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .up-nav button:nth-child(-n+2){border-bottom:1px solid var(--border-soft);}
+  .up-nav button:nth-child(2n+1){border-left:none;}
 }

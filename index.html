@@ -249,22 +249,26 @@
   <div class="exchange-shell">
     <!-- LeftAdPanel — 광고 소재가 들어오면 .side-ad-slot 안만 교체하면 됩니다 -->
     <aside class="side-ad-panel" id="left-ad-panel" aria-label="광고 영역">
-      <div class="side-ad-slot" id="left-ad-slot-1" data-ad-slot="left-1">
+      <!-- 좌측 광고 슬롯 — 실제 광고 소재가 들어오면 이 안에 <a><img></a>를 넣으면 됩니다.
+           비어 있는 동안에는 .side-ad-slot:empty 규칙으로 슬롯과 패널이 통째로
+           숨겨져 왼쪽에 빈 카드가 떠 있지 않습니다.
+           이전에 넣어둔 자체 홍보 배너는 아래 주석에 그대로 보관해 뒀습니다. -->
+      <div class="side-ad-slot" id="left-ad-slot-1" data-ad-slot="left-1"></div>
+      <div class="side-ad-slot" id="left-ad-slot-2" data-ad-slot="left-2"></div>
+      <!--
         <div class="ad-creative ad-creative-tall ad-creative-rank" data-ad-link="page-nav-ranking">
           <span class="ad-creative-mark">🏆</span>
           <span class="ad-creative-title">실시간 랭킹</span>
           <span class="ad-creative-sub">청산된 거래(실현 손익) 기준<br>지금 몇 위인지 확인해보세요</span>
           <span class="ad-creative-cta">랭킹 보기 ›</span>
         </div>
-      </div>
-      <div class="side-ad-slot" id="left-ad-slot-2" data-ad-slot="left-2">
         <div class="ad-creative ad-creative-tall ad-creative-board" data-ad-link="page-nav-board">
           <span class="ad-creative-mark">💬</span>
           <span class="ad-creative-title">커뮤니티</span>
           <span class="ad-creative-sub">매매 일지와 시황을<br>다른 사람들과 나눠보세요</span>
           <span class="ad-creative-cta">글 보러가기 ›</span>
         </div>
-      </div>
+      -->
     </aside>
 
   <div class="exchange-main">
