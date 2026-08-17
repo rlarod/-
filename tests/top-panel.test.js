@@ -485,12 +485,22 @@ section("[5] 기존 기능 보존");
     ok(mh && parseInt(mh[1], 10) >= 650, "차트 영역 최소 높이 650px 이상 필요");
   });
 
-  t("레이아웃: 전체 폭을 좁히는 고정 max-width가 없음", () => {
+  t("레이아웃: 어떤 해상도에서도 좌우 여백이 남지 않음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const app = css.match(/\.app\{[\s\S]*?\}/)[0];
-    const mw = app.match(/max-width:(\d+)px/);
-    ok(mw, ".app max-width 없음");
-    ok(parseInt(mw[1], 10) >= 1900, "1920px 화면에서 좌우가 남지 않도록 1900px 이상이어야 함: " + mw[1]);
+    // 1920px 상한이 있으면 그보다 넓은 모니터에서 좌우에 빈 공간이 생깁니다.
+    // 전체 폭을 쓰는 컨테이너 네 곳 모두 상한이 없어야 합니다.
+    [
+      [/\.app\{[\s\S]*?\}/, ".app"],
+      [/\.top-banner-inner\{[\s\S]*?\}/, ".top-banner-inner"],
+      [/\.menu-bar-inner\{[^}]*\}/, ".menu-bar-inner"],
+      [/\.notice-board-wrap\{[\s\S]*?\}/, ".notice-board-wrap"],
+    ].forEach(([re, label]) => {
+      const m = css.match(re);
+      ok(m, label + " 규칙 없음");
+      const mw = m[0].match(/max-width:([^;]+);/);
+      ok(mw, label + " 에 max-width 선언이 없음");
+      ok(/none/.test(mw[1]), label + " 의 폭 상한을 없애야 함(현재: " + mw[1].trim() + ")");
+    });
   });
 
   t("폰트: 사이트 전체가 한 글꼴 — 모노스페이스 잔재 없음", () => {
