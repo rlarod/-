@@ -682,6 +682,18 @@ section("[5] 기존 기능 보존");
       return parseFloat(m[1]);
     };
     ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") <= 22, "로고 이름이 너무 큼");
+
+    // 02단계 실측 기준 — 로고 마크는 정사각(비율 왜곡 금지),
+    // 헤더 안쪽 여백은 (로고 높이 / 헤더 높이) = 0.59가 나오도록 잡혀 있어야 합니다.
+    const mark = css.match(/\.brand \.mark\{[\s\S]*?\}/)[0];
+    const mw = mark.match(/width:(\d+)px/)[1], mh = mark.match(/height:(\d+)px/)[1];
+    eq(mw, mh, "로고 마크가 정사각이 아니면 비율이 깨짐");
+    const inner = css.match(/\.top-banner-inner\{[\s\S]*?\}/)[0];
+    const pad = inner.match(/padding:([\d.]+)px ([\d.]+)px/);
+    ok(pad, "헤더 안쪽 여백 지정 필요");
+    ok(parseFloat(pad[1]) >= 11 && parseFloat(pad[1]) <= 15,
+      "헤더 상하 여백이 레퍼런스 비율(로고:헤더=0.59)에서 벗어남: " + pad[1]);
+    ok(parseFloat(pad[2]) <= 10, "헤더 좌측 여백이 너무 큼: " + pad[2]);
     ok(size(/\.brand-tagline\{font-size:([\d.]+)px/, "태그라인") <= 13, "태그라인이 너무 큼");
     ok(size(/\.ws-status\{[^}]*font-size:([\d.]+)px/, "연결 상태") <= 14, "연결 상태가 너무 큼");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");

@@ -118,8 +118,11 @@ a:hover{text-decoration:underline;}
   border-bottom:1px solid var(--border);
 }
 .top-banner-inner{
-  max-width:var(--content-max);margin:0 auto;padding:7px 12px;
-  display:flex;align-items:center;gap:16px;flex-wrap:nowrap;min-width:0;
+  /* 02단계 실측 기준 — 레퍼런스의 (로고 높이 / 헤더 높이) = 0.591,
+     (좌측 여백 / 콘텐츠 폭) = 0.44%, (로고~다음 요소 간격) ≈ 콘텐츠 폭의 2.5%.
+     로고 블록 높이 37px 기준으로 헤더 63px, 좌측 8px, 간격 48px가 됩니다. */
+  max-width:var(--content-max);margin:0 auto;padding:12.5px 8px;
+  display:flex;align-items:center;gap:48px;flex-wrap:nowrap;min-width:0;
 }
 .top-banner-right{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-left:auto;flex:0 0 auto;}
 
@@ -159,12 +162,12 @@ a:hover{text-decoration:underline;}
   padding:0;border-radius:0;margin-left:4px;vertical-align:super;letter-spacing:-0.02em;
 }
 
-.brand{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
 .brand .mark{
-  width:30px;height:30px;border-radius:3px;
+  width:34px;height:34px;border-radius:3px;
   background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--sans);font-weight:700;color:#fff;font-size:18px;
+  font-family:var(--sans);font-weight:700;color:#fff;font-size:20px;
 }
 .brand-text{display:flex;flex-direction:column;gap:0;line-height:1.15;}
 .brand .name{font-weight:700;font-size:20px;letter-spacing:-0.02em;color:var(--text);}
