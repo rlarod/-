@@ -527,6 +527,22 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("내 정보 박스 내부: 남는 공간이 한 곳에 몰리지 않고 값 행이 나눠 가짐", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // space-between이면 남는 공간이 전부 값 행 아래 한 곳에 몰려 빈 띠가 생깁니다
+    // (실측: 우리 36.0% vs 레퍼런스 18.8%).
+    ok(/\.page-right > \.user-panel-box > \.user-panel-body\{\s*justify-content:stretch/.test(css),
+      "남는 공간을 아래 한 곳에 몰면 빈 띠가 생김");
+    ok(/\.page-right \.up-grid\{flex:1;grid-template-rows:1fr 1fr/.test(css),
+      "값 표가 남는 공간을 나눠 가져야 함");
+    // 글자도 폭에 비례해야 넓은 화면에서 작아 보이지 않음
+    ["up-value", "up-label", "up-nick"].forEach((c) => {
+      const m = css.match(new RegExp("\\.page-right \\." + c + "\\{font-size:clamp\\([^)]*\\)"));
+      ok(m, c + " 글자 크기가 폭에 비례해야 함");
+      ok(/vw/.test(m[0]), c + " 가 고정 px이면 넓은 화면에서 작아 보임");
+    });
+  });
+
   t("상단 박스 3개 높이 통일 — 내 정보만 내용 따라 변하지 않음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const v = css.match(/--top-box-h:\s*clamp\((\d+)px,\s*([\d.]+)vw,\s*(\d+)px\)/);

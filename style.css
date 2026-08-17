@@ -1912,3 +1912,28 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
     font-size:clamp(18px, 0.72vw, 26px);
   }
 }
+
+/* =========================================================================
+ * 내 정보 박스 내부 — 레퍼런스 비율에 맞춤
+ * =========================================================================
+ * 실측 비교(박스 높이 대비):
+ *   프로필 줄   레퍼런스 9.4%  / 우리 6.9%
+ *   값 행 간격  레퍼런스 22.9% / 우리 20.0%
+ *   값 행 아래 빈 띠  레퍼런스 18.8% / 우리 36.0%  <- 가장 큰 차이
+ * space-between이 남는 공간을 전부 아래 한 곳에 몰아넣고 있었습니다.
+ * 남는 공간을 값 행이 나눠 갖게 해 레퍼런스처럼 고르게 채웁니다.
+ * ========================================================================= */
+@media (min-width:1800px){
+  .page-right > .user-panel-box > .user-panel-body{
+    justify-content:stretch;display:flex;flex-direction:column;
+  }
+  .page-right .up-head{flex:0 0 auto;}
+  .page-right .up-grid{flex:1;grid-template-rows:1fr 1fr;align-items:stretch;}
+  .page-right .up-nav{flex:0 0 auto;}
+  /* 글자도 박스와 같이 폭에 비례 — 고정 px이면 넓은 화면에서 작아 보입니다 */
+  .page-right .up-nick{font-size:clamp(18px, 0.72vw, 26px);}
+  .page-right .up-rank-name{font-size:clamp(15px, 0.6vw, 21px);}
+  .page-right .up-value{font-size:clamp(18.5px, 0.75vw, 26px);}
+  .page-right .up-label{font-size:clamp(15px, 0.6vw, 21px);}
+  .page-right .up-nav button{font-size:clamp(13.5px, 0.55vw, 19px);}
+}
