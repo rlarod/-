@@ -76,23 +76,25 @@ App.NoticeBoard = (function () {
     }
   }
 
-  // 상단이 3분할로 바뀌면서 탭 구성이 달라졌습니다.
-  //   왼쪽 칼럼  : 공지사항 하나뿐이라 토글할 것이 없습니다.
-  //   가운데 칼럼: 최신게시물 <-> 인기글 토글.
-  // 어느 박스에 속한 탭인지는 DOM에서 직접 찾기 때문에, 나중에 배치가
-  // 또 바뀌어도 이 함수는 그대로 동작합니다.
-  function switchTab(tabName) {
-    if (tabName !== "latest" && tabName !== "popular") return;
-    if (dom.latest) dom.latest.style.display = tabName === "latest" ? "" : "none";
-    if (dom.popular) dom.popular.style.display = tabName === "popular" ? "" : "none";
-    document.querySelectorAll('.notice-tab-btn[data-tab="latest"], .notice-tab-btn[data-tab="popular"]').forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tab === tabName);
+  // 상단이 4분할(공지 / 최신게시물 / 인기글 / 내 정보)이 되면서 각 목록이
+  // 자기 칼럼을 하나씩 갖게 됐습니다. 즉 서로 숨겼다 보였다 할 일이 없습니다.
+  // 다만 나중에 다시 한 박스에 여러 탭을 넣더라도 동작하도록, "같은 박스 안에
+  // 있는 탭끼리만" 토글하게 구현해둡니다(다른 칼럼은 영향받지 않음).
+  function switchTab(tabName, btn) {
+    const box = btn ? btn.closest(".notice-box") : null;
+    if (!box) return;
+    const tabsInBox = box.querySelectorAll(".notice-tab-btn[data-tab]");
+    if (tabsInBox.length < 2) return; // 탭이 하나뿐인 칼럼은 토글할 것이 없음
+    tabsInBox.forEach((b) => {
+      const list = el("notice-list-" + b.dataset.tab);
+      if (list) list.style.display = b.dataset.tab === tabName ? "" : "none";
+      b.classList.toggle("active", b.dataset.tab === tabName);
     });
   }
 
   function bindTabs() {
     document.querySelectorAll(".notice-tab-btn[data-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab, btn));
     });
   }
 

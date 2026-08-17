@@ -11,7 +11,10 @@
 <!-- 본문 글꼴: Spoqa Han Sans Neo (@font-face는 style.css 상단에 선언).
      위 Pretendard 링크는 폴백용으로 남겨둡니다. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- JetBrains Mono — 사이트 글꼴을 Spoqa Han Sans Neo 하나로 통일하면서 더 이상
+     쓰이지 않습니다. 지우지 않고 주석으로만 남겨둡니다(되돌리려면 이 줄을 복구).
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+-->
 
 <!-- TradingView 공식 오픈소스 라이브러리 (Embed 위젯이 아닌, 직접 캔들을 그리는 용도) -->
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -115,17 +118,23 @@
     <ul class="notice-board-list" id="notice-list-notice"></ul>
   </div>
 
-  <!-- [가운데] 커뮤니티 요약 — 최신게시물 / 인기글 (기존 탭 그대로) -->
+  <!-- [가운데 좌] 최신게시물 -->
   <div class="notice-box">
     <div class="notice-board-tabs">
       <button class="notice-tab-btn active" data-tab="latest">📰 최신게시물</button>
-      <button class="notice-tab-btn" data-tab="popular">🔥 인기글</button>
       <!-- 아직 실제 게시판 분류가 없어서 준비중으로 명시(기능/코드는 그대로 보존) -->
       <button class="notice-tab-btn nav-coming-soon">자유게시판 <span class="nav-soon-badge">준비중</span></button>
       <button class="notice-tab-btn nav-coming-soon">분석게시판 <span class="nav-soon-badge">준비중</span></button>
     </div>
     <ul class="notice-board-list" id="notice-list-latest"></ul>
-    <ul class="notice-board-list" id="notice-list-popular" style="display:none;"></ul>
+  </div>
+
+  <!-- [가운데 우] 인기글 -->
+  <div class="notice-box">
+    <div class="notice-board-tabs">
+      <button class="notice-tab-btn active" data-tab="popular">🔥 인기글</button>
+    </div>
+    <ul class="notice-board-list" id="notice-list-popular"></ul>
   </div>
 
   <!-- [오른쪽] 로그인 사용자 정보 — js/user-panel.js가 채웁니다 -->

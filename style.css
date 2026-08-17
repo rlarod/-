@@ -53,7 +53,12 @@
   --blue-soft:rgba(47,111,228,0.11);
   --green:#0ECB81;
   --green-soft:rgba(14,203,129,0.11);
-  --mono:'JetBrains Mono', ui-monospace, monospace;
+  /* 사이트 전체를 하나의 글꼴로 통일했습니다. --mono는 예전에 JetBrains Mono를
+     가리켰지만, 호가창/차트/표만 다른 글꼴이라 화면이 따로 놀았습니다. 이제
+     본문과 같은 Spoqa Han Sans Neo를 쓰고, 숫자 정렬은 아래 tabular-nums로
+     처리합니다(자릿수 폭이 고정되므로 표·호가창 정렬이 그대로 유지됩니다).
+     변수 이름과 36곳의 사용처는 그대로 둬서 되돌리기도 쉽습니다. */
+  --mono:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   --sans:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   /* MARKET WAR 전용 색상 — 매수(BUY)=빨강, 매도(SELL)=파랑 (호가창의 초록/빨강 관례와는 별개) */
   --mw-buy:#F6465D;
@@ -67,6 +72,9 @@ body{
   background:var(--bg);
   color:var(--text);
   font-family:var(--sans);
+  /* 고정폭 숫자 — 모노스페이스 없이도 호가창/표/가격의 자릿수가 정렬됩니다 */
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
 }
@@ -137,16 +145,19 @@ body{
 .notice-board-wrap{
   width:100%;background:var(--bg);border-bottom:1px solid var(--border-soft);
   max-width:1920px;margin:0 auto;padding:10px 24px;
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch;
+  display:grid;grid-template-columns:30fr 30fr 20fr 20fr;gap:14px;align-items:stretch;
 }
 .notice-box{
   background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;
   display:flex;flex-direction:column;min-width:0;
 }
 .notice-box .notice-board-list{flex:1;}
-@media (max-width:1100px){
+@media (max-width:1300px){
+  /* 4칸이 좁아지는 구간 — 공지/최신 위, 인기글/내 정보 아래로 2×2 배치 */
   .notice-board-wrap{grid-template-columns:1fr 1fr;}
-  .user-panel-box{grid-column:1 / -1;}
+}
+@media (max-width:760px){
+  .notice-board-wrap{grid-template-columns:1fr;}
 }
 /* 3분할이 되면서 한 칼럼 폭이 좁아져, 탭 4개가 "최신/게시물"처럼 두 줄로
    잘렸습니다. 줄바꿈을 막고 내용 폭만 차지하게 한 뒤, 그래도 넘치면
@@ -270,10 +281,16 @@ body{
  * 임의의 px로 채팅 높이를 맞춘 게 아니라, 셋이 "같은 부모의 같은 행"에
  * 속하기 때문에 top/bottom이 항상 정확히 일치합니다.
  * ========================================================================= */
+/* 거래 화면 3열 비율 — 실측해보니 차트 54% / 호가 21% / 주문 24%로,
+   차트가 좁고 주문창이 필요 이상으로 넓었습니다. 대형 거래소 데스크톱
+   구성에 맞춰 차트 60% / 호가창 19% / 주문창 21%로 재배분합니다.
+   세 열은 같은 grid 행이라 높이가 항상 정확히 일치합니다.
+   높이는 화면의 68%를 쓰되 최소 650px을 보장합니다(창이 낮아도 차트가
+   찌그러지지 않게). 1050px 이하에서는 기존대로 1열로 쌓입니다. */
 .main-grid{
-  display:grid;grid-template-columns:2.2fr 0.85fr 1fr;gap:10px;
+  display:grid;grid-template-columns:60fr 19fr 21fr;gap:10px;
   margin-top:7px;
-  height:66vh;min-height:480px;
+  height:68vh;min-height:650px;
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
@@ -516,13 +533,30 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 /* 1050~1280px 구간은 3열 유지 상태로 호가창 폭이 가장 좁아지는 구간이라
    컬럼 라벨만 한 단계 더 줄입니다(1050px 이하는 1열로 바뀌어 폭이 넉넉해짐). */
-@media (max-width:1280px){
+/* 호가창 비중이 21%->19%로 줄면서 컬럼 라벨 여유도 함께 줄었습니다.
+   1400px 이하부터 라벨을 한 단계 축소합니다(라벨을 지우지는 않음). */
+@media (max-width:1400px){
   .ob-cols{font-size:11.5px;}
 }
 /* 1050~1120px은 3열 중 호가창이 가장 좁아지는 구간 — 여기서만 라벨을 더 줄이는 대신
    줄바꿈을 허용해서, 글자가 읽을 수 없을 만큼 작아지지 않게 합니다. */
-@media (max-width:1120px){
+@media (max-width:1250px){
+  /* 이 아래로는 라벨을 더 줄이는 대신 줄바꿈을 허용해서, 글자가
+     읽을 수 없을 만큼 작아지지 않게 합니다. */
   .ob-cols{white-space:normal;}
+}
+/* 3열을 유지하는 최소 폭. 이보다 좁으면 주문창(교차/레버리지 배지, 비율
+   버튼)의 내용 최소폭 때문에 그리드가 밀립니다. 그래서 1열 전환 지점을
+   1050px -> 1300px로 올렸습니다. 좁은 노트북에서는 차트가 전폭이 되어
+   오히려 더 크게 보이고, 기능은 하나도 사라지지 않습니다. */
+@media (max-width:1300px){
+  .main-grid{grid-template-columns:1fr;height:auto;}
+  .main-grid .chart-column,
+  .orderbook-column,
+  .side-column{height:auto;}
+  .page-chat-col{height:auto;overflow-y:visible;}
+  .main-grid .chart-column .chart-container{height:70vh;min-height:520px;}
+  .order-panel{height:auto;}
 }
 
 .ob-asks,.ob-bids{display:flex;flex-direction:column;}
@@ -1302,19 +1336,26 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .up-grid > :nth-child(6){border-right:1px solid var(--border-soft);}
 
 /* 하단 링크 줄 */
-.up-nav{display:flex;align-items:stretch;margin-top:auto;}
+/* 링크 6개를 한 줄에 넣으면 내 정보 칼럼이 좁아졌을 때(20% 배분) 넘칩니다.
+   3열 2행 격자로 배치해서 어느 폭에서도 잘리지 않게 합니다. */
+.up-nav{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:auto;
+  border-top:1px solid var(--border-soft);
+}
 .up-nav button{
-  flex:1;min-width:0;background:transparent;border:none;cursor:pointer;
-  padding:9px 2px;font-family:var(--sans);font-size:12.5px;font-weight:500;
+  min-width:0;background:transparent;border:none;cursor:pointer;
+  padding:8px 2px;font-family:var(--sans);font-size:12.5px;font-weight:500;
   color:var(--text-dim);white-space:nowrap;transition:.12s;
   display:flex;align-items:center;justify-content:center;gap:3px;
+  overflow:hidden;text-overflow:ellipsis;
 }
-.up-nav button + button{border-left:1px solid var(--border-soft);}
+.up-nav button:nth-child(-n+3){border-bottom:1px solid var(--border-soft);}
+.up-nav button:not(:nth-child(3n+1)){border-left:1px solid var(--border-soft);}
 .up-nav button:hover{color:var(--gold);background:var(--surface2);}
 .up-nav-soon{color:var(--text-faint) !important;}
 .up-soon-badge{
   font-size:9px;font-weight:500;color:var(--text-faint);
-  background:var(--surface3);border-radius:6px;padding:1px 4px;
+  background:var(--surface3);border-radius:6px;padding:1px 4px;flex:0 0 auto;
 }
 
 /* ---- 로그아웃 상태 ---- */

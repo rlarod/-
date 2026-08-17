@@ -66,48 +66,52 @@ function boot(opts) {
 }
 
 /* ===================================================================== */
-section("[1] 상단 3분할 레이아웃");
+section("[1] 상단 4분할 레이아웃");
 {
   const { doc } = boot();
   const boxes = doc.querySelectorAll(".notice-board-wrap > .notice-box");
 
-  t("상단이 정확히 3개 칼럼", () => eq(boxes.length, 3));
+  t("상단이 정확히 4개 칼럼", () => eq(boxes.length, 4));
 
-  t("CSS가 3등분(1fr 1fr 1fr)으로 선언됨", () => {
+  t("CSS가 30/30/20/20으로 선언됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.notice-board-wrap\{[\s\S]*?\}/);
     ok(m, ".notice-board-wrap 규칙 없음");
-    ok(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(m[0]), "3등분 선언 필요: " + m[0]);
+    ok(/grid-template-columns:30fr 30fr 20fr 20fr/.test(m[0]), "4분할 선언 필요: " + m[0]);
   });
 
-  t("왼쪽=공지사항", () => {
-    ok(/공지사항/.test(boxes[0].textContent), "왼쪽 칼럼에 공지사항 필요");
-    ok(boxes[0].querySelector("#notice-list-notice"), "공지 목록 유지 필요");
+  t("① 공지사항", () => {
+    ok(/공지사항/.test(boxes[0].textContent));
+    ok(boxes[0].querySelector("#notice-list-notice"), "공지 목록 유지");
   });
 
-  t("가운데=최신게시물/인기글 + 준비중 게시판", () => {
+  t("② 최신게시물 (+ 준비중 게시판 탭 보존)", () => {
     const txt = boxes[1].textContent;
-    ok(/최신게시물/.test(txt) && /인기글/.test(txt), "커뮤니티 요약 필요");
+    ok(/최신게시물/.test(txt));
     ok(/자유게시판/.test(txt) && /분석게시판/.test(txt), "기존 탭 보존 필요");
-    ok(boxes[1].querySelector("#notice-list-latest"), "최신게시물 목록 유지");
-    ok(boxes[1].querySelector("#notice-list-popular"), "인기글 목록 유지");
+    ok(boxes[1].querySelector("#notice-list-latest"));
   });
 
-  t("오른쪽=사용자 정보 패널", () => {
-    ok(boxes[2].classList.contains("user-panel-box"));
-    ok(boxes[2].querySelector("#user-panel-body"), "패널 본문 필요");
+  t("③ 인기글", () => {
+    ok(/인기글/.test(boxes[2].textContent));
+    ok(boxes[2].querySelector("#notice-list-popular"));
   });
 
-  t("최신게시물 <-> 인기글 탭 전환", () => {
+  t("④ 사용자 정보 패널", () => {
+    ok(boxes[3].classList.contains("user-panel-box"));
+    ok(boxes[3].querySelector("#user-panel-body"));
+  });
+
+  t("칼럼마다 목록이 따로 있어 서로 숨기지 않음", () => {
     const { doc: d } = boot();
-    const latest = d.getElementById("notice-list-latest");
-    const popular = d.getElementById("notice-list-popular");
-    eq(popular.style.display, "none", "기본은 최신게시물");
-    d.querySelector('.notice-tab-btn[data-tab="popular"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
-    eq(latest.style.display, "none");
-    eq(popular.style.display, "");
-    // 공지사항(왼쪽)은 탭 전환의 영향을 받지 않아야 함
     eq(d.getElementById("notice-list-notice").style.display, "");
+    eq(d.getElementById("notice-list-latest").style.display, "");
+    eq(d.getElementById("notice-list-popular").style.display, "");
+    // 탭이 하나뿐인 칼럼의 탭을 눌러도 다른 칼럼이 사라지면 안 됨
+    d.querySelector('.notice-tab-btn[data-tab="popular"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
+    eq(d.getElementById("notice-list-notice").style.display, "");
+    eq(d.getElementById("notice-list-latest").style.display, "");
+    eq(d.getElementById("notice-list-popular").style.display, "");
   });
 }
 
@@ -408,6 +412,38 @@ section("[5] 기존 기능 보존");
     // 기존 뷰/함수는 건드리지 않아야 함
     ok(!/drop\s+view\s+if\s+exists\s+public\.leaderboard/i.test(sql), "기존 leaderboard 뷰 건드리면 안 됨");
     ok(!/drop\s+function\s+if\s+exists\s+public\.get_leaderboard/i.test(sql), "기존 랭킹 함수 건드리면 안 됨");
+  });
+
+  t("레이아웃: 거래 3열 비율 60/19/21 + 차트 최소 650px", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const m = css.match(/\.main-grid\{[\s\S]*?\}/);
+    ok(m, ".main-grid 규칙 없음");
+    ok(/grid-template-columns:60fr 19fr 21fr/.test(m[0]), "차트/호가/주문 = 60:19:21 이어야 함");
+    const mh = m[0].match(/min-height:(\d+)px/);
+    ok(mh && parseInt(mh[1], 10) >= 650, "차트 영역 최소 높이 650px 이상 필요");
+  });
+
+  t("레이아웃: 전체 폭을 좁히는 고정 max-width가 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const app = css.match(/\.app\{[\s\S]*?\}/)[0];
+    const mw = app.match(/max-width:(\d+)px/);
+    ok(mw, ".app max-width 없음");
+    ok(parseInt(mw[1], 10) >= 1900, "1920px 화면에서 좌우가 남지 않도록 1900px 이상이어야 함: " + mw[1]);
+  });
+
+  t("폰트: 사이트 전체가 한 글꼴 — 모노스페이스 잔재 없음", () => {
+    // 주석 안의 설명 문구는 제외하고 실제 선언만 검사
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
+    ok(!/JetBrains Mono/.test(root), "JetBrains Mono가 남아있으면 안 됨");
+    ok(!/monospace/.test(root), "monospace 폴백이 남아있으면 안 됨");
+    ok(/--mono:'Spoqa Han Sans Neo'/.test(root), "--mono도 본문과 같은 글꼴이어야 함");
+    ok(/--sans:'Spoqa Han Sans Neo'/.test(root), "--sans도 동일");
+    // 모노스페이스를 뺀 대신 숫자 정렬은 tabular-nums로 유지되어야 함
+    const body = css.match(/\nbody\{[\s\S]*?\n\}/)[0];
+    ok(/tabular-nums/.test(body), "body에 tabular-nums 필요(호가창/표 자릿수 정렬)");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+    ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
   });
 
   t("SQL의 19단계와 코드의 19단계가 일치", () => {
