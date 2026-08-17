@@ -36,7 +36,10 @@ App.OrderbookClickOrder = (function () {
     if (price === null) return;
 
     const limitInput = el("limit-price-input");
-    if (limitInput) limitInput.value = price;
+    if (limitInput) {
+      limitInput.value = price;
+      limitInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
 
     // 지정가 탭으로 전환 — ui.js가 이미 바인딩해둔 클릭 핸들러를 그대로 트리거
     const limitTabBtn = document.querySelector('.interval-btn[data-order-type="limit"]');

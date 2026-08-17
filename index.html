@@ -238,7 +238,7 @@
           <input type="range" id="lev-slider" min="1" max="100" value="10">
         </div>
 
-        <div class="field">
+        <div class="field" style="display:none;">
           <div class="field-label"><span>증거금</span></div>
           <div class="margin-input-wrap">
             <input type="text" inputmode="numeric" id="margin-input" placeholder="0" value="1000">
@@ -251,6 +251,13 @@
             <div class="chip" data-margin="max">MAX</div>
           </div>
         </div>
+
+        <!-- ===== 가격/수량 입력 UI(개미톡 스타일) — qty-price-order.js가 여기에
+             동적으로 주문수량 입력+비율버튼을 만들고, ui.js가 만든 기존
+             #limit-price-input(지정가 전용 필드)에 "Last" 버튼도 붙입니다.
+             ui.js는 여전히 위에 숨겨둔 #margin-input만 읽어서 주문을 넣기 때문에
+             무수정입니다 — 이 모듈이 계산한 증거금을 그 필드에 대신 채워줍니다. ===== -->
+        <div id="qty-price-order-anchor"></div>
 
         <div class="order-pressure-bar">
           <div class="order-pressure-track">
@@ -601,5 +608,6 @@
 <script src="js/order-pressure-bar.js"></script>
 <script src="js/trading.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/qty-price-order.js"></script>
 </body>
 </html>
