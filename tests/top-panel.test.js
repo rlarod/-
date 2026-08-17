@@ -527,6 +527,20 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("내 정보 값 표: 라벨 셀 회색 + 값마다 색(레퍼런스 실측)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 레퍼런스 실측: 라벨 셀 #EEEEEE, 값 셀 흰색
+    ok(/\.page-right \.up-label\{[\s\S]*?background:#EEEEEE/.test(css), "라벨 셀은 회색 배경");
+    ok(/\.page-right \.up-value\{[\s\S]*?background:#fff/.test(css), "값 셀은 흰 배경");
+    // 자산은 강조색, 손익은 부호에 따라, 0이면 중립
+    ok(/#user-panel-equity,\s*\n\s*\.page-right #user-panel-available\{color:var\(--gold\)/.test(css),
+      "자산 값은 강조색");
+    ok(/#user-panel-profit,\s*\n\s*\.page-right #user-panel-roe\{color:var\(--text-dim\)/.test(css),
+      "손익 0일 때는 중립색이어야 함(가짜 강조 방지)");
+    ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--green\)/.test(css), "이익은 초록");
+    ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--red\)/.test(css), "손실은 빨강");
+  });
+
   t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {
     // js/chat.js(수정 금지)는 그대로 두고, 그려진 뒤 DOM만 꾸미는 방식
     const js = fs.readFileSync(path.join(REPO, "js/chat-event-style.js"), "utf8");
