@@ -591,29 +591,30 @@ section("[5] 기존 기능 보존");
 
     // 광고는 채팅보다 늦게(더 넓은 화면에서) 켜져야 함 — 우선순위 거래 > 채팅 > 광고
     const chatBp = parseInt(css.match(/@media \(min-width:(\d+)px\)\{\s*\.exchange-shell\{grid-template-columns:0 minmax/)[1], 10);
-    const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:(?:flex|block);\}/g);
+    const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:(?:flex|block)[^}]*\}/g);
     ok(adBlocks && adBlocks.length, "광고 표시 미디어쿼리를 찾을 수 없음");
     const adBp = parseInt(adBlocks[adBlocks.length - 1].match(/min-width:(\d+)px/)[1], 10);
     ok(adBp > chatBp, "광고(" + adBp + "px)가 채팅(" + chatBp + "px)보다 넓은 화면에서 켜져야 함");
   });
 
-  t("채팅/광고가 화면 상단에 고정되어 스크롤해도 따라옴", () => {
+  t("채팅/광고가 상단에 붙어 스크롤을 따라옴", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    // sticky는 "부모 높이 - 자기 높이"만큼만 움직이는데 거래 페이지가 화면 높이와
-    // 별 차이가 없어 사실상 붙지 않았습니다. 그래서 fixed로 고정합니다.
-    const chat = css.match(/\.side-chat-panel > \.page-chat-col\{[^}]*position:fixed[^}]*\}/);
-    ok(chat, "채팅 본체가 fixed로 고정되어야 함");
-    ok(/top:\d+px/.test(chat[0]) && /bottom:\d+px/.test(chat[0]), "top/bottom으로 화면 높이에 맞춰야 함");
-    ok(/height:auto/.test(chat[0]), "height:100%가 남아 있으면 top/bottom이 무시됨");
-    ok(/width:\d+px/.test(chat[0]), "fixed는 폭을 직접 지정해야 함");
+    const chat = css.match(/\.side-chat-panel > \.page-chat-col\{[^}]*position:sticky[^}]*\}/);
+    ok(chat, "채팅은 자기 트랙 안에서 sticky여야 함");
+    ok(/top:\d+px/.test(chat[0]), "붙을 위치(top) 지정 필요");
+    ok(/height:calc\(100vh/.test(chat[0]), "화면 높이에 맞춰야 함");
 
-    const ad = css.match(/\.side-ad-panel > \.side-ad-slot\{[^}]*position:fixed[^}]*\}/);
-    ok(ad, "좌측 광고도 고정되어야 함");
+    // fixed로 두면 여백이 없는 1920px 화면에서 가운데 콘텐츠(내 정보)를 덮습니다.
+    ok(!/\.side-chat-panel > \.page-chat-col\{[^}]*position:fixed/.test(css), "fixed는 가운데 콘텐츠를 덮음");
 
-    // 고정하더라도 grid 트랙(자리)은 남겨서 거래 화면 폭이 흔들리지 않아야 함
+    // overflow:hidden이면 안쪽 sticky가 동작하지 않습니다(실제로 그 버그가 있었음)
+    const wrap = css.match(/\.side-ad-panel,\.side-chat-panel\{[^}]*\}/)[0];
+    ok(/overflow:visible/.test(wrap), "패널에 overflow:hidden이 있으면 sticky가 죽음");
+
+    // sticky가 움직일 여지를 가지려면 셸이 거래 영역 전체를 감싸야 합니다
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
-    ok(/class="side-chat-panel"/.test(html), "채팅 자리(aside)가 남아 있어야 함");
-    ok(/grid-template-columns:0 minmax\(0,1fr\) 340px/.test(css), "채팅 폭만큼 트랙을 잡아둬야 함");
+    const shell = html.slice(html.indexOf('class="exchange-shell"'), html.indexOf('id="right-chat-panel"'));
+    ok(/class="main-grid"/.test(shell) && /history-panel/.test(shell), "셸이 거래내역까지 감싸야 함");
   });
 
   t("광고 슬롯에 실제 소재가 들어 있고 클릭하면 기존 메뉴로 이동", () => {
@@ -658,6 +659,36 @@ section("[5] 기존 기능 보존");
     ok(/tabular-nums/.test(body), "body에 tabular-nums 필요(호가창/표 자릿수 정렬)");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
     ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
+  });
+
+  t("디자인 시스템: 과도한 둥근 모서리·그림자가 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 금융 플랫폼 느낌 — radius는 0~3px, 50%(원형)만 예외
+    const radii = (css.match(/border-radius:([\d.]+)px/g) || []).map((v) => parseFloat(v.split(":")[1]));
+    const tooRound = radii.filter((v) => v > 3);
+    eq(tooRound.length, 0, "3px를 넘는 모서리가 남아 있음: " + tooRound.slice(0, 5).join(","));
+    ok(!/border-radius:999px/.test(css), "알약 형태 버튼은 쓰지 않음");
+
+    // 그림자는 떠 있는 요소(모달/드롭다운)와 상태 점만, 그것도 얇게
+    const shadows = css.match(/box-shadow:[^;]+;/g) || [];
+    shadows.forEach((sh) => {
+      const blur = (sh.match(/(\d+)px/g) || []).map((v) => parseInt(v, 10));
+      const max = Math.max(...blur, 0);
+      ok(max <= 10, "그림자가 너무 큼: " + sh.trim());
+    });
+  });
+
+  t("마이페이지도 다른 페이지와 같은 표 형태", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 미디어쿼리 안의 동명 규칙이 아니라 줄 맨 앞의 기본 규칙을 찾습니다
+    const grid = css.match(/\n\.mypage-grid\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(grid), "2칸 표 형태여야 함");
+    const item = css.match(/\n\.mypage-item\{[\s\S]*?\}/)[0];
+    ok(/justify-content:space-between/.test(item), "라벨 | 값 한 줄 배치여야 함");
+    ok(/border-bottom:1px solid/.test(item), "행 구분선 필요");
+    const val = css.match(/\n\.mypage-value\{[\s\S]*?\}/)[0];
+    const size = parseFloat(val.match(/font-size:([\d.]+)px/)[1]);
+    ok(size <= 20, "마이페이지 값 글자가 카드형처럼 너무 큼: " + size);
   });
 
   t("호가창 빈 공간 — 가짜 호가를 늘리지 않고 최근거래로 채움", () => {
