@@ -699,6 +699,25 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
+  t("메인 콘텐츠 구조: 레퍼런스 좌:우 = 3.20:1, gap 0.73%", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+
+    // 사이드 폭 23.6% — 레퍼런스 실측(좌 75.7% / gap 0.73% / 우 23.6%)
+    const mq = css.match(/@media \(min-width:1800px\)\{[\s\S]*?\n\}/);
+    ok(mq, "사이드 표시 미디어쿼리 없음");
+    ok(/grid-template-columns:0 minmax\(0,1fr\) 23\.6%/.test(mq[0]),
+      "우측 사이드는 콘텐츠의 23.6%여야 함");
+    ok(/gap:14px/.test(mq[0]), "영역 사이 간격은 레퍼런스 0.73%(=14px)");
+
+    // 공통 컨테이너 재사용 — 메인 콘텐츠만 별도 max-width를 만들지 않음
+    const main = css.match(/\.exchange-main\{[^}]*\}/);
+    ok(!main || /var\(--content-max\)/.test(main[0]) || !/max-width:\d/.test(main[0]),
+      "메인 콘텐츠가 별도 고정 폭을 쓰면 안 됨");
+
+    // 사이드가 숨겨지는 구간에서도 메인이 0px 칸으로 밀리지 않아야 함
+    ok(/\.exchange-shell > \.exchange-main\{grid-column:2/.test(css), "메인은 2번 칸 고정");
+  });
+
   t("광고 배너: 레퍼런스 실측 규격(폭 99.6%, 높이 5.98%, 직각, 테두리·그림자 없음)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");

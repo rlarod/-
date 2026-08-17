@@ -1566,10 +1566,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    1660px 이상: 채팅 표시(남는 폭이 3열 최소치 1300px 이상일 때).
    2000px 이상: 좌측 광고까지 표시하고, 가운데 거래 화면은 --content-max로 제한해
    광고/채팅이 남은 바깥 공간을 나눠 갖습니다. */
-/* 1720px 이상: 채팅 표시. 이 아래로 내리면 남는 거래 폭이 3열 최소치(1300px)를
-   밑돌아 호가창 라벨이 넘칩니다(1660px에서 실제로 확인). */
-@media (min-width:1720px){
-  .exchange-shell{grid-template-columns:0 minmax(0,1fr) 340px;gap:6px;}
+/* 05단계 — 레퍼런스 실측: 좌측 메인 75.7% / gap 0.73% / 우측 사이드 23.6%
+   (좌:우 = 3.20:1). 사이드 폭을 23.6%로 잡으면 남는 메인 폭이 3열 최소치
+   1300px를 밑도는 구간이 생겨, 표시 시작 폭을 1720 -> 1800px로 올렸습니다. */
+@media (min-width:1800px){
+  .exchange-shell{grid-template-columns:0 minmax(0,1fr) 23.6%;gap:14px;}
   .side-chat-panel{display:block;}
   /* 채팅은 자기 grid 트랙 안에서 상단에 붙습니다(sticky).
      fixed로 두면 1920px처럼 여백이 없는 화면에서 가운데 콘텐츠(내 정보 패널)를
@@ -1586,15 +1587,16 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 @media (min-width:2000px){
   /* 가운데 거래 화면은 --content-max로 제한하고(내용은 가운데 정렬),
      남는 폭은 좌측 광고 자리로 갑니다. */
-  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;}
+  /* 가운데가 --content-max로 고정되는 구간 — 사이드는 그 폭의 23.6%(=453px)로 고정해
+     레퍼런스의 좌:우 = 3.20:1 비율을 유지합니다. */
   .exchange-main{max-width:var(--content-max);margin:0 auto;width:100%;}
-  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) 340px;}
+  .exchange-shell{grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) 453px;gap:14px;}
 }
 /* 2600px 이상: 좌측 광고까지. 가운데 거래 화면을 --content-max로 고정하고
    광고/채팅은 그 바깥에 남는 공간만 나눠 갖습니다 — 광고 때문에 거래 화면이
    좁아지지 않게 하기 위한 조건입니다. */
 @media (min-width:2600px){
-  .exchange-shell{grid-template-columns:320px minmax(0,1fr) 340px;gap:8px;}
+  .exchange-shell{grid-template-columns:320px minmax(0,1fr) 453px;gap:14px;}
   .side-ad-panel{display:flex;align-self:start;position:sticky;top:6px;}
 }
 
