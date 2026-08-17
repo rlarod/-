@@ -159,7 +159,7 @@ body{
 .notice-tab-btn{
   background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);
   font-size:14.5px;font-weight:700;padding:10px 7px;cursor:pointer;
-  flex:1 1 auto;min-width:0;white-space:nowrap;
+  flex:1 0 auto;min-width:0;white-space:nowrap; /* 축소계수 0 — 내용보다 작아져 글자가 잘리는 것을 막고, 넘치면 탭 줄이 가로 스크롤됨 */
   border-bottom:2px solid transparent;transition:.12s;
 }
 .notice-board-tabs .nav-soon-badge{font-size:10.5px;padding:1px 4px;margin-left:3px;}
@@ -1244,53 +1244,83 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .rank-tier-text-영관{color:#B8931F;}
 .rank-tier-text-장성{color:#C93E4E;}
 
-/* ---- 오른쪽 칼럼: 사용자 정보 패널 ---- */
-.user-panel-body{padding:12px 14px 13px;display:flex;flex-direction:column;gap:11px;flex:1;}
+/* ---- 오른쪽 칼럼: 사용자 정보 패널 (개미톡 구조) ----
+   헤더(아바타+계급+닉네임+진행률) → 2×2 값 표 → 하단 링크 줄. */
+.user-panel-body{padding:0;display:flex;flex-direction:column;flex:1;}
 
-.user-panel-head{display:flex;align-items:center;gap:9px;min-width:0;}
-.user-panel-avatar{
-  flex:0 0 auto;width:34px;height:34px;border-radius:50%;
-  background:var(--gold-soft);color:var(--gold);
-  display:flex;align-items:center;justify-content:center;
-  font-size:17px;font-weight:700;
+/* 헤더 */
+.up-head{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  padding:9px 11px;border-bottom:1px solid var(--border-soft);
 }
-.user-panel-id{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap;}
-.user-panel-rank{font-size:14px;font-weight:600;white-space:nowrap;}
-.user-panel-nick{
-  font-size:17px;font-weight:700;color:var(--text);
+.up-avatar{
+  flex:0 0 auto;width:28px;height:28px;border-radius:50%;
+  background:var(--surface3);color:var(--text-dim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;
+}
+.up-who{display:flex;align-items:center;gap:5px;min-width:0;flex:1;}
+.up-rank{font-size:13px;font-weight:600;white-space:nowrap;}
+.up-nick{
+  font-size:15px;font-weight:700;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
 }
-
-.user-panel-stats{display:flex;flex-direction:column;gap:2px;}
-.user-panel-row{
-  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
-  font-size:14px;color:var(--text-faint);padding:3px 0;
+/* 다음 계급까지 진행률 — 실제 계급 점수에서 계산한 값 */
+.up-progress{
+  flex:0 0 auto;position:relative;width:76px;height:18px;border-radius:9px;
+  background:var(--surface3);overflow:hidden;display:flex;align-items:center;justify-content:center;
 }
-.user-panel-row b{
-  font-family:var(--sans);font-size:15px;font-weight:600;color:var(--text);
+.up-progress-fill{
+  position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold-soft);
+  border-right:1px solid var(--gold);transition:width .3s;
+}
+.up-progress-text{
+  position:relative;font-size:11px;font-weight:600;color:var(--text-dim);
+  font-variant-numeric:tabular-nums;
+}
+
+/* 2×2 값 표 — 라벨칸/값칸이 번갈아 붙는 4열 그리드 */
+.up-grid{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);
+  border-bottom:1px solid var(--border-soft);
+}
+.up-label{
+  background:var(--surface2);color:var(--text-faint);
+  font-size:12.5px;font-weight:500;white-space:nowrap;
+  padding:9px 9px;border-right:1px solid var(--border-soft);
+  display:flex;align-items:center;
+}
+.up-value{
+  padding:9px 10px;text-align:right;
+  font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text);
   font-variant-numeric:tabular-nums lining-nums;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:right;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  display:flex;align-items:center;justify-content:flex-end;
 }
-/* 실제 기능이 없는 항목은 숫자를 만들지 않고 준비중으로만 표시 */
-.user-panel-soon{color:var(--text-faint) !important;font-weight:500 !important;font-size:13px !important;}
-.user-panel-next{
-  font-size:13px;color:var(--text-faint);padding-top:8px;border-top:1px solid var(--border-soft);
-}
+.up-grid > :nth-child(-n+4){border-bottom:1px solid var(--border-soft);}
+.up-grid > :nth-child(2){border-right:1px solid var(--border-soft);}
+.up-grid > :nth-child(6){border-right:1px solid var(--border-soft);}
 
-.user-panel-actions{display:flex;gap:6px;margin-top:auto;}
-.user-panel-btn{
-  flex:1;padding:9px 0;border-radius:5px;cursor:pointer;
-  background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);
-  font-family:var(--sans);font-size:14px;font-weight:600;transition:.12s;
+/* 하단 링크 줄 */
+.up-nav{display:flex;align-items:stretch;margin-top:auto;}
+.up-nav button{
+  flex:1;min-width:0;background:transparent;border:none;cursor:pointer;
+  padding:9px 2px;font-family:var(--sans);font-size:12.5px;font-weight:500;
+  color:var(--text-dim);white-space:nowrap;transition:.12s;
+  display:flex;align-items:center;justify-content:center;gap:3px;
 }
-.user-panel-btn:hover{border-color:var(--gold);color:var(--gold);}
-.user-panel-btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;}
-.user-panel-btn-primary:hover{color:#fff;filter:brightness(1.06);}
+.up-nav button + button{border-left:1px solid var(--border-soft);}
+.up-nav button:hover{color:var(--gold);background:var(--surface2);}
+.up-nav-soon{color:var(--text-faint) !important;}
+.up-soon-badge{
+  font-size:9px;font-weight:500;color:var(--text-faint);
+  background:var(--surface3);border-radius:6px;padding:1px 4px;
+}
 
 /* ---- 로그아웃 상태 ---- */
 .user-panel-guest{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  padding:8px 0;
+  padding:16px 14px;
 }
 .user-panel-guest-icon{font-size:26px;line-height:1;}
 .user-panel-guest-text{margin:0;font-size:15px;color:var(--text-faint);}

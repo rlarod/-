@@ -289,22 +289,71 @@ section("[4] 사용자 정보 패널");
     eq(doc.getElementById("user-panel-roe").textContent, "+0.00%", "청산 전 수익률은 0");
   });
 
-  t("리워드는 실제 데이터가 없으므로 숫자를 만들지 않고 준비중", () => {
+  t("개미톡 구조 — 헤더 / 2×2 값 표 / 하단 링크 줄", () => {
     const { doc } = boot({ nickname: "홍길동" });
     const body = doc.getElementById("user-panel-body");
-    ok(/리워드/.test(body.textContent));
-    const soon = body.querySelector(".user-panel-soon");
-    ok(soon && soon.textContent === "준비중", "준비중 표시 필요");
-    ok(!/리워드[\s\S]{0,20}[\d,]{3,}/.test(body.textContent), "가짜 리워드 수치가 있으면 안 됨");
+    ok(body.querySelector(".up-head"), "헤더 줄 필요");
+    ok(body.querySelector(".up-progress"), "진행률 표시 필요");
+    const grid = body.querySelector(".up-grid");
+    ok(grid, "값 표 필요");
+    eq(grid.querySelectorAll(".up-label").length, 4, "라벨 4칸");
+    eq(grid.querySelectorAll(".up-value").length, 4, "값 4칸");
+    eq(
+      Array.prototype.map.call(grid.querySelectorAll(".up-label"), (l) => l.textContent).join(","),
+      "평가,수익금,가용,수익률"
+    );
+    eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
 
-  t("마이페이지/로그아웃은 기존 버튼을 그대로 사용", () => {
+  t("가용은 실제 주문가능 잔고(balance)", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    const snap = App.Trading.getSnapshot();
+    eq(doc.getElementById("user-panel-available").textContent, App.Utils.formatCurrency(snap.balance));
+    ok(snap.balance < snap.equity, "증거금이 묶였으므로 가용 < 평가");
+  });
+
+  t("진행률은 실제 계급 점수에서 계산", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    eq(doc.getElementById("user-panel-progress-text").textContent, "0%", "0점이면 0%");
+    App.Trading.openPosition("long", 2000, null, null);
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61200, time: Date.now() });
+    App.Trading.closePosition("수동청산");
+    const pct = parseFloat(doc.getElementById("user-panel-progress-text").textContent);
+    const rank = App.Rank.getUserRank();
+    const table = App.Rank.getRankTable();
+    const cur = table.find((r) => r.rank_id === rank.rank_id);
+    const next = table.find((r) => r.rank_id === rank.rank_id + 1);
+    const expected = Math.round(((rank.points - cur.min_points) / (next.min_points - cur.min_points)) * 100);
+    eq(pct, expected);
+    ok(pct > 0, "거래 후 진행률이 올라야 함");
+  });
+
+  t("리워드/쪽지는 실제 기능이 없으므로 숫자 없이 준비중", () => {
+    const { doc, win } = boot({ nickname: "홍길동" });
+    const soon = doc.querySelectorAll(".up-nav .up-nav-soon");
+    eq(soon.length, 2, "준비중 항목 2개");
+    const txt = Array.prototype.map.call(soon, (b) => b.textContent).join(" ");
+    ok(/리워드/.test(txt) && /쪽지/.test(txt));
+    ok(!/\d/.test(txt), "준비중 항목에 숫자가 있으면 안 됨: " + txt);
+    // 값 표(실제 데이터)에는 리워드가 들어가지 않아야 함
+    ok(!/리워드/.test(doc.querySelector(".up-grid").textContent), "값 표에 리워드가 있으면 안 됨");
+    soon[0].dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
+    ok(/준비중/.test(win.__lastAlert || ""), "클릭 시 안내만 떠야 함");
+  });
+
+  t("하단 링크는 전부 기존 버튼을 대신 누름(새 로직 없음)", () => {
     const { doc } = boot({ nickname: "홍길동" });
-    let logoutClicked = false;
-    doc.getElementById("auth-logout-btn").addEventListener("click", () => (logoutClicked = true));
-    doc.getElementById("user-panel-logout").dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
-    ok(logoutClicked, "기존 #auth-logout-btn 이 눌려야 함(새 로그아웃 로직 금지)");
-    ok(doc.getElementById("user-panel-mypage"), "마이페이지 버튼 필요");
+    const clicked = {};
+    [["auth-logout-btn", "logout"], ["page-nav-ranking", "ranking"], ["page-nav-board", "board"], ["page-nav-mypage", "mypage"]].forEach(([id, key]) => {
+      doc.getElementById(id).addEventListener("click", () => (clicked[key] = true));
+    });
+    ["logout", "ranking", "board", "mypage"].forEach((key) => {
+      doc.querySelector('.up-nav button[data-nav="' + key + '"]').dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
+      ok(clicked[key], key + " → 기존 버튼이 눌려야 함");
+    });
   });
 
   t("계급이 오르면 패널 표시도 바뀜", () => {

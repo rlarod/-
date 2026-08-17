@@ -68,42 +68,53 @@ App.UserPanel = (function () {
     if (s) s.addEventListener("click", go);
   }
 
+  // 개미톡 사용자 패널 구조: 헤더(아바타+계급+닉네임+진행률) → 2×2 값 표 → 하단 링크 줄.
+  // 값 4칸은 전부 App.Trading.getSnapshot()의 실제 값이고, 진행률은 계급 점수에서
+  // 계산한 실제 비율입니다. 실제 기능이 없는 항목(리워드/쪽지)은 하단에 "준비중"으로만 둡니다.
   function renderShell(nickname, rank) {
     dom.body.innerHTML =
-      '<div class="user-panel-head">' +
-      '<span class="user-panel-avatar">' + escapeHtml(nickname.slice(0, 1)) + "</span>" +
-      '<span class="user-panel-id">' +
-      App.Rank.renderBadge(rank, { size: 18 }) +
-      '<span class="user-panel-rank rank-tier-text-' + rank.rank_tier + '">' + escapeHtml(rank.rank_name) + "</span>" +
-      '<span class="user-panel-nick">' + escapeHtml(nickname) + "</span>" +
+      '<div class="up-head">' +
+      '<span class="up-avatar">' + escapeHtml(nickname.slice(0, 1)) + "</span>" +
+      '<span class="up-who">' +
+      App.Rank.renderBadge(rank, { size: 17 }) +
+      '<span class="up-rank rank-tier-text-' + rank.rank_tier + '">' + escapeHtml(rank.rank_name) + "</span>" +
+      '<span class="up-nick">' + escapeHtml(nickname) + "</span>" +
+      "</span>" +
+      '<span class="up-progress" id="user-panel-progress" title="다음 계급까지 진행률">' +
+      '<span class="up-progress-fill" id="user-panel-progress-fill"></span>' +
+      '<span class="up-progress-text" id="user-panel-progress-text">-</span>' +
       "</span></div>" +
-      '<div class="user-panel-stats">' +
-      '<div class="user-panel-row"><span>총자산</span><b id="user-panel-equity">-</b></div>' +
-      '<div class="user-panel-row"><span>수익금</span><b id="user-panel-profit">-</b></div>' +
-      '<div class="user-panel-row"><span>수익률</span><b id="user-panel-roe">-</b></div>' +
-      '<div class="user-panel-row"><span>리워드</span><b class="user-panel-soon">준비중</b></div>' +
+
+      '<div class="up-grid">' +
+      '<span class="up-label">평가</span><b class="up-value" id="user-panel-equity">-</b>' +
+      '<span class="up-label">수익금</span><b class="up-value" id="user-panel-profit">-</b>' +
+      '<span class="up-label">가용</span><b class="up-value" id="user-panel-available">-</b>' +
+      '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
       "</div>" +
-      '<div class="user-panel-next" id="user-panel-next"></div>' +
-      '<div class="user-panel-actions">' +
-      '<button type="button" class="user-panel-btn" id="user-panel-mypage">마이페이지</button>' +
-      '<button type="button" class="user-panel-btn" id="user-panel-logout">로그아웃</button>' +
+
+      '<div class="up-nav">' +
+      '<button type="button" data-nav="ranking">랭킹</button>' +
+      '<button type="button" data-nav="board">커뮤니티</button>' +
+      '<button type="button" data-nav="mypage">내정보</button>' +
+      '<button type="button" class="up-nav-soon" data-nav="reward">리워드<span class="up-soon-badge">준비중</span></button>' +
+      '<button type="button" class="up-nav-soon" data-nav="message">쪽지<span class="up-soon-badge">준비중</span></button>' +
+      '<button type="button" data-nav="logout">로그아웃</button>' +
       "</div>";
 
-    const my = el("user-panel-mypage");
-    if (my) {
-      my.addEventListener("click", () => {
-        const btn = el("page-nav-mypage");
-        if (btn) btn.click(); // 기존 페이지 전환 로직 그대로 사용
-        else alert("마이페이지는 현재 메뉴에서 숨김 상태입니다.");
+    // 하단 링크는 전부 기존 버튼을 대신 눌러주는 방식 — 새 화면 전환 로직 없음.
+    const PROXY = { ranking: "page-nav-ranking", board: "page-nav-board", mypage: "page-nav-mypage", logout: "auth-logout-btn" };
+    dom.body.querySelectorAll(".up-nav button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.nav;
+        if (key === "reward" || key === "message") {
+          alert(key === "reward" ? "리워드 기능은 준비중입니다." : "쪽지 기능은 준비중입니다.");
+          return;
+        }
+        const target = el(PROXY[key]);
+        if (target) target.click();
+        else alert("해당 메뉴는 현재 화면에서 숨김 상태입니다.");
       });
-    }
-    const out = el("user-panel-logout");
-    if (out) {
-      out.addEventListener("click", () => {
-        const btn = el("auth-logout-btn");
-        if (btn) btn.click(); // auth.js의 기존 로그아웃 그대로
-      });
-    }
+    });
   }
 
   function renderStats(snapshot) {
@@ -113,22 +124,32 @@ App.UserPanel = (function () {
     const roe = (realized / INITIAL_BALANCE) * 100;
 
     eq.textContent = App.Utils.formatCurrency(snapshot.equity);
+    el("user-panel-available").textContent = App.Utils.formatCurrency(snapshot.balance);
 
     const profit = el("user-panel-profit");
     profit.textContent = App.Utils.formatCurrencySigned(realized);
-    profit.className = realized > 0 ? "pnl-positive" : realized < 0 ? "pnl-negative" : "";
+    profit.className = "up-value " + (realized > 0 ? "pnl-positive" : realized < 0 ? "pnl-negative" : "");
 
     const roeEl = el("user-panel-roe");
     roeEl.textContent = App.Utils.formatPercent(roe);
-    roeEl.className = roe > 0 ? "pnl-positive" : roe < 0 ? "pnl-negative" : "";
+    roeEl.className = "up-value " + (roe > 0 ? "pnl-positive" : roe < 0 ? "pnl-negative" : "");
 
-    const next = el("user-panel-next");
+    // 다음 계급까지 진행률 — 현재 계급 구간 안에서 몇 %인지(실제 점수 기준)
+    const rank = App.Rank.getUserRank(snapshot);
+    const table = App.Rank.getRankTable();
+    const cur = table.find((r) => r.rank_id === rank.rank_id);
+    const next = table.find((r) => r.rank_id === rank.rank_id + 1);
+    let pct = 100;
     if (next) {
-      const rank = App.Rank.getUserRank(snapshot);
-      next.textContent = rank.next_rank_name
-        ? rank.next_rank_name + "까지 " + Math.ceil(rank.points_to_next) + "점"
-        : "최고 계급입니다";
+      const span = next.min_points - cur.min_points;
+      pct = span > 0 ? Math.max(0, Math.min(100, ((rank.points - cur.min_points) / span) * 100)) : 0;
     }
+    const fill = el("user-panel-progress-fill");
+    const text = el("user-panel-progress-text");
+    if (fill) fill.style.width = pct.toFixed(0) + "%";
+    if (text) text.textContent = next ? pct.toFixed(0) + "%" : "MAX";
+    const wrap = el("user-panel-progress");
+    if (wrap) wrap.title = next ? next.rank_name + "까지 " + Math.ceil(rank.points_to_next) + "점" : "최고 계급입니다";
   }
 
   function render() {
