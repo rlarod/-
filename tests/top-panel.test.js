@@ -661,6 +661,23 @@ section("[5] 기존 기능 보존");
     ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
   });
 
+  t("기본 규격: body에 font-size / line-height / 글자색이 명시됨", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const body = css.match(/\nbody\{[\s\S]*?\n\}/)[0];
+    const fs2 = body.match(/font-size:([\d.]+)px/);
+    ok(fs2, "body에 기본 font-size가 없으면 브라우저 기본 16px이 됨");
+    ok(parseFloat(fs2[1]) <= 14, "기본 글자 크기가 너무 큼: " + fs2[1]);
+    const lh = body.match(/line-height:([\d.]+)/);
+    ok(lh, "body에 기본 line-height 필요");
+    ok(parseFloat(lh[1]) <= 1.5, "기본 줄간격이 너무 넓음: " + lh[1]);
+    ok(/box-sizing:border-box/.test(css), "box-sizing 필요");
+    ok(/html,body\{margin:0;padding:0/.test(css), "html/body 여백 초기화 필요");
+
+    // 기본 링크 스타일(브라우저 기본 파란 밑줄/보라 방문색 방지)
+    ok(/\na\{color:var\(--gold\);text-decoration:none;\}/.test(css), "a 기본 스타일 필요");
+    ok(/a:visited\{/.test(css) && /a:hover\{/.test(css), "a:visited / a:hover 필요");
+  });
+
   t("디자인 시스템: 과도한 둥근 모서리·그림자가 없음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     // 금융 플랫폼 느낌 — radius는 0~3px, 50%(원형)만 예외

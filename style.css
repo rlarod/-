@@ -42,7 +42,7 @@
   --surface3:#EBEDF2;
   --border:#D7DAE2;
   --border-soft:#E6E8EE;
-  --text:#171A22;
+  --text:#333333;      /* 01단계: 개미톡 기준 기본 글자색(순검정 아님) */
   --text-dim:#5B6472;
   --text-faint:#7C8494;
   --gold:#1D5FD6;
@@ -80,12 +80,26 @@ body{
   background:var(--bg);
   color:var(--text);
   font-family:var(--sans);
+  /* 01단계 기본 규격 — 지금까지 body에 font-size/line-height가 없어서
+     브라우저 기본값(16px, normal)을 쓰고 있었습니다. 개미톡처럼 정보 밀도가
+     높은 기준값을 명시합니다. 개별 요소는 대부분 자기 크기를 갖고 있어
+     이 값은 "지정이 없는 요소"에만 적용됩니다(이번 단계에서 개별 크기는
+     건드리지 않음 — 다음 단계에서 조정). */
+  font-size:13px;
+  line-height:1.4;
   /* 고정폭 숫자 — 모노스페이스 없이도 호가창/표/가격의 자릿수가 정렬됩니다 */
   font-variant-numeric:tabular-nums lining-nums;
   font-feature-settings:"tnum" 1,"lnum" 1;
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
 }
+
+/* 01단계 기본 링크 스타일 — 지금까지 정의가 없어 브라우저 기본(파란 밑줄,
+   방문 시 보라색)을 쓰고 있었습니다. 개별 링크 디자인은 바꾸지 않고
+   기본값만 사이트 색에 맞춥니다. */
+a{color:var(--gold);text-decoration:none;}
+a:visited{color:var(--gold);}
+a:hover{text-decoration:underline;}
 /* 업비트처럼 콘텐츠를 가운데 정렬하고 양옆을 비워둡니다(광고 배너 자리).
    폭은 :root의 --content-max 하나로 관리합니다. */
 /* .app 자체는 화면 전체 폭을 씁니다(거래 셸이 좌우 여백까지 쓰기 위해).
