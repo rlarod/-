@@ -710,7 +710,8 @@ section("[5] 기존 기능 보존");
       ok(m, label + " 규칙 없음");
       return parseFloat(m[1]);
     };
-    ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") <= 22, "로고 이름이 너무 큼");
+    // 레퍼런스 세로 비율 실측(로고 26/686 = 3.79%)에 맞춰 1920 콘텐츠에서 로고 블록 약 73px.
+    ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") >= 26, "로고 이름이 레퍼런스보다 작음");
 
     // 02단계 실측 기준 — 로고 마크는 정사각(비율 왜곡 금지),
     // 헤더 안쪽 여백은 (로고 높이 / 헤더 높이) = 0.59가 나오도록 잡혀 있어야 합니다.
@@ -720,10 +721,10 @@ section("[5] 기존 기능 보존");
     const inner = css.match(/\.top-banner-inner\{[\s\S]*?\}/)[0];
     const pad = inner.match(/padding:([\d.]+)px ([\d.]+)px/);
     ok(pad, "헤더 안쪽 여백 지정 필요");
-    ok(parseFloat(pad[1]) >= 11 && parseFloat(pad[1]) <= 15,
-      "헤더 상하 여백이 레퍼런스 비율(로고:헤더=0.59)에서 벗어남: " + pad[1]);
+    ok(parseFloat(pad[1]) >= 25 && parseFloat(pad[1]) <= 35,
+      "헤더 높이가 레퍼런스 비율(6.41% of 콘텐츠 폭 = 123px)에서 벗어남: " + pad[1]);
     ok(parseFloat(pad[2]) <= 10, "헤더 좌측 여백이 너무 큼: " + pad[2]);
-    ok(size(/\.brand-tagline\{font-size:([\d.]+)px/, "태그라인") <= 13, "태그라인이 너무 큼");
+    ok(size(/\.brand-tagline\{font-size:([\d.]+)px/, "태그라인") < size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름"), "태그라인은 로고 이름보다 작아야 함");
     ok(size(/\.ws-status\{[^}]*font-size:([\d.]+)px/, "연결 상태") <= 14, "연결 상태가 너무 큼");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
@@ -822,7 +823,8 @@ section("[5] 기존 기능 보존");
     const hgt = parseFloat(cre.match(/height:(\d+)px/)[1]);
     // 레퍼런스 배너는 그래픽이 꽉 찬 이미지(환산 115px)지만 현재 소재는 문구 한 줄이라
     // 82px로 낮췄습니다. 이미지 소재로 바꾸면 슬롯이 height:auto라 원본 비율을 따릅니다.
-    ok(hgt >= 70 && hgt <= 125, "배너 높이가 범위를 벗어남: " + hgt);
+    // 레퍼런스 배너 = 콘텐츠 폭의 7.00% (1920 환산 134px)
+    ok(hgt >= 125 && hgt <= 145, "배너 높이가 레퍼런스 비율에서 벗어남: " + hgt);
     ok(/border-radius:0/.test(cre), "레퍼런스 배너는 직각 모서리");
     const slot = css.match(/\.top-ad-slot\{[^}]*\}/)[0];
     ok(/border-radius:0/.test(slot), "슬롯도 직각");
@@ -844,7 +846,8 @@ section("[5] 기존 기능 보존");
     const btn = css.match(/\n\.top-banner-nav-btn\{[\s\S]*?\}/)[0];
     const fsz = parseFloat(btn.match(/font-size:([\d.]+)px/)[1]);
     // 레퍼런스 메뉴바는 콘텐츠 폭 대비 약 3.8~5.1%로, 14px일 때는 눈에 띄게 작았습니다.
-    ok(fsz >= 18 && fsz <= 22, "메뉴 글자가 너무 작거나 큼: " + fsz);
+    // 레퍼런스 메뉴바 = 콘텐츠 폭의 3.94% (1920 환산 76px)
+    ok(fsz >= 24 && fsz <= 28, "메뉴 글자가 레퍼런스 비율에서 벗어남: " + fsz);
     const pad = btn.match(/padding:([\d.]+)px ([\d.]+)px/);
     ok(pad, "메뉴 버튼 패딩 필요");
     ok(parseFloat(pad[2]) >= 20 && parseFloat(pad[2]) <= 24, "item 좌우 패딩이 레퍼런스(약 22px)와 다름: " + pad[2]);
