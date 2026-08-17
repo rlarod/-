@@ -58,10 +58,11 @@
      본문과 같은 Spoqa Han Sans Neo를 쓰고, 숫자 정렬은 아래 tabular-nums로
      처리합니다(자릿수 폭이 고정되므로 표·호가창 정렬이 그대로 유지됩니다).
      변수 이름과 36곳의 사용처는 그대로 둬서 되돌리기도 쉽습니다. */
-  /* 콘텐츠 최대 폭 — 업비트처럼 가운데 정렬하고 양옆을 비워둡니다(광고 배너 자리).
-     이 값 하나만 바꾸면 전체 폭이 같이 움직입니다.
-     참고: 업비트 실측 1400px. 여기서는 차트 크기를 유지하려고 1700px로 잡았습니다. */
-  --content-max:1700px;
+  /* 콘텐츠 최대 폭 — 가운데 정렬하고 양옆을 비워둡니다(광고 배너 자리).
+     이 값 하나만 바꾸면 .app / .top-banner-inner / .menu-bar-inner /
+     .notice-board-wrap 네 곳이 함께 움직입니다.
+     참고값: 업비트 실측 1400px / 이전 기본값 1920px. */
+  --content-max:1920px;
   --mono:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   --sans:'Spoqa Han Sans Neo','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   /* MARKET WAR 전용 색상 — 매수(BUY)=빨강, 매도(SELL)=파랑 (호가창의 초록/빨강 관례와는 별개) */
