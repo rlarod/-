@@ -587,26 +587,27 @@ section("[5] 기존 기능 보존");
     ok(input > acct, "가격 입력값(" + input + ")이 가장 커야 함");
   });
 
-  t("레이아웃: 콘텐츠 폭이 변수 하나로 관리되고 가운데 정렬됨", () => {
+  t("레이아웃: 콘텐츠가 화면 폭을 100% 채움(레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    // 거래 셸은 좌우 광고/채팅을 위해 전체 폭을 쓰고,
-    // 나머지 블록은 .page-center 등으로 --content-max를 유지해야 합니다.
+    const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
+    // 레퍼런스는 콘텐츠가 화면을 100% 채웁니다. 폭 상한을 두면 넓은 모니터에서
+    // 좌우가 30%씩 비어 전체 비율이 어긋납니다(실측 67.1% vs 100%).
+    ok(/--content-max:\s*none/.test(root), "콘텐츠 폭 상한이 있으면 넓은 화면에서 좌우가 빔");
+
+    // 폭을 쓰는 컨테이너들이 같은 변수를 참조해야 기준선이 어긋나지 않습니다
     [
       [/\.top-banner-inner\{[\s\S]*?\}/, ".top-banner-inner"],
       [/\.menu-bar-inner\{[^}]*\}/, ".menu-bar-inner"],
-      [/\.notice-board-wrap\{[\s\S]*?\}/, ".notice-board-wrap"],
-      [/\.page-center\{[^}]*\}/, ".page-center"],
-      [/\.top-ad-banner\{[^}]*\}/, ".top-ad-banner"],
+      [/\n\.page-shell\{[\s\S]*?\}/, ".page-shell"],
     ].forEach(([re, label]) => {
       const m = css.match(re);
       ok(m, label + " 규칙 없음");
       ok(/max-width:var\(--content-max\)/.test(m[0]), label + " 는 --content-max를 써야 함");
-      ok(/margin:0 auto|margin-left:auto/.test(m[0]), label + " 는 가운데 정렬되어야 함");
     });
-    const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
-    const v = root.match(/--content-max:(\d+)px/);
-    ok(v, ":root에 --content-max 정의 필요");
-    ok(parseInt(v[1], 10) >= 1350, "콘텐츠 폭이 너무 좁아 3열이 눌림: " + v[1]);
+
+    // 좌우 2단 비율 — 레퍼런스 77 : 23
+    const shell = css.match(/\n\.page-shell\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(shell), "우측 칼럼은 23%");
   });
 
   t("광고/채팅: 거래 화면이 항상 최우선이고 소재가 없으면 자리도 없음", () => {
