@@ -132,14 +132,14 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
     });
   });
 
-  t("디자인: 둥근 카드/큰 여백을 걷어낸 촘촘한 패널", () => {
+  t("디자인: 둥근 카드는 걷어내되 글자는 거래소 수준으로 읽히는 크기", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const box = css.match(/\n\.notice-box\{[\s\S]*?\}/)[0];
     const radius = parseFloat(box.match(/border-radius:([\d.]+)px/)[1]);
     ok(radius <= 3, "border-radius가 너무 큼: " + radius);
     const li = css.match(/\.notice-board-list li\{[\s\S]*?\}/)[0];
     const fsz = parseFloat(li.match(/font-size:([\d.]+)px/)[1]);
-    ok(fsz <= 15, "목록 글자가 너무 큼: " + fsz);
+    ok(fsz >= 16, "목록 글자가 너무 작음: " + fsz);
   });
 }
 
@@ -476,13 +476,36 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
-  t("레이아웃: 거래 3열 비율 60/19/21 + 차트 최소 650px", () => {
+  t("레이아웃: 차트가 주 영역이고 호가/주문창도 충분한 폭", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.main-grid\{[\s\S]*?\}/);
     ok(m, ".main-grid 규칙 없음");
-    ok(/grid-template-columns:60fr 19fr 21fr/.test(m[0]), "차트/호가/주문 = 60:19:21 이어야 함");
+    const cols = m[0].match(/grid-template-columns:(\d+)fr (\d+)fr (\d+)fr/);
+    ok(cols, "3열 비율 선언 필요");
+    const [chart, ob, order] = [+cols[1], +cols[2], +cols[3]];
+    ok(chart >= 55, "차트가 주 영역이어야 함(현재 " + chart + "%)");
+    ok(chart >= ob && chart >= order, "차트가 가장 넓어야 함");
+    ok(ob >= 20, "호가창 폭이 부족함: " + ob);
+    ok(order >= 22, "주문창 폭이 부족함: " + order);
     const mh = m[0].match(/min-height:(\d+)px/);
-    ok(mh && parseInt(mh[1], 10) >= 650, "차트 영역 최소 높이 650px 이상 필요");
+    ok(mh && parseInt(mh[1], 10) >= 700, "차트 영역 최소 높이 700px 이상 필요: " + (mh && mh[1]));
+  });
+
+  t("타이포 스케일: 숫자가 일반 텍스트보다 한 단계 큼", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const size = (re, label) => {
+      const m = css.match(re);
+      ok(m, label + " 규칙 없음");
+      return parseFloat(m[1]);
+    };
+    const label = size(/\.amitalk-order \.field-label\{[\s\S]*?font-size:([\d.]+)px/, "주문 라벨");
+    const calc = size(/\.amitalk-order \.order-preview-row b\{[\s\S]*?font-size:([\d.]+)px/, "계산값");
+    const acct = size(/\.amitalk-order \.order-account-row b\{[\s\S]*?font-size:([\d.]+)px/, "계좌값");
+    const input = size(/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:([\d.]+)px/, "주문 입력값");
+    ok(label >= 17, "라벨이 너무 작음: " + label);
+    ok(calc > label, "계산 숫자(" + calc + ")가 라벨(" + label + ")보다 커야 함");
+    ok(acct >= calc, "계좌 숫자(" + acct + ")가 계산 숫자(" + calc + ") 이상이어야 함");
+    ok(input > acct, "가격 입력값(" + input + ")이 가장 커야 함");
   });
 
   t("레이아웃: 어떤 해상도에서도 좌우 여백이 남지 않음", () => {

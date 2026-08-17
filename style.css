@@ -113,7 +113,7 @@ body{
 .top-banner-nav-btn{
   flex:0 0 auto;white-space:nowrap;
   background:transparent;border:none;color:rgba(255,255,255,0.82);
-  padding:13px 11px;border-radius:0;font-family:var(--sans);font-size:21.5px;font-weight:700;
+  padding:13px 11px;border-radius:0;font-family:var(--sans);font-size:26px;font-weight:700;
   cursor:pointer;transition:.12s;border-bottom:3px solid transparent;
 }
 /* 1366px 이하(노트북 기본 해상도)에서도 9개가 한 줄에 다 들어가도록 좌우 여백만 축소 */
@@ -126,7 +126,7 @@ body{
 .top-banner-nav-btn.nav-coming-soon{color:rgba(255,255,255,0.55);}
 .nav-soon-badge{
   display:inline-block;white-space:nowrap;
-  font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.18);
+  font-size:14.5px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.18);
   padding:1px 5px;border-radius:20px;margin-left:4px;vertical-align:middle;
 }
 
@@ -135,12 +135,12 @@ body{
   width:36px;height:36px;border-radius:9px;
   background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-weight:700;color:#fff;font-size:20px;
+  font-family:var(--mono);font-weight:700;color:#fff;font-size:24px;
   box-shadow:0 0 0 1px rgba(29,95,214,0.35), 0 4px 14px rgba(29,95,214,0.15);
 }
 .brand-text{display:flex;flex-direction:column;gap:0;line-height:1.15;}
-.brand .name{font-weight:800;font-size:21.5px;letter-spacing:-0.01em;}
-.brand-tagline{font-size:14.5px;color:var(--text-faint);}
+.brand .name{font-weight:800;font-size:26px;letter-spacing:-0.01em;}
+.brand-tagline{font-size:17.5px;color:var(--text-faint);}
 
 /* 공지/이벤트 배너 */
 /* 상단 3분할 — 공지사항 / 커뮤니티 / 내 정보. 세 칼럼 폭이 정확히 같고
@@ -180,19 +180,19 @@ body{
 .notice-board-tabs::-webkit-scrollbar{display:none;}
 .notice-tab-btn{
   background:transparent;border:none;color:var(--text-faint);font-family:var(--sans);
-  font-size:13.5px;font-weight:600;padding:9px 10px;cursor:pointer;
+  font-size:16px;font-weight:600;padding:9px 10px;cursor:pointer;
   flex:1 0 auto;min-width:0;white-space:nowrap;
   border-bottom:2px solid transparent;transition:.12s;
 }
 .notice-tab-btn + .notice-tab-btn{border-left:1px solid var(--border-soft);}
-.notice-board-tabs .nav-soon-badge{font-size:9.5px;padding:1px 4px;margin-left:3px;}
+.notice-board-tabs .nav-soon-badge{font-size:11.5px;padding:1px 4px;margin-left:3px;}
 .notice-tab-btn:hover{color:var(--text-dim);}
 .notice-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--surface);}
 
 /* 목록 — 한 줄에 하나, 촘촘하게 */
-.notice-board-list{list-style:none;margin:0;padding:7px 11px 9px;display:flex;flex-direction:column;gap:4px;}
+.notice-board-list{list-style:none;margin:0;padding:9px 13px 11px;display:flex;flex-direction:column;gap:6px;}
 .notice-board-list li{
-  font-size:14px;line-height:1.55;color:var(--text-dim);
+  font-size:17px;line-height:1.55;color:var(--text-dim);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   display:flex;justify-content:space-between;gap:8px;
 }
@@ -204,13 +204,13 @@ body{
 .notice-board-post:hover{color:var(--gold);}
 /* 인기글 순위 — 개미톡의 "인기글 N위" 표기 */
 .notice-rank{color:var(--red);font-weight:700;margin-right:6px;}
-.notice-board-post-likes{flex:0 0 auto;font-size:12.5px;color:var(--text-faint);}
-.notice-board-empty{color:var(--text-faint);font-size:13.5px;white-space:normal;}
+.notice-board-post-likes{flex:0 0 auto;font-size:15px;color:var(--text-faint);}
+.notice-board-empty{color:var(--text-faint);font-size:16px;white-space:normal;}
 
 /* 전광판 */
-.ticker-board-table{width:100%;border-collapse:collapse;font-size:17px;}
+.ticker-board-table{width:100%;border-collapse:collapse;font-size:20.5px;}
 .ticker-board-table th{
-  font-size:15px;font-weight:600;color:var(--text-faint);text-align:right;
+  font-size:18px;font-weight:600;color:var(--text-faint);text-align:right;
   padding:0 10px 5px 0;border-bottom:1px solid var(--border);border-right:1px solid var(--border-soft);
 }
 .ticker-board-table th:first-child{text-align:left;}
@@ -220,14 +220,14 @@ body{
 .ticker-board-table td:last-child{border-right:none;}
 .ticker-board-table tr{border-bottom:1px solid var(--border-soft);}
 .ticker-board-table tr:last-child{border-bottom:none;}
-.ticker-board-code{font-family:var(--mono);font-size:15px;color:var(--text-faint);margin-left:6px;}
+.ticker-board-code{font-family:var(--mono);font-size:18px;color:var(--text-faint);margin-left:6px;}
 .ticker-board-mock-badge{
-  font-size:14px;font-weight:700;color:var(--text-faint);background:var(--surface3);
+  font-size:17px;font-weight:700;color:var(--text-faint);background:var(--surface3);
   padding:1px 6px;border-radius:20px;margin-left:6px;
 }
 .ticker-board-panel{margin-bottom:10px;}
 
-.ws-status{display:flex;align-items:center;gap:8px;font-size:20px;color:var(--text-dim);font-family:var(--mono);}
+.ws-status{display:flex;align-items:center;gap:8px;font-size:24px;color:var(--text-dim);font-family:var(--mono);}
 .ws-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--text-faint);}
 .ws-dot.ok{background:#34D399;box-shadow:0 0 6px rgba(52,211,153,0.6);}
 .ws-dot.fail{background:var(--red);box-shadow:0 0 6px rgba(229,72,77,0.6);}
@@ -246,9 +246,9 @@ body{
    기존처럼 라벨 위/값 아래 큰 글씨 유지, 나머지 통계는 라벨+값을
    같은 줄에 붙여서 훨씬 조밀하게 표시합니다. */
 .stat-block:not(.main-price-block){flex-direction:row;align-items:baseline;gap:6px;}
-.stat-label{font-size:16.5px;color:var(--text-faint);white-space:nowrap;}
-.stat-value{font-family:var(--mono);font-size:18.5px;font-weight:600;color:var(--text);white-space:nowrap;}
-.main-price-block .stat-value.price{font-size:31.5px;font-weight:700;color:var(--gold);}
+.stat-label{font-size:20px;color:var(--text-faint);white-space:nowrap;}
+.stat-value{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);white-space:nowrap;}
+.main-price-block .stat-value.price{font-size:38px;font-weight:700;color:var(--gold);}
 .stat-value.up{color:var(--green);}
 .stat-value.down{color:var(--red);}
 
@@ -258,7 +258,7 @@ body{
 }
 .interval-btn{
   background:var(--surface);border:1px solid var(--border-soft);color:var(--text-dim);
-  padding:6px 12px;border-radius:7px;font-family:var(--mono);font-size:17px;font-weight:600;
+  padding:6px 12px;border-radius:7px;font-family:var(--mono);font-size:20.5px;font-weight:600;
   cursor:pointer;transition:.12s;
 }
 .interval-btn:hover{border-color:var(--text-faint);color:var(--text);}
@@ -279,7 +279,7 @@ body{
 }
 .disclaimer{
   margin-top:7px;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
-  font-size:16.5px;color:var(--text-faint);line-height:1.6;
+  font-size:20px;color:var(--text-faint);line-height:1.6;
 }
 .disclaimer b{color:var(--text-dim);}
 
@@ -305,9 +305,13 @@ body{
    높이는 화면의 68%를 쓰되 최소 650px을 보장합니다(창이 낮아도 차트가
    찌그러지지 않게). 1050px 이하에서는 기존대로 1열로 쌓입니다. */
 .main-grid{
-  display:grid;grid-template-columns:60fr 19fr 21fr;gap:4px;
+  /* 폰트를 20% 키우면서 호가창/주문창이 좁아 글자가 넘쳤습니다.
+     차트가 여전히 주 영역이되(56%) 우측 두 칼럼에 충분한 폭을 줍니다. */
+  display:grid;grid-template-columns:56fr 21fr 23fr;gap:4px;
   margin-top:5px;
-  height:calc(100vh - 430px);min-height:650px;
+  /* 한 화면에 억지로 맞추지 않습니다 — 차트가 충분히 크도록 최소 높이를
+     넉넉히 잡고, 모자라면 페이지가 스크롤되게 둡니다(가독성 우선). */
+  height:calc(100vh - 380px);min-height:760px;
 }
 .main-grid .chart-wrap{margin-top:0;}
 .main-grid .chart-column{height:100%;display:flex;flex-direction:column;min-height:0;}
@@ -344,23 +348,23 @@ body{
   .notice-board-wrap{grid-template-columns:1fr;padding:0 16px;}
   .chart-container,
   .main-grid .chart-column .chart-container{height:62vh;min-height:380px;}
-  .main-price-block .stat-value.price{font-size:28.5px;}
+  .main-price-block .stat-value.price{font-size:34px;}
   .stats-bar{gap:20px;}
   .app{padding:14px 12px 32px;} /* 좁은 화면에서 좌우 여백을 줄여 콘텐츠 폭을 더 확보 */
   .chip{padding:9px 0;} /* 터치 타겟을 조금 더 키움(6px→9px) */
   /* 배너 글씨를 키운 뒤라, 좁은 화면에서 5개 탭+로고+로그인상태가 한 줄에
      안 들어가서 줄바꿈되는데, 이때 버튼 크기를 살짝 줄여서 덜 답답하게 함 */
-  .top-banner-nav-btn{padding:8px 9px;font-size:20px;}
-  .brand .name{font-size:24px;}
-  .auth-user-badge{font-size:18.5px;gap:6px;margin-right:0;}
-  .ws-status{font-size:17px;}
+  .top-banner-nav-btn{padding:8px 9px;font-size:24px;}
+  .brand .name{font-size:29px;}
+  .auth-user-badge{font-size:22px;gap:6px;margin-right:0;}
+  .ws-status{font-size:20.5px;}
   .mw-canvas-wrap-battle{height:52vh;min-height:340px;}
   /* 포지션 카드 — 3열은 좁은 화면에서 글씨가 눌려 보여서 2열로 줄임 */
   .position-grid{gap:10px 16px;}
-  .position-grid b{font-size:18.5px;}
-  .position-table th{font-size:14.5px;padding-right:14px;}
-  .position-table td{font-size:18.5px;padding-right:14px;}
-  .position-grid .pnl-row b{font-size:21.5px;}
+  .position-grid b{font-size:22px;}
+  .position-table th{font-size:17.5px;padding-right:14px;}
+  .position-table td{font-size:22px;padding-right:14px;}
+  .position-grid .pnl-row b{font-size:26px;}
   /* 모바일 컬럼 우선순위 — 심볼/수량/진입가/현재가/손익(ROE%)만 먼저 보이고
      나머지(청산가/증거금/TP/SL/진입수수료/수익률)는 "더보기"로 펼쳐야 보임 */
   .position-table .mobile-hide{display:none;}
@@ -368,16 +372,16 @@ body{
   .position-expand-btn{
     display:block;width:100%;margin-top:8px;padding:8px 0;background:none;
     border:1px dashed var(--border);border-radius:8px;color:var(--text-faint);
-    font-family:var(--sans);font-size:17px;cursor:pointer;
+    font-family:var(--sans);font-size:20.5px;cursor:pointer;
   }
   .mypage-grid{grid-template-columns:1fr 1fr;}
-  .mypage-nickname-value{font-size:24px;}
-  .leaderboard-rank-badge{font-size:17px;}
+  .mypage-nickname-value{font-size:29px;}
+  .leaderboard-rank-badge{font-size:20.5px;}
 }
 @media (max-width:400px){
   .stats-bar{gap:10px;}
   .top-banner-inner{padding:12px 14px;}
-  .top-banner-nav-btn{padding:7px 10px;font-size:18.5px;}
+  .top-banner-nav-btn{padding:7px 10px;font-size:22px;}
   .mypage-grid{grid-template-columns:1fr;}
 }
 
@@ -388,25 +392,25 @@ body{
   display:flex;flex-direction:column;gap:4px;padding-bottom:14px;margin-bottom:14px;
   border-bottom:1px solid var(--border-soft);
 }
-.acc-balance .field-label{font-size:17px;color:var(--text-faint);}
-.balance-value{font-family:var(--mono);font-size:28.5px;font-weight:700;color:var(--text);}
+.acc-balance .field-label{font-size:20.5px;color:var(--text-faint);}
+.balance-value{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--text);}
 
 /* ---------- 입력 필드 공통 ---------- */
 .field{margin-bottom:16px;}
-.field-label{display:flex;justify-content:space-between;font-size:17px;color:var(--text-dim);margin-bottom:7px;}
+.field-label{display:flex;justify-content:space-between;font-size:20.5px;color:var(--text-dim);margin-bottom:7px;}
 .top-mode-row{display:flex;gap:8px;margin-bottom:10px;}
 .margin-mode-badge{
-  flex:1;text-align:center;font-size:15.5px;font-weight:700;color:var(--text-dim);
+  flex:1;text-align:center;font-size:18.5px;font-weight:700;color:var(--text-dim);
   background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;
 }
 .margin-mode-badge-lev{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
-.mode-badge-arrow{font-size:11px;opacity:0.7;}
+.mode-badge-arrow{font-size:13px;opacity:0.7;}
 .leverage-field-top{
   background:var(--surface2);border:1px solid var(--border);border-radius:9px;
   padding:10px 12px 12px;margin-bottom:16px;
 }
 .leverage-field-top .field-label{margin-bottom:8px;}
-.leverage-field-top .lev-val{font-size:21.5px;}
+.leverage-field-top .lev-val{font-size:26px;}
 .field-label .lev-val{font-family:var(--mono);color:var(--gold);font-weight:700;}
 
 .margin-input-wrap{
@@ -415,18 +419,18 @@ body{
 }
 .qty-price-last-btn{
   flex:0 0 auto;background:none;border:none;color:var(--gold);font-family:var(--sans);
-  font-size:13px;font-weight:700;cursor:pointer;padding:4px 6px;
+  font-size:15.5px;font-weight:700;cursor:pointer;padding:4px 6px;
 }
 .margin-input-wrap input{
   flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);
-  font-size:21.5px;font-weight:600;padding:11px 0;min-width:0;width:100%;
+  font-size:26px;font-weight:600;padding:11px 0;min-width:0;width:100%;
 }
-.margin-input-wrap span{color:var(--text-faint);font-size:17px;}
+.margin-input-wrap span{color:var(--text-faint);font-size:20.5px;}
 
 .chip-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
 .chip{
   flex:1;text-align:center;padding:6px 0;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
-  color:var(--text-dim);font-family:var(--mono);font-size:16.5px;cursor:pointer;min-width:38px;
+  color:var(--text-dim);font-family:var(--mono);font-size:20px;cursor:pointer;min-width:38px;
 }
 .chip:hover{border-color:var(--gold);color:var(--gold);}
 
@@ -442,31 +446,31 @@ input[type=range]::-webkit-slider-thumb{
 .order-buttons{display:flex;flex-direction:column;gap:8px;}
 .order-btn{
   width:100%;padding:14px 0;border-radius:9px;border:none;font-family:var(--sans);font-weight:800;
-  font-size:21.5px;letter-spacing:0.03em;cursor:pointer;transition:.15s;
+  font-size:26px;letter-spacing:0.03em;cursor:pointer;transition:.15s;
 }
 .order-btn.long{background:var(--green);color:#fff;}
 .order-btn.short{background:var(--red);color:#fff;}
 .order-btn:hover{filter:brightness(1.08);}
 .order-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
 
-.err-msg{font-size:16.5px;color:var(--red);margin-top:8px;min-height:14px;}
+.err-msg{font-size:20px;color:var(--red);margin-top:8px;min-height:14px;}
 
 .account-divider{height:1px;background:var(--border-soft);margin:16px 0;}
 
 /* ---------- 현재 포지션 — 바이낸스 실제 포지션 표 참고, 컬럼 순서/구성 그대로 재현 ---------- */
-.position-empty{font-size:17px;color:var(--text-faint);padding:14px 0;text-align:center;}
+.position-empty{font-size:20.5px;color:var(--text-faint);padding:14px 0;text-align:center;}
 .position-card{padding-top:8px;}
-.badge{font-family:var(--sans);font-size:16px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:0.03em;}
+.badge{font-family:var(--sans);font-size:19px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:0.03em;}
 .badge.long{background:var(--green-soft);color:var(--green);}
 .badge.short{background:var(--red-soft);color:var(--red);}
 
 .position-symbol-cell{white-space:nowrap;}
-.position-symbol-name{font-size:20px;font-weight:700;color:var(--text);}
-.position-symbol-sub{font-size:16px;color:var(--text-faint);margin-top:2px;}
+.position-symbol-name{font-size:24px;font-weight:700;color:var(--text);}
+.position-symbol-sub{font-size:19px;color:var(--text-faint);margin-top:2px;}
 /* 수량(Size) 부호/색 — LONG=+(빨강), SHORT=-(파랑). 기존 배지 색 규칙과 동일하게 맞춤 */
 .qty-long{color:var(--green) !important;}
 .qty-short{color:var(--red) !important;}
-.position-roe-inline{font-size:17px;margin-left:2px;}
+.position-roe-inline{font-size:20.5px;margin-left:2px;}
 .position-roe-inline #pos-pnl-pct{font-family:var(--mono);}
 
 /* .position-grid는 미체결 지정가 카드(#pending-order-card, 항목 3개뿐이라
@@ -476,8 +480,8 @@ input[type=range]::-webkit-slider-thumb{
    .table-scroll — 호가창/거래내역/랭킹에서 이미 씀)으로 바꿨습니다. */
 .position-grid{display:flex;flex-wrap:wrap;gap:14px 24px;}
 .position-grid > div{flex:0 0 100px;display:flex;flex-direction:column-reverse;gap:3px;}
-.position-grid span{font-size:17px;color:var(--text-faint);}
-.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:20px;}
+.position-grid span{font-size:20.5px;color:var(--text-faint);}
+.position-grid b{font-family:var(--mono);font-weight:700;color:var(--text);font-size:24px;}
 
 /* =========================================================================
  * 포지션 테이블 — 바이낸스 포지션 창 그대로: 얇은 헤더 라벨 행 + 값 한 줄.
@@ -486,11 +490,11 @@ input[type=range]::-webkit-slider-thumb{
  * ========================================================================= */
 .position-table{width:100%;border-collapse:collapse;white-space:nowrap;}
 .position-table th{
-  font-size:15px;font-weight:600;color:var(--text-faint);text-align:right;
+  font-size:18px;font-weight:600;color:var(--text-faint);text-align:right;
   padding:0 14px 5px 0;border-bottom:1px solid var(--border);border-right:1px solid var(--border-soft);
 }
 .position-table td{
-  font-family:var(--mono);font-weight:700;font-size:20px;color:var(--text);
+  font-family:var(--mono);font-weight:700;font-size:24px;color:var(--text);
   text-align:right;padding:4px 14px 4px 0;border-right:1px solid var(--border-soft);
 }
 .position-table th:last-child,.position-table td:last-child{border-right:none;}
@@ -504,20 +508,20 @@ input[type=range]::-webkit-slider-thumb{
 .position-expand-btn{display:none;} /* 기본(넓은 화면)은 숨김 — 700px 이하에서만 보임(아래 미디어쿼리) */
 .close-btn{
   width:100%;margin-top:7px;padding:10px 0;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface3);color:var(--text);font-family:var(--sans);font-weight:700;font-size:18.5px;
+  background:var(--surface3);color:var(--text);font-family:var(--sans);font-weight:700;font-size:22px;
   cursor:pointer;transition:.12s;
 }
 .close-btn:hover{border-color:var(--gold);color:var(--gold);}
 
 .history-panel{margin-top:7px;}
 .table-scroll{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:17px;margin-top:8px;}
+table{width:100%;border-collapse:collapse;font-size:20.5px;margin-top:8px;}
 th{text-align:right;color:var(--text-dim);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border-soft);white-space:nowrap;}
 th:first-child,td:first-child{text-align:left;}
 th:last-child,td:last-child{border-right:none;}
 td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--border-soft);border-right:1px solid var(--border-soft);font-family:var(--mono);white-space:nowrap;}
 tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);padding:18px 0;border-right:none;}
-.badge-reason{font-family:var(--sans);font-size:16px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface3);color:var(--text-dim);}
+.badge-reason{font-family:var(--sans);font-size:19px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface3);color:var(--text-dim);}
 .badge-reason.reason-forced{background:var(--red-soft);color:var(--red);}
 
 /* =========================================================================
@@ -537,7 +541,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    항목은 하나도 지우지 않았고 배치만 위아래로 바꿨습니다. */
 .ob-header{
   display:flex;flex-direction:column;align-items:stretch;gap:5px;
-  margin-bottom:8px;font-size:17px;color:var(--text-dim);min-width:0;
+  margin-bottom:8px;font-size:20.5px;color:var(--text-dim);min-width:0;
 }
 .ob-title{
   font-weight:600;color:var(--text);min-width:0;
@@ -546,14 +550,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .ob-cols{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
   min-width:0;text-align:right;
-  font-family:var(--mono);font-size:13px;letter-spacing:-0.02em;color:var(--text-faint);white-space:nowrap;
+  font-family:var(--mono);font-size:15.5px;letter-spacing:-0.02em;color:var(--text-faint);white-space:nowrap;
 }
 /* 1050~1280px 구간은 3열 유지 상태로 호가창 폭이 가장 좁아지는 구간이라
    컬럼 라벨만 한 단계 더 줄입니다(1050px 이하는 1열로 바뀌어 폭이 넉넉해짐). */
 /* 호가창 비중이 21%->19%로 줄면서 컬럼 라벨 여유도 함께 줄었습니다.
    1400px 이하부터 라벨을 한 단계 축소합니다(라벨을 지우지는 않음). */
 @media (max-width:1400px){
-  .ob-cols{font-size:11.5px;}
+  .ob-cols{font-size:14px;}
 }
 /* 1050~1120px은 3열 중 호가창이 가장 좁아지는 구간 — 여기서만 라벨을 더 줄이는 대신
    줄바꿈을 허용해서, 글자가 읽을 수 없을 만큼 작아지지 않게 합니다. */
@@ -580,7 +584,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .ob-row{
   position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
-  padding:2px 2px;font-family:var(--mono);font-size:15.5px;overflow:hidden;border-radius:3px;
+  padding:5px 4px;font-family:var(--mono);font-size:18.5px;line-height:1.35;overflow:hidden;border-radius:3px;
   cursor:pointer;
 }
 .ob-depth-bar{
@@ -600,15 +604,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .ob-current-price-row{display:flex;align-items:center;gap:6px;margin:4px 0;}
 .ob-mark-price-row{
-  text-align:center;font-size:13px;color:var(--text-faint);margin-bottom:4px;
+  text-align:center;font-size:15.5px;color:var(--text-faint);margin-bottom:4px;
 }
 .ob-mark-price-row b{font-family:var(--mono);font-weight:600;color:var(--text-dim);}
 .ob-current-price-row .ob-current-price{margin:0;flex:1;}
-.ob-price-arrow{font-size:17.5px;font-weight:700;color:var(--text-faint);width:14px;text-align:center;}
+.ob-price-arrow{font-size:21px;font-weight:700;color:var(--text-faint);width:14px;text-align:center;}
 .ob-price-arrow-up{color:var(--green);}
 .ob-price-arrow-down{color:var(--red);}
 .ob-current-price{
-  text-align:center;font-family:var(--mono);font-weight:700;font-size:20px;
+  text-align:center;font-family:var(--mono);font-weight:700;font-size:24px;
   color:var(--gold);padding:7px 0;margin:4px 0;background:var(--gold-soft);border-radius:6px;
 }
 
@@ -617,8 +621,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 @media (max-width:600px){
   .orderbook-panel{padding:10px 12px;}
-  .ob-row{font-size:16.5px;padding:3px 2px;}
-  .ob-current-price{font-size:18.5px;}
+  .ob-row{font-size:20px;padding:3px 2px;}
+  .ob-current-price{font-size:22px;}
 }
 
 /* =========================================================================
@@ -629,7 +633,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap;}
 .tab-btn{
   background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);
-  font-size:18.5px;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;
+  font-size:22px;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;
 }
 .tab-btn:hover{color:var(--text);}
 .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
@@ -639,7 +643,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .asset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
 .asset-item{background:var(--surface2);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
 .asset-item .field-label{margin-bottom:6px;}
-.asset-item b{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--text);}
+.asset-item b{font-family:var(--mono);font-size:27.5px;font-weight:700;color:var(--text);}
 
 /* =========================================================================
  * MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현. 새로 추가된
@@ -651,7 +655,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .market-war-panel{padding:14px 16px;}
 
-.mw-power-label{display:flex;gap:10px;font-family:var(--mono);font-size:17px;}
+.mw-power-label{display:flex;gap:10px;font-family:var(--mono);font-size:20.5px;}
 .mw-buy-label{color:var(--mw-buy);}
 .mw-sell-label{color:var(--mw-sell);}
 .mw-buy-label b,.mw-sell-label b{font-weight:700;}
@@ -673,7 +677,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .mw-canvas:active{cursor:grabbing;}
 
 .mw-controls-hint{
-  position:absolute;bottom:8px;right:10px;font-family:var(--mono);font-size:14.5px;
+  position:absolute;bottom:8px;right:10px;font-family:var(--mono);font-size:17.5px;
   color:rgba(237,239,244,0.55);text-shadow:0 1px 3px rgba(0,0,0,0.7);pointer-events:none;
 }
 
@@ -682,17 +686,17 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   align-items:center;gap:2px;pointer-events:none;text-align:center;
 }
 .mw-hud-price{
-  font-family:var(--mono);font-weight:700;font-size:28.5px;color:#EDEFF4;
+  font-family:var(--mono);font-weight:700;font-size:34px;color:#EDEFF4;
   text-shadow:0 2px 6px rgba(0,0,0,0.7);
 }
 .mw-hud-status{
-  font-family:var(--sans);font-weight:600;font-size:16px;letter-spacing:0.04em;
+  font-family:var(--sans);font-weight:600;font-size:19px;letter-spacing:0.04em;
   color:var(--gold);text-shadow:0 1px 4px rgba(0,0,0,0.7);
 }
 
 .mw-feed{
   margin-top:7px;display:flex;flex-direction:column;gap:4px;
-  max-height:96px;overflow-y:auto;font-family:var(--mono);font-size:16px;
+  max-height:96px;overflow-y:auto;font-family:var(--mono);font-size:19px;
 }
 .mw-feed-item{
   display:flex;gap:8px;color:var(--text-dim);padding:2px 0;
@@ -704,8 +708,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 @media (max-width:600px){
   .mw-canvas-wrap{height:180px;}
-  .mw-power-label{font-size:16px;gap:10px;}
-  .mw-feed{max-height:70px;font-size:14.5px;}
+  .mw-power-label{font-size:19px;gap:10px;}
+  .mw-feed{max-height:70px;font-size:17.5px;}
 }
 
 /* =========================================================================
@@ -731,42 +735,42 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   width:52px;height:52px;margin:0 auto 14px;border-radius:14px;
   background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-weight:700;color:#fff;font-size:28.5px;
+  font-family:var(--mono);font-weight:700;color:#fff;font-size:34px;
 }
-.auth-title{font-size:26px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.auth-sub{font-size:17px;color:var(--text-dim);margin-bottom:22px;}
+.auth-title{font-size:31px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.auth-sub{font-size:20.5px;color:var(--text-dim);margin-bottom:22px;}
 .auth-input{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-  color:var(--text);font-family:var(--sans);font-size:21.5px;font-weight:600;
+  color:var(--text);font-family:var(--sans);font-size:26px;font-weight:600;
   padding:13px 14px;outline:none;text-align:center;margin-bottom:6px;
 }
 .auth-input:focus{border-color:var(--gold);}
-.auth-err{font-size:16.5px;color:var(--red);min-height:16px;margin-bottom:10px;}
+.auth-err{font-size:20px;color:var(--red);min-height:16px;margin-bottom:10px;}
 .auth-start-btn{
   width:100%;padding:14px 0;border-radius:9px;border:none;background:var(--gold);
-  color:#fff;font-family:var(--sans);font-weight:800;font-size:21.5px;
+  color:#fff;font-family:var(--sans);font-weight:800;font-size:26px;
   letter-spacing:0.02em;cursor:pointer;transition:.15s;
 }
 .auth-start-btn:hover{filter:brightness(1.06);}
 .auth-start-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
 .auth-loading{
-  display:none;font-size:17px;color:var(--text-dim);margin-top:7px;font-family:var(--mono);
+  display:none;font-size:20.5px;color:var(--text-dim);margin-top:7px;font-family:var(--mono);
 }
-.auth-note{font-size:16px;color:var(--text-faint);margin-top:7px;line-height:1.5;}
+.auth-note{font-size:19px;color:var(--text-faint);margin-top:7px;line-height:1.5;}
 
 .auth-user-badge{
   display:flex;align-items:center;gap:10px;margin-right:14px;
-  font-family:var(--mono);font-size:21.5px;color:var(--gold);font-weight:600;
+  font-family:var(--mono);font-size:26px;color:var(--gold);font-weight:600;
 }
 .auth-logout-btn{
-  font-family:var(--sans);font-size:18.5px;font-weight:600;color:var(--text-dim);
+  font-family:var(--sans);font-size:22px;font-weight:600;color:var(--text-dim);
   background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   padding:6px 12px;cursor:pointer;transition:.12s;
 }
 .auth-logout-btn:hover{color:var(--text);border-color:var(--text-faint);}
 
 .auth-toggle-row{
-  margin-top:7px;font-size:17px;color:var(--text-faint);
+  margin-top:7px;font-size:20.5px;color:var(--text-faint);
   display:flex;gap:6px;justify-content:center;flex-wrap:wrap;
 }
 .auth-toggle-row a{color:var(--gold);font-weight:700;text-decoration:none;}
@@ -779,7 +783,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .leaderboard-row-me{background:var(--gold-soft);}
 .leaderboard-row-me td{color:var(--text);font-weight:700;}
 .leaderboard-me-badge{
-  font-family:var(--sans);font-size:14.5px;font-weight:700;color:var(--gold);
+  font-family:var(--sans);font-size:17.5px;font-weight:700;color:var(--gold);
   background:var(--gold-soft);padding:1px 6px;border-radius:4px;margin-left:4px;
 }
 .leaderboard-rank-badge{font-weight:800;white-space:nowrap;}
@@ -787,7 +791,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .leaderboard-rank-badge.rank-2{color:#C9CDD6;}
 .leaderboard-rank-badge.rank-3{color:#D28C4E;}
 .leaderboard-my-rank{
-  margin-top:7px;font-size:17px;color:var(--text-dim);font-family:var(--mono);
+  margin-top:7px;font-size:20.5px;color:var(--text-dim);font-family:var(--mono);
   min-height:14px;
 }
 
@@ -799,31 +803,31 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
   padding:4px 2px;margin-bottom:10px;
 }
-.chat-msg{font-size:17.5px;line-height:1.4;}
+.chat-msg{font-size:21px;line-height:1.4;}
 .chat-msg-event{
   background:var(--gold-soft);border-radius:8px;padding:6px 8px;margin:2px 0;
 }
 .chat-event-icon{margin-right:6px;}
-.chat-msg-event .chat-msg-text{color:var(--gold);font-weight:600;font-size:17px;}
+.chat-msg-event .chat-msg-text{color:var(--gold);font-weight:600;font-size:20.5px;}
 .chat-msg-event .chat-msg-time{color:var(--text-faint);}
 .chat-msg-nick{font-weight:700;color:var(--gold);margin-right:6px;}
-.chat-msg-time{color:var(--text-faint);font-size:15px;font-family:var(--mono);}
+.chat-msg-time{color:var(--text-faint);font-size:18px;font-family:var(--mono);}
 .chat-msg-text{color:var(--text);margin-top:2px;word-break:break-word;white-space:pre-wrap;}
-.chat-empty{font-size:17px;color:var(--text-faint);text-align:center;padding:80px 0;}
+.chat-empty{font-size:20.5px;color:var(--text-faint);text-align:center;padding:80px 0;}
 
 .chat-input-row{display:flex;gap:6px;}
 .chat-input{
   flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-  color:var(--text);font-family:var(--sans);font-size:18.5px;padding:10px 12px;outline:none;min-width:0;
+  color:var(--text);font-family:var(--sans);font-size:22px;padding:10px 12px;outline:none;min-width:0;
 }
 .chat-input:focus{border-color:var(--gold);}
 .chat-send-btn{
   flex:0 0 auto;padding:0 16px;border-radius:9px;border:none;background:var(--gold);
-  color:#fff;font-family:var(--sans);font-weight:700;font-size:18.5px;cursor:pointer;transition:.12s;
+  color:#fff;font-family:var(--sans);font-weight:700;font-size:22px;cursor:pointer;transition:.12s;
 }
 .chat-send-btn:hover{filter:brightness(1.06);}
 .chat-send-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
-.chat-err{font-size:16.5px;color:var(--red);margin-top:6px;min-height:14px;}
+.chat-err{font-size:20px;color:var(--red);margin-top:6px;min-height:14px;}
 
 @media (max-width:600px){
   .chat-messages,
@@ -838,7 +842,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .admin-reset-btn{
   width:100%;padding:12px 0;border-radius:9px;border:1px solid var(--red);
   background:var(--red-soft);color:var(--red);font-family:var(--sans);font-weight:700;
-  font-size:18.5px;cursor:pointer;transition:.12s;
+  font-size:22px;cursor:pointer;transition:.12s;
 }
 .admin-reset-btn:hover{background:var(--red);color:#fff;}
 
@@ -850,14 +854,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   width:100%;max-width:380px;padding:26px 24px;background:var(--surface);
   border:1px solid var(--red);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.5);
 }
-.admin-confirm-title{font-size:23px;font-weight:800;color:var(--red);margin-bottom:14px;}
-.admin-confirm-body{font-size:18.5px;color:var(--text-dim);line-height:1.7;}
+.admin-confirm-title{font-size:27.5px;font-weight:800;color:var(--red);margin-bottom:14px;}
+.admin-confirm-body{font-size:22px;color:var(--text-dim);line-height:1.7;}
 .admin-confirm-body ul{margin:8px 0;padding-left:20px;}
 .admin-confirm-body b{color:var(--red);}
 .admin-confirm-actions{display:flex;gap:8px;margin-top:20px;}
 .admin-confirm-cancel-btn,.admin-confirm-ok-btn{
   flex:1;padding:11px 0;border-radius:9px;border:none;font-family:var(--sans);
-  font-weight:700;font-size:18.5px;cursor:pointer;
+  font-weight:700;font-size:22px;cursor:pointer;
 }
 .admin-confirm-cancel-btn{background:var(--surface3);color:var(--text-dim);}
 .admin-confirm-ok-btn{background:var(--red);color:#fff;}
@@ -866,7 +870,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 새 시즌 시작 안내 토스트 */
 .season-reset-banner{
   position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1200;
-  background:var(--gold);color:#fff;font-family:var(--sans);font-weight:700;font-size:18.5px;
+  background:var(--gold);color:#fff;font-family:var(--sans);font-weight:700;font-size:22px;
   padding:10px 18px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,0.4);
   transition:opacity .5s;
 }
@@ -878,30 +882,30 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  * display 전환으로만 구현했습니다(레이아웃 구조 자체는 안 늘림).
  * ========================================================================= */
 .board-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px;}
-.board-section-title{font-size:17px;font-weight:700;color:var(--text-dim);margin:14px 0 8px;}
+.board-section-title{font-size:20.5px;font-weight:700;color:var(--text-dim);margin:14px 0 8px;}
 .board-popular-item{
-  font-size:17.5px;padding:7px 4px;border-bottom:1px solid var(--border-soft);cursor:pointer;
+  font-size:21px;padding:7px 4px;border-bottom:1px solid var(--border-soft);cursor:pointer;
   display:flex;justify-content:space-between;color:var(--text);
 }
 .board-popular-item:hover{color:var(--gold);}
-.board-mini-stat{color:var(--text-faint);font-family:var(--mono);font-size:16px;}
+.board-mini-stat{color:var(--text-faint);font-family:var(--mono);font-size:19px;}
 .board-hot-badge{filter:saturate(1.4);}
 .board-row{cursor:pointer;}
 .board-row:hover{background:var(--surface2);}
 
 .board-textarea{
   width:100%;min-height:160px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-  color:var(--text);font-family:var(--sans);font-size:18.5px;padding:12px;outline:none;resize:vertical;
+  color:var(--text);font-family:var(--sans);font-size:22px;padding:12px;outline:none;resize:vertical;
   margin-top:8px;line-height:1.6;
 }
 .board-textarea:focus{border-color:var(--gold);}
 .board-write-actions{display:flex;gap:8px;margin-top:7px;}
 .board-write-actions button{flex:1;}
 
-.board-detail-title{font-size:24px;font-weight:700;color:var(--text);margin:6px 0 6px;}
-.board-detail-meta{font-size:16.5px;color:var(--text-faint);font-family:var(--mono);margin-bottom:14px;}
+.board-detail-title{font-size:29px;font-weight:700;color:var(--text);margin:6px 0 6px;}
+.board-detail-meta{font-size:20px;color:var(--text-faint);font-family:var(--mono);margin-bottom:14px;}
 .board-detail-content{
-  font-size:19px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  font-size:23px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word;
   padding-bottom:14px;border-bottom:1px solid var(--border-soft);margin-bottom:14px;
 }
 .board-detail-actions{display:flex;gap:8px;margin-bottom:14px;}
@@ -910,18 +914,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .board-vote-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px;}
 .board-vote-btn{
   padding:9px 18px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);
-  color:var(--text-dim);font-family:var(--sans);font-weight:700;font-size:18.5px;cursor:pointer;transition:.12s;
+  color:var(--text-dim);font-family:var(--sans);font-weight:700;font-size:22px;cursor:pointer;transition:.12s;
 }
 .board-vote-btn:hover{border-color:var(--gold);color:var(--gold);}
 .board-vote-btn.board-vote-active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);}
 
 .board-comments-section{margin-top:6px;}
-.board-empty-comment{font-size:17px;color:var(--text-faint);text-align:center;padding:20px 0;}
+.board-empty-comment{font-size:20.5px;color:var(--text-faint);text-align:center;padding:20px 0;}
 .board-comment-item{padding:9px 0;border-bottom:1px solid var(--border-soft);}
 .board-comment-meta{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
-.board-comment-text{font-size:17.5px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.board-comment-text{font-size:21px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
 .board-comment-delete-btn{
-  margin-left:auto;font-size:15px;color:var(--text-faint);background:none;border:none;cursor:pointer;
+  margin-left:auto;font-size:18px;color:var(--text-faint);background:none;border:none;cursor:pointer;
 }
 .board-comment-delete-btn:hover{color:var(--red);}
 
@@ -932,13 +936,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;align-items:baseline;gap:10px;padding-bottom:16px;margin-bottom:18px;
   border-bottom:1px solid var(--border-soft);
 }
-.mypage-nickname-label{font-size:17px;color:var(--text-faint);}
-.mypage-nickname-value{font-size:28.5px;font-weight:800;color:var(--gold);}
+.mypage-nickname-label{font-size:20.5px;color:var(--text-faint);}
+.mypage-nickname-value{font-size:34px;font-weight:800;color:var(--gold);}
 .mypage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px 28px;}
 .mypage-item{display:flex;flex-direction:column;gap:6px;}
-.mypage-item-highlight .mypage-value{color:var(--gold);font-size:31.5px;}
-.mypage-item-label{font-size:17px;color:var(--text-dim);}
-.mypage-value{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text);}
+.mypage-item-highlight .mypage-value{color:var(--gold);font-size:38px;}
+.mypage-item-label{font-size:20.5px;color:var(--text-dim);}
+.mypage-value{font-family:var(--mono);font-size:31px;font-weight:600;color:var(--text);}
 
 /* =========================================================================
  * 종목 선택 드롭다운 — 구조만(다종목 데이터 연동은 보류 중). BTC만 실제
@@ -949,7 +953,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   background:none;border:none;cursor:pointer;padding:0;
   display:flex;align-items:center;gap:5px;
 }
-.symbol-select-arrow{font-size:16px;color:var(--text-faint);}
+.symbol-select-arrow{font-size:19px;color:var(--text-faint);}
 .symbol-select-dropdown{
   position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:240px;
   background:var(--surface2);border:1px solid var(--border);border-radius:10px;
@@ -961,10 +965,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .symbol-option:last-child{border-bottom:none;}
 .symbol-option:hover{background:var(--surface3);}
-.symbol-option-name{font-size:18.5px;font-weight:600;color:var(--text);}
-.symbol-option-code{font-size:16px;color:var(--text-faint);font-family:var(--mono);margin-right:auto;margin-left:8px;}
+.symbol-option-name{font-size:22px;font-weight:600;color:var(--text);}
+.symbol-option-code{font-size:19px;color:var(--text-faint);font-family:var(--mono);margin-right:auto;margin-left:8px;}
 .symbol-option-badge{
-  font-size:14.5px;font-weight:700;color:var(--text-faint);background:var(--surface3);
+  font-size:17.5px;font-weight:700;color:var(--text-faint);background:var(--surface3);
   padding:2px 8px;border-radius:20px;white-space:nowrap;
 }
 .symbol-option-badge-active{color:var(--gold);background:var(--gold-soft);}
@@ -983,9 +987,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .event-banner::before{width:220px;height:220px;top:-90px;left:6%;}
 .event-banner::after{width:170px;height:170px;bottom:-80px;right:8%;}
-.event-banner-icon{font-size:37.5px;position:relative;z-index:1;}
-.event-banner-title{font-size:37.5px;font-weight:800;position:relative;z-index:1;}
-.event-banner-sub{font-size:24px;opacity:0.92;position:relative;z-index:1;}
+.event-banner-icon{font-size:45px;position:relative;z-index:1;}
+.event-banner-title{font-size:45px;font-weight:800;position:relative;z-index:1;}
+.event-banner-sub{font-size:29px;opacity:0.92;position:relative;z-index:1;}
 @media (max-width:700px){
   .event-banner{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:4px;}
 }
@@ -999,7 +1003,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .product-tabs{display:flex;gap:8px;margin-top:0;padding-bottom:6px;border-bottom:1px solid var(--border-soft);}
 .product-tab-btn{
   background:none;border:1px solid transparent;color:var(--text-dim);font-family:var(--sans);
-  font-size:15px;font-weight:700;padding:4px 10px;cursor:pointer;border-radius:3px;
+  font-size:18px;font-weight:700;padding:4px 10px;cursor:pointer;border-radius:3px;
 }
 .product-tab-btn.active{color:var(--red);border-color:var(--red);background:var(--red-soft);}
 .product-tab-btn:not(.active):hover{color:var(--text);}
@@ -1009,7 +1013,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .orderbook-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-soft);margin-bottom:8px;}
 .ob-tab-btn{
   background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);
-  font-size:17.5px;font-weight:700;padding:9px 16px;cursor:pointer;
+  font-size:21px;font-weight:700;padding:9px 16px;cursor:pointer;
   border-bottom:2px solid transparent;transition:.12s;
 }
 .ob-tab-btn:hover{color:var(--text);}
@@ -1021,7 +1025,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 .order-preview-rows,.order-account-rows{margin-bottom:10px;display:flex;flex-direction:column;gap:3px;}
 .order-preview-row,.order-account-row{
-  display:flex;justify-content:space-between;font-size:14.5px;color:var(--text-faint);
+  display:flex;justify-content:space-between;font-size:17.5px;color:var(--text-faint);
 }
 .order-preview-row b,.order-account-row b{font-family:var(--mono);font-weight:600;color:var(--text-dim);}
 .order-pressure-track{
@@ -1030,7 +1034,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .order-pressure-buy{background:var(--green);transition:width .3s;}
 .order-pressure-sell{background:var(--red);transition:width .3s;}
 .order-pressure-labels{
-  display:flex;justify-content:space-between;font-size:15px;font-family:var(--mono);
+  display:flex;justify-content:space-between;font-size:18px;font-family:var(--mono);
   margin-top:4px;
 }
 .order-pressure-labels span:first-child{color:var(--green);}
@@ -1055,7 +1059,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  *    색을 빼고 중립 회색으로 두어 실제 값이 생겼을 때만 눈에 들어오게 합니다.
  * ========================================================================= */
 .amitalk-order{
-  padding:12px;font-size:17.5px;
+  padding:12px;font-size:21px;
   font-family:var(--sans);
   --ami-accent:#E07B0B;          /* 레버리지/Last 강조(개미톡 주황을 살짝 차분하게) */
   --ami-line:#DCDFE5;
@@ -1081,18 +1085,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .top-mode-row{gap:8px;margin-bottom:10px;}
 .amitalk-order .margin-mode-badge{
   flex:1;display:flex;align-items:baseline;justify-content:center;gap:0;
-  height:44px;padding:0 10px;font-family:var(--sans);font-size:17.5px;font-weight:500;
+  height:44px;padding:0 10px;font-family:var(--sans);font-size:21px;font-weight:500;
   color:#3C4350;background:#fff;border:1px solid var(--ami-line);border-radius:5px;cursor:pointer;
   line-height:44px;
 }
 .amitalk-order .margin-mode-badge-lev{
   color:var(--ami-accent);border-color:var(--ami-accent);background:#fff;
   font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;
-  font-size:21px;font-weight:600;
+  font-size:25px;font-weight:600;
 }
-.amitalk-order .lev-dec{font-size:17.5px;font-weight:500;}
-.amitalk-order .lev-x{font-size:15.5px;font-weight:500;margin-left:1px;}
-.amitalk-order .mode-badge-arrow{font-size:12px;opacity:.55;margin-left:7px;font-weight:400;}
+.amitalk-order .lev-dec{font-size:21px;font-weight:500;}
+.amitalk-order .lev-x{font-size:18.5px;font-weight:500;margin-left:1px;}
+.amitalk-order .mode-badge-arrow{font-size:14.5px;opacity:.55;margin-left:7px;font-weight:400;}
 .amitalk-order .leverage-field-top{
   background:#FAFBFC;border:1px solid var(--ami-line);border-radius:5px;
   padding:14px 12px 12px;margin-bottom:10px;
@@ -1104,14 +1108,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .amitalk-order .ami-type-tabs #order-type-row{display:flex;gap:5px;margin:0;flex-wrap:nowrap;}
 .amitalk-order .interval-btn[data-order-type]{
-  padding:8px 18px;border-radius:4px;font-family:var(--sans);font-size:16.5px;font-weight:500;
+  padding:8px 18px;border-radius:4px;font-family:var(--sans);font-size:20px;font-weight:500;
   background:#fff;border:1px solid var(--ami-line);color:#6B727F;letter-spacing:-0.01em;
 }
 .amitalk-order .interval-btn[data-order-type].active{
   background:#4F5663;border-color:#4F5663;color:#fff;font-weight:600;
 }
 .amitalk-order .ami-sound{
-  display:flex;align-items:center;gap:6px;font-size:15.5px;font-weight:400;
+  display:flex;align-items:center;gap:6px;font-size:18.5px;font-weight:400;
   color:var(--ami-label-strong);cursor:pointer;user-select:none;
 }
 .amitalk-order .ami-sound input{width:16px;height:16px;margin:0;accent-color:#2F6FE4;cursor:pointer;}
@@ -1119,24 +1123,24 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* ---- [3][4] 주문가격 / 주문수량 — 1순위 값 ---- */
 .amitalk-order .field{margin-bottom:12px;}
 .amitalk-order .field-label{
-  font-size:15.5px;color:var(--ami-label);margin-bottom:6px;
+  font-size:18.5px;color:var(--ami-label);margin-bottom:6px;
   font-weight:500;letter-spacing:-0.01em;
 }
 .amitalk-order .margin-input-wrap{
   background:#fff;border:1px solid var(--ami-line);border-radius:4px;padding:0 12px;gap:8px;height:48px;
 }
 .amitalk-order .margin-input-wrap input{
-  font-family:var(--sans);font-size:23px;font-weight:600;padding:0;color:var(--ami-value);
+  font-family:var(--sans);font-size:27.5px;font-weight:600;padding:0;color:var(--ami-value);
   font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;
   letter-spacing:-0.005em;
 }
 .amitalk-order .margin-input-wrap input::placeholder{color:#C6CBD4;font-weight:500;}
 /* 단위(BTC/USDT)는 값보다 확실히 아래 위계로 */
 .amitalk-order .margin-input-wrap span{
-  font-size:15.5px;font-weight:500;color:var(--ami-label);flex:0 0 auto;letter-spacing:0.01em;
+  font-size:18.5px;font-weight:500;color:var(--ami-label);flex:0 0 auto;letter-spacing:0.01em;
 }
 .amitalk-order .qty-price-last-btn{
-  font-size:16.5px;font-weight:600;color:var(--ami-accent);padding:3px 5px;letter-spacing:0;
+  font-size:20px;font-weight:600;color:var(--ami-accent);padding:3px 5px;letter-spacing:0;
 }
 /* 개미톡 주문가격 칸에는 통화 단위 표기가 없습니다 — 화면에서만 숨기고
    요소/기능(ui.js의 통화 전환 라벨 갱신)은 그대로 둡니다. */
@@ -1145,7 +1149,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--ami-line);padding-left:9px;margin-left:3px;
 }
 .amitalk-order .ami-price-step button{
-  width:26px;height:18px;line-height:15px;padding:0;font-size:14.5px;cursor:pointer;
+  width:26px;height:18px;line-height:15px;padding:0;font-size:17.5px;cursor:pointer;
   background:#F4F5F7;border:1px solid var(--ami-line);border-radius:3px;color:#6B727F;
 }
 .amitalk-order .ami-market-price-field .margin-input-wrap{background:#FAFBFC;}
@@ -1159,7 +1163,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .amitalk-order #qty-percent-row .chip{
   flex:1;min-width:0;padding:9px 0;border:none;background:#fff;border-radius:0;
-  color:var(--ami-label-strong);font-family:var(--sans);font-size:15.5px;font-weight:500;
+  color:var(--ami-label-strong);font-family:var(--sans);font-size:18.5px;font-weight:500;
   font-variant-numeric:tabular-nums lining-nums;
 }
 .amitalk-order #qty-percent-row .chip + .chip{border-left:1px solid var(--ami-line-soft);}
@@ -1168,7 +1172,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* ---- [6] 매수/매도 비율 바 ---- */
 .amitalk-order .order-pressure-bar{margin:14px 0;}
 .amitalk-order .order-pressure-labels{
-  font-size:15.5px;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em;
+  font-size:18.5px;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em;
   font-variant-numeric:tabular-nums lining-nums;
 }
 .amitalk-order .order-pressure-labels span:first-child{color:var(--ami-green);}
@@ -1183,12 +1187,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   border:1px solid var(--ami-line-soft);border-radius:4px;background:#fff;
 }
 .amitalk-order .order-preview-row{
-  font-size:15.5px;color:var(--ami-label);padding:3px 0;gap:8px;
+  font-size:18.5px;color:var(--ami-label);padding:3px 0;gap:8px;
   font-weight:400;letter-spacing:-0.01em;align-items:baseline;
 }
 .amitalk-order .order-preview-row span{flex:0 1 auto;white-space:nowrap;}
 .amitalk-order .order-preview-row b{
-  font-family:var(--sans);font-size:16.5px;font-weight:600;
+  font-family:var(--sans);font-size:20px;font-weight:600;
   font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:right;
   color:var(--ami-value-sub);
@@ -1203,34 +1207,34 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .ami-tpsl-toggle{
   width:100%;display:flex;align-items:center;justify-content:space-between;
   background:#FAFBFC;border:1px solid var(--ami-line);border-radius:4px;
-  padding:10px 11px;font-family:var(--sans);font-size:15.5px;font-weight:500;
+  padding:10px 11px;font-family:var(--sans);font-size:18.5px;font-weight:500;
   color:var(--ami-label-strong);cursor:pointer;letter-spacing:-0.01em;
 }
 .amitalk-order .ami-tpsl-toggle.open .mode-badge-arrow{transform:rotate(180deg);}
 .amitalk-order #ami-tpsl-anchor{padding-top:10px;}
-.amitalk-order #tp-sl-field .margin-input-wrap input{font-size:18.5px;font-weight:500;}
-.amitalk-order #tp-sl-field .margin-input-wrap span{font-size:14.5px;}
+.amitalk-order #tp-sl-field .margin-input-wrap input{font-size:22px;font-weight:500;}
+.amitalk-order #tp-sl-field .margin-input-wrap span{font-size:17.5px;}
 
 /* ---- [8] 매수 / 매도 버튼 — 한글·영문 같은 크기/굵기로 한 덩어리처럼 ---- */
 .amitalk-order .order-buttons{flex-direction:row;gap:8px;margin-top:12px;}
 .amitalk-order .order-btn{
   flex:1;width:auto;padding:0;height:52px;border-radius:4px;
-  font-family:var(--sans);font-size:18.5px;font-weight:600;
+  font-family:var(--sans);font-size:22px;font-weight:600;
   letter-spacing:-0.01em;word-spacing:0.02em;text-align:center;
 }
 .amitalk-order .order-btn.long{background:var(--ami-btn-green);}
 .amitalk-order .order-btn.short{background:var(--ami-btn-red);}
-.amitalk-order .err-msg{font-size:15.5px;font-weight:500;margin-top:8px;min-height:0;}
+.amitalk-order .err-msg{font-size:18.5px;font-weight:500;margin-top:8px;min-height:0;}
 
 /* ---- [9] 평가 / 보유 / 가능 — 1순위 계좌 정보 ---- */
 .amitalk-order .order-account-rows{margin:14px 0 0;gap:0;}
 .amitalk-order .order-account-row{
-  font-size:15.5px;color:var(--ami-label-strong);padding:4px 0;gap:8px;
+  font-size:18.5px;color:var(--ami-label-strong);padding:4px 0;gap:8px;
   font-weight:500;letter-spacing:-0.01em;align-items:baseline;
 }
 .amitalk-order .order-account-row span{flex:0 1 auto;white-space:nowrap;}
 .amitalk-order .order-account-row b{
-  font-family:var(--sans);font-size:17.5px;font-weight:600;color:var(--ami-value);
+  font-family:var(--sans);font-size:21px;font-weight:600;color:var(--ami-value);
   font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:right;
   letter-spacing:-0.005em;
@@ -1238,33 +1242,33 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* ---- [10] 강제청산 / 수수료 — 보조 정보 ---- */
 .amitalk-order .ami-acc-sub{margin-top:12px;padding-top:12px;border-top:1px solid var(--ami-line-soft);}
-.amitalk-order .ami-acc-sub .order-account-row{font-size:14.5px;color:var(--ami-label);font-weight:400;}
+.amitalk-order .ami-acc-sub .order-account-row{font-size:17.5px;color:var(--ami-label);font-weight:400;}
 .amitalk-order .ami-acc-sub .order-account-row b{
-  font-weight:500;font-size:14.5px;color:var(--ami-value-sub);
+  font-weight:500;font-size:17.5px;color:var(--ami-value-sub);
 }
 
 /* ---- [11] 하단 프로모션 / 종목 ---- */
 .amitalk-order .ami-promo{
   display:flex;align-items:baseline;justify-content:center;gap:6px;
   margin-top:16px;padding:13px 10px;border-radius:4px;cursor:pointer;
-  background:#FBEDF1;color:#B4586C;font-size:15.5px;font-weight:500;letter-spacing:-0.01em;
+  background:#FBEDF1;color:#B4586C;font-size:18.5px;font-weight:500;letter-spacing:-0.01em;
 }
 /* 배지 테두리/배경을 걷어내고 같은 줄에 자연스럽게 읽히는 보조 텍스트로 */
 .amitalk-order .ami-promo-badge{
-  background:none;border:none;padding:0;color:#C89AA6;font-size:13px;font-weight:400;
+  background:none;border:none;padding:0;color:#C89AA6;font-size:15.5px;font-weight:400;
 }
 .amitalk-order .ami-promo-badge::before{content:"· ";}
 .amitalk-order .ami-symbols{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
 .amitalk-order .ami-symbol-row{
   position:relative;display:flex;align-items:center;justify-content:center;
   padding:13px 46px;border:1px solid var(--ami-line);border-radius:4px;
-  background:#fff;font-size:16.5px;font-weight:500;color:var(--ami-value-sub);
+  background:#fff;font-size:20px;font-weight:500;color:var(--ami-value-sub);
   cursor:pointer;text-align:center;letter-spacing:-0.01em;
 }
 .amitalk-order .ami-symbol-row.active{border-color:var(--gold);color:var(--gold);font-weight:600;cursor:default;}
 .amitalk-order .ami-symbol-badge{
   position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  font-size:12px;font-weight:500;color:var(--ami-label);background:#F2F4F7;
+  font-size:14.5px;font-weight:500;color:var(--ami-label);background:#F2F4F7;
   border-radius:3px;padding:3px 7px;letter-spacing:0;
 }
 .amitalk-order .ami-symbol-badge.on{color:#fff;background:var(--gold);}
@@ -1275,10 +1279,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .amitalk-order .ami-symbol-row{padding:13px 44px;}
 }
 @media (max-width:400px){
-  .amitalk-order .order-preview-row b{font-size:15.5px;}
-  .amitalk-order .order-account-row b{font-size:16.5px;}
-  .amitalk-order .interval-btn[data-order-type]{padding:8px 12px;font-size:15.5px;}
-  .amitalk-order .margin-input-wrap input{font-size:21px;}
+  .amitalk-order .order-preview-row b{font-size:18.5px;}
+  .amitalk-order .order-account-row b{font-size:20px;}
+  .amitalk-order .interval-btn[data-order-type]{padding:8px 12px;font-size:18.5px;}
+  .amitalk-order .margin-input-wrap input{font-size:25px;}
 }
 
 
@@ -1291,7 +1295,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  * ========================================================================= */
 .rank-badge{display:inline-flex;align-items:center;vertical-align:middle;line-height:0;}
 .rank-name-wrap{display:inline-flex;align-items:center;gap:5px;min-width:0;}
-.rank-name-label{font-size:14px;font-weight:600;white-space:nowrap;}
+.rank-name-label{font-size:17px;font-weight:600;white-space:nowrap;}
 .rank-nickname{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rank-tier-text-병{color:#7C8494;}
 .rank-tier-text-부사관{color:#B37E22;}
@@ -1313,12 +1317,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   flex:0 0 auto;width:28px;height:28px;border-radius:50%;
   background:var(--surface3);color:var(--text-dim);
   display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:700;
+  font-size:17px;font-weight:700;
 }
 .up-who{display:flex;align-items:center;gap:5px;min-width:0;flex:1;}
-.up-rank{font-size:13px;font-weight:600;white-space:nowrap;}
+.up-rank{font-size:15.5px;font-weight:600;white-space:nowrap;}
 .up-nick{
-  font-size:15px;font-weight:700;color:var(--text);
+  font-size:18px;font-weight:700;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
 }
 /* 다음 계급까지 진행률 — 실제 계급 점수에서 계산한 값 */
@@ -1331,7 +1335,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   border-right:1px solid var(--gold);transition:width .3s;
 }
 .up-progress-text{
-  position:relative;font-size:11px;font-weight:600;color:var(--text-dim);
+  position:relative;font-size:13px;font-weight:600;color:var(--text-dim);
   font-variant-numeric:tabular-nums;
 }
 
@@ -1342,13 +1346,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .up-label{
   background:var(--surface2);color:var(--text-faint);
-  font-size:12.5px;font-weight:500;white-space:nowrap;
-  padding:9px 9px;border-right:1px solid var(--border-soft);
+  font-size:15px;font-weight:500;white-space:nowrap;
+  padding:11px 10px;border-right:1px solid var(--border-soft);
   display:flex;align-items:center;
 }
 .up-value{
-  padding:9px 10px;text-align:right;
-  font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text);
+  padding:11px 12px;text-align:right;
+  font-family:var(--sans);font-size:18.5px;font-weight:600;color:var(--text);
   font-variant-numeric:tabular-nums lining-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
   display:flex;align-items:center;justify-content:flex-end;
@@ -1366,7 +1370,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .up-nav button{
   min-width:0;background:transparent;border:none;cursor:pointer;
-  padding:8px 2px;font-family:var(--sans);font-size:12.5px;font-weight:500;
+  padding:8px 2px;font-family:var(--sans);font-size:15px;font-weight:500;
   color:var(--text-dim);white-space:nowrap;transition:.12s;
   display:flex;align-items:center;justify-content:center;gap:3px;
   overflow:hidden;text-overflow:ellipsis;
@@ -1376,7 +1380,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .up-nav button:hover{color:var(--gold);background:var(--surface2);}
 .up-nav-soon{color:var(--text-faint) !important;}
 .up-soon-badge{
-  font-size:9px;font-weight:500;color:var(--text-faint);
+  font-size:11px;font-weight:500;color:var(--text-faint);
   background:var(--surface3);border-radius:6px;padding:1px 4px;flex:0 0 auto;
 }
 
@@ -1385,8 +1389,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
   padding:16px 14px;
 }
-.user-panel-guest-icon{font-size:26px;line-height:1;}
-.user-panel-guest-text{margin:0;font-size:15px;color:var(--text-faint);}
+.user-panel-guest-icon{font-size:31px;line-height:1;}
+.user-panel-guest-text{margin:0;font-size:18px;color:var(--text-faint);}
 .user-panel-guest-actions{display:flex;gap:6px;width:100%;}
 
 /* cache-bust: 1786959900 */
