@@ -74,13 +74,13 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
 
   t("박스 3개(공지 / 게시판 / 내 정보)", () => eq(boxes.length, 3));
 
-  t("CSS 비율이 30 / 45 / 25 (공지 / 커뮤니티 / 내 정보)", () => {
+  t("CSS 비율이 34.4 / 34.5 / 30 (레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const m = css.match(/\.notice-board-wrap\{[\s\S]*?\}/);
     ok(m, ".notice-board-wrap 규칙 없음");
     const cols = m[0].match(/grid-template-columns:minmax\(0,(\d+)fr\) minmax\(0,(\d+)fr\) minmax\(0,(\d+)fr\)/);
     ok(cols, "3열 비율 선언 필요: " + m[0]);
-    eq([+cols[1], +cols[2], +cols[3]].join("/"), "30/45/25");
+    eq([+cols[1], +cols[2], +cols[3]].join("/"), "344/345/300");
     // minmax(0,...)이 빠지면 내 정보 칼럼이 내용 최소폭에 걸려 비율이 어긋납니다
     ok(/minmax\(0,/.test(m[0]), "minmax(0,...)로 축소를 허용해야 함");
   });
@@ -123,13 +123,16 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
     ok(boxes[0].querySelector(".notice-tag-info"), "[안내] 색상 구분");
   });
 
-  t("② 게시판은 박스 하나 + 탭 4개", () => {
+  t("① 박스1 = 공지사항 | 최신게시물 (레퍼런스 구성)", () => {
+    const tabs = boxes[0].querySelectorAll(".notice-tab-btn[data-tab]");
+    eq(Array.prototype.map.call(tabs, (b) => b.dataset.tab).join(","), "notice,latest");
+    ["notice", "latest"].forEach((k) => ok(boxes[0].querySelector("#notice-list-" + k), k + " 없음"));
+  });
+
+  t("② 박스2 = 인기글 | 자유게시판 | 분석게시판 (레퍼런스 구성)", () => {
     const tabs = boxes[1].querySelectorAll(".notice-tab-btn[data-tab]");
-    eq(tabs.length, 4);
-    eq(Array.prototype.map.call(tabs, (b) => b.dataset.tab).join(","), "latest,popular,free,analysis");
-    ["latest", "popular", "free", "analysis"].forEach((k) => {
-      ok(boxes[1].querySelector("#notice-list-" + k), k + " 내용 영역 필요");
-    });
+    eq(Array.prototype.map.call(tabs, (b) => b.dataset.tab).join(","), "popular,free,analysis");
+    ["popular", "free", "analysis"].forEach((k) => ok(boxes[1].querySelector("#notice-list-" + k), k + " 없음"));
   });
 
   t("③ 내 정보", () => {
@@ -137,17 +140,24 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
     ok(boxes[2].querySelector("#user-panel-body"));
   });
 
-  t("탭 전환 — 한 번에 하나만 보이고 공지/내 정보는 영향 없음", () => {
+  t("탭 전환 — 같은 박스 안에서만 바뀌고 다른 박스는 영향 없음", () => {
     const { doc: d } = boot();
-    const ids = ["latest", "popular", "free", "analysis"];
-    ids.forEach((target) => {
+    // 박스1: 공지사항 <-> 최신게시물
+    [["notice", "latest"], ["latest", "notice"]].forEach(([target, other]) => {
       d.querySelector('.notice-tab-btn[data-tab="' + target + '"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
-      ids.forEach((k) => {
-        const shown = d.getElementById("notice-list-" + k).style.display !== "none";
-        eq(shown, k === target, k + " 표시 상태");
-      });
-      // 다른 칼럼은 절대 숨겨지면 안 됨
-      eq(d.getElementById("notice-list-notice").style.display, "");
+      ok(d.getElementById("notice-list-" + target).style.display !== "none", target + " 보여야 함");
+      eq(d.getElementById("notice-list-" + other).style.display, "none", other + " 숨겨야 함");
+      // 박스2는 영향 없음
+      ok(d.getElementById("notice-list-popular").style.display !== "none", "박스2가 영향받으면 안 됨");
+    });
+    // 박스2: 인기글 / 자유 / 분석 — 박스1 상태는 그대로여야 함
+    const b1State = () => ["notice", "latest"].map((k) => d.getElementById("notice-list-" + k).style.display).join("|");
+    const before = b1State();
+    const b2 = ["popular", "free", "analysis"];
+    b2.forEach((target) => {
+      d.querySelector('.notice-tab-btn[data-tab="' + target + '"]').dispatchEvent(new d.defaultView.MouseEvent("click", { bubbles: true }));
+      b2.forEach((k) => eq(d.getElementById("notice-list-" + k).style.display !== "none", k === target, k + " 표시 상태"));
+      eq(b1State(), before, "박스2 탭을 눌렀는데 박스1 상태가 바뀜");
       eq(d.getElementById("user-panel-body").style.display, "");
     });
   });
@@ -791,10 +801,14 @@ section("[5] 기존 기능 보존");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
 
     // 위치 — 메뉴 바로 아래
+    // 레퍼런스 순서: 메뉴 -> 공지/게시판 박스 -> 배너 -> 상품탭
     const menuIdx = html.indexOf('class="menu-bar"');
-    const adIdx = html.indexOf('id="top-ad-banner"');
     const noticeIdx = html.indexOf('class="notice-board-wrap"');
-    ok(menuIdx < adIdx && adIdx < noticeIdx, "배너는 메뉴와 콘텐츠 사이에 있어야 함");
+    const adIdx = html.indexOf('id="top-ad-banner"');
+    const productIdx = html.indexOf('class="product-tabs');
+    ok(menuIdx < noticeIdx, "메뉴가 공지 박스보다 앞");
+    ok(noticeIdx < adIdx, "배너는 공지/게시판 박스 아래에 있어야 함(레퍼런스 위치)");
+    ok(adIdx < productIdx, "배너는 상품탭보다 앞");
 
     // 폭 — 공통 컨테이너(--content-max) 사용, 좌우 여백 최소
     const wrap = css.match(/\.top-ad-banner\{[^}]*\}/)[0];
@@ -829,7 +843,8 @@ section("[5] 기존 기능 보존");
 
     const btn = css.match(/\n\.top-banner-nav-btn\{[\s\S]*?\}/)[0];
     const fsz = parseFloat(btn.match(/font-size:([\d.]+)px/)[1]);
-    ok(fsz >= 13 && fsz <= 15, "메뉴 글자가 레퍼런스 비율(약 14px)에서 벗어남: " + fsz);
+    // 레퍼런스 메뉴바는 콘텐츠 폭 대비 약 3.8~5.1%로, 14px일 때는 눈에 띄게 작았습니다.
+    ok(fsz >= 18 && fsz <= 22, "메뉴 글자가 너무 작거나 큼: " + fsz);
     const pad = btn.match(/padding:([\d.]+)px ([\d.]+)px/);
     ok(pad, "메뉴 버튼 패딩 필요");
     ok(parseFloat(pad[2]) >= 20 && parseFloat(pad[2]) <= 24, "item 좌우 패딩이 레퍼런스(약 22px)와 다름: " + pad[2]);

@@ -146,7 +146,7 @@ a:hover{text-decoration:underline;}
      글자높이/메뉴높이 = 0.269 -> font-size 14px, item 좌우 패딩 = 콘텐츠 폭의 1.17% -> 22px */
   flex:0 0 auto;white-space:nowrap;
   background:transparent;border:none;color:rgba(255,255,255,0.86);
-  padding:7.5px 22px;border-radius:0;font-family:var(--sans);font-size:14px;font-weight:600;
+  padding:14px 22px;border-radius:0;font-family:var(--sans);font-size:20px;font-weight:600;
   cursor:pointer;transition:.12s;letter-spacing:-0.02em;line-height:1.4;
 }
 /* 1366px 이하(노트북 기본 해상도)에서도 9개가 한 줄에 다 들어가도록 좌우 여백만 축소 */
@@ -198,7 +198,7 @@ a:hover{text-decoration:underline;}
   max-width:var(--content-max);margin:0 auto;padding:6px 8px;
   /* 공지 30% / 커뮤니티 45% / 내 정보 25%.
      minmax(0,...)이 없으면 내 정보 칼럼이 내용 최소폭에 걸려 25%보다 넓어집니다. */
-  display:grid;grid-template-columns:minmax(0,30fr) minmax(0,45fr) minmax(0,25fr);
+  display:grid;grid-template-columns:minmax(0,344fr) minmax(0,345fr) minmax(0,300fr);
   gap:6px;align-items:stretch;
 }
 .notice-box{
@@ -1745,16 +1745,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  * ========================================================================= */
 .top-banner-nav-btn.nav-coming-soon{display:none;}
 .product-tab-btn.nav-coming-soon{display:none;}
-.notice-tab-btn[data-tab="free"],
-.notice-tab-btn[data-tab="analysis"]{display:none;}
-.up-nav .up-nav-soon{display:none;}
-/* 하단 메뉴가 6개 -> 4개가 되므로 칸 수도 맞춥니다 */
-.up-nav{grid-template-columns:repeat(4,minmax(0,1fr));}
-@media (max-width:1799px){
-  .up-nav{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .up-nav button:nth-child(-n+2){border-bottom:1px solid var(--border-soft);}
-  .up-nav button:nth-child(2n+1){border-left:none;}
-}
+
 
 /* 1800px 미만: 채팅 칸을 없애고 거래 화면이 전폭을 씁니다(기존 동작 유지) */
 @media (max-width:1799px){
