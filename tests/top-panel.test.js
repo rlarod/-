@@ -527,6 +527,18 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("상단 박스 3개 높이 통일 — 내 정보만 내용 따라 변하지 않음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/--top-box-h:\s*\d+px/.test(css), "상단 박스 공통 높이 변수 필요");
+    const mq = css.match(/@media \(min-width:1800px\)\{[\s\S]*?height:var\(--top-box-h\);/);
+    ok(mq, "2단 레이아웃에서 세 박스 높이를 고정해야 함");
+    ok(/\.notice-board-wrap > \.notice-box,\s*\n\s*\.page-right > \.user-panel-box\{height:var\(--top-box-h\);\}/.test(css),
+      "공지/게시판/내 정보가 같은 높이 변수를 써야 함");
+    // 내용이 길어져도 박스가 늘어나지 않고 안에서 스크롤되어야 단차가 생기지 않음
+    ok(/\.notice-board-list\{overflow-y:auto/.test(css.replace(/\s+/g, " ")) ||
+       /notice-board-list\{overflow-y:auto/.test(css), "목록이 넘칠 때 내부 스크롤 필요");
+  });
+
   t("칸 단차: 패널 상하좌우 경계가 서로 맞음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     // ① 우측 칼럼 위 여백 = 공지 박스 위 여백

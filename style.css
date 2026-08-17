@@ -1864,3 +1864,22 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* ③ 세 칼럼의 아랫변을 칼럼 끝까지 맞춤 */
 .main-grid .side-column > .order-panel{flex:1;min-height:0;}
 #orderbook-tabs-content.ob-stacked{gap:0;}
+
+/* =========================================================================
+ * 상단 박스 3개 높이 통일 (공지 / 게시판 / 내 정보)
+ * =========================================================================
+ * 레퍼런스는 세 박스의 윗변·아랫변이 모두 같은 높이입니다.
+ * 우리는 내 정보 박스만 내용에 따라 높이가 변해 단차가 생겼습니다.
+ *   로그아웃: 내 정보 179px vs 공지 186px  (7px 짧음)
+ *   로그인  : 내 정보 221px vs 공지 186px  (35px 김)
+ * 가장 큰 경우(로그인 221px)에 맞춰 셋 다 같은 높이로 고정합니다.
+ * 좌우 2단이 풀리는 좁은 화면에서는 원래대로 내용 높이를 따릅니다.
+ * ========================================================================= */
+:root{ --top-box-h:221px; }
+@media (min-width:1800px){
+  .notice-board-wrap > .notice-box,
+  .page-right > .user-panel-box{height:var(--top-box-h);}
+  /* 내용이 더 길어져도 박스가 늘어나지 않고 안에서만 스크롤되게 */
+  .notice-board-wrap > .notice-box > .notice-board-list{overflow-y:auto;min-height:0;}
+  .page-right > .user-panel-box > .user-panel-body{overflow-y:auto;min-height:0;}
+}
