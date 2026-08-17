@@ -851,6 +851,26 @@ section("[5] 기존 기능 보존");
     ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
   });
 
+  t("헤더 우측(연결 상태/통화/로그인)은 화면에서만 숨김 — 기능은 유지", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/\.top-banner-right\{display:none;\}/.test(css), "헤더 우측 숨김 규칙 필요");
+
+    // 마크업은 그대로 남아 있어야 합니다. 특히 #auth-logout-btn은 내 정보 패널의
+    // "로그아웃"이 대신 눌러주는 대상이라, 삭제하면 로그아웃이 동작하지 않습니다.
+    const { doc } = boot({ nickname: "홍길동" });
+    ["auth-logout-btn", "ws-status-text", "last-update-text"].forEach((id) => {
+      ok(doc.getElementById(id), id + " 이 사라지면 안 됨");
+    });
+
+    // 숨겨진 로그아웃 버튼이 내 정보 패널에서 실제로 눌리는지
+    let fired = false;
+    doc.getElementById("auth-logout-btn").addEventListener("click", () => { fired = true; });
+    const btn = doc.querySelector('.up-nav button[data-nav="logout"]');
+    ok(btn, "내 정보 로그아웃 버튼 필요");
+    btn.dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
+    ok(fired, "숨긴 헤더 로그아웃까지 전달되어야 함");
+  });
+
   t("헤더: 레퍼런스 구조(로고 + [공지] 한 줄 + 우측 상태)와 컴팩트한 크기", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");

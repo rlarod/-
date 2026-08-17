@@ -2022,3 +2022,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    전역 규칙 자체는 그대로 둡니다(호가창/포지션 손익 등이 그대로 쓰고 있음). */
 .page-right .up-value.pnl-positive{color:var(--red) !important;}
 .page-right .up-value.pnl-negative{color:var(--blue) !important;}
+
+/* =========================================================================
+ * 헤더 우측(연결 상태 · USDT/KRW · 닉네임 · 로그아웃) — 화면에서만 숨김
+ * =========================================================================
+ * 마크업과 이벤트는 그대로 둡니다. 특히 #auth-logout-btn은 내 정보 패널의
+ * "로그아웃"이 대신 눌러주는 대상이라, 삭제하면 로그아웃이 동작하지 않습니다.
+ * (숨겨진 요소도 JS의 .click()은 정상 동작합니다.)
+ * 이 한 줄만 지우면 원래대로 돌아옵니다.
+ * ========================================================================= */
+.top-banner-right{display:none;}
+/* 우측이 빠진 만큼 헤더 공지 줄이 남은 폭을 씁니다 */
+.top-banner-inner > .header-notice{margin-right:0;}
