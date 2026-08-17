@@ -111,15 +111,17 @@ a:hover{text-decoration:underline;}
 
 /* ---------- 상단 풀폭 배너(.app 바깥, 화면 끝까지) — 개미톡처럼 로고/상태 줄과
    메뉴 줄을 분리했습니다(다크 테마 색상은 유지). ---------- */
+/* 02단계 헤더 — 레퍼런스처럼 그라데이션 없는 흰 배경 + 아래 얇은 선.
+   높이는 로고에 맞춰 컴팩트하게 유지합니다. */
 .top-banner{
-  width:100%;background:linear-gradient(180deg,var(--surface2),var(--surface));
+  width:100%;background:var(--surface);
   border-bottom:1px solid var(--border);
 }
 .top-banner-inner{
-  max-width:var(--content-max);margin:0 auto;padding:6px 12px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  max-width:var(--content-max);margin:0 auto;padding:7px 12px;
+  display:flex;align-items:center;gap:16px;flex-wrap:nowrap;
 }
-.top-banner-right{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.top-banner-right{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-left:auto;flex:0 0 auto;}
 
 .menu-bar{width:100%;background:var(--gold);}
 .menu-bar-inner{max-width:var(--content-max);margin:0 auto;padding:0 12px;}
@@ -157,16 +159,16 @@ a:hover{text-decoration:underline;}
   padding:0;border-radius:0;margin-left:4px;vertical-align:super;letter-spacing:-0.02em;
 }
 
-.brand{display:flex;align-items:center;gap:9px;}
+.brand{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
 .brand .mark{
-  width:36px;height:36px;border-radius:3px;
+  width:30px;height:30px;border-radius:3px;
   background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-weight:700;color:#fff;font-size:24px;
+  font-family:var(--sans);font-weight:700;color:#fff;font-size:18px;
 }
 .brand-text{display:flex;flex-direction:column;gap:0;line-height:1.15;}
-.brand .name{font-weight:800;font-size:26px;letter-spacing:-0.01em;}
-.brand-tagline{font-size:17.5px;color:var(--text-faint);}
+.brand .name{font-weight:700;font-size:20px;letter-spacing:-0.02em;color:var(--text);}
+.brand-tagline{font-size:12px;color:var(--text-faint);}
 
 /* 공지/이벤트 배너 */
 /* 상단 3분할 — 공지사항 / 커뮤니티 / 내 정보. 세 칼럼 폭이 정확히 같고
@@ -259,7 +261,7 @@ a:hover{text-decoration:underline;}
 }
 .ticker-board-panel{margin-bottom:10px;}
 
-.ws-status{display:flex;align-items:center;gap:8px;font-size:24px;color:var(--text-dim);font-family:var(--mono);}
+.ws-status{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-faint);font-family:var(--sans);white-space:nowrap;}
 .ws-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--text-faint);}
 .ws-dot.ok{background:#34D399;box-shadow:0 0 6px rgba(52,211,153,0.6);}
 .ws-dot.fail{background:var(--red);box-shadow:0 0 6px rgba(229,72,77,0.6);}
@@ -401,8 +403,8 @@ a:hover{text-decoration:underline;}
      안 들어가서 줄바꿈되는데, 이때 버튼 크기를 살짝 줄여서 덜 답답하게 함 */
   .top-banner-nav-btn{padding:8px 9px;font-size:24px;}
   .brand .name{font-size:29px;}
-  .auth-user-badge{font-size:22px;gap:6px;margin-right:0;}
-  .ws-status{font-size:20.5px;}
+  .auth-user-badge{font-size:13px;gap:6px;margin-right:0;}
+  .ws-status{font-size:12px;}
   .mw-canvas-wrap-battle{height:52vh;min-height:340px;}
   /* 포지션 카드 — 3열은 좁은 화면에서 글씨가 눌려 보여서 2열로 줄임 */
   .position-grid{gap:10px 16px;}
@@ -806,13 +808,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .auth-note{font-size:19px;color:var(--text-faint);margin-top:7px;line-height:1.5;}
 
 .auth-user-badge{
-  display:flex;align-items:center;gap:10px;margin-right:14px;
-  font-family:var(--mono);font-size:26px;color:var(--gold);font-weight:600;
+  display:flex;align-items:center;gap:8px;margin-right:0;
+  font-family:var(--sans);font-size:14px;color:var(--gold);font-weight:600;white-space:nowrap;
 }
 .auth-logout-btn{
-  font-family:var(--sans);font-size:22px;font-weight:600;color:var(--text-dim);
+  font-family:var(--sans);font-size:13px;font-weight:500;color:var(--text-dim);
   background:var(--surface2);border:1px solid var(--border);border-radius:3px;
-  padding:6px 12px;cursor:pointer;transition:.12s;
+  padding:4px 9px;cursor:pointer;transition:.12s;white-space:nowrap;
 }
 .auth-logout-btn:hover{color:var(--text);border-color:var(--text-faint);}
 
@@ -1583,7 +1585,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .side-ad-panel{display:flex;align-self:start;position:sticky;top:6px;}
 }
 
-/* cache-bust: 1786968300 */
+
 
 
 /* =========================================================================
@@ -1643,3 +1645,29 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 
 /* cache-bust: 1786970500 */
+
+
+/* ---- 헤더 공지 한 줄 (개미톡 헤더 구조) ---- */
+.header-notice{
+  display:flex;align-items:center;gap:7px;min-width:0;flex:1 1 auto;
+}
+.header-notice-tag{
+  flex:0 0 auto;background:var(--red);color:#fff;border-radius:2px;
+  padding:2px 7px;font-size:12px;font-weight:700;letter-spacing:-0.02em;
+}
+.header-notice-text{
+  font-size:13px;color:var(--text-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+}
+/* 좁은 화면에서는 공지 줄을 접어 로고와 상태 표시가 밀리지 않게 합니다 */
+@media (max-width:1100px){
+  .header-notice{display:none;}
+}
+
+/* cache-bust: 1786973000 */
+
+/* 헤더의 통화 전환(USDT/KRW) — ui.js가 .interval-btn 클래스로 만들어 넣습니다.
+   차트 시간봉 버튼과 같은 클래스라, 헤더 안에 있는 것만 작게 맞춥니다(ui.js 무수정). */
+#currency-toggle .interval-btn{
+  font-size:13px;font-weight:600;padding:4px 10px;border-radius:3px;
+}

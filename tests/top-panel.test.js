@@ -661,6 +661,32 @@ section("[5] 기존 기능 보존");
     ok(!/JetBrains/.test(html), "쓰이지 않는 글꼴을 계속 내려받으면 안 됨");
   });
 
+  t("헤더: 레퍼런스 구조(로고 + [공지] 한 줄 + 우측 상태)와 컴팩트한 크기", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+
+    // 개미톡 헤더의 [공지] 자리 — 새 데이터가 아니라 기존 공지 목록 재사용
+    ok(/id="header-notice-text"/.test(html), "헤더 공지 슬롯 필요");
+    const nb = fs.readFileSync(path.join(REPO, "js/notice-board.js"), "utf8");
+    ok(/STATIC_NOTICES\[0\]/.test(nb), "헤더 공지는 기존 공지 목록을 재사용해야 함");
+
+    // 그라데이션 없는 흰 배경
+    const banner = css.match(/\n\.top-banner\{[\s\S]*?\}/)[0];
+    ok(!/linear-gradient/.test(banner), "헤더에 그라데이션을 쓰지 않음");
+    ok(/background:var\(--surface\)/.test(banner), "헤더는 흰 배경");
+
+    // 로고/상태 크기 — 헤더가 다시 커지지 않도록
+    const size = (re, label) => {
+      const m = css.match(re);
+      ok(m, label + " 규칙 없음");
+      return parseFloat(m[1]);
+    };
+    ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") <= 22, "로고 이름이 너무 큼");
+    ok(size(/\.brand-tagline\{font-size:([\d.]+)px/, "태그라인") <= 13, "태그라인이 너무 큼");
+    ok(size(/\.ws-status\{[^}]*font-size:([\d.]+)px/, "연결 상태") <= 14, "연결 상태가 너무 큼");
+    ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
+  });
+
   t("기본 규격: body에 font-size / line-height / 글자색이 명시됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const body = css.match(/\nbody\{[\s\S]*?\n\}/)[0];

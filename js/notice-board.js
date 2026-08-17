@@ -33,6 +33,15 @@ App.NoticeBoard = (function () {
     return div.innerHTML;
   }
 
+  // 헤더의 [공지] 한 줄 — 개미톡 헤더 구조. 목록 첫 줄을 그대로 재사용하며
+  // 별도의 데이터를 만들지 않습니다.
+  function renderHeaderNotice() {
+    const box = el("header-notice-text");
+    if (!box || !STATIC_NOTICES.length) return;
+    const m = STATIC_NOTICES[0].match(/^\[(.+?)\]\s*(.*)$/);
+    box.textContent = m ? m[2] : STATIC_NOTICES[0];
+  }
+
   function renderNotices() {
     if (!dom.notice) return;
     dom.notice.innerHTML = STATIC_NOTICES.map((t) => {
@@ -120,6 +129,7 @@ App.NoticeBoard = (function () {
     if (!dom.notice) return; // 마크업 없으면 조용히 종료
 
     renderNotices();
+    renderHeaderNotice();
     loadBoardLists();
     bindTabs();
   }
