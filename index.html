@@ -111,6 +111,14 @@
      notice-list-popular, .notice-tab-btn[data-tab])를 그대로 유지해서
      js/notice-board.js와 js/board.js는 한 줄도 수정하지 않았습니다.
      세 칼럼은 폭이 정확히 같고, 좁은 화면에서는 세로로 쌓입니다. -->
+<!-- ===== TopAdBanner — 파란 메뉴 바로 아래 가로형 광고 배너 =====
+     소재가 들어오면 .top-ad-slot 안만 교체하면 됩니다(링크를 걸려면 이 div를
+     <a>로 감싸면 됨). 소재가 없는 동안에는 CSS가 통째로 숨겨서
+     빈 띠가 남지 않습니다(:empty 규칙). -->
+<div class="top-ad-banner" id="top-ad-banner">
+  <div class="top-ad-slot" id="top-ad-slot" data-ad-slot="top-1"></div>
+</div>
+
 <div class="notice-board-wrap">
   <!-- [왼쪽 30%] 공지사항 -->
   <div class="notice-box">
@@ -157,14 +165,14 @@
 
   <!-- ===== 이벤트/공지 배너 — 순수 안내용, 실제 이벤트 없어도 문구는 정직하게(실제 진행중 대회 없음 명시) ===== -->
   <!-- 화면에서만 숨김(코드 보존) -->
-  <div class="event-banner">
+  <div class="event-banner page-center">
     <span class="event-banner-icon">📣</span>
     <span class="event-banner-title">BTC 모의투자 커뮤니티</span>
     <span class="event-banner-sub">가상 자금으로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
   </div>
 
   <!-- ===== 상품 카테고리 탭 — 우리는 코인선물(BTC)만 실제로 지원, 나머지는 준비중 ===== -->
-  <div class="product-tabs">
+  <div class="product-tabs page-center">
     <button class="product-tab-btn nav-coming-soon">모의투자 <span class="nav-soon-badge">준비중</span></button>
     <button class="product-tab-btn nav-coming-soon">해외선물 <span class="nav-soon-badge">준비중</span></button>
     <button class="product-tab-btn active">코인선물</button>
@@ -172,7 +180,7 @@
 
   <!-- ===== 전광판 — 여러 종목을 표로 한눈에(BTC는 실시간, 나머지는 준비중 배지) ===== -->
   <!-- 화면에서만 숨김(코드 보존) -->
-  <div class="panel ticker-board-panel" id="ticker-board-panel" style="display:none;">
+  <div class="panel ticker-board-panel page-center" id="ticker-board-panel" style="display:none;">
     <div class="field-label"><span>📊 전광판</span></div>
     <div class="table-scroll">
       <table class="ticker-board-table">
@@ -182,7 +190,7 @@
     </div>
   </div>
 
-  <div class="stats-bar">
+  <div class="stats-bar page-center">
     <div class="stat-block main-price-block">
       <div class="symbol-select-wrap">
         <button class="symbol-select-btn" id="symbol-select-btn">
@@ -211,11 +219,22 @@
     </div>
   </div>
 
-  <div class="interval-row" id="interval-row"></div>
+  <div class="interval-row page-center" id="interval-row"></div>
 
   <!-- ===== 메인 3열: 차트 / 매수·매도 주문 / 실시간 채팅 — 셋 다 이 grid의
        같은 행(row)에 속해서 top/bottom이 정확히 일치합니다(.main-grid에 높이를
        주고 grid 기본 stretch로 세 칼럼이 그 높이를 나눠 갖습니다). ===== -->
+  <!-- ===== 거래 영역 셸 — [좌측 광고] [기존 거래 화면] [실시간 채팅] =====
+       가운데 거래 화면은 기존 폭(--content-max)을 그대로 유지하고, 화면이 넓어져
+       남는 좌우 공간에만 광고/채팅이 들어갑니다. 공간이 모자라면 CSS가
+       채팅 -> 광고 순서로 자동으로 감춥니다(거래 화면이 최우선). -->
+  <div class="exchange-shell">
+    <!-- LeftAdPanel — 광고 소재가 들어오면 .side-ad-slot 안만 교체하면 됩니다 -->
+    <aside class="side-ad-panel" id="left-ad-panel" aria-label="광고 영역">
+      <div class="side-ad-slot" id="left-ad-slot-1" data-ad-slot="left-1"></div>
+      <div class="side-ad-slot" id="left-ad-slot-2" data-ad-slot="left-2"></div>
+    </aside>
+
   <div class="main-grid">
 
     <div class="chart-column">
@@ -409,6 +428,13 @@
 
       <!-- ===== 채팅 — 주문창/포지션 바로 아래로 이동. chat.js는 id로만 요소를 찾기
            때문에 위치를 옮겨도 채팅 로직/Realtime 구독은 전혀 영향 없습니다. ===== -->
+    </div>
+
+  </div>
+
+    <!-- 실시간 채팅 — 주문창에서 분리해 별도 우측 패널로. 마크업/ id는 그대로라
+         js/chat.js(수정 금지 파일)는 한 줄도 바꾸지 않았습니다. -->
+    <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
       <div class="page-chat-col">
         <div class="panel page-chat-panel" id="chat-panel">
           <div class="field-label"><span>💬 실시간 채팅</span></div>
@@ -420,11 +446,10 @@
           <div class="chat-err" id="chat-err"></div>
         </div>
       </div>
-    </div>
-
+    </aside>
   </div>
 
-  <div class="panel history-panel">
+  <div class="panel history-panel page-center">
     <div class="field-label"><span>거래내역</span></div>
     <div class="table-scroll">
       <table>
@@ -439,7 +464,7 @@
 
   <!-- ===== 서버 거래내역(Supabase) — 위의 로컬 거래내역과는 별개, 기기가 바뀌어도 유지됨 ===== -->
 
-  <div class="panel" id="cloud-history-panel">
+  <div class="panel page-center" id="cloud-history-panel">
     <div class="field-label"><span>☁ 거래내역 (서버 저장 · 새로고침해도 유지)</span></div>
     <div class="table-scroll">
       <table>
@@ -455,12 +480,12 @@
   <!-- 요청: 호가창을 하단 탭(포지션/미체결/주문내역/거래내역/자산)보다도 더 아래, 페이지 맨 밑으로 -->
   <!-- ===== MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현 (신규) ===== -->
   <!-- ===== 관리자 전용(기본 숨김) — am_i_admin() RPC가 true를 반환할 때만 보여짐 ===== -->
-  <div class="panel admin-panel" id="admin-panel" style="display:none;">
+  <div class="panel admin-panel page-center" id="admin-panel" style="display:none;">
     <div class="field-label"><span>⚠️ 관리자</span></div>
     <button id="admin-reset-btn" class="admin-reset-btn">전체 시즌 초기화</button>
   </div>
 
-  <div class="disclaimer">
+  <div class="disclaimer page-center">
 
     <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
     BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,

@@ -499,10 +499,10 @@ section("[5] 기존 기능 보존");
     // 마크업/코드는 삭제하지 않고 남아 있어야 합니다.
     ok(/\.event-banner\{display:none !important;\}/.test(css), "장식 배너는 화면에서 숨김 처리되어야 함");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
-    ok(/class="event-banner"/.test(html), "배너 마크업은 삭제하지 않고 보존해야 함");
+    ok(/class="event-banner[^"]*"/.test(html), "배너 마크업은 삭제하지 않고 보존해야 함");
     ok(/\.event-banner\{\n\s*margin-top/.test(css), "배너 원래 스타일도 보존해야 함(복구 가능)");
     // 바깥 여백이 다시 커지지 않도록 고정
-    const app = css.match(/\.app\{[\s\S]*?\}/)[0];
+    const app = css.match(/\n\.app\{[\s\S]*?\}/)[0];
     const pad = app.match(/padding:(\d+)px (\d+)px/);
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
@@ -539,27 +539,64 @@ section("[5] 기존 기능 보존");
     ok(input > acct, "가격 입력값(" + input + ")이 가장 커야 함");
   });
 
-  t("레이아웃: 콘텐츠가 가운데 정렬되고 폭은 변수 하나로 관리됨", () => {
+  t("레이아웃: 콘텐츠 폭이 변수 하나로 관리되고 가운데 정렬됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    // 폭 상한이 여러 곳에 흩어져 있으면 한쪽만 고쳐서 배치가 어긋납니다.
-    // 네 컨테이너가 모두 같은 변수를 쓰고 가운데 정렬되어야 합니다.
+    // 거래 셸은 좌우 광고/채팅을 위해 전체 폭을 쓰고,
+    // 나머지 블록은 .page-center 등으로 --content-max를 유지해야 합니다.
     [
-      [/\.app\{[\s\S]*?\}/, ".app"],
       [/\.top-banner-inner\{[\s\S]*?\}/, ".top-banner-inner"],
       [/\.menu-bar-inner\{[^}]*\}/, ".menu-bar-inner"],
       [/\.notice-board-wrap\{[\s\S]*?\}/, ".notice-board-wrap"],
+      [/\.page-center\{[^}]*\}/, ".page-center"],
+      [/\.top-ad-banner\{[^}]*\}/, ".top-ad-banner"],
     ].forEach(([re, label]) => {
       const m = css.match(re);
       ok(m, label + " 규칙 없음");
       ok(/max-width:var\(--content-max\)/.test(m[0]), label + " 는 --content-max를 써야 함");
-      ok(/margin:0 auto/.test(m[0]), label + " 는 가운데 정렬되어야 함");
+      ok(/margin:0 auto|margin-left:auto/.test(m[0]), label + " 는 가운데 정렬되어야 함");
     });
     const root = css.match(/:root\{[\s\S]*?\n\}/)[0];
     const v = root.match(/--content-max:(\d+)px/);
     ok(v, ":root에 --content-max 정의 필요");
-    const px = parseInt(v[1], 10);
-    // 너무 좁으면 차트/호가창/주문창 3열이 눌립니다(1310px에서 최소 동작 확인됨)
-    ok(px >= 1350, "콘텐츠 폭이 너무 좁아 3열이 눌림: " + px);
+    ok(parseInt(v[1], 10) >= 1350, "콘텐츠 폭이 너무 좁아 3열이 눌림: " + v[1]);
+  });
+
+  t("광고/채팅: 거래 화면이 항상 최우선이고 소재가 없으면 자리도 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+
+    // 컴포넌트 자리(슬롯)가 존재해야 함 — 나중에 소재만 넣으면 되도록
+    ok(/id="top-ad-slot"/.test(html), "상단 배너 슬롯 필요");
+    ok(/id="left-ad-slot-1"/.test(html) && /id="left-ad-slot-2"/.test(html), "좌측 광고 슬롯 필요");
+    ok(/id="right-chat-panel"/.test(html), "우측 채팅 패널 필요");
+
+    // 소재가 없으면 빈 띠/빈 칸이 남지 않아야 함
+    ok(/\.side-ad-slot:empty\{display:none;\}/.test(css), "빈 광고 슬롯은 숨겨야 함");
+    ok(/\.top-ad-banner:has\(\.top-ad-slot:empty\)\{display:none;\}/.test(css), "소재 없으면 상단 배너 자체를 숨겨야 함");
+
+    // 칸 배치가 명시적이어야 함(숨겨진 패널 때문에 거래 화면이 0px 칸으로 밀리는 버그 방지)
+    ok(/\.exchange-shell > \.main-grid\{grid-column:2/.test(css), "거래 화면은 2번 칸에 고정되어야 함");
+    ok(/\.exchange-shell > \.side-ad-panel\{grid-column:1/.test(css), "광고는 1번 칸");
+    ok(/\.exchange-shell > \.side-chat-panel\{grid-column:3/.test(css), "채팅은 3번 칸");
+
+    // 광고는 채팅보다 늦게(더 넓은 화면에서) 켜져야 함 — 우선순위 거래 > 채팅 > 광고
+    const chatBp = parseInt(css.match(/@media \(min-width:(\d+)px\)\{\s*\.exchange-shell\{grid-template-columns:0 minmax/)[1], 10);
+    const adBlocks = css.match(/@media \(min-width:\d+px\)\{(?:(?!@media)[\s\S])*?\.side-ad-panel\{display:flex;\}/g);
+    ok(adBlocks && adBlocks.length, "광고 표시 미디어쿼리를 찾을 수 없음");
+    const adBp = parseInt(adBlocks[adBlocks.length - 1].match(/min-width:(\d+)px/)[1], 10);
+    ok(adBp > chatBp, "광고(" + adBp + "px)가 채팅(" + chatBp + "px)보다 넓은 화면에서 켜져야 함");
+  });
+
+  t("채팅이 주문창에서 분리되어 우측 패널로 이동함", () => {
+    const { doc } = boot({ nickname: "홍길동" });
+    const chat = doc.getElementById("chat-panel");
+    ok(chat, "채팅 패널이 사라지면 안 됨");
+    ok(chat.closest(".side-chat-panel"), "채팅은 우측 패널 안에 있어야 함");
+    ok(!chat.closest(".side-column"), "채팅이 주문창 칼럼 안에 있으면 안 됨");
+    // chat.js가 쓰는 id가 전부 살아 있어야 함
+    ["chat-messages", "chat-input", "chat-send-btn", "chat-err"].forEach((id) => {
+      ok(doc.getElementById(id), id + " 가 사라짐");
+    });
   });
 
   t("폰트: 사이트 전체가 한 글꼴 — 모노스페이스 잔재 없음", () => {

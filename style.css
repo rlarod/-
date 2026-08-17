@@ -88,8 +88,10 @@ body{
 }
 /* 업비트처럼 콘텐츠를 가운데 정렬하고 양옆을 비워둡니다(광고 배너 자리).
    폭은 :root의 --content-max 하나로 관리합니다. */
+/* .app 자체는 화면 전체 폭을 씁니다(거래 셸이 좌우 여백까지 쓰기 위해).
+   가운데 정렬이 필요한 블록에는 .page-center를 붙여 --content-max를 유지합니다. */
 .app{
-  max-width:var(--content-max);margin:0 auto;padding:5px 8px 10px;
+  max-width:none;margin:0 auto;padding:5px 8px 10px;
   display:flex;flex-direction:column;min-height:100vh;
 }
 
@@ -567,7 +569,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .ob-cols{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
   min-width:0;text-align:right;
-  font-family:var(--mono);font-size:15.5px;letter-spacing:-0.02em;color:var(--text-faint);white-space:nowrap;
+  /* 채팅 패널이 생기면서 호가창 칼럼 폭이 뷰포트와 무관하게 좁아질 수 있어,
+     줄바꿈을 허용해 어떤 폭에서도 넘치지 않게 합니다(라벨은 그대로 유지). */
+  font-family:var(--mono);font-size:14px;letter-spacing:-0.02em;color:var(--text-faint);white-space:normal;
 }
 /* 1050~1280px 구간은 3열 유지 상태로 호가창 폭이 가장 좁아지는 구간이라
    컬럼 라벨만 한 단계 더 줄입니다(1050px 이하는 1열로 바뀌어 폭이 넉넉해짐). */
@@ -1411,7 +1415,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .user-panel-guest-text{margin:0;font-size:18px;color:var(--text-faint);}
 .user-panel-guest-actions{display:flex;gap:6px;width:100%;}
 
-/* cache-bust: 1786959900 */
+
 
 /* =========================================================================
  * 가운데 칼럼(호가창 / 최근거래) — 바이낸스식 상하 배치
@@ -1436,3 +1440,90 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .orderbook-tabs.ob-tabs-stacked .ob-tab-btn.active{border-bottom-color:transparent;}
 
 /* cache-bust: 1786964800 */
+
+/* =========================================================================
+ * 광고 영역 + 우측 실시간 채팅 (좌우 여백 활용)
+ * =========================================================================
+ * 원칙
+ *  1) 가운데 거래 화면이 최우선입니다. 광고/채팅은 화면이 넓어져 남는
+ *     공간에만 들어가고, 좁아지면 광고 -> 채팅 순서로 사라집니다.
+ *  2) 거래 셸은 .app의 폭 상한을 받지 않고 화면 전체를 씁니다. 대신 그 외
+ *     블록(상품탭/시세바/거래내역 등)은 .page-center로 가운데 정렬을 유지해
+ *     기존 화면 구성이 그대로 보입니다.
+ *  3) 광고 소재가 없으면(:empty) 슬롯도 패널도 표시되지 않아 빈 칸이
+ *     어색하게 남지 않습니다. 나중에 슬롯 안에 이미지/링크만 넣으면 됩니다.
+ * ========================================================================= */
+
+/* .app은 전체 폭을 쓰고, 거래 셸 외의 블록만 가운데 정렬 */
+.page-center{width:100%;max-width:var(--content-max);margin-left:auto;margin-right:auto;}
+
+/* ---- 거래 영역 셸: [좌측 광고] [거래 화면] [채팅] ----
+   칸을 명시적으로 지정합니다. display:none인 패널은 grid 흐름에서 빠지기 때문에
+   순서에만 의존하면 거래 화면이 0px 칸으로 밀려납니다(실제로 그 버그가 있었음). */
+.exchange-shell{
+  display:grid;
+  grid-template-columns:0 minmax(0,1fr) 0;
+  gap:0;align-items:stretch;margin-top:5px;
+}
+.exchange-shell > .side-ad-panel{grid-column:1;grid-row:1;}
+.exchange-shell > .main-grid{grid-column:2;grid-row:1;margin-top:0;}
+.exchange-shell > .side-chat-panel{grid-column:3;grid-row:1;}
+
+.side-ad-panel,.side-chat-panel{
+  min-width:0;overflow:hidden;display:none;flex-direction:column;gap:6px;
+}
+.side-ad-panel{align-items:center;justify-content:flex-start;}
+
+/* ---- 광고 슬롯 ---- */
+.side-ad-slot{
+  width:100%;max-width:300px;border:1px solid var(--border-soft);border-radius:2px;
+  background:var(--surface);
+}
+.side-ad-slot:empty{display:none;}
+.side-ad-slot img{display:block;width:100%;height:auto;}
+
+/* ---- 상단 가로형 배너 ---- */
+.top-ad-banner{width:100%;max-width:var(--content-max);margin:0 auto;padding:0 8px;}
+.top-ad-slot{width:100%;max-height:120px;overflow:hidden;border-radius:2px;}
+.top-ad-slot img{display:block;width:100%;height:auto;}
+.top-ad-slot:empty{display:none;}
+.top-ad-banner:has(.top-ad-slot:empty){display:none;}
+.top-ad-slot:not(:empty){margin:6px 0 0;}
+
+/* ---- 우측 실시간 채팅 패널 ----
+   거래 화면과 같은 grid 행이라 위/아래가 항상 정확히 일치하고,
+   스크롤은 채팅 메시지 영역 안에서만 생깁니다. */
+.side-chat-panel > .page-chat-col{height:100%;min-height:0;display:flex;flex:1;}
+.side-chat-panel .page-chat-panel{flex:1;min-height:0;display:flex;flex-direction:column;}
+.side-chat-panel .chat-messages{flex:1;min-height:0;overflow-y:auto;}
+
+/* ---- 폭이 충분할 때만 좌우 패널을 켭니다 ----
+   1660px 이상: 채팅 표시(남는 폭이 3열 최소치 1300px 이상일 때).
+   2000px 이상: 좌측 광고까지 표시하고, 가운데 거래 화면은 --content-max로 제한해
+   광고/채팅이 남은 바깥 공간을 나눠 갖습니다. */
+/* 1720px 이상: 채팅 표시. 이 아래로 내리면 남는 거래 폭이 3열 최소치(1300px)를
+   밑돌아 호가창 라벨이 넘칩니다(1660px에서 실제로 확인). */
+@media (min-width:1720px){
+  .exchange-shell{grid-template-columns:0 minmax(0,1fr) 340px;gap:6px;}
+  .side-chat-panel{display:flex;}
+}
+/* 2000px 이상: 가운데 거래 화면을 --content-max로 고정합니다. 다른 블록
+   (시세바/거래내역 등)도 같은 폭이라 세로줄이 어긋나지 않습니다. */
+@media (min-width:2000px){
+  .exchange-shell{
+    grid-template-columns:minmax(0,1fr) minmax(0,var(--content-max)) minmax(340px,1fr);
+    gap:8px;
+  }
+}
+/* 2600px 이상: 좌측 광고까지. 가운데 거래 화면을 --content-max로 고정하고
+   광고/채팅은 그 바깥에 남는 공간만 나눠 갖습니다 — 광고 때문에 거래 화면이
+   좁아지지 않게 하기 위한 조건입니다. */
+@media (min-width:2600px){
+  .exchange-shell{
+    grid-template-columns:minmax(200px,1fr) minmax(0,var(--content-max)) minmax(340px,1fr);
+    gap:8px;
+  }
+  .side-ad-panel{display:flex;}
+}
+
+/* cache-bust: 1786968300 */
