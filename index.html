@@ -116,7 +116,16 @@
      <a>로 감싸면 됨). 소재가 없는 동안에는 CSS가 통째로 숨겨서
      빈 띠가 남지 않습니다(:empty 규칙). -->
 <div class="top-ad-banner" id="top-ad-banner">
-  <div class="top-ad-slot" id="top-ad-slot" data-ad-slot="top-1"></div>
+  <div class="top-ad-slot" id="top-ad-slot" data-ad-slot="top-1">
+    <!-- 소재 교체 방법: 이 안을 <img src="assets/배너.png" alt="..."> 한 줄로 바꾸면 됩니다.
+         data-ad-link 값은 클릭 시 이동할 기존 메뉴 버튼의 id입니다(js/ad-slots.js). -->
+    <div class="ad-creative ad-creative-wide" data-ad-link="page-nav-board">
+      <span class="ad-creative-mark">₿</span>
+      <span class="ad-creative-title">BTC 모의투자 커뮤니티</span>
+      <span class="ad-creative-sub">실시간 시세로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
+      <span class="ad-creative-cta">커뮤니티 바로가기 ›</span>
+    </div>
+  </div>
 </div>
 
 <div class="notice-board-wrap">
@@ -231,10 +240,25 @@
   <div class="exchange-shell">
     <!-- LeftAdPanel — 광고 소재가 들어오면 .side-ad-slot 안만 교체하면 됩니다 -->
     <aside class="side-ad-panel" id="left-ad-panel" aria-label="광고 영역">
-      <div class="side-ad-slot" id="left-ad-slot-1" data-ad-slot="left-1"></div>
-      <div class="side-ad-slot" id="left-ad-slot-2" data-ad-slot="left-2"></div>
+      <div class="side-ad-slot" id="left-ad-slot-1" data-ad-slot="left-1">
+        <div class="ad-creative ad-creative-tall ad-creative-rank" data-ad-link="page-nav-ranking">
+          <span class="ad-creative-mark">🏆</span>
+          <span class="ad-creative-title">실시간 랭킹</span>
+          <span class="ad-creative-sub">청산된 거래(실현 손익) 기준<br>지금 몇 위인지 확인해보세요</span>
+          <span class="ad-creative-cta">랭킹 보기 ›</span>
+        </div>
+      </div>
+      <div class="side-ad-slot" id="left-ad-slot-2" data-ad-slot="left-2">
+        <div class="ad-creative ad-creative-tall ad-creative-board" data-ad-link="page-nav-board">
+          <span class="ad-creative-mark">💬</span>
+          <span class="ad-creative-title">커뮤니티</span>
+          <span class="ad-creative-sub">매매 일지와 시황을<br>다른 사람들과 나눠보세요</span>
+          <span class="ad-creative-cta">글 보러가기 ›</span>
+        </div>
+      </div>
     </aside>
 
+  <div class="exchange-main">
   <div class="main-grid">
 
     <div class="chart-column">
@@ -432,22 +456,6 @@
 
   </div>
 
-    <!-- 실시간 채팅 — 주문창에서 분리해 별도 우측 패널로. 마크업/ id는 그대로라
-         js/chat.js(수정 금지 파일)는 한 줄도 바꾸지 않았습니다. -->
-    <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
-      <div class="page-chat-col">
-        <div class="panel page-chat-panel" id="chat-panel">
-          <div class="field-label"><span>💬 실시간 채팅</span></div>
-          <div class="chat-messages" id="chat-messages"></div>
-          <div class="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
-            <button id="chat-send-btn" class="chat-send-btn">전송</button>
-          </div>
-          <div class="chat-err" id="chat-err"></div>
-        </div>
-      </div>
-    </aside>
-  </div>
 
   <div class="panel history-panel page-center">
     <div class="field-label"><span>거래내역</span></div>
@@ -490,6 +498,24 @@
     <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
     BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
     수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
+  </div>
+  </div>
+
+    <!-- 실시간 채팅 — 주문창에서 분리해 별도 우측 패널로. 마크업/ id는 그대로라
+         js/chat.js(수정 금지 파일)는 한 줄도 바꾸지 않았습니다. -->
+    <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
+      <div class="page-chat-col">
+        <div class="panel page-chat-panel" id="chat-panel">
+          <div class="field-label"><span>💬 실시간 채팅</span></div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button id="chat-send-btn" class="chat-send-btn">전송</button>
+          </div>
+          <div class="chat-err" id="chat-err"></div>
+        </div>
+      </div>
+    </aside>
   </div>
 
   </div>
@@ -692,6 +718,7 @@
 <script src="js/notice-board.js"></script>
 <script src="js/rank.js"></script>
 <script src="js/user-panel.js"></script>
+<script src="js/ad-slots.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>

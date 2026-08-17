@@ -1439,7 +1439,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .orderbook-tabs.ob-tabs-stacked .ob-tab-btn{cursor:default;}
 .orderbook-tabs.ob-tabs-stacked .ob-tab-btn.active{border-bottom-color:transparent;}
 
-/* cache-bust: 1786964800 */
+
 
 /* =========================================================================
  * 광고 영역 + 우측 실시간 채팅 (좌우 여백 활용)
@@ -1466,8 +1466,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   gap:0;align-items:stretch;margin-top:5px;
 }
 .exchange-shell > .side-ad-panel{grid-column:1;grid-row:1;}
-.exchange-shell > .main-grid{grid-column:2;grid-row:1;margin-top:0;}
+.exchange-shell > .exchange-main{grid-column:2;grid-row:1;min-width:0;display:flex;flex-direction:column;}
 .exchange-shell > .side-chat-panel{grid-column:3;grid-row:1;}
+.exchange-main > .main-grid{margin-top:0;}
 
 .side-ad-panel,.side-chat-panel{
   min-width:0;overflow:hidden;display:none;flex-direction:column;gap:6px;
@@ -1491,8 +1492,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .top-ad-slot:not(:empty){margin:6px 0 0;}
 
 /* ---- 우측 실시간 채팅 패널 ----
-   거래 화면과 같은 grid 행이라 위/아래가 항상 정확히 일치하고,
-   스크롤은 채팅 메시지 영역 안에서만 생깁니다. */
+   화면 상단에 붙어서 스크롤을 따라 내려옵니다(position:sticky).
+   align-self:start가 없으면 grid가 칸 높이를 꽉 채워 sticky가 동작하지 않습니다.
+   높이는 화면 높이에 맞추고, 스크롤은 채팅 메시지 영역 안에서만 생깁니다. */
+.side-chat-panel,.side-ad-panel{
+  position:sticky;top:6px;align-self:start;
+}
+.side-chat-panel{height:calc(100vh - 12px);max-height:calc(100vh - 12px);}
+.side-ad-panel{max-height:calc(100vh - 12px);overflow-y:auto;scrollbar-width:none;}
+.side-ad-panel::-webkit-scrollbar{display:none;}
 .side-chat-panel > .page-chat-col{height:100%;min-height:0;display:flex;flex:1;}
 .side-chat-panel .page-chat-panel{flex:1;min-height:0;display:flex;flex-direction:column;}
 .side-chat-panel .chat-messages{flex:1;min-height:0;overflow-y:auto;}
@@ -1527,3 +1535,62 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 
 /* cache-bust: 1786968300 */
+
+
+/* =========================================================================
+ * 광고 소재(배너) — 지금 들어 있는 것은 우리 사이트 자체 홍보 배너입니다.
+ * 외부 광고가 들어오면 index.html의 슬롯 안쪽만 <img>/<a>로 교체하면 됩니다.
+ * ========================================================================= */
+.ad-creative{
+  position:relative;overflow:hidden;display:flex;color:#fff;
+  background:linear-gradient(120deg,#2F6FE4 0%,var(--gold) 55%,#5B8DEF 100%);
+  border-radius:3px;user-select:none;transition:filter .15s;
+}
+.ad-creative:hover{filter:brightness(1.06);}
+/* 참고 배너처럼 은은한 장식 원 */
+.ad-creative::before,.ad-creative::after{
+  content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,0.13);pointer-events:none;
+}
+.ad-creative::before{width:190px;height:190px;top:-70px;right:6%;}
+.ad-creative::after{width:120px;height:120px;bottom:-60px;right:22%;}
+.ad-creative-mark{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.18);border-radius:50%;font-weight:700;
+}
+.ad-creative-title{font-weight:700;letter-spacing:-0.02em;}
+.ad-creative-sub{color:rgba(255,255,255,0.9);}
+.ad-creative-cta{
+  background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.45);
+  border-radius:999px;font-weight:600;white-space:nowrap;
+}
+
+/* 가로형(상단) */
+.ad-creative-wide{
+  align-items:center;gap:14px;padding:0 26px;height:88px;
+}
+.ad-creative-wide .ad-creative-mark{width:40px;height:40px;font-size:22px;}
+.ad-creative-wide .ad-creative-title{font-size:25px;}
+.ad-creative-wide .ad-creative-sub{font-size:16px;}
+.ad-creative-wide .ad-creative-cta{margin-left:auto;padding:8px 16px;font-size:15px;}
+
+/* 세로형(좌측) */
+.ad-creative-tall{
+  flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;
+  padding:22px 20px;min-height:230px;text-align:left;
+}
+.ad-creative-tall .ad-creative-mark{width:42px;height:42px;font-size:22px;}
+.ad-creative-tall .ad-creative-title{font-size:23px;}
+.ad-creative-tall .ad-creative-sub{font-size:15px;line-height:1.55;}
+.ad-creative-tall .ad-creative-cta{padding:7px 14px;font-size:14px;}
+.ad-creative-rank{background:linear-gradient(160deg,#E8A317 0%,#D9772B 100%);}
+.ad-creative-board{background:linear-gradient(160deg,#2F6FE4 0%,#6D5BD0 100%);}
+
+/* 좁은 화면에서 상단 배너는 두 줄로 자연스럽게 */
+@media (max-width:900px){
+  .ad-creative-wide{height:auto;padding:14px 16px;flex-wrap:wrap;gap:8px;}
+  .ad-creative-wide .ad-creative-title{font-size:20px;}
+  .ad-creative-wide .ad-creative-sub{font-size:14px;}
+  .ad-creative-wide .ad-creative-cta{margin-left:0;}
+}
+
+/* cache-bust: 1786970500 */

@@ -51,7 +51,7 @@ function boot(opts) {
     };})();
   `);
 
-  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js"].forEach((f) => {
+  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js"].forEach((f) => {
     win.eval(fs.readFileSync(path.join(REPO, f), "utf8"));
   });
 
@@ -59,6 +59,7 @@ function boot(opts) {
   win.App.Auth = { getNickname: () => o.nickname || "" };
 
   win.App.Trading.init();
+  win.App.AdSlots.init();
   win.App.Rank.init();
   win.App.NoticeBoard.init(); // App.Board가 없으면 조용히 넘어감
   win.App.UserPanel.init();
@@ -575,7 +576,7 @@ section("[5] 기존 기능 보존");
     ok(/\.top-ad-banner:has\(\.top-ad-slot:empty\)\{display:none;\}/.test(css), "소재 없으면 상단 배너 자체를 숨겨야 함");
 
     // 칸 배치가 명시적이어야 함(숨겨진 패널 때문에 거래 화면이 0px 칸으로 밀리는 버그 방지)
-    ok(/\.exchange-shell > \.main-grid\{grid-column:2/.test(css), "거래 화면은 2번 칸에 고정되어야 함");
+    ok(/\.exchange-shell > \.exchange-main\{grid-column:2/.test(css), "거래 화면은 2번 칸에 고정되어야 함");
     ok(/\.exchange-shell > \.side-ad-panel\{grid-column:1/.test(css), "광고는 1번 칸");
     ok(/\.exchange-shell > \.side-chat-panel\{grid-column:3/.test(css), "채팅은 3번 칸");
 
@@ -585,6 +586,34 @@ section("[5] 기존 기능 보존");
     ok(adBlocks && adBlocks.length, "광고 표시 미디어쿼리를 찾을 수 없음");
     const adBp = parseInt(adBlocks[adBlocks.length - 1].match(/min-width:(\d+)px/)[1], 10);
     ok(adBp > chatBp, "광고(" + adBp + "px)가 채팅(" + chatBp + "px)보다 넓은 화면에서 켜져야 함");
+  });
+
+  t("채팅/광고가 상단에 붙어 스크롤을 따라옴(sticky)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const rule = css.match(/\.side-chat-panel,\.side-ad-panel\{[^}]*\}/);
+    ok(rule, "채팅/광고 sticky 규칙 없음");
+    ok(/position:sticky/.test(rule[0]), "position:sticky 필요");
+    ok(/top:\d+px/.test(rule[0]), "붙을 위치(top) 지정 필요");
+    // align-self:start가 없으면 grid가 칸 높이를 꽉 채워 sticky가 동작하지 않습니다
+    ok(/align-self:start/.test(rule[0]), "align-self:start가 없으면 sticky가 동작하지 않음");
+    // sticky가 움직일 여지를 가지려면 셸이 거래 영역 전체를 감싸야 합니다
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    const shell = html.slice(html.indexOf('class="exchange-shell"'), html.indexOf('id="right-chat-panel"'));
+    ok(/class="main-grid"/.test(shell), "셸 안에 거래 그리드 필요");
+    ok(/history-panel/.test(shell), "셸이 거래내역까지 감싸야 sticky가 움직일 여지가 생김");
+  });
+
+  t("광고 슬롯에 실제 소재가 들어 있고 클릭하면 기존 메뉴로 이동", () => {
+    const { doc } = boot({ nickname: "홍길동" });
+    ["top-ad-slot", "left-ad-slot-1", "left-ad-slot-2"].forEach((id) => {
+      const slot = doc.getElementById(id);
+      ok(slot, id + " 없음");
+      ok(slot.querySelector(".ad-creative"), id + " 에 소재가 없음");
+    });
+    // 소재는 전부 실제로 존재하는 메뉴를 가리켜야 함(죽은 링크 금지)
+    doc.querySelectorAll("[data-ad-link]").forEach((el) => {
+      ok(doc.getElementById(el.dataset.adLink), "존재하지 않는 메뉴를 가리킴: " + el.dataset.adLink);
+    });
   });
 
   t("채팅이 주문창에서 분리되어 우측 패널로 이동함", () => {
