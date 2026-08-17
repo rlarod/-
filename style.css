@@ -132,18 +132,37 @@ body{
 .brand-tagline{font-size:14.5px;color:var(--text-faint);}
 
 /* 공지/이벤트 배너 */
+/* 상단 3분할 — 공지사항 / 커뮤니티 / 내 정보. 세 칼럼 폭이 정확히 같고
+   (1fr 1fr 1fr) 높이도 서로 맞춰집니다(grid의 기본 stretch). */
 .notice-board-wrap{
   width:100%;background:var(--bg);border-bottom:1px solid var(--border-soft);
   max-width:1920px;margin:0 auto;padding:10px 24px;
-  display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch;
 }
-.notice-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-.notice-board-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-soft);background:var(--surface2);}
+.notice-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;
+  display:flex;flex-direction:column;min-width:0;
+}
+.notice-box .notice-board-list{flex:1;}
+@media (max-width:1100px){
+  .notice-board-wrap{grid-template-columns:1fr 1fr;}
+  .user-panel-box{grid-column:1 / -1;}
+}
+/* 3분할이 되면서 한 칼럼 폭이 좁아져, 탭 4개가 "최신/게시물"처럼 두 줄로
+   잘렸습니다. 줄바꿈을 막고 내용 폭만 차지하게 한 뒤, 그래도 넘치면
+   가로 스크롤로 넘겨보게 합니다(탭을 지우거나 숨기지 않음). */
+.notice-board-tabs{
+  display:flex;gap:0;border-bottom:1px solid var(--border-soft);background:var(--surface2);
+  overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+}
+.notice-board-tabs::-webkit-scrollbar{display:none;}
 .notice-tab-btn{
   background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);
-  font-size:17.5px;font-weight:700;padding:10px 18px;cursor:pointer;flex:1;
+  font-size:14.5px;font-weight:700;padding:10px 7px;cursor:pointer;
+  flex:1 1 auto;min-width:0;white-space:nowrap;
   border-bottom:2px solid transparent;transition:.12s;
 }
+.notice-board-tabs .nav-soon-badge{font-size:10.5px;padding:1px 4px;margin-left:3px;}
 .notice-tab-btn:hover{color:var(--text);}
 .notice-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--surface);}
 .notice-board-list{list-style:none;margin:0;padding:10px 14px 12px;display:flex;flex-direction:column;gap:7px;}
@@ -961,7 +980,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .order-pressure-labels span:first-child{color:var(--green);}
 .order-pressure-labels span:last-child{color:var(--red);}
 
-/* cache-bust: 1786957700 */
+
 
 /* =========================================================================
  * 주문창(Order Panel) — 개미톡 구조 + 금융 UI 타이포그래피
@@ -1207,3 +1226,74 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 
 /* cache-bust: 1786955200 */
+
+/* =========================================================================
+ * 계급장(군 계급) + 상단 사용자 정보 패널
+ * =========================================================================
+ * 계급장은 외부 이미지 없이 js/rank.js가 만드는 인라인 SVG입니다.
+ * 계층(병/부사관/준사관/위관/영관/장성)별로 모양과 색이 확실히 달라집니다.
+ * ========================================================================= */
+.rank-badge{display:inline-flex;align-items:center;vertical-align:middle;line-height:0;}
+.rank-name-wrap{display:inline-flex;align-items:center;gap:5px;min-width:0;}
+.rank-name-label{font-size:14px;font-weight:600;white-space:nowrap;}
+.rank-nickname{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-tier-text-병{color:#7C8494;}
+.rank-tier-text-부사관{color:#B37E22;}
+.rank-tier-text-준사관{color:#8A93A3;}
+.rank-tier-text-위관{color:#B8931F;}
+.rank-tier-text-영관{color:#B8931F;}
+.rank-tier-text-장성{color:#C93E4E;}
+
+/* ---- 오른쪽 칼럼: 사용자 정보 패널 ---- */
+.user-panel-body{padding:12px 14px 13px;display:flex;flex-direction:column;gap:11px;flex:1;}
+
+.user-panel-head{display:flex;align-items:center;gap:9px;min-width:0;}
+.user-panel-avatar{
+  flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+  background:var(--gold-soft);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:700;
+}
+.user-panel-id{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap;}
+.user-panel-rank{font-size:14px;font-weight:600;white-space:nowrap;}
+.user-panel-nick{
+  font-size:17px;font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+}
+
+.user-panel-stats{display:flex;flex-direction:column;gap:2px;}
+.user-panel-row{
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  font-size:14px;color:var(--text-faint);padding:3px 0;
+}
+.user-panel-row b{
+  font-family:var(--sans);font-size:15px;font-weight:600;color:var(--text);
+  font-variant-numeric:tabular-nums lining-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:right;
+}
+/* 실제 기능이 없는 항목은 숫자를 만들지 않고 준비중으로만 표시 */
+.user-panel-soon{color:var(--text-faint) !important;font-weight:500 !important;font-size:13px !important;}
+.user-panel-next{
+  font-size:13px;color:var(--text-faint);padding-top:8px;border-top:1px solid var(--border-soft);
+}
+
+.user-panel-actions{display:flex;gap:6px;margin-top:auto;}
+.user-panel-btn{
+  flex:1;padding:9px 0;border-radius:5px;cursor:pointer;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);
+  font-family:var(--sans);font-size:14px;font-weight:600;transition:.12s;
+}
+.user-panel-btn:hover{border-color:var(--gold);color:var(--gold);}
+.user-panel-btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;}
+.user-panel-btn-primary:hover{color:#fff;filter:brightness(1.06);}
+
+/* ---- 로그아웃 상태 ---- */
+.user-panel-guest{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:8px 0;
+}
+.user-panel-guest-icon{font-size:26px;line-height:1;}
+.user-panel-guest-text{margin:0;font-size:15px;color:var(--text-faint);}
+.user-panel-guest-actions{display:flex;gap:6px;width:100%;}
+
+/* cache-bust: 1786959900 */

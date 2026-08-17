@@ -76,11 +76,16 @@ App.NoticeBoard = (function () {
     }
   }
 
+  // 상단이 3분할로 바뀌면서 탭 구성이 달라졌습니다.
+  //   왼쪽 칼럼  : 공지사항 하나뿐이라 토글할 것이 없습니다.
+  //   가운데 칼럼: 최신게시물 <-> 인기글 토글.
+  // 어느 박스에 속한 탭인지는 DOM에서 직접 찾기 때문에, 나중에 배치가
+  // 또 바뀌어도 이 함수는 그대로 동작합니다.
   function switchTab(tabName) {
-    if (tabName !== "notice" && tabName !== "latest") return; // 인기글은 왼쪽 박스와 무관, 오른쪽 박스의 유일한 실제 탭이라 토글 불필요
-    if (dom.notice) dom.notice.style.display = tabName === "notice" ? "" : "none";
+    if (tabName !== "latest" && tabName !== "popular") return;
     if (dom.latest) dom.latest.style.display = tabName === "latest" ? "" : "none";
-    document.querySelectorAll('.notice-tab-btn[data-tab="notice"], .notice-tab-btn[data-tab="latest"]').forEach((btn) => {
+    if (dom.popular) dom.popular.style.display = tabName === "popular" ? "" : "none";
+    document.querySelectorAll('.notice-tab-btn[data-tab="latest"], .notice-tab-btn[data-tab="popular"]').forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tab === tabName);
     });
   }
