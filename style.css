@@ -1424,11 +1424,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .up-label{
   background:var(--surface2);color:var(--text-faint);
   font-size:15px;font-weight:500;white-space:nowrap;
-  padding:11px 10px;border-right:1px solid var(--border-soft);
+  padding:9px 10px;   /* 레퍼런스 값 행 간격 45px에 맞춤 */border-right:1px solid var(--border-soft);
   display:flex;align-items:center;
 }
 .up-value{
-  padding:11px 12px;text-align:right;
+  padding:9px 12px;text-align:right;
   font-family:var(--sans);font-size:18.5px;font-weight:600;color:var(--text);
   font-variant-numeric:tabular-nums lining-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
@@ -1439,27 +1439,37 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .up-grid > :nth-child(6){border-right:1px solid var(--border-soft);}
 
 /* 하단 링크 줄 */
-/* 링크 6개를 한 줄에 넣으면 내 정보 칼럼이 좁아졌을 때(20% 배분) 넘칩니다.
-   3열 2행 격자로 배치해서 어느 폭에서도 잘리지 않게 합니다. */
+/* 07단계 — 레퍼런스 하단 메뉴는 한 줄(높이 50px 환산)입니다.
+   사이드 폭이 449px로 넓어져 6개가 한 줄에 들어가므로 3열 2행 -> 1행으로
+   되돌립니다. 좁아지면 아래 미디어쿼리가 다시 2행으로 접습니다. */
 .up-nav{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:auto;
+  display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin-top:auto;
   border-top:1px solid var(--border-soft);
 }
 .up-nav button{
   min-width:0;background:transparent;border:none;cursor:pointer;
-  padding:8px 2px;font-family:var(--sans);font-size:15px;font-weight:500;
+  padding:9px 2px;font-family:var(--sans);font-size:13.5px;font-weight:500;
   color:var(--text-dim);white-space:nowrap;transition:.12s;
   display:flex;align-items:center;justify-content:center;gap:3px;
   overflow:hidden;text-overflow:ellipsis;
 }
-.up-nav button:nth-child(-n+3){border-bottom:1px solid var(--border-soft);}
-.up-nav button:not(:nth-child(3n+1)){border-left:1px solid var(--border-soft);}
+.up-nav button + button{border-left:1px solid var(--border-soft);}
+/* 폭이 모자라면 다시 3열 2행으로 접어 글자가 잘리지 않게 합니다.
+   실측상 내 정보 박스가 460px 이상일 때만 6개가 한 줄에 들어갑니다. */
+@media (max-width:1799px){
+  .up-nav{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .up-nav button:nth-child(-n+3){border-bottom:1px solid var(--border-soft);}
+  .up-nav button:nth-child(3n+1){border-left:none;}
+}
 .up-nav button:hover{color:var(--gold);background:var(--surface2);}
 .up-nav-soon{color:var(--text-faint) !important;}
+/* 하단 메뉴가 한 줄이 되면서 "리워드 준비중"이 잘렸습니다.
+   배지 배경/패딩을 걷어내 같은 정보를 더 좁게 표시합니다(문구 유지). */
 .up-soon-badge{
-  font-size:11px;font-weight:500;color:var(--text-faint);
-  background:var(--surface3);border-radius:3px;padding:1px 4px;flex:0 0 auto;
+  font-size:9.5px;font-weight:400;color:var(--text-faint);
+  background:none;border-radius:0;padding:0;flex:0 0 auto;letter-spacing:-0.04em;
 }
+.up-nav button{gap:2px;}
 
 /* ---- 로그아웃 상태 ---- */
 .user-panel-guest{

@@ -699,6 +699,26 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
+  t("사이드 위젯: 레퍼런스처럼 하단 메뉴 한 줄, 좁아지면 접힘", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const nav = css.match(/\n\.up-nav\{[^}]*\}/)[0];
+    ok(/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(nav),
+      "레퍼런스 하단 메뉴는 한 줄이어야 함");
+    // 폭이 모자라는 구간에서는 접혀야 글자가 잘리지 않음(실측: 460px 미만이면 잘림)
+    ok(/@media \(max-width:1799px\)\{[\s\S]*?\.up-nav\{grid-template-columns:repeat\(3/.test(css),
+      "좁은 화면에서 3열 2행으로 접는 규칙 필요");
+
+    // 로그인/로그아웃 두 상태를 모두 지원해야 함
+    const js = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");
+    ok(/renderLoggedOut/.test(js) && /user-panel-login/.test(js), "로그아웃 상태 UI 필요");
+    ok(/renderShell/.test(js) && /user-panel-equity/.test(js), "로그인 상태 UI 필요");
+
+    // 사이드 박스도 공통 박스 규격을 따라야 함
+    ok(/\.user-panel-box/.test(css), "사이드 박스 클래스 필요");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    ok(/class="notice-box user-panel-box"/.test(html), "사이드 박스는 공통 .notice-box 규격을 써야 함");
+  });
+
   t("박스 공통 규격: 모서리·테두리·배경이 한 가지로 통일됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const box = css.match(/\n\.notice-box\{[\s\S]*?\}/)[0];
