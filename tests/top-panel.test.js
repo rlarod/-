@@ -699,6 +699,39 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
+  t("광고 배너: 레퍼런스 실측 규격(폭 99.6%, 높이 5.98%, 직각, 테두리·그림자 없음)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+
+    // 위치 — 메뉴 바로 아래
+    const menuIdx = html.indexOf('class="menu-bar"');
+    const adIdx = html.indexOf('id="top-ad-banner"');
+    const noticeIdx = html.indexOf('class="notice-board-wrap"');
+    ok(menuIdx < adIdx && adIdx < noticeIdx, "배너는 메뉴와 콘텐츠 사이에 있어야 함");
+
+    // 폭 — 공통 컨테이너(--content-max) 사용, 좌우 여백 최소
+    const wrap = css.match(/\.top-ad-banner\{[^}]*\}/)[0];
+    ok(/max-width:var\(--content-max\)/.test(wrap), "공통 컨테이너 폭을 써야 함");
+    ok(/margin:0 auto/.test(wrap), "가운데 정렬 필요");
+    const wp = parseFloat(wrap.match(/padding:0 (\d+)px/)[1]);
+    ok(wp <= 6, "배너 좌우 여백이 레퍼런스(99.6% 폭)보다 큼: " + wp);
+
+    // 높이/모서리 — 레퍼런스 높이 비율 5.98%(1920 환산 115px), 직각
+    const cre = css.match(/\.ad-creative-wide\{[^}]*\}/)[0];
+    const hgt = parseFloat(cre.match(/height:(\d+)px/)[1]);
+    ok(hgt >= 105 && hgt <= 125, "배너 높이가 레퍼런스 비율(약 115px)에서 벗어남: " + hgt);
+    ok(/border-radius:0/.test(cre), "레퍼런스 배너는 직각 모서리");
+    const slot = css.match(/\.top-ad-slot\{[^}]*\}/)[0];
+    ok(/border-radius:0/.test(slot), "슬롯도 직각");
+
+    // 이미지 교체 시 비율 왜곡 방지
+    ok(/\.top-ad-slot img\{display:block;width:100%;height:auto;\}/.test(css),
+      "이미지는 height:auto로 원본 비율을 지켜야 함");
+
+    // 소재가 없으면 빈 띠가 남지 않아야 함
+    ok(/\.top-ad-banner:has\(\.top-ad-slot:empty\)\{display:none;\}/.test(css), "소재 없으면 숨김");
+  });
+
   t("메뉴: 레퍼런스 실측 비율(헤더/메뉴=1.69, 글자 14px, 배경 #1769B3)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
 
