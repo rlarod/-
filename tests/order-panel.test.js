@@ -392,18 +392,22 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     // 금액 = 수량 × 현재가 (USDT 줄에 표시)
     const notionalUsdt = doc.getElementById("pos-notional").querySelector(".pos-money-usdt");
     ok(notionalUsdt, "USDT 줄 필요");
+    // 값이 클수록 소수 자리를 줄여 칸을 아낍니다(10만 이상 0자리 / 1000 이상 2자리)
+    const dp = notional >= 100000 ? 0 : notional >= 1000 ? 2 : 4;
     eq(
       notionalUsdt.textContent,
-      notional.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT"
+      notional.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp }) + " USDT"
     );
 
     // 유지증거금률은 trading.js 안의 상수라 밖에 또 적으면 어긋납니다.
     // 공개 API(calcLiquidationPrice)에서 역산한 값을 써야 합니다.
     const mmr = App.PositionTableExtra.getMMRForTest();
     ok(mmr > 0 && mmr < 0.1, "역산한 유지증거금률이 비정상: " + mmr);
+    const maint = notional * mmr;
+    const mdp = maint >= 100000 ? 0 : maint >= 1000 ? 2 : 4;
     eq(
       doc.getElementById("pos-maint-margin").querySelector(".pos-money-usdt").textContent,
-      (notional * mmr).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT"
+      maint.toLocaleString("en-US", { minimumFractionDigits: mdp, maximumFractionDigits: mdp }) + " USDT"
     );
     const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
     ok(!/0\.005/.test(src), "유지증거금률을 하드코딩하면 안 됨");
@@ -517,7 +521,9 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     const usdt = cell.querySelector(".pos-money-usdt");
     const krw = cell.querySelector(".pos-money-krw");
     ok(usdt && /USDT$/.test(usdt.textContent), "USDT 줄 필요");
-    ok(krw && /KRW$/.test(krw.textContent), "원화 줄 필요");
+    // 원화는 자릿수가 길어 억/만 단위로 줄여 표시합니다
+    ok(krw && /원$/.test(krw.textContent), "원화 줄 필요");
+    ok(/[억만]|\d/.test(krw.textContent), "원화 값 필요");
 
     // 환율을 다른 곳에 또 적으면 어긋납니다
     const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");

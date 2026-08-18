@@ -2208,26 +2208,28 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 숫자가 흔들리지 않도록 폭이 일정한 숫자 글꼴 사용 */
 .position-table td{font-variant-numeric:tabular-nums;}
 
-.position-table th:nth-child(1){width:9%;}    /* 종목 */
-.position-table th:nth-child(2){width:11%;}   /* 수량 — 소수 6자리+단위라 넓게 */
-.position-table th:nth-child(3){width:12%;}   /* 금액 */
-.position-table th:nth-child(4){width:8%;}    /* 진입가 */
-.position-table th:nth-child(5){width:8%;}    /* 현재가 */
-.position-table th:nth-child(6){width:8%;}    /* 강제청산가 */
+/* 칸 비율 — 금액 계열(USDT + 원화 두 줄)은 넓게, 단가 계열은 좁게.
+   합이 100%가 되도록 배분합니다(나머지는 미실현/실현/청산이 나눠 가짐). */
+.position-table th:nth-child(1){width:8%;}    /* 종목 */
+.position-table th:nth-child(2){width:10%;}   /* 수량 */
+.position-table th:nth-child(3){width:11%;}   /* 금액 */
+.position-table th:nth-child(4){width:7%;}    /* 진입가 */
+.position-table th:nth-child(5){width:7%;}    /* 현재가 */
+.position-table th:nth-child(6){width:7%;}    /* 강제청산가 */
 /* 개시증거금 이후 칸들은 "USDT + 원화" 두 줄이라 조금 더 넓게 잡습니다.
    (1800px에서 개시증거금이 3px 넘치던 것 보정) */
-.position-table th:nth-child(7){width:11%;}   /* 개시증거금 */
-.position-table th:nth-child(8){width:11%;}   /* 유지증거금 */
+.position-table th:nth-child(7){width:12%;}   /* 개시증거금 */
+.position-table th:nth-child(8){width:12%;}   /* 유지증거금 */
 
 /* 레퍼런스 포지션 표는 작고 촘촘합니다. 칸을 고정한 만큼 글자를 줄여
    좁은 화면에서도 값이 잘리지 않게 합니다(폭에 비례). */
 /* 포지션 영역은 좌측 칼럼(시세바와 같은 폭) 안에 들어갑니다.
    글자는 키우되, 그 폭 안에서 값이 잘리지 않는 선까지만 올립니다. */
-.position-table th{font-size:clamp(14px, 0.55vw, 19px);padding-right:8px;}
-.position-table td{font-size:clamp(15px, 0.58vw, 20px);padding-right:8px;}
-.position-table .pos-money-krw{font-size:0.76em;}
-.position-table .position-symbol-name{font-size:clamp(15px, 0.6vw, 21px);}
-.position-table .position-symbol-sub{font-size:clamp(12.5px, 0.48vw, 17px);}
+.position-table th{font-size:clamp(16px, 0.66vw, 23px);padding-right:8px;}
+.position-table td{font-size:clamp(17px, 0.7vw, 25px);padding-right:8px;}
+.position-table .pos-money-krw{font-size:0.74em;}
+.position-table .position-symbol-name{font-size:clamp(17px, 0.72vw, 25px);}
+.position-table .position-symbol-sub{font-size:clamp(14px, 0.56vw, 20px);}
 .pos-close-btn{font-size:clamp(13px, 0.56vw, 19px);padding:5px 10px;}
 
 
@@ -2255,12 +2257,17 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 1800~2200px은 좌측 칼럼이 가장 좁은 구간 — 표 글자를 한 단계 줄여
    금액(USDT/원화 두 줄)이 잘리지 않게 합니다. */
 @media (min-width:1800px) and (max-width:2200px){
-  .position-table th{font-size:12px;}
-  .position-table td{font-size:12.5px;}
-  .position-table .position-symbol-name{font-size:13.5px;}
-  .position-table .position-symbol-sub{font-size:11.5px;}
-  .pos-close-btn{font-size:12px;padding:4px 7px;}
-  /* 이 구간에서 원화 줄까지 들어가려면 여백을 더 줄여야 합니다. */
+  .position-table th{font-size:14px;}
+  .position-table td{font-size:15px;}
+  .position-table .position-symbol-name{font-size:16px;}
+  .position-table .position-symbol-sub{font-size:13px;}
+  .pos-close-btn{font-size:13px;padding:4px 8px;}
   .position-table th,
-  .position-table td{padding-right:5px;}
+  .position-table td{padding-right:3px;}
+  /* 이 구간은 개시/유지증거금이 가장 빠듯합니다 */
+  .position-table th:nth-child(7),
+  .position-table th:nth-child(8){width:13%;}
+  .position-table th:nth-child(4),
+  .position-table th:nth-child(5),
+  .position-table th:nth-child(6){width:6.5%;}
 }

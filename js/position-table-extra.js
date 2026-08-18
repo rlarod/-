@@ -45,13 +45,28 @@ App.PositionTableExtra = (function () {
   /* ---------------- USDT + KRW 두 줄 표기 ---------------- */
   // 레퍼런스는 금액 칸마다 USDT 값 아래에 =원화를 함께 보여줍니다.
   // 환율은 App.Config.USD_KRW 하나만 씁니다(다른 곳에 또 적지 않음).
+  // 1억 이상은 "3.08억", 1만 이상은 "3,085만", 그 미만은 그대로.
+  function shortKrw(n) {
+    const abs = Math.abs(n);
+    if (abs >= 100000000) return (n / 100000000).toFixed(2) + "억";
+    if (abs >= 10000) return Math.round(n / 10000).toLocaleString("ko-KR") + "만";
+    return n.toLocaleString("ko-KR");
+  }
+
   function money(usd, opts) {
     const o = opts || {};
     if (usd === null || usd === undefined || !isFinite(usd)) return "-";
     const sign = o.signed && usd > 0 ? "+" : "";
-    const usdt = sign + usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT";
+    // 소수 4자리는 칸을 크게 잡아먹어 글자를 키울 수 없었습니다.
+    // 값이 클수록 소수 자리를 줄입니다(10만 이상이면 소수 없이).
+    const abs = Math.abs(usd);
+    const dp = abs >= 100000 ? 0 : abs >= 1000 ? 2 : 4;
+    const usdt =
+      sign + usd.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp }) + " USDT";
+    // 원화는 자릿수가 길어(3억이면 9자리) 칸을 잡아먹습니다.
+    // 억/만 단위로 줄여 표시해 글자를 키울 여유를 만듭니다.
     const krwNum = Math.round(usd * App.Config.USD_KRW);
-    const krw = "=" + (sign && krwNum > 0 ? "+" : "") + krwNum.toLocaleString("ko-KR") + " KRW";
+    const krw = "≈" + (sign && krwNum > 0 ? "+" : "") + shortKrw(krwNum) + "원";
     return { usdt: usdt, krw: krw };
   }
 
@@ -145,6 +160,14 @@ App.PositionTableExtra = (function () {
       return;
     }
 
+    // 수량 — 레퍼런스는 단위 없이 숫자만 보여줍니다(224.354).
+    // ui.js가 "+16.011486 BTC"로 써두면 칸이 부족해 잘리므로 단위만 뗍니다.
+    // 방향(+/-)과 색은 ui.js가 넣은 그대로 유지합니다.
+    if (dom.qtyCell) {
+      const t = dom.qtyCell.textContent;
+      if (t.indexOf(" BTC") !== -1) dom.qtyCell.textContent = t.replace(/\s*BTC\s*$/, "");
+    }
+
     // 종목 부제 — 레퍼런스의 "Isolated 93.00x" 자리.
     // 우리 주문창은 교차(Cross) 방식이라 그대로 적습니다(없는 방식을 적지 않음).
     //
@@ -230,6 +253,7 @@ App.PositionTableExtra = (function () {
       pnlCell: el("pos-pnl-cell"),
       symbolSub: document.querySelector(".position-symbol-sub"),
       levEl: el("pos-leverage"),
+      qtyCell: el("pos-qty"),
       pnlEl: el("pos-pnl"),
       pnlPctEl: el("pos-pnl-pct"),
       prefixNode: document.createTextNode("Cross "),
