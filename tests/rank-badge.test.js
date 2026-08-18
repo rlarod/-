@@ -108,8 +108,20 @@ console.log("\n계급장");
   ok("rank-badge-attach.js 가 연결됐다", at("js/rank-badge-attach.js") > at("js/rank.js"));
 
   const attach = fs.readFileSync(path.join(REPO, "js", "rank-badge-attach.js"), "utf8");
-  ok("남의 계급을 지어내지 않는다(채팅은 내 것만)", /내 닉네임일 때만/.test(attach));
-  ok("랭킹표는 행에 계급 정보가 있을 때만 붙인다", /data-rank-id|data-rank-points/.test(attach));
+  /* 2026-08-18: 서버가 닉네임별 계급 점수를 주게 되어 모두의 계급장을 붙입니다. */
+  ok("계급 점수를 서버에서 받아온다", /rpc\("rank_points_all"\)/.test(attach));
+  ok("점수를 화면에서 지어내지 않는다", !/Math\.random/.test(attach));
+  ok("계급 단계 판정은 rank.js 에 맡긴다", /App\.Rank\.calculateRank/.test(attach));
+  ok("모르는 닉네임에는 아무것도 안 붙인다", /if \(!rank\) return;/.test(attach));
+  ok("랭킹표·채팅·커뮤니티 세 곳에 붙인다", /attachLeaderboard/.test(attach) && /attachChat/.test(attach) && /attachBoard/.test(attach));
+  ok("서버 함수가 없으면 조용히 넘어간다", /loadFailed = true/.test(attach));
+  ok("실패해도 계속 재시도하지 않는다", /if \(loading \|\| loadFailed\) return/.test(attach));
+
+  const sqlBadge = fs.readFileSync(path.join(REPO, "supabase", "schema-rank-badges.sql"), "utf8");
+  const sqlCode = sqlBadge.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+  ok("SQL: 점수를 기존 tl_earned() 로 계산(새 공식 안 만듦)", /public\.tl_earned\(p\.id\)/.test(sqlCode));
+  ok("SQL: 테이블을 만들거나 지우지 않는다", !/create table|drop table|truncate/i.test(sqlCode));
+  ok("SQL: 조회 수를 제한한다(과부하 방지)", /limit greatest/.test(sqlCode));
 }
 
 /* ---------- 크기 규격 ---------- */

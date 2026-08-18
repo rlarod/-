@@ -6,11 +6,11 @@
  * js/leaderboard.js 와 js/chat.js 는 수정 금지 파일이라 손대지 않습니다.
  * 그 파일들이 그린 뒤에 DOM 만 후처리합니다(이 프로젝트에서 계속 쓰던 방식).
  *
- * 계급은 새로 계산하지 않습니다.
- *   랭킹표 : 서버가 준 rank_points / rank_id 가 행에 있으면 그걸 쓰고,
- *            없으면 그 행의 수익률로 App.Rank 가 계산합니다.
- *   채팅   : 서버가 계급을 같이 주지 않으므로, 내 메시지에만 내 계급을 붙입니다.
- *            (남의 계급을 임의로 지어내지 않습니다 — 가짜 데이터 금지)
+ * 계급 점수는 서버에서 받아옵니다.
+ *   public.rank_points_all() -> [{ nickname, rank_points }]
+ *   그 점수를 js/rank.js 의 RANK_TABLE 로 계급으로 바꿉니다.
+ *   화면에서 점수를 지어내지 않습니다(가짜 데이터 금지).
+ *   서버 함수가 아직 없으면(SQL 미실행) 내 계급만 붙이고 조용히 넘어갑니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -20,8 +20,56 @@ App.RankBadgeAttach = (function () {
 
   var MARK = "data-rank-badge-done";
 
+  var rankByNick = null;   // { 닉네임: 계급객체 }
+  var loading = false;
+  var loadFailed = false;
+
   function ready() {
     return !!(App.RankBadge && App.Rank && typeof App.Rank.calculateRank === "function");
+  }
+
+  function sb() {
+    return App.SupabaseClient && App.SupabaseClient.get ? App.SupabaseClient.get() : null;
+  }
+
+  /* 서버에서 닉네임별 계급 점수를 한 번 받아 지도를 만듭니다. */
+  function loadRanks() {
+    if (loading || loadFailed) return Promise.resolve(rankByNick);
+    var client = sb();
+    if (!client || !ready()) return Promise.resolve(null);
+    loading = true;
+    return Promise.resolve(client.rpc("rank_points_all"))
+      .then(function (r) {
+        if (r.error) throw r.error;
+        var map = {};
+        (r.data || []).forEach(function (row) {
+          if (!row || !row.nickname) return;
+          map[String(row.nickname).trim()] = App.Rank.calculateRank(Number(row.rank_points) || 0);
+        });
+        rankByNick = map;
+        loading = false;
+        run();
+        return map;
+      })
+      .catch(function (e) {
+        loading = false;
+        loadFailed = true;   // 계속 재시도하지 않습니다
+        console.warn(
+          "[rank-badge-attach.js] 계급 점수를 못 받았습니다 — 내 계급장만 표시합니다. " +
+          "(supabase/schema-rank-badges.sql 실행 필요)", e
+        );
+        return null;
+      });
+  }
+
+  /* 닉네임으로 계급 찾기 — 서버 지도에 없으면 내 것만 확인합니다. */
+  function rankOf(nickname) {
+    var n = String(nickname || "").trim();
+    if (!n) return null;
+    if (rankByNick && rankByNick[n]) return rankByNick[n];
+    var myNick = App.Auth && typeof App.Auth.getNickname === "function" ? App.Auth.getNickname() : null;
+    if (myNick && String(myNick).trim() === n && App.Rank.getUserRank) return App.Rank.getUserRank();
+    return null;
   }
 
   /* ---------------- 랭킹표 ---------------- */
@@ -36,13 +84,10 @@ App.RankBadgeAttach = (function () {
       var nickCell = cells[1];
       if (nickCell.querySelector(".rank-badge")) { tr.setAttribute(MARK, "1"); return; }
 
-      /* 행에 계급 정보가 실려 있으면 그대로 쓰고, 없으면 만들지 않습니다. */
-      var rid = tr.getAttribute("data-rank-id");
-      var pts = tr.getAttribute("data-rank-points");
-      var rank = null;
-      if (rid) rank = { rank_id: Number(rid), rank_name: tr.getAttribute("data-rank-name") || "" };
-      else if (pts) rank = App.Rank.calculateRank(Number(pts));
-      if (!rank) { tr.setAttribute(MARK, "1"); return; }
+      /* 닉네임으로 계급을 찾습니다. '나' 배지 같은 덧붙은 글자는 떼고 봅니다. */
+      var nick = nickCell.textContent.replace(/나\s*$/, "").trim();
+      var rank = rankOf(nick);
+      if (!rank) return;   // 모르면 아무것도 붙이지 않습니다(잘못된 계급장 방지)
 
       var img = App.RankBadge.el(rank, "ranking", rank.rank_name);
       if (img) nickCell.insertBefore(img, nickCell.firstChild);
@@ -53,18 +98,26 @@ App.RankBadgeAttach = (function () {
   /* ---------------- 실시간 채팅 ---------------- */
   function attachChat() {
     if (!ready()) return;
-    var myNick = App.Auth && typeof App.Auth.getNickname === "function" ? App.Auth.getNickname() : null;
-    if (!myNick) return;
-    var myRank = App.Rank.getUserRank ? App.Rank.getUserRank() : null;
-    if (!myRank) return;
-
     document.querySelectorAll(".chat-msg-nick").forEach(function (nick) {
       if (nick.getAttribute(MARK)) return;
+      var rank = rankOf(nick.textContent);
+      if (!rank) return;   // 아직 모르면 표시하지 않습니다(다음 갱신 때 붙습니다)
       nick.setAttribute(MARK, "1");
-      /* 내 닉네임일 때만 붙입니다 — 남의 계급은 서버가 안 주므로 지어내지 않습니다. */
-      if (nick.textContent.trim() !== String(myNick).trim()) return;
       if (nick.previousElementSibling && nick.previousElementSibling.classList.contains("rank-badge")) return;
-      var img = App.RankBadge.el(myRank, "chat", myRank.rank_name);
+      var img = App.RankBadge.el(rank, "chat", rank.rank_name);
+      if (img && nick.parentNode) nick.parentNode.insertBefore(img, nick);
+    });
+  }
+
+  /* ---------------- 커뮤니티(게시판 댓글) ---------------- */
+  function attachBoard() {
+    if (!ready()) return;
+    document.querySelectorAll(".board-comment-meta .chat-msg-nick").forEach(function (nick) {
+      if (nick.getAttribute("data-rank-board-done")) return;
+      var rank = rankOf(nick.textContent);
+      if (!rank) return;
+      nick.setAttribute("data-rank-board-done", "1");
+      var img = App.RankBadge.el(rank, "community", rank.rank_name);
       if (img && nick.parentNode) nick.parentNode.insertBefore(img, nick);
     });
   }
@@ -72,12 +125,14 @@ App.RankBadgeAttach = (function () {
   function run() {
     try { attachLeaderboard(); } catch (e) { console.warn("[rank-badge-attach.js] 랭킹표 실패:", e); }
     try { attachChat(); } catch (e) { console.warn("[rank-badge-attach.js] 채팅 실패:", e); }
+    try { attachBoard(); } catch (e) { console.warn("[rank-badge-attach.js] 커뮤니티 실패:", e); }
   }
 
   function init() {
+    loadRanks();
     run();
     /* 목록이 다시 그려질 때마다 따라 붙입니다. */
-    var targets = ["leaderboard-body", "chat-messages"];
+    var targets = ["leaderboard-body", "chat-messages", "board-comments-list"];
     targets.forEach(function (id) {
       var node = document.getElementById(id);
       if (!node || typeof MutationObserver === "undefined") return;
@@ -92,5 +147,9 @@ App.RankBadgeAttach = (function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, run: run, attachLeaderboard: attachLeaderboard, attachChat: attachChat };
+  return {
+    init: init, run: run, loadRanks: loadRanks, rankOf: rankOf,
+    attachLeaderboard: attachLeaderboard, attachChat: attachChat, attachBoard: attachBoard,
+    _setMap: function (m) { rankByNick = m; },
+  };
 })();
