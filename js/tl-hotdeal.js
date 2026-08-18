@@ -50,6 +50,15 @@ App.TLHotdeal = (function () {
 
   var LOW_STOCK = 3; // 이하이면 "마감 임박"
 
+  /* 상품 이미지가 준비된 것만 화면에 내보냅니다(2026-08-18 지시).
+     상품 데이터는 지우지 않습니다 — 이미지가 등록되면 자동으로 다시 보입니다.
+     전부 보이게 하려면 이 값만 false 로 바꾸면 됩니다. */
+  var SHOW_ONLY_WITH_IMAGE = true;
+
+  function hasImage(product) {
+    return !!(product && product.image_url && String(product.image_url).trim());
+  }
+
   var state = {
     products: [],
     balance: null, // { logged_in, earned, spent, balance }
@@ -112,7 +121,9 @@ App.TLHotdeal = (function () {
 
   function filterProducts(products, opts) {
     var o = opts || {};
+    var onlyWithImage = o.onlyWithImage === undefined ? SHOW_ONLY_WITH_IMAGE : o.onlyWithImage;
     return (products || []).filter(function (p) {
+      if (onlyWithImage && !hasImage(p)) return false;
       if (o.category && o.category !== "all" && p.category !== o.category) return false;
       if (!matchesBand(p, o.band || "all")) return false;
       if (!matchesSearch(p, o.search)) return false;
@@ -620,6 +631,7 @@ App.TLHotdeal = (function () {
     describeServerError: describeServerError,
     badgesFor: badgesFor,
     countByProduct: countByProduct,
+    hasImage: hasImage,
     CATEGORIES: CATEGORIES,
     PRICE_BANDS: PRICE_BANDS,
     _state: state,

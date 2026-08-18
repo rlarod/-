@@ -58,22 +58,34 @@ const catalog = [
 
 console.log("\nTL 핫딜");
 
+/* ---------- 이미지 없는 상품 숨김 ---------- */
+{
+  const withImg = prod({ id: "img1", image_url: "assets/products/starbucks-10000.png" });
+  const noImg = prod({ id: "img2" });
+  const list = [withImg, noImg];
+  ok("이미지 없는 상품은 화면에서 빠진다", HD.filterProducts(list, {}).length === 1);
+  ok("남는 건 이미지 있는 상품", HD.filterProducts(list, {})[0].id === "img1");
+  ok("데이터를 지우는 게 아니라 거르기만 한다(원본 그대로)", list.length === 2 && list[1].id === "img2");
+  ok("빈 문자열도 이미지 없음으로 본다", !HD.hasImage(prod({ image_url: "   " })));
+  ok("옵션으로 전부 보이게 할 수 있다", HD.filterProducts(list, { onlyWithImage: false }).length === 2);
+}
+
 /* ---------- 카테고리 / 가격대 / 검색 ---------- */
 {
-  ok("기본은 전체 — 모든 상품", HD.filterProducts(catalog, { category: "all", band: "all" }).length === catalog.length);
-  ok("카페만 거른다", HD.filterProducts(catalog, { category: "cafe", band: "all" }).every((p) => p.category === "cafe"));
-  ok("카페는 2개", HD.filterProducts(catalog, { category: "cafe", band: "all" }).length === 2);
+  ok("기본은 전체 — 모든 상품", HD.filterProducts(catalog, { category: "all", band: "all", onlyWithImage: false }).length === catalog.length);
+  ok("카페만 거른다", HD.filterProducts(catalog, { category: "cafe", band: "all", onlyWithImage: false }).every((p) => p.category === "cafe"));
+  ok("카페는 2개", HD.filterProducts(catalog, { category: "cafe", band: "all", onlyWithImage: false }).length === 2);
 
-  const b5 = HD.filterProducts(catalog, { category: "all", band: "5k" });
+  const b5 = HD.filterProducts(catalog, { category: "all", band: "5k", onlyWithImage: false });
   ok("5천원대 필터가 5,000원 상품만", b5.every((p) => p.price === 5000) && b5.length === 3, b5.map((p) => p.price).join(","));
-  const b50 = HD.filterProducts(catalog, { category: "all", band: "50k" });
+  const b50 = HD.filterProducts(catalog, { category: "all", band: "50k", onlyWithImage: false });
   ok("5만원대 필터가 50,000원 상품", b50.length === 1 && b50[0].price === 50000);
 
-  ok("브랜드로 검색", HD.filterProducts(catalog, { search: "쿠팡" }).length === 1);
-  ok("일부만 입력해도 검색", HD.filterProducts(catalog, { search: "배달" }).length === 2);
-  ok("대소문자/공백 무시", HD.filterProducts(catalog, { search: "  스타벅스 " }).length === 1);
-  ok("없는 검색어는 0건", HD.filterProducts(catalog, { search: "없는브랜드" }).length === 0);
-  ok("카테고리+가격대+검색 동시 적용", HD.filterProducts(catalog, { category: "delivery", band: "5k", search: "배달" }).length === 1);
+  ok("브랜드로 검색", HD.filterProducts(catalog, { onlyWithImage: false, search: "쿠팡" }).length === 1);
+  ok("일부만 입력해도 검색", HD.filterProducts(catalog, { onlyWithImage: false, search: "배달" }).length === 2);
+  ok("대소문자/공백 무시", HD.filterProducts(catalog, { onlyWithImage: false, search: "  스타벅스 " }).length === 1);
+  ok("없는 검색어는 0건", HD.filterProducts(catalog, { onlyWithImage: false, search: "없는브랜드" }).length === 0);
+  ok("카테고리+가격대+검색 동시 적용", HD.filterProducts(catalog, { category: "delivery", band: "5k", search: "배달", onlyWithImage: false }).length === 1);
 }
 
 /* ---------- 정렬 ---------- */

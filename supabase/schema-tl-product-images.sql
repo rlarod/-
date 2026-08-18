@@ -21,30 +21,50 @@ update public.tl_products
    set image_url = 'assets/products/starbucks-20000.png', updated_at = now()
  where brand = '스타벅스' and name = '금액권 20,000원';
 
+update public.tl_products
+   set image_url = 'assets/products/mega-10000.png', updated_at = now()
+ where brand = '메가커피' and name = '금액권 10,000원';
+
 
 -- ---------------- 2) 확인 ----------------
 -- 스타벅스 상품 3개 중 2개에 image_url 이 채워져 있어야 합니다.
 select brand, name, price, tl_price,
-       coalesce(image_url, '(없음 — 머리글자로 표시)') as 이미지
+       coalesce(image_url, '(없음 — 화면에서 숨김)') as 이미지
 from public.tl_products
-where brand = '스타벅스'
-order by price;
+where brand in ('스타벅스', '메가커피')
+order by brand, price;
 
 
 -- ---------------- 3) 전체 현황 ----------------
+-- 이미지 없는 상품은 화면에서 숨겨집니다(데이터는 그대로 남습니다).
 select count(*) as 전체상품,
-       count(image_url) as 이미지있음,
-       count(*) - count(image_url) as 이미지없음
+       count(image_url) as 화면에_보임,
+       count(*) - count(image_url) as 숨겨짐
 from public.tl_products;
 
 
--- ---------------- 4) 스타벅스 30,000원권을 추가하려면 ----------------
--- TL 가격을 정해서 아래 <TL가격> 자리에 넣고 주석을 풀어 실행하세요.
--- (참고: 기존 비율은 10,000원 -> 2,700 TL / 20,000원 -> 5,300 TL 입니다)
+-- ---------------- 4) 아직 등록 못 한 상품 ----------------
+-- 이미지는 받았는데 상품 목록에 없는 것들입니다.
+-- 처음 주신 목록에 없던 금액대라 TL 가격을 임의로 정하지 않았습니다.
+--
+--   스타벅스 30,000원   assets/products/starbucks-30000.png
+--   메가커피 30,000원   assets/products/mega-30000.png
+--   메가커피 50,000원   assets/products/mega-50000.png
+--
+-- 참고 — 지금 등록된 비율
+--   스타벅스 10,000원 -> 2,700 TL / 20,000원 -> 5,300 TL
+--   메가커피 10,000원 -> 2,500 TL
+--   배민·쿠팡 30,000원 -> 8,000 TL / 50,000원 -> 13,500 TL
+--
+-- TL 가격을 정하신 뒤 <TL가격> 자리를 채우고 주석을 풀어 실행하세요.
 --
 -- insert into public.tl_products
 --   (name, brand, category, price, tl_price, stock, max_purchase, sort_order, image_url)
 -- values
 --   ('금액권 30,000원', '스타벅스', 'cafe', 30000, <TL가격>, 50, 2, 16,
---    'assets/products/starbucks-30000.png')
+--    'assets/products/starbucks-30000.png'),
+--   ('금액권 30,000원', '메가커피', 'cafe', 30000, <TL가격>, 50, 2, 17,
+--    'assets/products/mega-30000.png'),
+--   ('금액권 50,000원', '메가커피', 'cafe', 50000, <TL가격>, 50, 2, 18,
+--    'assets/products/mega-50000.png')
 -- on conflict do nothing;
