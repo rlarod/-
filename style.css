@@ -2543,7 +2543,10 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
  * =========================================================================
  * 레퍼런스: 제목 한 줄, 그 아래 [글쓴이 | 작성일시] ... [조회 추천 댓글]
  * ========================================================================= */
-#board-detail-view{max-width:1100px;}
+/* 상세 화면만 1100px로 묶여 있어 좌측 칼럼(실측 1945px) 대비 56.6%밖에 안 찼습니다.
+   공지 2박스·광고 배너·목록 화면과 단차가 나므로 목록과 같은 폭으로 맞춥니다.
+   (실측: 1100px -> 1925px, 목록 화면과 동일) */
+#board-detail-view{max-width:none;}
 #board-back-btn{margin-bottom:14px;}
 .board-detail-title{
   font-size:clamp(20px, 0.95vw, 32px);font-weight:700;color:var(--text);
