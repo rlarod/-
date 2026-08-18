@@ -404,7 +404,9 @@ App.TLHotdeal = (function () {
 
     return (
       '<article class="hd-card' + (soldOut ? " hd-card-out" : "") + '">' +
-      (badges ? '<div class="hd-badges">' + badges + "</div>" : "") +
+      // 배지가 없어도 칸은 항상 둡니다 — 없으면 배지 있는 카드만 내용이
+      // 아래로 밀려서 가격·TL 줄에 단차가 납니다(실측으로 확인).
+      '<div class="hd-badges">' + badges + "</div>" +
       '<div class="hd-thumb">' + thumb + "</div>" +
       '<div class="hd-brand">' + esc(p.brand) + "</div>" +
       '<div class="hd-name">' + esc(p.name) + "</div>" +
