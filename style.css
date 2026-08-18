@@ -2734,12 +2734,15 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 .hd-badge-out{background:var(--surface3);color:var(--text-faint);}
 .hd-thumb{
   display:flex;align-items:center;justify-content:center;
-  /* 상품 이미지가 정사각(250x250)이라 낮은 칸에서는 너무 작게 들어갑니다.
-     칸을 정사각에 가깝게 잡아 이미지가 시원하게 보이도록 했습니다. */
-  aspect-ratio:1 / 1;max-height:190px;
+  /* 상품권 이미지의 실제 내용 비율이 약 1.55:1 입니다(6장 실측 1.53~1.56).
+     칸을 같은 비율로 잡아야 좌우 빈 공간 없이 꽉 찹니다.
+     정사각 칸으로 두면 이미지가 세로에 맞춰져 양옆이 크게 비었습니다. */
+  aspect-ratio:1.55 / 1;
   border:1px solid var(--border-soft);border-radius:3px;
   background:var(--surface2);overflow:hidden;
 }
+/* 여백을 잘라낸 이미지라 칸을 꽉 채웁니다. 비율이 조금 달라도
+   contain 이라 잘리지 않고 아주 얇은 여백만 남습니다. */
 .hd-thumb-img{width:100%;height:100%;object-fit:contain;}
 .hd-thumb-text{font-size:42px;font-weight:700;color:var(--text-faint);letter-spacing:-0.02em;}
 .hd-brand{font-size:15px;color:var(--text-faint);}

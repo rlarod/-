@@ -299,6 +299,31 @@ console.log("\n  구조·보안·디자인");
 
   /* 디자인 */
   ok("카드 모서리는 사이트 규칙 3px", /\.hd-card\{[\s\S]*?border-radius:3px/.test(css));
+
+  /* 2026-08-18: 정사각 칸에 가로형 상품권을 넣으니 양옆이 크게 비었습니다.
+     이미지 여백을 잘라내고 칸도 같은 비율(약 1.55:1)로 맞췄습니다. */
+  ok("이미지 칸이 상품권 비율(1.55:1)", /\.hd-thumb\{[\s\S]*?aspect-ratio:1\.55 \/ 1/.test(css));
+  ok("이미지가 잘리지 않게 contain 유지", /\.hd-thumb-img\{[^}]*object-fit:contain/.test(css));
+  {
+    /* PNG 헤더에서 크기를 직접 읽어 실제로 가로형인지 확인합니다. */
+    const dir = path.join(REPO, "assets", "products");
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".png"));
+    ok("상품 이미지가 6장 있다", files.length === 6, String(files.length));
+    files.forEach((f) => {
+      const buf = fs.readFileSync(path.join(dir, f));
+      const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+      const r = w / h;
+      ok(f + " 가 가로형(1.4~1.7)", r > 1.4 && r < 1.7, r.toFixed(3));
+    });
+    ok("원본 250x250 은 그대로 보관돼 있다", (() => {
+      const od = path.join(dir, "original");
+      if (!fs.existsSync(od)) return false;
+      return fs.readdirSync(od).filter((f) => f.endsWith(".png")).every((f) => {
+        const b2 = fs.readFileSync(path.join(od, f));
+        return b2.readUInt32BE(16) === 250 && b2.readUInt32BE(20) === 250;
+      });
+    })());
+  }
   ok("새 색을 만들지 않고 기존 변수 사용", /\.hd-buy-btn\{[\s\S]*?background:var\(--gold\)/.test(css));
   ok("카드 배경이 변수라 다크모드에서 안 뜬다", /\.hd-card\{[\s\S]*?background:var\(--surface\)/.test(css));
   ok("다크모드 전용 카드 규칙이 있다", /html\[data-theme="dark"\] \.hd-card/.test(css));
