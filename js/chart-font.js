@@ -33,6 +33,23 @@ App.ChartFont = (function () {
      캔버스 글자가 DOM 글자보다 조금 작아 보이는 점도 감안했습니다. */
   var FONT_SIZE = 21;
 
+  /* 글꼴도 사이트와 맞춥니다.
+     js/chart.js 는 'JetBrains Mono' 를 지정하는데, 사이트는 예전에
+     본문 글꼴로 통일했습니다(style.css 의 --sans / --mono 가 같은 값).
+     그래서 차트 축 숫자만 다른 글꼴로 나와 따로 놀았습니다.
+     CSS 변수에서 직접 읽어오므로, 나중에 사이트 글꼴을 바꾸면 차트도
+     자동으로 따라옵니다(코드에 글꼴 이름을 박아두지 않습니다). */
+  function siteFontFamily() {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue("--sans");
+      v = (v || "").trim();
+      if (v) return v;
+    } catch (e) {
+      /* 아래 기본값으로 */
+    }
+    return null;
+  }
+
   var charts = [];
 
   function patch() {
@@ -48,6 +65,9 @@ App.ChartFont = (function () {
       opts.layout = opts.layout || {};
       /* chart.js 가 fontSize 를 직접 정하고 있으면 그 값을 존중합니다. */
       if (opts.layout.fontSize === undefined) opts.layout.fontSize = FONT_SIZE;
+      /* 글꼴은 chart.js 가 지정해도 사이트 글꼴로 덮습니다(통일이 목적). */
+      var ff = siteFontFamily();
+      if (ff) opts.layout.fontFamily = ff;
       var chart = origCreate.call(LC, container, opts);
       try {
         charts.push(chart);
@@ -113,6 +133,7 @@ App.ChartFont = (function () {
 
   return {
     setFontSize: setFontSize,
+    getFontFamily: siteFontFamily,
     getFontSize: function () {
       return FONT_SIZE;
     },

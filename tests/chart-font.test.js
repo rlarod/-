@@ -52,13 +52,21 @@ function makeFakeLib() {
 }
 
 function boot(lib) {
+  const SITE_FONT = "'Noto Sans KR','Spoqa Han Sans Neo',sans-serif";
   const sandbox = {
     console: { warn() {}, log() {} },
     setInterval: () => 0,
     clearInterval: () => {},
     LightweightCharts: lib,
-    document: { readyState: "complete", addEventListener() {} },
+    document: {
+      readyState: "complete",
+      addEventListener() {},
+      documentElement: {},
+    },
+    /* 사이트 글꼴을 CSS 변수에서 읽어오는지 확인하기 위한 흉내 */
+    getComputedStyle: () => ({ getPropertyValue: (k) => (k === "--sans" ? " " + SITE_FONT + " " : "") }),
   };
+  sandbox.__SITE_FONT = SITE_FONT;
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(SRC, sandbox);
@@ -110,8 +118,19 @@ console.log("\n차트 글씨 크기");
     ok("차트 축이 시간 버튼보다 작지 않다", CF.getFontSize() >= iv, CF.getFontSize() + " vs " + iv);
   }
   ok("원래 옵션은 그대로 남는다", chart.options().autoSize === true && chart.options().layout.textColor === "#333");
+
+  /* 글꼴도 사이트와 맞춥니다 — chart.js 는 'JetBrains Mono' 를 쓰는데
+     사이트는 본문 글꼴로 통일돼 있어 차트 축만 따로 놀았습니다. */
+  ok("글꼴을 CSS 변수(--sans)에서 읽어 적용한다", chart.options().layout.fontFamily === sb.__SITE_FONT, chart.options().layout.fontFamily);
+  ok("글꼴 이름을 코드에 박아두지 않았다", SRC.indexOf("Noto Sans") === -1 && SRC.indexOf("Pretendard") === -1);
   ok("만든 차트를 붙잡아 둔다", CF.getCharts().length === 1);
   ok("차트가 실제로 만들어졌다", created.length === 1);
+
+  {
+    /* chart.js 가 다른 글꼴을 지정해도 사이트 글꼴로 덮어야 합니다. */
+    const c2 = sb.LightweightCharts.createChart({}, { layout: { fontFamily: "'JetBrains Mono', monospace" } });
+    ok("chart.js 의 JetBrains Mono 를 사이트 글꼴로 덮는다", c2.options().layout.fontFamily === sb.__SITE_FONT, c2.options().layout.fontFamily);
+  }
 }
 
 /* ---- chart.js 가 직접 크기를 정하면 존중 ---- */
