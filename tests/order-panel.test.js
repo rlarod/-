@@ -70,7 +70,10 @@ function setInput(el, v) {
 /* ===================================================================== */
 section("[1] 보호 대상 핵심 파일 무결성");
 const PROTECTED = {
-  "js/trading.js": "d507994799da3ec6b71225b53a365b21",
+  // 2026-08-18: 사장님 허락을 받아 펀딩비 정산 한 줄만 수정했습니다.
+  //   state.balance += fundingFee  ->  Math.max(0, state.balance + fundingFee)
+  //   (100% 진입 후 잔고가 음수가 되던 문제. 아래 회귀 테스트로 고정합니다.)
+  "js/trading.js": "33250202c00b097ff8344ae2ee64cbe7",
   "js/ui.js": "333fc427e75b47b306699c92aa4e7b50",
   "js/auth.js": "9cec9a7257eb54f379bf72e14e21e463",
   "js/supabase-sync.js": "faddcbbc34b5165177ff26cb978040f8",
@@ -512,6 +515,36 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     // ui.js가 개수를 갱신하며 글자를 다시 쓰므로 매번 재적용되어야 함
     const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
     ok(!/refNamed/.test(src), "한 번만 바꾸면 ui.js가 되돌려놓음");
+  });
+
+  t("펀딩비로 잔고가 음수가 되지 않음", () => {
+    const src = fs.readFileSync(path.join(REPO, "js/trading.js"), "utf8");
+    // 잔고는 "내가 들고 있는 돈"이라 음수가 될 수 없습니다.
+    ok(/state\.balance = Math\.max\(0, state\.balance \+ fundingFee\)/.test(src),
+      "펀딩 정산에서 잔고를 0에서 멈춰야 함");
+    ok(!/state\.balance \+= fundingFee/.test(src), "예전 방식이 남아 있으면 안 됨");
+
+    const { App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 96000, time: Date.now() });
+    App.Trading.setLeverage(100);
+    // 잔고를 거의 다 쓰는 크기로 진입
+    App.Trading.openPosition("long", App.Trading.getMaxAffordableMargin(), null, null);
+    ok(App.Trading.getSnapshot().balance >= 0, "진입 직후 잔고는 0 이상");
+
+    // 펀딩을 여러 번 정산해도 음수로 내려가면 안 됩니다
+    const sym = App.Config.getActiveSymbol();
+    for (let i = 0; i < 4; i++) {
+      App.Bus.emit("funding:update", {
+        symbol: sym,
+        nextFundingTime: Date.now() + i * 10000,
+        fundingRate: 0.0001,
+        markPrice: 96000,
+      });
+    }
+    const snap = App.Trading.getSnapshot();
+    ok(snap.balance >= 0, "펀딩비를 내고도 잔고가 음수면 안 됨: " + snap.balance);
+    // 펀딩 기록 자체는 남아야 합니다(얼마를 냈는지 확인 가능)
+    ok(snap.totalFundingPaid < 0, "펀딩 지불 기록은 남아야 함");
   });
 
   t("100% 버튼으로 실제 진입이 되어야 함(반올림 초과 방지)", () => {

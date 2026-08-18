@@ -339,7 +339,12 @@ App.Trading = (function () {
 
     const pos = state.position;
     const fundingFee = calcFundingFee(pos, markPrice, fundingRate);
-    state.balance += fundingFee;
+    // 잔고는 "내가 들고 있는 돈"이라 음수가 될 수 없습니다.
+    // 100%로 진입해 잔고가 0에 가까울 때 펀딩비를 그대로 빼면 마이너스가
+    // 됐습니다(실측: -526 USDT). 0에서 멈춥니다.
+    // 실제 거래소는 부족분을 증거금에서 차감하지만, 그건 청산 로직과 얽혀
+    // 있어 여기서는 건드리지 않습니다.
+    state.balance = Math.max(0, state.balance + fundingFee);
     state.lastSettledFundingTime = fundingTime;
 
     state.fundingHistory.unshift({
