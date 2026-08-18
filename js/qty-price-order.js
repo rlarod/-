@@ -78,7 +78,13 @@ App.QtyPriceOrder = (function () {
     const maxMargin = App.Trading.getMaxAffordableMargin();
     const leverage = getLeverage();
     const maxQty = (maxMargin * leverage) / price;
-    dom.qtyInput.value = ((maxQty * pct) / 100).toFixed(6);
+
+    // toFixed(6)는 반올림이라 100%에서 최대치를 아주 조금 넘길 수 있습니다.
+    // 그러면 "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다"로 진입이
+    // 거부됩니다(실측: 0.0009 USDT 초과). 올림이 아니라 버림으로 맞춥니다.
+    const raw = (maxQty * pct) / 100;
+    const floored = Math.floor(raw * 1e6) / 1e6;
+    dom.qtyInput.value = floored.toFixed(6);
     syncMargin();
   }
 

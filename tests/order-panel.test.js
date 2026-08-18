@@ -514,6 +514,31 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     ok(!/refNamed/.test(src), "한 번만 바꾸면 ui.js가 되돌려놓음");
   });
 
+  t("100% 버튼으로 실제 진입이 되어야 함(반올림 초과 방지)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 96456.75, time: Date.now() });
+    App.Trading.setLeverage(100);
+
+    const before = App.Trading.getSnapshot().balance;
+    click(doc.querySelector('#qty-percent-row .chip[data-pct="100"]'));
+
+    // toFixed(6)는 반올림이라 최대치를 아주 조금 넘겨 진입이 거부됐습니다.
+    const margin = parseFloat(doc.getElementById("margin-input").value);
+    const maxMargin = App.Trading.getMaxAffordableMargin();
+    ok(margin <= maxMargin, "100%가 최대 증거금을 넘으면 진입이 거부됨: " + margin + " > " + maxMargin);
+
+    const r = App.Trading.openPosition("long", margin, null, null);
+    ok(r.ok !== false, "100%로 진입할 수 있어야 함: " + (r.error || ""));
+
+    const snap = App.Trading.getSnapshot();
+    ok(snap.position, "포지션이 생겨야 함");
+    // 잔고의 대부분이 실제로 들어가야 합니다(잔돈만 남는 수준)
+    ok(snap.position.margin > before * 0.9, "100%인데 증거금이 너무 작음: " + snap.position.margin);
+
+    const src = fs.readFileSync(path.join(REPO, "js/qty-price-order.js"), "utf8");
+    ok(/Math\.floor\(raw \* 1e6\)/.test(src), "반올림이 아니라 버림이어야 함");
+  });
+
   t("표 안에서 단위가 섞이지 않음(선택한 통화가 첫 줄)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64304, time: Date.now() });
