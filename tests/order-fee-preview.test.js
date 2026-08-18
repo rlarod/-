@@ -101,6 +101,14 @@ console.log("\n100% 주문과 진입수수료");
   ok("수수료율을 코드에 박아두지 않았다", !/0\.0005|0\.0002/.test(js));
   ok("지정가/시장가로 메이커·테이커를 구분한다", /isLimitMode/.test(js) && /maker/.test(js) && /taker/.test(js));
   ok("가용 잔고 초과 시 경고를 띄운다", /order-fee-warn|acc-fee-warn/.test(js));
+  /* 2026-08-18: 두 줄이면 주문창이 40px 넘쳐 스크롤이 생겼습니다(실측).
+     한 줄로 합치고 소수 2자리로 줄여 잘림 없이 들어가게 했습니다. */
+  ok("수수료·필요총액을 한 줄에 넣는다(주문창 스크롤 방지)", /order-fee-row/.test(js) && (js.match(/order-account-row/g) || []).length <= 2);
+  ok("값은 소수 2자리 — 4자리면 좁은 주문창에서 잘림", /plain\(o\.total, 2\)/.test(js) && /plain\(o\.fee, 2\)/.test(js));
+  ok("라벨은 짧게(길면 값이 잘림), 설명은 title 로", /title="증거금 \+ 진입수수료/.test(js) && />필요총액</.test(js));
+
+  const cssFee = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+  ok("이 줄만 여백을 줄여 높이를 맞춘다", /\.order-account-row\.order-fee-row\{padding-top:0;padding-bottom:0;\}/.test(cssFee));
 
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   ok("index.html 에 모듈이 연결됐다", html.indexOf("js/order-fee-preview.js") !== -1);

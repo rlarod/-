@@ -2631,9 +2631,14 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   font-size:clamp(15px, 0.62vw, 21px);
 }
 
-/* 주문창 진입수수료 경고 — 필요총액이 가용 잔고를 넘을 때만 보입니다.
-   (js/order-fee-preview.js 가 display 로 켜고 끕니다) */
-.order-account-row.order-fee-warn > b{color:var(--short, #e0533d);}
+/* 주문창 수수료/필요총액 — 세로 공간이 빠듯해 한 줄에 같이 넣습니다.
+   가용 잔고를 넘으면 뒤에 빨간 '잔고 초과' 꼬리표만 붙습니다
+   (js/order-fee-preview.js 가 display 로 켜고 끕니다). */
+/* 추가한 이 한 줄 때문에 주문창이 8px 넘쳐서 스크롤이 생겼습니다(실측).
+   다른 줄은 그대로 두고 이 줄의 위아래 여백만 줄여 맞춥니다. */
+.amitalk-order .ami-acc-sub .order-account-row.order-fee-row{padding-top:0;padding-bottom:0;}
+.order-fee-sub{color:var(--text-faint);font-size:0.86em;font-weight:400;}
+.order-fee-warn-tag{color:var(--red);font-weight:700;}
 
 /* ===== TL 로고 — 다크모드 대비 =====
    공식 로고의 "TRADING" 글자는 짙은 남색이라 어두운 배경에서 거의 안 보입니다

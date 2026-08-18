@@ -122,8 +122,9 @@ App.OrderFeePreview = (function () {
       return;
     }
 
-    dom.feeAmount.textContent = plain(o.fee, 4);
-    dom.total.textContent = plain(o.total, 4);
+    /* 주문창 폭이 좁아 4자리면 잘립니다. 2자리로 줄입니다(실측). */
+    dom.feeAmount.textContent = plain(o.fee, 2);
+    dom.total.textContent = plain(o.total, 2);
 
     /* 가용 잔고를 넘으면 진입이 거부되므로 미리 알려줍니다. */
     if (dom.warn) {
@@ -139,23 +140,19 @@ App.OrderFeePreview = (function () {
     var container = rateRow.closest(".order-account-rows");
     if (!container) return false;
 
+    /* 주문창 세로 공간이 빠듯해서(실측: 두 줄이면 40px 넘쳐 스크롤 발생)
+       진입수수료와 필요총액을 한 줄에 같이 보여줍니다. */
     var feeRow = document.createElement("div");
-    feeRow.className = "order-account-row";
-    feeRow.innerHTML = '<span>진입수수료</span><b id="acc-fee-amount">-</b>';
-
-    var totalRow = document.createElement("div");
-    totalRow.className = "order-account-row";
-    totalRow.innerHTML = '<span>필요총액</span><b id="acc-order-total">-</b>';
-
-    var warnRow = document.createElement("div");
-    warnRow.className = "order-account-row order-fee-warn";
-    warnRow.id = "acc-fee-warn";
-    warnRow.style.display = "none";
-    warnRow.innerHTML = "<span></span><b>가용 잔고를 넘습니다</b>";
+    feeRow.className = "order-account-row order-fee-row";
+    feeRow.innerHTML =
+      /* 라벨에 '(수수료)' 안내까지 넣으니 값이 40px 잘렸습니다(실측).
+         라벨은 짧게 두고, 값 옆 괄호가 수수료라는 건 title 로 알려줍니다. */
+      '<span title="증거금 + 진입수수료. 괄호 안이 진입수수료입니다.">필요총액</span>' +
+      '<b><span id="acc-order-total">-</span>' +
+      '<span class="order-fee-sub"> (<span id="acc-fee-amount">-</span>)</span>' +
+      '<span class="order-fee-warn-tag" id="acc-fee-warn" style="display:none;"> 초과</span></b>';
 
     container.appendChild(feeRow);
-    container.appendChild(totalRow);
-    container.appendChild(warnRow);
 
     dom.feeAmount = el("acc-fee-amount");
     dom.total = el("acc-order-total");
