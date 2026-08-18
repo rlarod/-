@@ -56,6 +56,11 @@ App.PositionTableExtra = (function () {
   function money(usd, opts) {
     const o = opts || {};
     if (usd === null || usd === undefined || !isFinite(usd)) return "-";
+
+    // 진입가·현재가·강제청산가는 ui.js가 선택된 통화로 그립니다.
+    // 여기만 USDT로 고정하면 한 표 안에서 단위가 섞여 값을 오해하게 됩니다.
+    // 선택된 통화를 첫 줄에, 나머지 통화를 둘째 줄에 둡니다.
+    const krwMode = !!(App.Config && App.Config.getDisplayCurrency() === "KRW");
     const sign = o.signed && usd > 0 ? "+" : "";
     // 소수 4자리는 칸을 크게 잡아먹어 글자를 키울 수 없었습니다.
     // 값이 클수록 소수 자리를 줄입니다(10만 이상이면 소수 없이).
@@ -66,8 +71,13 @@ App.PositionTableExtra = (function () {
     // 원화는 자릿수가 길어(3억이면 9자리) 칸을 잡아먹습니다.
     // 억/만 단위로 줄여 표시해 글자를 키울 여유를 만듭니다.
     const krwNum = Math.round(usd * App.Config.USD_KRW);
-    const krw = "≈" + (sign && krwNum > 0 ? "+" : "") + shortKrw(krwNum) + "원";
-    return { usdt: usdt, krw: krw };
+    const krwSign = sign && krwNum > 0 ? "+" : "";
+    const krwFull = krwSign + krwNum.toLocaleString("ko-KR") + "원";
+    const krwShort = "≈" + krwSign + shortKrw(krwNum) + "원";
+
+    // 원화 모드: 원화가 주(主), USDT가 보조
+    if (krwMode) return { usdt: krwFull, krw: "≈" + usdt };
+    return { usdt: usdt, krw: krwShort };
   }
 
   function paintMoney(cell, usd, opts) {
@@ -118,6 +128,11 @@ App.PositionTableExtra = (function () {
     hideExtraColumns();
     hideExtraRows();
     renameTabs();
+    // 원화 모드는 가격 자릿수가 길어 칸 배분이 달라야 합니다(CSS에서 처리).
+    document.documentElement.setAttribute(
+      "data-currency",
+      App.Config && App.Config.getDisplayCurrency() === "KRW" ? "KRW" : "USDT"
+    );
     const snap = App.Trading.getSnapshot();
     const pos = snap.position;
 
@@ -287,6 +302,10 @@ App.PositionTableExtra = (function () {
     if (App.Bus) {
       App.Bus.on("price:update", render);
       App.Bus.on("trading:persisted", render);
+      // 통화를 바꾸면 표의 단위도 함께 바뀌어야 합니다.
+      // ui.js도 같은 이벤트로 개시증거금·미실현손익을 다시 그리므로,
+      // 그 뒤에 우리가 덮어쓰도록 한 박자 늦게 실행합니다.
+      App.Bus.on("currency:change", () => setTimeout(render, 0));
     }
     render();
   }

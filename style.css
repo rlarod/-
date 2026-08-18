@@ -2446,3 +2446,11 @@ html[data-theme="dark"] .amitalk-order #qty-percent-row .chip:hover{background:v
    nav-coming-soon 클래스를 유지해야 클릭 시 안내가 뜨므로,
    숨김 규칙만 이 항목에 한해 되돌립니다(id 선택자가 더 강함). */
 .top-banner-nav-btn.nav-coming-soon#page-nav-hotdeal{display:inline-flex;}
+/* 원화 모드에서는 가격 자릿수가 길어(96,456,000원) 단가 칸이 잘립니다.
+   단가 3칸을 넓히고, 두 줄로 표시되는 금액 계열을 조금 양보합니다. */
+html[data-currency="KRW"] .position-table th:nth-child(4),
+html[data-currency="KRW"] .position-table th:nth-child(5),
+html[data-currency="KRW"] .position-table th:nth-child(6){width:9%;}
+html[data-currency="KRW"] .position-table th:nth-child(7),
+html[data-currency="KRW"] .position-table th:nth-child(8){width:10.5%;}
+html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}

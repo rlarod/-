@@ -514,6 +514,28 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     ok(!/refNamed/.test(src), "한 번만 바꾸면 ui.js가 되돌려놓음");
   });
 
+  t("표 안에서 단위가 섞이지 않음(선택한 통화가 첫 줄)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64304, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+
+    // USDT 모드: 첫 줄 USDT
+    App.Config.setDisplayCurrency("USDT");
+    App.PositionTableExtra.renderForTest();
+    ok(/USDT$/.test(doc.getElementById("pos-notional").querySelector(".pos-money-usdt").textContent),
+      "USDT 모드에서는 첫 줄이 USDT");
+
+    // 원화 모드: 진입가(ui.js)와 금액(이 모듈)이 같은 단위여야 함
+    App.Config.setDisplayCurrency("KRW");
+    App.PositionTableExtra.renderForTest();
+    const entry = doc.getElementById("pos-entry").textContent;
+    const notional = doc.getElementById("pos-notional").querySelector(".pos-money-usdt").textContent;
+    ok(/원$/.test(entry), "원화 모드에서 진입가는 원화: " + entry);
+    ok(/원$/.test(notional), "원화 모드에서 금액도 원화여야 함(단위 혼용 방지): " + notional);
+
+    App.Config.setDisplayCurrency("USDT");
+  });
+
   t("금액 칸은 USDT + 원화 두 줄(환율은 Config 하나만 사용)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
