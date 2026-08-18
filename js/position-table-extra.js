@@ -42,22 +42,94 @@ App.PositionTableExtra = (function () {
     return App.Utils.formatCurrencyPlain(v);
   }
 
+  /* ---------------- USDT + KRW 두 줄 표기 ---------------- */
+  // 레퍼런스는 금액 칸마다 USDT 값 아래에 =원화를 함께 보여줍니다.
+  // 환율은 App.Config.USD_KRW 하나만 씁니다(다른 곳에 또 적지 않음).
+  function money(usd, opts) {
+    const o = opts || {};
+    if (usd === null || usd === undefined || !isFinite(usd)) return "-";
+    const sign = o.signed && usd > 0 ? "+" : "";
+    const usdt = sign + usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT";
+    const krwNum = Math.round(usd * App.Config.USD_KRW);
+    const krw = "=" + (sign && krwNum > 0 ? "+" : "") + krwNum.toLocaleString("ko-KR") + " KRW";
+    return { usdt: usdt, krw: krw };
+  }
+
+  function paintMoney(cell, usd, opts) {
+    if (!cell) return;
+    const m = money(usd, opts);
+    if (m === "-") {
+      cell.textContent = "-";
+      return;
+    }
+    cell.innerHTML = "";
+    const a = document.createElement("div");
+    a.className = "pos-money-usdt";
+    a.textContent = m.usdt;
+    const b = document.createElement("div");
+    b.className = "pos-money-krw";
+    b.textContent = m.krw;
+    cell.appendChild(a);
+    cell.appendChild(b);
+  }
+
+  /* ---------------- 탭 이름을 레퍼런스와 맞춤 ---------------- */
+  // ui.js가 만든 탭입니다. 마크업을 지우지 않고 글자만 바꾸고,
+  // 레퍼런스에 없는 "자산" 탭은 화면에서만 숨깁니다.
+  function renameTabs() {
+    // ui.js가 만든 탭 줄 — 포지션 탭 버튼의 부모로 찾습니다(클래스명에 의존 안 함).
+    const anchor = el("tab-btn-position");
+    const row = anchor ? anchor.parentElement : null;
+    if (!row) return;
+    // ui.js가 개수를 갱신하면서 글자를 매번 다시 쓰므로, 한 번만 바꾸면
+    // 원래 이름으로 돌아갑니다. 그릴 때마다 다시 적용합니다.
+    Array.prototype.forEach.call(row.children, (btn) => {
+      const tab = btn.dataset.tab;
+      const txt = btn.textContent.trim();
+      if (tab === "pending" && txt.indexOf("미체결주문") !== 0) {
+        btn.textContent = txt.replace("미체결", "미체결주문");
+      }
+      // 레퍼런스의 주문내역/마감손익에는 개수가 붙지 않습니다.
+      if (tab === "orders" && txt !== "주문내역") btn.textContent = "주문내역";
+      if (tab === "history" && txt !== "마감손익") btn.textContent = "마감손익";
+      if (tab === "assets") btn.classList.add("ref-tab-hidden");
+    });
+  }
+
   function render() {
     if (!dom.notional) return;
     // ui.js가 TP/SL·진입수수료 칸과 부분청산 줄을 나중에 만들기 때문에,
     // 그릴 때마다 다시 확인합니다.
     hideExtraColumns();
     hideExtraRows();
+    renameTabs();
     const snap = App.Trading.getSnapshot();
     const pos = snap.position;
 
     // 실현손익은 포지션이 없어도 계속 의미가 있는 값입니다.
     if (dom.realized) {
-      dom.realized.textContent = App.Utils.formatCurrencySigned(snap.realizedPnl);
+      paintMoney(dom.realized, snap.realizedPnl, { signed: true });
       dom.realized.className =
         "mobile-hide " +
         (snap.realizedPnl > 0 ? "pnl-positive" : snap.realizedPnl < 0 ? "pnl-negative" : "");
     }
+
+    // 개시증거금 · 미실현손익은 ui.js가 채운 뒤라 여기서 두 줄 표기로 바꿉니다.
+    // (ui.js는 수정 금지 파일이라 출력 형식을 바꿀 수 없어, 그린 뒤에 다시 씁니다.)
+    if (dom.marginCell) paintMoney(dom.marginCell, pos ? pos.margin : null);
+    if (dom.pnlCell && pos) {
+      const pnlWrap = dom.pnlCell;
+      paintMoney(pnlWrap, snap.unrealizedPnl, { signed: true });
+      const roe = document.createElement("div");
+      roe.className = "pos-money-roe";
+      roe.textContent = "(" + App.Utils.formatPercent(snap.roe) + ")";
+      pnlWrap.insertBefore(roe, pnlWrap.children[1] || null);
+    } else if (dom.pnlCell) {
+      dom.pnlCell.textContent = "-";
+    }
+
+    // 일괄청산 버튼은 포지션이 있을 때만 의미가 있습니다.
+    if (dom.closeAllBtn) dom.closeAllBtn.disabled = !pos;
 
     if (!pos) {
       dom.notional.textContent = "-";
@@ -66,15 +138,20 @@ App.PositionTableExtra = (function () {
       return;
     }
 
+    // 종목 부제 — 레퍼런스의 "Isolated 93.00x" 자리.
+    // 우리 주문창은 교차(Cross) 방식이라 그대로 적습니다(없는 방식을 적지 않음).
+    if (dom.symbolSub) dom.symbolSub.textContent = "Cross " + Number(pos.leverage).toFixed(2) + "x";
+
     const price = snap.currentPrice;
     // 금액 = 포지션 가치(수량 × 현재가). 현재가가 아직 없으면 진입가 기준.
     const ref = price && isFinite(price) ? price : pos.entry;
     const notional = pos.qty * ref; // trading.js의 포지션 필드명은 qty
-    dom.notional.textContent = fmt(notional);
+    paintMoney(dom.notional, notional);
 
     if (dom.maint) {
       const mmr = getMMR();
-      dom.maint.textContent = mmr === null ? "-" : fmt(notional * mmr);
+      if (mmr === null) dom.maint.textContent = "-";
+      else paintMoney(dom.maint, notional * mmr);
     }
 
     if (dom.closeBtn) dom.closeBtn.disabled = false;
@@ -119,8 +196,20 @@ App.PositionTableExtra = (function () {
       maint: el("pos-maint-margin"),
       realized: el("pos-realized"),
       closeBtn: el("pos-close-market"),
+      marginCell: el("pos-margin"),
+      pnlCell: el("pos-pnl-cell"),
+      symbolSub: document.querySelector(".position-symbol-sub"),
+      closeAllBtn: el("pos-close-all"),
     };
     if (!dom.notional) return;
+
+    if (dom.closeAllBtn) {
+      dom.closeAllBtn.addEventListener("click", () => {
+        // 포지션이 하나뿐인 구조라 시장가 전체청산과 같은 동작입니다.
+        if (!App.Trading.getSnapshot().position) return;
+        App.Trading.closePosition();
+      });
+    }
 
     if (dom.closeBtn) {
       dom.closeBtn.addEventListener("click", () => {

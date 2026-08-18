@@ -2132,3 +2132,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   font-size:15px;padding:0 3px;
 }
 .pos-limit-clear:hover{color:var(--red);}
+
+/* 포지션 표 — USDT/KRW 두 줄 표기 + 일괄청산 (레퍼런스 구성) */
+.pos-money-usdt{font-weight:700;line-height:1.3;}
+.pos-money-krw{font-size:0.82em;opacity:.75;font-weight:500;line-height:1.3;}
+.pos-money-roe{font-size:0.85em;font-weight:600;line-height:1.3;}
+.position-toolbar{display:flex;justify-content:flex-end;padding:0 0 6px;}
+.pos-close-all-btn{
+  padding:6px 14px;border-radius:3px;cursor:pointer;
+  background:var(--surface2);color:var(--text);border:1px solid var(--border);
+  font-family:var(--sans);font-size:16px;font-weight:600;transition:.12s;
+}
+.pos-close-all-btn:hover:not(:disabled){background:var(--surface3);}
+.pos-close-all-btn:disabled{color:var(--text-faint);cursor:not-allowed;}
+/* 레퍼런스에 없는 "자산" 탭 — 화면에서만 숨김(탭 내용·핸들러는 유지) */
+.ref-tab-hidden{display:none !important;}

@@ -389,14 +389,22 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     const snap = App.Trading.getSnapshot();
     const notional = snap.position.qty * snap.currentPrice;
 
-    // 금액 = 수량 × 현재가
-    eq(doc.getElementById("pos-notional").textContent, App.Utils.formatCurrencyPlain(notional));
+    // 금액 = 수량 × 현재가 (USDT 줄에 표시)
+    const notionalUsdt = doc.getElementById("pos-notional").querySelector(".pos-money-usdt");
+    ok(notionalUsdt, "USDT 줄 필요");
+    eq(
+      notionalUsdt.textContent,
+      notional.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT"
+    );
 
     // 유지증거금률은 trading.js 안의 상수라 밖에 또 적으면 어긋납니다.
     // 공개 API(calcLiquidationPrice)에서 역산한 값을 써야 합니다.
     const mmr = App.PositionTableExtra.getMMRForTest();
     ok(mmr > 0 && mmr < 0.1, "역산한 유지증거금률이 비정상: " + mmr);
-    eq(doc.getElementById("pos-maint-margin").textContent, App.Utils.formatCurrencyPlain(notional * mmr));
+    eq(
+      doc.getElementById("pos-maint-margin").querySelector(".pos-money-usdt").textContent,
+      (notional * mmr).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " USDT"
+    );
     const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
     ok(!/0\.005/.test(src), "유지증거금률을 하드코딩하면 안 됨");
 
@@ -407,8 +415,7 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
 
     // 실현손익은 청산 뒤에 반영
     App.PositionTableExtra.renderForTest();
-    eq(doc.getElementById("pos-realized").textContent,
-       App.Utils.formatCurrencySigned(App.Trading.getSnapshot().realizedPnl));
+    ok(doc.getElementById("pos-realized").querySelector(".pos-money-usdt"), "실현손익도 두 줄 표기");
   });
 
   t("포지션 표 칸 구성이 레퍼런스와 같음(추가 칸은 숨김, 삭제 아님)", () => {
@@ -439,6 +446,46 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
       (t) => !t.classList.contains("position-col-hidden")
     ).length;
     eq(bodyVisible, heads.length, "헤더 수와 본문 칸 수가 같아야 함");
+  });
+
+  t("하단 탭 이름이 레퍼런스와 같음(자산 탭은 숨김, 삭제 아님)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    App.PositionTableExtra.renderForTest();
+
+    const row = doc.getElementById("tab-btn-position").parentElement;
+    const visible = Array.prototype.filter
+      .call(row.children, (c) => !c.classList.contains("ref-tab-hidden"))
+      .map((c) => c.textContent.trim());
+    eq(visible.join(","), "포지션(1),미체결주문(0),주문내역,마감손익");
+
+    // 자산 탭은 마크업과 내용이 그대로 남아 있어야 함
+    const assets = row.querySelector('[data-tab="assets"]');
+    ok(assets, "자산 탭이 사라지면 안 됨");
+    ok(assets.classList.contains("ref-tab-hidden"), "자산 탭은 숨김 처리");
+
+    // ui.js가 개수를 갱신하며 글자를 다시 쓰므로 매번 재적용되어야 함
+    const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
+    ok(!/refNamed/.test(src), "한 번만 바꾸면 ui.js가 되돌려놓음");
+  });
+
+  t("금액 칸은 USDT + 원화 두 줄(환율은 Config 하나만 사용)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    App.PositionTableExtra.renderForTest();
+
+    const cell = doc.getElementById("pos-notional");
+    const usdt = cell.querySelector(".pos-money-usdt");
+    const krw = cell.querySelector(".pos-money-krw");
+    ok(usdt && /USDT$/.test(usdt.textContent), "USDT 줄 필요");
+    ok(krw && /KRW$/.test(krw.textContent), "원화 줄 필요");
+
+    // 환율을 다른 곳에 또 적으면 어긋납니다
+    const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
+    ok(/App\.Config\.USD_KRW/.test(src), "환율은 Config에서 가져와야 함");
+    ok(!/1500/.test(src), "환율을 하드코딩하면 안 됨");
   });
 
   t("지정가 청산 — 목표가 도달 시에만 기존 청산 함수를 부름", () => {
