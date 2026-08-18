@@ -2480,3 +2480,38 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 /* 댓글 수는 제목 뒤에 작게(레퍼런스와 동일) */
 .board-gallery .bg-comment{color:var(--gold);font-weight:700;font-size:14.5px;}
 .board-gallery tr.board-row:hover .bg-title{color:var(--gold);text-decoration:underline;}
+
+/* =========================================================================
+ * 커뮤니티 — 페이지 번호 + 검색
+ * ========================================================================= */
+.board-paging{margin-top:14px;}
+.board-page-row{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  position:relative;margin-bottom:12px;
+}
+.board-page-count{
+  position:absolute;left:0;font-size:15px;color:var(--text-faint);
+}
+.board-page-nums{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;}
+.board-page-btn{
+  min-width:30px;padding:5px 8px;border-radius:3px;cursor:pointer;
+  background:none;border:1px solid transparent;
+  font-family:var(--sans);font-size:16px;font-weight:600;
+  color:var(--text-dim);transition:.12s;
+}
+.board-page-btn:hover{background:var(--surface2);color:var(--text);}
+.board-page-btn.active{color:var(--red);text-decoration:underline;font-weight:700;}
+.board-search-row{display:flex;gap:6px;justify-content:center;align-items:center;}
+.board-search-row select,
+.board-search-row input{
+  padding:8px 10px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);
+  font-family:var(--sans);font-size:16px;
+}
+.board-search-row input{width:min(340px,40vw);}
+.board-search-row button{
+  padding:8px 18px;border-radius:3px;cursor:pointer;
+  background:var(--gold);color:#fff;border:1px solid var(--gold);
+  font-family:var(--sans);font-size:16px;font-weight:700;
+}
+.board-search-row button:hover{filter:brightness(1.08);}

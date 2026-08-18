@@ -24,8 +24,22 @@ App.LayoutAlign = (function () {
   let grid = null;
   let chat = null;
 
+  // 채팅 아랫변을 맞출 기준 요소를 찾습니다.
+  // 거래 화면이면 거래 행, 다른 페이지(커뮤니티/랭킹 등)면 그 페이지의 본문.
+  function anchorBottom() {
+    if (grid && grid.offsetParent) return grid.getBoundingClientRect().bottom;
+    // 거래 화면이 아니면 현재 보이는 페이지를 찾습니다(인라인 style로 전환됨).
+    const app = document.querySelector(".page-left .app");
+    if (!app) return null;
+    const pages = app.children;
+    for (let i = 0; i < pages.length; i++) {
+      if (pages[i].offsetParent) return pages[i].getBoundingClientRect().bottom;
+    }
+    return null;
+  }
+
   function apply() {
-    if (!col || !grid || !chat) return;
+    if (!col || !chat) return;
 
     // 2단이 아니면 CSS 기본값으로 되돌립니다.
     if (window.innerWidth < MIN_WIDTH || !chat.offsetParent) {
@@ -34,10 +48,18 @@ App.LayoutAlign = (function () {
       return;
     }
 
-    const gridBottom = grid.getBoundingClientRect().bottom;
+    const bottom = anchorBottom();
+    if (bottom === null) return;
     const chatTop = chat.getBoundingClientRect().top;
-    const h = Math.round(gridBottom - chatTop);
-    if (h <= 0) return;
+    const h = Math.round(bottom - chatTop);
+    // 너무 짧으면 채팅이 찌그러지므로 최소 높이를 둡니다.
+    // (파란 헤더 134px + 메시지 영역 + 입력줄이 들어갈 최소치)
+    const MIN_H = 260;
+    if (h < MIN_H) {
+      col.style.height = MIN_H + "px";
+      col.style.maxHeight = MIN_H + "px";
+      return;
+    }
 
     col.style.height = h + "px";
     col.style.maxHeight = h + "px";
@@ -47,14 +69,21 @@ App.LayoutAlign = (function () {
     col = document.querySelector(".page-right .page-chat-col");
     grid = document.querySelector(".main-grid");
     chat = document.querySelector(".page-right .page-chat-panel");
-    if (!col || !grid || !chat) return;
+    if (!col || !chat) return;
 
     apply();
     window.addEventListener("resize", apply);
     // 주문창 길이가 바뀌면 거래 행 높이도 바뀌므로 다시 맞춥니다.
     if (window.ResizeObserver) {
-      new ResizeObserver(apply).observe(grid);
+      if (grid) new ResizeObserver(apply).observe(grid);
+      // 페이지를 바꾸면(커뮤니티/랭킹 등) 기준 요소가 달라지므로 함께 관찰합니다.
+      const appEl = document.querySelector(".page-left .app");
+      if (appEl) new ResizeObserver(apply).observe(appEl);
     }
+    // 메뉴로 페이지를 옮길 때도 다시 맞춥니다.
+    document.querySelectorAll(".top-banner-nav-btn").forEach((b) => {
+      b.addEventListener("click", () => setTimeout(apply, 0));
+    });
     if (App.Bus) App.Bus.on("trading:persisted", apply);
   }
 

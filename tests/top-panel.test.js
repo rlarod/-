@@ -51,7 +51,7 @@ function boot(opts) {
     };})();
   `);
 
-  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js", "js/theme.js", "js/board-gallery-style.js"].forEach((f) => {
+  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js", "js/theme.js", "js/board-gallery-style.js", "js/board-paging.js"].forEach((f) => {
     win.eval(fs.readFileSync(path.join(REPO, f), "utf8"));
   });
 
@@ -65,6 +65,7 @@ function boot(opts) {
   win.App.UserPanel.init();
   win.App.Theme.init();
   win.App.BoardGalleryStyle.init();
+  win.App.BoardPaging.init();
   return { dom, win, App: win.App, doc: win.document };
 }
 
@@ -762,6 +763,41 @@ section("[5] 기존 기능 보존");
     eq(row.children.length, 6, "칸 수 유지");
     eq(row.dataset.id, "a", "글 id가 유지되어야 클릭이 동작함");
     ok(/\[2\]/.test(row.children[1].textContent), "댓글 수는 제목 뒤에");
+  });
+
+  t("커뮤니티 페이지 번호와 검색", () => {
+    const js = fs.readFileSync(path.join(REPO, "js/board-paging.js"), "utf8");
+    // board.js를 고치지 않고 이미 불러온 목록만 다뤄야 합니다
+    ok(!/supabase|\.from\(/.test(js), "서버에 새로 질의하면 board.js와 중복됨");
+    ok(/MutationObserver/.test(js), "목록이 바뀌면 다시 계산해야 함");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const body = doc.getElementById("board-list-body");
+    const titles = ["청산 후기", "레버리지 질문", "수익 인증", "손절 타이밍"];
+    body.innerHTML = titles
+      .map((t, i) =>
+        '<tr class="board-row" data-id="p' + i + '">' +
+        '<td style="text-align:left;">' + t + "</td><td>김갱" + i +
+        "</td><td>5</td><td>2</td><td>10</td><td>1시간 전</td></tr>"
+      )
+      .join("");
+    App.BoardGalleryStyle.applyForTest();
+    App.BoardPaging.applyForTest();
+
+    ok(doc.getElementById("board-page-nums"), "페이지 번호 영역 필요");
+    ok(doc.getElementById("board-search-input"), "검색창 필요");
+
+    // 검색이 제목으로 걸러야 함
+    doc.getElementById("board-search-input").value = "청산";
+    App.BoardPaging.searchForTest();
+    const visible = [].filter.call(body.querySelectorAll("tr.board-row"), (r) => r.style.display !== "none");
+    eq(visible.length, 1, "제목에 '청산'이 든 글만 남아야 함");
+
+    // 검색어를 비우면 전체 복귀
+    doc.getElementById("board-search-input").value = "";
+    App.BoardPaging.searchForTest();
+    const all = [].filter.call(body.querySelectorAll("tr.board-row"), (r) => r.style.display !== "none");
+    eq(all.length, titles.length, "검색어를 지우면 전체가 보여야 함");
   });
 
   t("원화 표시에 '원'이 붙음", () => {
