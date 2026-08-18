@@ -389,21 +389,38 @@ section("[4] 사용자 정보 패널");
     eq(grid.querySelectorAll(".up-value").length, 4, "값 4칸");
     eq(
       Array.prototype.map.call(grid.querySelectorAll(".up-label"), (l) => l.textContent).join(","),
-      // 레퍼런스(개미톡) 구성: 선물 / 벅스 / USDT / 지갑
-      //   벅스 -> 포인트(계급 점수, 실제 값)
-      //   지갑 -> 대응 데이터가 없어 수익률 유지
-      "선물,포인트,USDT,수익률"
+      // 라벨은 뜻이 바로 보이도록 풀어 썼습니다.
+      //   총자산 = 평가자산 / 손익 = 실현 손익 누계 / 수익률 = 손익÷초기자산 / 포인트 = 계급 점수
+      "총자산,손익,수익률,포인트"
     );
     eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
 
-  t("가용은 실제 주문가능 잔고(balance)", () => {
+  t("손익 칸은 실현 손익 누계 — 진입만으로는 변하지 않음", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const profit = () => doc.getElementById("user-panel-profit").textContent;
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    ok(/^[+-]?0/.test(profit().replace(/[,\s]/g, "")), "포지션만 열었을 때는 0 (핵심 원칙)");
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+    App.Trading.closePosition();
+    const snap = App.Trading.getSnapshot();
+    ok(snap.realizedPnl > 0, "이익 청산이어야 함");
+    // 총자산과 같은 형식(통화 기호 없이)이어야 단위가 섞이지 않습니다
+    ok(!/\$/.test(profit()), "총자산과 같은 형식이어야 함: " + profit());
+    ok(/^\+/.test(profit()), "이익이면 + 부호");
+  });
+
+  t("총자산은 스냅샷의 equity를 그대로 씀", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     App.Trading.openPosition("long", 5000, null, null);
     const snap = App.Trading.getSnapshot();
-    eq(doc.getElementById("user-panel-available").textContent, App.Utils.formatCurrencyPlain(snap.balance));
-    ok(snap.balance < snap.equity, "증거금이 묶였으므로 가용 < 평가");
+    // 가용 잔고 칸은 손익 칸으로 바뀌었습니다(라벨 정리).
+    eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.equity));
+    eq(doc.getElementById("user-panel-available"), null, "가용 칸은 더 이상 없음");
   });
 
   t("진행률은 실제 계급 점수에서 계산", () => {

@@ -2042,6 +2042,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .page-right #user-panel-equity,
 .page-right #user-panel-available{color:var(--gold);}
 .page-right #user-panel-points{color:var(--gold);}
+.page-right #user-panel-profit{color:var(--text-dim);}
 .page-right #user-panel-roe{color:var(--text-dim);}
 /* 전역 .pnl-positive/.pnl-negative가 !important라, 같은 강도로 덮어씁니다.
    전역 규칙 자체는 그대로 둡니다(호가창/포지션 손익 등이 그대로 쓰고 있음). */

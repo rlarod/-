@@ -101,10 +101,15 @@ App.UserPanel = (function () {
       //   포인트 = 계급 점수            (레퍼런스의 "벅스" 자리 — 우리 실제 값)
       //   USDT   = 주문 가능 잔고       (레퍼런스와 동일 이름)
       //   수익률 = 실현 수익률          (레퍼런스의 "지갑"에 해당하는 데이터가 없어 유지)
-      '<span class="up-label">선물</span><b class="up-value" id="user-panel-equity">-</b>' +
-      '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
-      '<span class="up-label">USDT</span><b class="up-value" id="user-panel-available">-</b>' +
+      // 라벨은 뜻이 바로 보이도록 풀어서 씁니다.
+      //   총자산  = 평가자산(equity) — 잔고 + 사용중 증거금 + 미실현손익
+      //   손익    = 실현 손익 누계 (청산으로 확정된 금액)
+      //   수익률  = 실현손익 / 초기자산
+      //   포인트  = 계급 점수 (js/rank.js가 계산하는 실제 값)
+      '<span class="up-label">총자산</span><b class="up-value" id="user-panel-equity">-</b>' +
+      '<span class="up-label">손익</span><b class="up-value" id="user-panel-profit">-</b>' +
       '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
+      '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
       "</div>" +
 
       '<div class="up-nav">' +
@@ -141,7 +146,16 @@ App.UserPanel = (function () {
     // 자산 값은 통화 기호 없이 숫자만 (레퍼런스와 동일).
     // formatCurrencyPlain은 기존에 있던 함수로, USDT/KRW 전환도 그대로 따릅니다.
     eq.textContent = App.Utils.formatCurrencyPlain(snapshot.equity);
-    el("user-panel-available").textContent = App.Utils.formatCurrencyPlain(snapshot.balance);
+    // 손익 = 실현 손익 누계. 진입만으로는 변하지 않고 청산 때 확정됩니다.
+    const profitEl = el("user-panel-profit");
+    if (profitEl) {
+      // 총자산과 같은 형식(통화 기호 없이)으로 맞춥니다. 부호만 직접 붙입니다.
+      profitEl.textContent =
+        (realized > 0 ? "+" : realized < 0 ? "-" : "") +
+        App.Utils.formatCurrencyPlain(Math.abs(realized));
+      profitEl.className =
+        "up-value " + (realized > 0 ? "pnl-positive" : realized < 0 ? "pnl-negative" : "");
+    }
 
     // 포인트 = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
     // 없는 수치를 지어내지 않고, 이미 계급 계산에 쓰는 값을 그대로 보여줍니다.
