@@ -429,7 +429,7 @@
 
         <!-- ===== [11] 하단 프로모션 영역 — 재충전/아이템은 실제로 구현된 기능이
              아니라서 "준비중"으로 두고 클릭 시 안내만 뜹니다(가짜 수치 금지). ===== -->
-        <!-- 하루 1회 무료 충전 — 오전 6시(한국시간) 기준으로 횟수가 채워집니다.
+        <!-- 무료 충전 — 한국시간 자정 기준 하루 2회로 횟수가 채워집니다.
              금액·횟수·포지션 확인은 전부 서버(claim_daily_recharge)에서 합니다. -->
         <div class="ami-promo" id="ami-promo">
           <button type="button" class="daily-recharge-btn" id="daily-recharge-btn" disabled>
@@ -822,6 +822,9 @@
 <script src="js/trading.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/qty-price-order.js"></script>
+<!-- 100%를 눌러도 지갑이 다 안 들어가는 것처럼 보이던 문제 — 실제 진입수수료와
+     필요총액을 주문창에 표시합니다(증거금 + 수수료 = 지갑 전액). -->
+<script src="js/order-fee-preview.js"></script>
 <script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>

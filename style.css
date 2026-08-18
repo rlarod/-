@@ -2581,3 +2581,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   width:auto;flex:0 0 auto;padding:8px 24px;
   font-size:clamp(15px, 0.62vw, 21px);
 }
+
+/* 주문창 진입수수료 경고 — 필요총액이 가용 잔고를 넘을 때만 보입니다.
+   (js/order-fee-preview.js 가 display 로 켜고 끕니다) */
+.order-account-row.order-fee-warn > b{color:var(--short, #e0533d);}
