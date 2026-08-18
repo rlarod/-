@@ -352,30 +352,40 @@ section("[4] 사용자 정보 패널");
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
     App.Trading.closePosition("수동청산");
     const snap = App.Trading.getSnapshot();
-    eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
-    eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent((snap.realizedPnl / 100000) * 100));
+    // 청산 후에는 보유분이 없어 미실현 기준 수익률은 0입니다.
+    eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent(snap.roe));
     eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.equity));
   });
 
-  t("수익률은 랭킹 뷰와 같은 산식(실현손익 / 100,000)", () => {
+  t("수익률은 미실현 손익 기준 ROE(손익 / 증거금)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    App.Trading.setLeverage(10);
     App.Trading.openPosition("long", 5000, null, null);
-    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
-    App.Trading.closePosition("수동청산");
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+
     const snap = App.Trading.getSnapshot();
-    const shown = parseFloat(doc.getElementById("user-panel-roe").textContent.replace(/[+%]/g, ""));
-    const expected = Math.round((snap.realizedPnl / 100000) * 100 * 100) / 100;
-    eq(shown, expected);
+    eq(doc.getElementById("user-panel-roe").textContent, App.Utils.formatPercent(snap.roe));
+    // 랭킹은 실현손익 기준이라 값이 다를 수 있습니다(의도된 차이).
+    ok(snap.roe !== 0, "보유 중에도 수익률이 움직여야 함");
   });
 
-  t("포지션만 열었을 때는 수익금/수익률이 그대로(핵심 원칙)", () => {
+  t("진입만으로 자산·포인트는 변하지 않음(핵심 원칙)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    const points0 = doc.getElementById("user-panel-points").textContent;
+
     App.Trading.openPosition("long", 5000, null, null);
-    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
-    eq(doc.getElementById("user-panel-roe").textContent, "+0.00%", "청산 전 수익률은 0");
-    eq(doc.getElementById("user-panel-roe").textContent, "+0.00%", "청산 전 수익률은 0");
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+
+    // 시세가 올라도 자산(잔고)과 포인트는 그대로 — 청산해야 확정됩니다.
+    const assetAfterOpen = doc.getElementById("user-panel-equity").textContent;
+    eq(doc.getElementById("user-panel-points").textContent, points0, "포인트는 청산 전 불변");
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 62000, time: Date.now() });
+    eq(doc.getElementById("user-panel-equity").textContent, assetAfterOpen, "자산은 시세로 변하지 않음");
+
+    // 반면 손익·수익률은 보유 중에도 움직여야 합니다.
+    ok(App.Trading.getSnapshot().unrealizedPnl > 0, "미실현 손익은 반영되어야 함");
   });
 
   t("개미톡 구조 — 헤더 / 2×2 값 표 / 하단 링크 줄", () => {
@@ -391,36 +401,43 @@ section("[4] 사용자 정보 패널");
       Array.prototype.map.call(grid.querySelectorAll(".up-label"), (l) => l.textContent).join(","),
       // 라벨은 뜻이 바로 보이도록 풀어 썼습니다.
       //   총자산 = 평가자산 / 손익 = 실현 손익 누계 / 수익률 = 손익÷초기자산 / 포인트 = 계급 점수
-      "총자산,손익,수익률,포인트"
+      "자산,손익,수익률,포인트"
     );
     eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
 
-  t("손익 칸은 실현 손익 누계 — 진입만으로는 변하지 않음", () => {
+  t("손익 칸은 보유 포지션의 미실현 손익(시세따라 실시간)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     const profit = () => doc.getElementById("user-panel-profit").textContent;
 
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     App.Trading.openPosition("long", 5000, null, null);
-    ok(/^[+-]?0/.test(profit().replace(/[,\s]/g, "")), "포지션만 열었을 때는 0 (핵심 원칙)");
+    ok(/^[+-]?0/.test(profit().replace(/[,\s]/g, "")), "진입 직후에는 0");
 
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+    ok(/^\+/.test(profit()), "가격이 오르면 + (청산하지 않아도 움직여야 함)");
+    ok(!/\$/.test(profit()), "자산과 같은 형식이어야 함: " + profit());
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 59000, time: Date.now() });
+    ok(/^-/.test(profit()), "가격이 내리면 -");
+
     App.Trading.closePosition();
-    const snap = App.Trading.getSnapshot();
-    ok(snap.realizedPnl > 0, "이익 청산이어야 함");
-    // 총자산과 같은 형식(통화 기호 없이)이어야 단위가 섞이지 않습니다
-    ok(!/\$/.test(profit()), "총자산과 같은 형식이어야 함: " + profit());
-    ok(/^\+/.test(profit()), "이익이면 + 부호");
+    ok(/^[+-]?0/.test(profit().replace(/[,\s]/g, "")), "청산하면 보유분이 없으므로 0");
   });
 
-  t("총자산은 스냅샷의 equity를 그대로 씀", () => {
+  t("자산은 포지션에 넣고 남은 잔고(balance)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    const before = doc.getElementById("user-panel-equity").textContent;
     App.Trading.openPosition("long", 5000, null, null);
     const snap = App.Trading.getSnapshot();
-    // 가용 잔고 칸은 손익 칸으로 바뀌었습니다(라벨 정리).
-    eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.equity));
-    eq(doc.getElementById("user-panel-available"), null, "가용 칸은 더 이상 없음");
+    eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.balance));
+    ok(doc.getElementById("user-panel-equity").textContent !== before, "진입하면 증거금만큼 줄어야 함");
+
+    // 시세가 움직여도 자산은 그대로(청산 때만 움직임)
+    const afterOpen = doc.getElementById("user-panel-equity").textContent;
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+    eq(doc.getElementById("user-panel-equity").textContent, afterOpen, "시세로는 자산이 변하지 않아야 함");
   });
 
   t("진행률은 실제 계급 점수에서 계산", () => {
@@ -604,18 +621,19 @@ section("[5] 기존 기능 보존");
 
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     App.Trading.openPosition("long", 5000, null, null);
-    ok(/up-state-flat/.test(grid()), "포지션만 열었을 때는 아직 검정(실현 손익 0)");
+    ok(/up-state-flat/.test(grid()), "진입 직후에는 평가손익 0이라 검정");
 
+    // 손익·수익률이 미실현 기준이라 색도 보유 중 평가손익을 따릅니다.
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
-    App.Trading.closePosition();
-    ok(/up-state-profit/.test(grid()), "이익 청산 후 빨강 상태");
+    ok(/up-state-profit/.test(grid()), "평가이익이면 빨강 상태");
     ok(/^\+/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 + 표시");
 
-    App.Trading.openPosition("long", 5000, null, null);
-    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 40000, time: Date.now() });
-    App.Trading.closePosition();
-    ok(/up-state-loss/.test(grid()), "손실 청산 후 파랑 상태");
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 59000, time: Date.now() });
+    ok(/up-state-loss/.test(grid()), "평가손실이면 파랑 상태");
     ok(/^-/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 - 표시");
+
+    App.Trading.closePosition();
+    ok(/up-state-flat/.test(grid()), "청산하면 보유분이 없어 중립");
   });
 
   t("내 정보 값 표: 라벨 셀 회색 + 값마다 색(레퍼런스 실측)", () => {

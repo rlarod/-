@@ -102,11 +102,12 @@ App.UserPanel = (function () {
       //   USDT   = 주문 가능 잔고       (레퍼런스와 동일 이름)
       //   수익률 = 실현 수익률          (레퍼런스의 "지갑"에 해당하는 데이터가 없어 유지)
       // 라벨은 뜻이 바로 보이도록 풀어서 씁니다.
-      //   총자산  = 평가자산(equity) — 잔고 + 사용중 증거금 + 미실현손익
-      //   손익    = 실현 손익 누계 (청산으로 확정된 금액)
-      //   수익률  = 실현손익 / 초기자산
+      //   자산    = 주문 가능 잔고(balance) — 포지션에 넣고 남은 시드.
+      //             진입하면 증거금만큼 줄고 청산하면 되돌아옵니다.
+      //   손익    = 미실현 손익 — 보유 중인 포지션의 평가 손익(시세따라 실시간)
+      //   수익률  = 미실현 손익 기준 ROE (손익 / 증거금)
       //   포인트  = 계급 점수 (js/rank.js가 계산하는 실제 값)
-      '<span class="up-label">총자산</span><b class="up-value" id="user-panel-equity">-</b>' +
+      '<span class="up-label">자산</span><b class="up-value" id="user-panel-equity">-</b>' +
       '<span class="up-label">손익</span><b class="up-value" id="user-panel-profit">-</b>' +
       '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
       '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
@@ -145,16 +146,19 @@ App.UserPanel = (function () {
 
     // 자산 값은 통화 기호 없이 숫자만 (레퍼런스와 동일).
     // formatCurrencyPlain은 기존에 있던 함수로, USDT/KRW 전환도 그대로 따릅니다.
-    eq.textContent = App.Utils.formatCurrencyPlain(snapshot.equity);
-    // 손익 = 실현 손익 누계. 진입만으로는 변하지 않고 청산 때 확정됩니다.
+    // 자산 = 포지션에 넣고 남은 잔고. 진입/청산 때만 움직입니다.
+    eq.textContent = App.Utils.formatCurrencyPlain(snapshot.balance);
+
+    // 손익 = 보유 중인 포지션의 미실현 손익(시세에 따라 실시간으로 변합니다).
+    const unrealized = snapshot.unrealizedPnl || 0;
     const profitEl = el("user-panel-profit");
     if (profitEl) {
-      // 총자산과 같은 형식(통화 기호 없이)으로 맞춥니다. 부호만 직접 붙입니다.
+      // 자산과 같은 형식(통화 기호 없이)으로 맞춥니다. 부호만 직접 붙입니다.
       profitEl.textContent =
-        (realized > 0 ? "+" : realized < 0 ? "-" : "") +
-        App.Utils.formatCurrencyPlain(Math.abs(realized));
+        (unrealized > 0 ? "+" : unrealized < 0 ? "-" : "") +
+        App.Utils.formatCurrencyPlain(Math.abs(unrealized));
       profitEl.className =
-        "up-value " + (realized > 0 ? "pnl-positive" : realized < 0 ? "pnl-negative" : "");
+        "up-value " + (unrealized > 0 ? "pnl-positive" : unrealized < 0 ? "pnl-negative" : "");
     }
 
     // 포인트 = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
@@ -165,9 +169,11 @@ App.UserPanel = (function () {
       pointsEl.textContent = r && typeof r.points === "number" ? Math.round(r.points).toLocaleString() + " P" : "-";
     }
 
+    // 수익률 = 미실현 손익 기준 ROE(손익 / 증거금). 손익과 같은 기준입니다.
+    const roeNow = snapshot.roe || 0;
     const roeEl = el("user-panel-roe");
-    roeEl.textContent = App.Utils.formatPercent(roe);
-    roeEl.className = "up-value " + (roe > 0 ? "pnl-positive" : roe < 0 ? "pnl-negative" : "");
+    roeEl.textContent = App.Utils.formatPercent(roeNow);
+    roeEl.className = "up-value " + (roeNow > 0 ? "pnl-positive" : roeNow < 0 ? "pnl-negative" : "");
 
     // 값 표 전체의 색 상태 — 실현 손익 기준.
     //   이익  : 빨강 (수익률 앞에 +)
@@ -188,7 +194,7 @@ App.UserPanel = (function () {
     const grid = el("user-panel-grid");
     if (grid) {
       grid.classList.remove("up-state-profit", "up-state-loss", "up-state-flat");
-      grid.classList.add(realized > 0 ? "up-state-profit" : realized < 0 ? "up-state-loss" : "up-state-flat");
+      grid.classList.add(unrealized > 0 ? "up-state-profit" : unrealized < 0 ? "up-state-loss" : "up-state-flat");
     }
 
     // 다음 계급까지 진행률 — 현재 계급 구간 안에서 몇 %인지(실제 점수 기준)
