@@ -47,6 +47,16 @@
   --text-faint:#7C8494;
   --gold:#1D5FD6;
   --gold-soft:rgba(29,95,214,0.10);
+  /* ===== TL 브랜드 컬러 =====
+     공식 로고 PNG에서 직접 뽑은 값입니다(임의로 정한 색이 아닙니다).
+       가장 많이 쓰인 색 #0058F8 → --tl-blue
+       심볼의 짙은 축     #011E7A → --tl-navy
+       하이라이트 축      #17E9FF → --tl-cyan
+     빨강/초록은 매매 상승·하락 표시용으로만 계속 씁니다(브랜드 색 아님). */
+  --tl-blue:#0058F8;
+  --tl-blue-soft:rgba(0,88,248,0.10);
+  --tl-navy:#011E7A;
+  --tl-cyan:#17E9FF;
   --red:#E5484D;
   --red-soft:rgba(229,72,77,0.11);
   --blue:#2F6FE4;
@@ -175,7 +185,25 @@ a:hover{text-decoration:underline;}
   padding:0;border-radius:0;margin-left:4px;vertical-align:super;letter-spacing:-0.02em;
 }
 
-.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+/* ===== TL 브랜드 로고 =====
+   로고는 공식 원본 이미지를 그대로 씁니다. 형태·비율·색을 CSS로 바꾸지 않고
+   높이만 헤더에 맞추고, 가로는 aspect-ratio로 원본 비율(1461:328 = 4.454)을
+   유지합니다. 사이트 이름이 바로 보이도록 충분히 크게 둡니다. */
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none;}
+.brand-logo{
+  height:68px;width:auto;display:block;
+  /* 이미지가 늦게 떠도 헤더 높이가 흔들리지 않게 자리를 미리 잡습니다. */
+  aspect-ratio:1461 / 328;
+}
+.brand-logo-mark{display:none;height:52px;width:auto;aspect-ratio:525 / 328;}
+/* 좁아지면 글자 로고 대신 심볼만 — 로고를 찌그러뜨리지 않고 교체합니다. */
+@media (max-width:900px){
+  .brand-logo{display:none;}
+  .brand-logo-mark{display:block;}
+}
+
+/* 옛 텍스트 브랜드(.mark/.name/.brand-tagline) 규칙은 마크업이 사라져도
+   되돌릴 수 있게 남겨둡니다(기능 삭제 금지 원칙). */
 .brand .mark{
   width:62px;height:62px;border-radius:3px;
   background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
@@ -2585,3 +2613,17 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 /* 주문창 진입수수료 경고 — 필요총액이 가용 잔고를 넘을 때만 보입니다.
    (js/order-fee-preview.js 가 display 로 켜고 끕니다) */
 .order-account-row.order-fee-warn > b{color:var(--short, #e0533d);}
+
+/* ===== TL 로고 — 다크모드 대비 =====
+   공식 로고의 "TRADING" 글자는 짙은 남색이라 어두운 배경에서 거의 안 보입니다
+   (실측: 다크모드 헤더에서 TRADING 부분만 사라짐).
+   로고 색을 바꾸는 것은 브랜드 지침 위반이므로, 로고는 원본 그대로 두고
+   뒤에 흰 판(클리어 스페이스)을 깔아 가독성을 확보합니다. */
+html[data-theme="dark"] .brand-logo,
+html[data-theme="dark"] .brand-logo-mark{
+  background:#fff;
+  padding:6px 12px;
+  /* 이 사이트의 디자인 규칙: 모서리 최대 3px */
+  border-radius:3px;
+  box-sizing:content-box;
+}

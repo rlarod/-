@@ -2,7 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>BTCUSDT 실시간 차트 · 선물 모의투자</title>
+<title>TL · TRADING LEAGUE — 모의투자 트레이딩 리그</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/tl-mark-32.png">
+<link rel="apple-touch-icon" href="assets/brand/tl-mark-180.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="style.css">
@@ -62,13 +64,15 @@
 <!-- ===== 상단 풀폭 배너 — .app 바깥에 둬서 화면 끝까지 꽉 차게(거래소 사이트 스타일) ===== -->
 <div class="top-banner">
   <div class="top-banner-inner">
-    <div class="brand">
-      <div class="mark">₿</div>
-      <div class="brand-text">
-        <div class="name">BTC 모의투자</div>
-        <div class="brand-tagline">모의투자 커뮤니티</div>
-      </div>
-    </div>
+    <!-- TL 브랜드 — 공식 로고 원본(assets/brand/)을 그대로 씁니다.
+         로고 형태·비율·색은 손대지 않고 높이만 헤더에 맞춥니다.
+         좁은 화면에서는 심볼만 남기고 글자 로고를 숨깁니다(형태 변형 아님). -->
+    <a class="brand" href="#" id="brand-home" aria-label="TL TRADING LEAGUE">
+      <img class="brand-logo" src="assets/brand/tl-logo.png"
+           alt="TL TRADING LEAGUE — 모의투자 트레이딩 리그" width="1461" height="328">
+      <img class="brand-logo-mark" src="assets/brand/tl-mark.png"
+           alt="TL" width="525" height="328">
+    </a>
 
     <!-- 헤더 공지 한 줄 — 개미톡 헤더의 [공지] + 안내문 자리입니다.
          새 데이터를 만들지 않고 js/notice-board.js가 이미 갖고 있는
@@ -107,7 +111,7 @@
       <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">코인선물</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">커뮤니티</button>
       <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-hotdeal">🔥 핫딜 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-hotdeal">🔥 TL 핫딜 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
       <!-- 전쟁터는 화면에서만 숨김(page-battle과 js/market-war.js는 그대로) -->
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
@@ -175,7 +179,7 @@
          data-ad-link 값은 클릭 시 이동할 기존 메뉴 버튼의 id입니다(js/ad-slots.js). -->
     <div class="ad-creative ad-creative-wide" data-ad-link="page-nav-board">
       <span class="ad-creative-mark">₿</span>
-      <span class="ad-creative-title">BTC 모의투자 커뮤니티</span>
+      <span class="ad-creative-title">TL · TRADING LEAGUE</span>
       <span class="ad-creative-sub">실시간 시세로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
       <span class="ad-creative-cta">커뮤니티 바로가기 ›</span>
     </div>
@@ -190,7 +194,7 @@
   <!-- 화면에서만 숨김(코드 보존) -->
   <div class="event-banner page-center">
     <span class="event-banner-icon">📣</span>
-    <span class="event-banner-title">BTC 모의투자 커뮤니티</span>
+    <span class="event-banner-title">TL · TRADING LEAGUE</span>
     <span class="event-banner-sub">가상 자금으로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
   </div>
 
@@ -651,7 +655,7 @@
   <!-- ===== 랭킹 페이지(기본 숨김) — page-nav.js가 전환 담당, leaderboard.js도 id로만 요소를 찾아서 무수정 ===== -->
   <div id="page-ranking" style="display:none;">
     <div class="panel" id="leaderboard-panel">
-      <div class="field-label"><span>🏆 투자 랭킹 (실현 손익 기준)</span></div>
+      <div class="field-label"><span>🏆 TL 랭킹 (실현 손익 기준)</span></div>
       <div class="table-scroll">
         <table>
           <thead><tr>
@@ -701,6 +705,12 @@
         <div class="mypage-item">
           <span class="mypage-item-label">누적 펀딩비</span>
           <span class="mypage-value" id="mypage-funding">-</span>
+        </div>
+        <!-- TL 잔액 — 새 값을 만들지 않고 우측 패널이 이미 쓰는
+             App.Rank.getUserRank().points 를 같은 단위로 보여줍니다. -->
+        <div class="mypage-item">
+          <span class="mypage-item-label">TL 잔액</span>
+          <span class="mypage-value" id="mypage-tl">-</span>
         </div>
       </div>
     </div>
@@ -825,6 +835,8 @@
 <!-- 100%를 눌러도 지갑이 다 안 들어가는 것처럼 보이던 문제 — 실제 진입수수료와
      필요총액을 주문창에 표시합니다(증거금 + 수수료 = 지갑 전액). -->
 <script src="js/order-fee-preview.js"></script>
+<!-- TL 브랜드 — 마이페이지 TL 잔액, 로고 로딩 실패 시 글자 브랜드 대체 -->
+<script src="js/tl-brand.js"></script>
 <script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>

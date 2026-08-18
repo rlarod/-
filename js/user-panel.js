@@ -98,7 +98,8 @@ App.UserPanel = (function () {
       '<div class="up-grid" id="user-panel-grid">' +
       // 라벨은 레퍼런스(개미톡)의 선물 / 벅스 / USDT / 지갑 구성을 따릅니다.
       //   선물   = 선물 계좌 평가자산   (레퍼런스와 동일 이름)
-      //   포인트 = 계급 점수            (레퍼런스의 "벅스" 자리 — 우리 실제 값)
+      //   보유 TL = 계급 점수           (레퍼런스의 "벅스" 자리 — 우리 실제 값)
+      //            TL은 서비스의 포인트 단위이자 브랜드 이름입니다.
       //   USDT   = 주문 가능 잔고       (레퍼런스와 동일 이름)
       //   수익률 = 실현 수익률          (레퍼런스의 "지갑"에 해당하는 데이터가 없어 유지)
       // 라벨은 뜻이 바로 보이도록 풀어서 씁니다.
@@ -106,14 +107,14 @@ App.UserPanel = (function () {
       //             포지션을 잡으면 증거금만큼 나가고 청산하면 되돌아옵니다.
       //   손익    = 미실현 손익 — 보유 중인 포지션의 평가 손익(시세따라 실시간)
       //   수익률  = 미실현 손익 기준 ROE (손익 / 증거금)
-      //   포인트  = 계급 점수 (js/rank.js가 계산하는 실제 값)
+      //   보유 TL = 계급 점수 (js/rank.js가 계산하는 실제 값)
       // 배치: 왼쪽은 시세따라 움직이는 값, 오른쪽은 내가 들고 있는 값.
       //   손익  | 지갑
-      //   수익률 | 포인트
+      //   수익률 | 보유 TL
       '<span class="up-label">손익</span><b class="up-value" id="user-panel-profit">-</b>' +
       '<span class="up-label">지갑</span><b class="up-value" id="user-panel-equity">-</b>' +
       '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
-      '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
+      '<span class="up-label">보유 TL</span><b class="up-value" id="user-panel-points">-</b>' +
       "</div>" +
 
       '<div class="up-nav">' +
@@ -164,12 +165,13 @@ App.UserPanel = (function () {
         "up-value " + (unrealized > 0 ? "pnl-positive" : unrealized < 0 ? "pnl-negative" : "");
     }
 
-    // 포인트 = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
+    // 보유 TL = 계급 점수(js/rank.js가 청산 거래 수와 실현 수익률로 계산하는 실제 값).
+    // 단위 표기는 "P"가 아니라 브랜드 단위 "TL"을 씁니다.
     // 없는 수치를 지어내지 않고, 이미 계급 계산에 쓰는 값을 그대로 보여줍니다.
     const pointsEl = el("user-panel-points");
     if (pointsEl) {
       const r = App.Rank ? App.Rank.getUserRank(snapshot) : null;
-      pointsEl.textContent = r && typeof r.points === "number" ? Math.round(r.points).toLocaleString() + " P" : "-";
+      pointsEl.textContent = r && typeof r.points === "number" ? Math.round(r.points).toLocaleString() + " TL" : "-";
     }
 
     // 수익률 = 미실현 손익 기준 ROE(손익 / 증거금). 손익과 같은 기준입니다.

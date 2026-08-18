@@ -402,7 +402,7 @@ section("[4] 사용자 정보 패널");
       // 왼쪽은 시세따라 움직이는 값, 오른쪽은 내가 들고 있는 값.
       //   손익 = 미실현 손익 / 지갑 = 주문가능 잔고
       //   수익률 = 미실현 ROE / 포인트 = 계급 점수
-      "손익,지갑,수익률,포인트"
+      "손익,지갑,수익률,보유 TL"
     );
     eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
@@ -607,7 +607,7 @@ section("[5] 기존 기능 보존");
     // 지어낸 수치가 아니라 rank.js가 계산한 실제 점수여야 함
     const snap = App.Trading.getSnapshot();
     const pts = Math.round(App.Rank.getUserRank(snap).points);
-    eq(after, pts.toLocaleString() + " P");
+    eq(after, pts.toLocaleString() + " TL"); // 단위는 브랜드 단위 TL
   });
 
   t("내 정보 값 색: 이익 초록 / 손실 빨강 / 보유 없으면 중립", () => {
