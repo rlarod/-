@@ -102,13 +102,16 @@ App.UserPanel = (function () {
       //   USDT   = 주문 가능 잔고       (레퍼런스와 동일 이름)
       //   수익률 = 실현 수익률          (레퍼런스의 "지갑"에 해당하는 데이터가 없어 유지)
       // 라벨은 뜻이 바로 보이도록 풀어서 씁니다.
-      //   자산    = 주문 가능 잔고(balance) — 포지션에 넣고 남은 시드.
-      //             진입하면 증거금만큼 줄고 청산하면 되돌아옵니다.
+      //   지갑    = 주문 가능 잔고(balance) — 내가 들고 있는 돈.
+      //             포지션을 잡으면 증거금만큼 나가고 청산하면 되돌아옵니다.
       //   손익    = 미실현 손익 — 보유 중인 포지션의 평가 손익(시세따라 실시간)
       //   수익률  = 미실현 손익 기준 ROE (손익 / 증거금)
       //   포인트  = 계급 점수 (js/rank.js가 계산하는 실제 값)
-      '<span class="up-label">자산</span><b class="up-value" id="user-panel-equity">-</b>' +
+      // 배치: 왼쪽은 시세따라 움직이는 값, 오른쪽은 내가 들고 있는 값.
+      //   손익  | 지갑
+      //   수익률 | 포인트
       '<span class="up-label">손익</span><b class="up-value" id="user-panel-profit">-</b>' +
+      '<span class="up-label">지갑</span><b class="up-value" id="user-panel-equity">-</b>' +
       '<span class="up-label">수익률</span><b class="up-value" id="user-panel-roe">-</b>' +
       '<span class="up-label">포인트</span><b class="up-value" id="user-panel-points">-</b>' +
       "</div>" +
@@ -146,14 +149,14 @@ App.UserPanel = (function () {
 
     // 자산 값은 통화 기호 없이 숫자만 (레퍼런스와 동일).
     // formatCurrencyPlain은 기존에 있던 함수로, USDT/KRW 전환도 그대로 따릅니다.
-    // 자산 = 포지션에 넣고 남은 잔고. 진입/청산 때만 움직입니다.
+    // 지갑 = 내가 들고 있는 돈. 포지션을 잡으면 나가고 청산하면 돌아옵니다.
     eq.textContent = App.Utils.formatCurrencyPlain(snapshot.balance);
 
     // 손익 = 보유 중인 포지션의 미실현 손익(시세에 따라 실시간으로 변합니다).
     const unrealized = snapshot.unrealizedPnl || 0;
     const profitEl = el("user-panel-profit");
     if (profitEl) {
-      // 자산과 같은 형식(통화 기호 없이)으로 맞춥니다. 부호만 직접 붙입니다.
+      // 지갑과 같은 형식(통화 기호 없이)으로 맞춥니다. 부호만 직접 붙입니다.
       profitEl.textContent =
         (unrealized > 0 ? "+" : unrealized < 0 ? "-" : "") +
         App.Utils.formatCurrencyPlain(Math.abs(unrealized));

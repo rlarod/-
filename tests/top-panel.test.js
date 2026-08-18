@@ -370,7 +370,7 @@ section("[4] 사용자 정보 패널");
     ok(snap.roe !== 0, "보유 중에도 수익률이 움직여야 함");
   });
 
-  t("진입만으로 자산·포인트는 변하지 않음(핵심 원칙)", () => {
+  t("진입만으로 지갑·포인트는 시세에 흔들리지 않음(핵심 원칙)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     const points0 = doc.getElementById("user-panel-points").textContent;
@@ -382,7 +382,7 @@ section("[4] 사용자 정보 패널");
     const assetAfterOpen = doc.getElementById("user-panel-equity").textContent;
     eq(doc.getElementById("user-panel-points").textContent, points0, "포인트는 청산 전 불변");
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 62000, time: Date.now() });
-    eq(doc.getElementById("user-panel-equity").textContent, assetAfterOpen, "자산은 시세로 변하지 않음");
+    eq(doc.getElementById("user-panel-equity").textContent, assetAfterOpen, "지갑은 시세로 변하지 않음");
 
     // 반면 손익·수익률은 보유 중에도 움직여야 합니다.
     ok(App.Trading.getSnapshot().unrealizedPnl > 0, "미실현 손익은 반영되어야 함");
@@ -399,9 +399,10 @@ section("[4] 사용자 정보 패널");
     eq(grid.querySelectorAll(".up-value").length, 4, "값 4칸");
     eq(
       Array.prototype.map.call(grid.querySelectorAll(".up-label"), (l) => l.textContent).join(","),
-      // 라벨은 뜻이 바로 보이도록 풀어 썼습니다.
-      //   총자산 = 평가자산 / 손익 = 실현 손익 누계 / 수익률 = 손익÷초기자산 / 포인트 = 계급 점수
-      "자산,손익,수익률,포인트"
+      // 왼쪽은 시세따라 움직이는 값, 오른쪽은 내가 들고 있는 값.
+      //   손익 = 미실현 손익 / 지갑 = 주문가능 잔고
+      //   수익률 = 미실현 ROE / 포인트 = 계급 점수
+      "손익,지갑,수익률,포인트"
     );
     eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
   });
@@ -425,19 +426,19 @@ section("[4] 사용자 정보 패널");
     ok(/^[+-]?0/.test(profit().replace(/[,\s]/g, "")), "청산하면 보유분이 없으므로 0");
   });
 
-  t("자산은 포지션에 넣고 남은 잔고(balance)", () => {
+  t("지갑은 내가 들고 있는 돈(balance) — 시세로 변하지 않음", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     const before = doc.getElementById("user-panel-equity").textContent;
     App.Trading.openPosition("long", 5000, null, null);
     const snap = App.Trading.getSnapshot();
     eq(doc.getElementById("user-panel-equity").textContent, App.Utils.formatCurrencyPlain(snap.balance));
-    ok(doc.getElementById("user-panel-equity").textContent !== before, "진입하면 증거금만큼 줄어야 함");
+    ok(doc.getElementById("user-panel-equity").textContent !== before, "포지션을 잡으면 지갑에서 나가야 함");
 
     // 시세가 움직여도 자산은 그대로(청산 때만 움직임)
     const afterOpen = doc.getElementById("user-panel-equity").textContent;
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
-    eq(doc.getElementById("user-panel-equity").textContent, afterOpen, "시세로는 자산이 변하지 않아야 함");
+    eq(doc.getElementById("user-panel-equity").textContent, afterOpen, "시세로는 지갑이 변하지 않아야 함");
   });
 
   t("진행률은 실제 계급 점수에서 계산", () => {
@@ -634,6 +635,14 @@ section("[5] 기존 기능 보존");
 
     App.Trading.closePosition();
     ok(/up-state-flat/.test(grid()), "청산하면 보유분이 없어 중립");
+  });
+
+  t("지갑·포인트는 손익 색을 따르지 않음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 내가 들고 있는 값이라 시세따라 색이 바뀌면 헷갈립니다.
+    ok(/#user-panel-equity,[\s\S]*?#user-panel-points\{color:var\(--text\) !important;\}/.test(css),
+      "지갑·포인트는 항상 본문색이어야 함");
+    ok(/up-state-profit #user-panel-equity/.test(css), "이익 상태에서도 색이 바뀌면 안 됨");
   });
 
   t("내 정보 값 표: 라벨 셀 회색 + 값마다 색(레퍼런스 실측)", () => {

@@ -2516,3 +2516,14 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   font-family:var(--sans);font-size:16px;font-weight:700;
 }
 .board-search-row button:hover{filter:brightness(1.08);}
+
+/* 지갑·포인트는 손익 상태 색을 따르지 않고 항상 검정(밝은 모드 기준 본문색).
+   내가 들고 있는 값이라 시세따라 색이 바뀌면 오히려 헷갈립니다. */
+.page-right #user-panel-equity,
+.page-right #user-panel-points,
+.page-right .up-state-profit #user-panel-equity,
+.page-right .up-state-loss   #user-panel-equity,
+.page-right .up-state-flat   #user-panel-equity,
+.page-right .up-state-profit #user-panel-points,
+.page-right .up-state-loss   #user-panel-points,
+.page-right .up-state-flat   #user-panel-points{color:var(--text) !important;}
