@@ -640,6 +640,11 @@ section("[5] 기존 기능 보존");
     // 버튼은 기본 비활성 — 서버가 허용해야만 열림
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
     ok(/id="daily-recharge-btn" disabled/.test(html), "버튼은 기본 비활성이어야 함");
+
+    // SQL 미적용을 다른 오류와 구분해 안내해야 함(원인 찾기 쉽게)
+    ok(/PGRST202/.test(js) && /42883/.test(js), "함수 없음 오류 코드를 구분해야 함");
+    ok(/서버 설정이 아직 적용되지 않았습니다/.test(js), "SQL 미적용 전용 안내 필요");
+    ok(/schema-daily-recharge\.sql/.test(js), "콘솔에 실행할 파일명을 안내해야 함");
   });
 
   t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {

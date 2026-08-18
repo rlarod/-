@@ -59,8 +59,23 @@ App.DailyRecharge = (function () {
       }
     } catch (e) {
       // 서버에 물어보지 못하면 버튼을 열어두지 않습니다(오작동 방지).
-      console.warn("[daily-recharge.js] 충전 가능 여부 확인 실패:", e);
-      setMsg("충전 상태를 확인하지 못했습니다", true);
+      // 원인별로 다르게 안내합니다 — 대부분은 SQL 미적용입니다.
+      const code = String((e && e.code) || "");
+      const msg = String((e && e.message) || e);
+      const missing =
+        code === "PGRST202" || code === "42883" ||
+        /could not find the function|does not exist|schema cache/i.test(msg);
+
+      if (missing) {
+        console.warn(
+          "[daily-recharge.js] 서버 함수가 없습니다. " +
+          "supabase/schema-daily-recharge.sql 을 Supabase SQL Editor에서 실행해주세요.", e
+        );
+        setMsg("서버 설정이 아직 적용되지 않았습니다", true);
+      } else {
+        console.warn("[daily-recharge.js] 충전 가능 여부 확인 실패:", code, msg, e);
+        setMsg("충전 상태를 확인하지 못했습니다 (" + (code || "오류") + ")", true);
+      }
     }
   }
 
