@@ -81,7 +81,17 @@ console.log("\n차트 글씨 크기");
 
   ok("fontSize 가 끼워 넣어진다", chart.options().layout.fontSize === CF.getFontSize(), String(chart.options().layout.fontSize));
   ok("기본값 12px 보다 크다", CF.getFontSize() > 12, String(CF.getFontSize()));
-  ok("16px 이상으로 키웠다", CF.getFontSize() >= 16, String(CF.getFontSize()));
+  /* 주변 UI 실측 기준 — 호가창 숫자/주문창 계좌줄이 18.5px 입니다.
+     차트 축만 작으면 눈에 띄므로 그 눈높이(18px 이상)를 지킵니다. */
+  ok("호가창 숫자(18.5px)와 비슷한 크기", CF.getFontSize() >= 18, String(CF.getFontSize()));
+  ok("채팅 본문(20.5px)보다는 크지 않다", CF.getFontSize() <= 21, String(CF.getFontSize()));
+  {
+    /* CSS 에서 실제 주변 크기를 읽어 비교합니다(값이 바뀌면 같이 잡히게). */
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const ob = Number((css.match(/\.ob-row\{[\s\S]*?font-size:([\d.]+)px/) || [])[1]);
+    ok("호가창 크기를 읽어왔다", ob > 0, String(ob));
+    ok("차트 축이 호가창보다 작지 않다", CF.getFontSize() >= ob, CF.getFontSize() + " vs " + ob);
+  }
   ok("원래 옵션은 그대로 남는다", chart.options().autoSize === true && chart.options().layout.textColor === "#333");
   ok("만든 차트를 붙잡아 둔다", CF.getCharts().length === 1);
   ok("차트가 실제로 만들어졌다", created.length === 1);

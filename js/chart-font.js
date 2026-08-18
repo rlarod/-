@@ -23,8 +23,13 @@ window.App = window.App || {};
 App.ChartFont = (function () {
   "use strict";
 
-  /* 라이브러리 기본값은 12px 입니다. */
-  var FONT_SIZE = 17;
+  /* 라이브러리 기본값은 12px 입니다.
+     주변 UI 실측(2026-08-18)에 맞춰 정했습니다.
+       호가창 숫자 18.5px / 주문창 평가·보유·가능 18.5px
+       채팅 본문 20.5px / 레버리지 배지 21px
+     차트 축은 호가창 숫자와 성격이 같은 값이라 같은 눈높이로 둡니다.
+     캔버스 글자가 DOM 글자보다 조금 작아 보여서 0.5px 올렸습니다. */
+  var FONT_SIZE = 19;
 
   var charts = [];
 
