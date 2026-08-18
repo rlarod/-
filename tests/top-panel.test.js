@@ -770,7 +770,11 @@ section("[5] 기존 기능 보존");
 
     // 횟수 제한과 포지션 확인도 서버에서
     ok(/already_claimed/.test(sql) && /has_position/.test(sql), "서버가 횟수·포지션을 검사해야 함");
-    ok(/interval '6 hours'/.test(sql) && /Asia\/Seoul/.test(sql), "한국시간 오전 6시 기준");
+    // 2026-08-18 규칙 변경: 오전 6시 하루 1회 -> 자정(한국시간) 하루 2회
+    ok(/date_trunc\('day', now\(\) at time zone 'Asia\/Seoul'\)\) at time zone 'Asia\/Seoul'/.test(sql), "한국시간 자정 기준");
+    ok(!/interval '6 hours'/.test(sql), "오전 6시 기준이 남아있으면 안 됨");
+    ok(/recharge_max_per_day/.test(sql) && /select 2;/.test(sql), "하루 한도 2회는 서버가 정해야 함");
+    ok(/recharge_count/.test(sql), "횟수를 서버에 기록해야 함(자정 전 재충전 방지)");
     ok(/for update/.test(sql), "동시 요청 이중 충전 방지 필요");
 
     // 기존 데이터를 지우지 않아야 함 (주석은 제외하고 실제 구문만 검사)

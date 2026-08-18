@@ -1,7 +1,8 @@
 /* =========================================================================
  * js/daily-recharge.js — App.DailyRecharge
  * =========================================================================
- * 하루 1회 무료 충전(100,000 USDT). 한국시간 오전 6시에 횟수가 채워집니다.
+ * 무료 충전(100,000 USDT) — 한국시간 자정 기준 하루 2회.
+ * 자정이 지나면 횟수가 새로 채워집니다.
  * 포지션을 들고 있으면 충전할 수 없고, 정리한 뒤에만 가능합니다.
  *
  * 금액·횟수·포지션 확인은 전부 서버(claim_daily_recharge RPC)에서 합니다.
@@ -47,13 +48,21 @@ App.DailyRecharge = (function () {
       if (!data) return;
 
       if (data.can_claim) {
-        setMsg("하루 1회 · 오전 6시 기준", false);
+        // 서버가 알려준 남은 횟수를 그대로 씁니다(임의로 지어내지 않습니다).
+        const left = Number(data.remaining);
+        const max = Number(data.max_per_day);
+        setMsg(
+          Number.isFinite(left) && Number.isFinite(max)
+            ? "오늘 " + left + "/" + max + "회 남음 · 자정 기준"
+            : "자정 기준",
+          false
+        );
         return;
       }
       if (data.reason === "has_position") {
         setMsg("포지션을 정리한 뒤 충전할 수 있습니다", true);
       } else if (data.reason === "already_claimed") {
-        setMsg("오늘은 이미 충전했습니다 · 오전 6시에 다시 채워집니다", true);
+        setMsg("오늘 충전을 다 썼습니다 · 자정에 다시 채워집니다", true);
       } else {
         setMsg("로그인 후 이용할 수 있습니다", true);
       }
@@ -108,9 +117,14 @@ App.DailyRecharge = (function () {
       saved.balance = Number(data.balance);
       App.Storage.save(STORAGE_KEY, saved);
 
+      const left = Number(data.remaining);
+      const max = Number(data.max_per_day);
       alert(
         "무료 충전 " + Number(data.amount).toLocaleString() + " USDT 완료\n" +
-        "잔고: " + Number(data.balance).toLocaleString() + " USDT"
+        "잔고: " + Number(data.balance).toLocaleString() + " USDT" +
+        (Number.isFinite(left) && Number.isFinite(max)
+          ? "\n오늘 남은 충전: " + left + "/" + max + "회"
+          : "")
       );
       window.location.reload();
     } catch (e) {
@@ -118,7 +132,7 @@ App.DailyRecharge = (function () {
       if (/has_position/.test(msg)) {
         alert("포지션을 보유 중에는 충전할 수 없습니다.");
       } else if (/already_claimed/.test(msg)) {
-        alert("오늘은 이미 충전했습니다. 오전 6시에 다시 채워집니다.");
+        alert("오늘 충전을 다 썼습니다. 자정에 다시 채워집니다.");
       } else if (/not_logged_in/.test(msg)) {
         alert("로그인 후 이용할 수 있습니다.");
       } else {
