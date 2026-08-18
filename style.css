@@ -2209,7 +2209,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .position-table td{font-variant-numeric:tabular-nums;}
 
 .position-table th:nth-child(1){width:9%;}    /* 종목 */
-.position-table th:nth-child(2){width:9%;}    /* 수량 */
+.position-table th:nth-child(2){width:11%;}   /* 수량 — 소수 6자리+단위라 넓게 */
 .position-table th:nth-child(3){width:12%;}   /* 금액 */
 .position-table th:nth-child(4){width:8%;}    /* 진입가 */
 .position-table th:nth-child(5){width:8%;}    /* 현재가 */
@@ -2217,9 +2217,54 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 레퍼런스 포지션 표는 작고 촘촘합니다. 칸을 고정한 만큼 글자를 줄여
    좁은 화면에서도 값이 잘리지 않게 합니다(폭에 비례). */
-.position-table th{font-size:clamp(12px, 0.52vw, 17px);padding-right:8px;}
-.position-table td{font-size:clamp(12.5px, 0.55vw, 18px);padding-right:8px;}
-.position-table .pos-money-krw{font-size:0.8em;}
-.position-table .position-symbol-name{font-size:clamp(13px, 0.58vw, 19px);}
-.position-table .position-symbol-sub{font-size:clamp(11px, 0.46vw, 15px);}
-.pos-close-btn{font-size:clamp(11.5px, 0.48vw, 15px);padding:4px 8px;}
+.position-table th{font-size:clamp(15px, 0.68vw, 23px);padding-right:8px;}
+.position-table td{font-size:clamp(16px, 0.72vw, 25px);padding-right:8px;}
+.position-table .pos-money-krw{font-size:0.78em;}
+.position-table .position-symbol-name{font-size:clamp(16px, 0.74vw, 26px);}
+.position-table .position-symbol-sub{font-size:clamp(13px, 0.58vw, 20px);}
+.pos-close-btn{font-size:clamp(13px, 0.56vw, 19px);padding:5px 10px;}
+
+/* =========================================================================
+ * 실험: 포지션 영역을 채팅창 오른쪽 끝까지 넓힘
+ * =========================================================================
+ * 포지션 표가 들어 있는 하단 탭 패널만 페이지 전체 폭을 쓰게 합니다.
+ * page-shell의 좌우 여백이 8px씩이라 전체 폭은 (100vw - 16px)입니다.
+ * 되돌리려면 이 블록만 지우면 됩니다.
+ * ========================================================================= */
+@media (min-width:1800px){
+  .exchange-main > .panel:has(#tab-panel-position){
+    width:calc(100vw - 16px);
+    max-width:calc(100vw - 16px);
+  }
+  /* 넓어진 표가 채팅 아래로 들어가지 않도록 채팅은 거래 행까지만 */
+  .page-right .side-chat-panel > .page-chat-col{
+    height:auto;max-height:none;position:static;
+  }
+  /* 자식이 부모보다 넓어지면 부모에 가로 스크롤 경고가 뜨므로 명시적으로 허용 */
+  .page-left,
+  .page-left .app,
+  .page-left #page-exchange,
+  .page-left .exchange-shell,
+  .page-left .exchange-main{overflow:visible;max-width:none;}
+}
+
+/* 좌우 2단이 풀리는 1799px 이하에서는 표가 좁아져 값이 잘립니다.
+   그 구간만 글자를 한 단계 줄입니다(1800px 이상은 위 clamp 값 그대로). */
+@media (max-width:1799px){
+  .position-table th{font-size:13px;}
+  .position-table td{font-size:13.5px;}
+  .position-table .position-symbol-name{font-size:14px;}
+  .position-table .position-symbol-sub{font-size:11.5px;}
+  /* 그래도 좁으면 칸을 줄이지 말고 표 안에서 가로로 스크롤합니다
+     (값이 잘려 안 보이는 것보다 낫습니다). */
+  .position-card > .table-scroll{overflow-x:auto;}
+  .position-card .table-scroll{overflow-x:auto;}
+  .position-card .table-scroll > .position-table{min-width:1320px;}
+}
+
+/* 청산 칸(지정가/시장가 두 버튼)은 좁아지면 줄바꿈되므로 최소 폭을 줍니다. */
+.position-table th:last-child,
+.position-table td:last-child{min-width:120px;}
+@media (max-width:1799px){
+  .position-card .table-scroll > .position-table{min-width:1560px;}
+}
