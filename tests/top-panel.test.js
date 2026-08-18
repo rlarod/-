@@ -816,6 +816,17 @@ section("[5] 기존 기능 보존");
     ok(/\[2\]/.test(row.children[1].textContent), "댓글 수는 제목 뒤에");
   });
 
+  t("게시글 상세로 들어가도 칼럼 폭이 줄지 않음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // .app이 flex 자식이라 내용이 좁으면 칼럼까지 같이 줄었습니다(2184 -> 402px).
+    ok(/\.page-left > \.app\{width:100%;align-self:stretch;\}/.test(css),
+      "왼쪽 칼럼 폭을 채우도록 고정해야 함");
+    ok(/\.page-left \.app > div\{width:100%;\}/.test(css), "페이지도 폭을 채워야 함");
+    // 상세 화면 버튼이 폭을 꽉 채우지 않도록
+    ok(/#board-detail-view \.board-detail-actions > button\{[\s\S]*?width:auto/.test(css),
+      "수정/삭제 버튼이 늘어지면 안 됨");
+  });
+
   t("커뮤니티 페이지 번호와 검색", () => {
     const js = fs.readFileSync(path.join(REPO, "js/board-paging.js"), "utf8");
     // board.js를 고치지 않고 이미 불러온 목록만 다뤄야 합니다

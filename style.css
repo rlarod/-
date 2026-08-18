@@ -2528,3 +2528,53 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 .page-right .up-state-profit #user-panel-points,
 .page-right .up-state-loss   #user-panel-points,
 .page-right .up-state-flat   #user-panel-points{color:var(--text) !important;}
+
+/* 게시글 상세처럼 내용이 좁을 때 왼쪽 칼럼까지 같이 줄어드는 것을 막습니다.
+   (page-shell이 minmax(0,1fr)이라 내용 폭을 따라갔습니다 — 실측 2184px -> 402px)
+   페이지와 그 안의 패널이 칼럼 폭을 꽉 채우도록 고정합니다. */
+/* .app은 .page-left(flex)의 자식이라 내용이 좁으면 같이 줄어듭니다.
+   칼럼 폭을 꽉 채우도록 고정합니다(실측: 상세 화면에서 2184 -> 402px). */
+.page-left > .app{width:100%;align-self:stretch;}
+.page-left .app > div{width:100%;}
+.page-left .app > div > .panel{width:100%;box-sizing:border-box;}
+
+/* =========================================================================
+ * 게시글 상세 — 갤러리형 머리글
+ * =========================================================================
+ * 레퍼런스: 제목 한 줄, 그 아래 [글쓴이 | 작성일시] ... [조회 추천 댓글]
+ * ========================================================================= */
+#board-detail-view{max-width:1100px;}
+#board-back-btn{margin-bottom:14px;}
+.board-detail-title{
+  font-size:clamp(20px, 0.95vw, 32px);font-weight:700;color:var(--text);
+  line-height:1.4;padding-bottom:10px;
+}
+.board-detail-meta{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:clamp(14px, 0.6vw, 20px);color:var(--text-faint);
+  padding-bottom:12px;border-bottom:2px solid var(--border);
+}
+.board-detail-content{
+  padding:26px 4px;min-height:180px;line-height:1.75;
+  font-size:clamp(16px, 0.68vw, 23px);color:var(--text);
+  border-bottom:1px solid var(--border-soft);
+}
+/* 추천/비추천은 글 아래 가운데로(레퍼런스와 동일 배치) */
+.board-vote-row{display:flex;gap:8px;justify-content:center;padding:18px 0;}
+.board-vote-btn{font-size:clamp(15px, 0.62vw, 21px);padding:9px 20px;}
+.board-detail-actions{display:flex;gap:6px;justify-content:flex-end;padding-bottom:4px;}
+.board-comments-section{border-top:1px solid var(--border);padding-top:16px;}
+/* 상세 화면 버튼들이 폭을 꽉 채우지 않도록(칼럼이 넓어지면서 늘어졌습니다) */
+#board-back-btn{width:auto;padding:8px 20px;font-size:clamp(15px, 0.62vw, 21px);}
+.board-detail-actions #board-edit-btn,
+.board-detail-actions #board-delete-btn{
+  width:auto;padding:8px 22px;font-size:clamp(15px, 0.62vw, 21px);
+}
+#board-detail-view .chat-input-row{max-width:100%;}
+
+/* 수정/삭제는 기존 규칙이 width:100%라 더 구체적인 선택자로 덮습니다. */
+#board-detail-view .board-detail-actions{display:flex;gap:6px;justify-content:flex-end;}
+#board-detail-view .board-detail-actions > button{
+  width:auto;flex:0 0 auto;padding:8px 24px;
+  font-size:clamp(15px, 0.62vw, 21px);
+}
