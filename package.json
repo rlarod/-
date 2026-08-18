@@ -6,7 +6,7 @@
   "scripts": {
     "start": "serve -l 3000",
     "dev": "serve -l 3000",
-    "test": "node tests/order-panel.test.js && node tests/top-panel.test.js"
+    "test": "node tests/order-panel.test.js && node tests/top-panel.test.js && node tests/comment-fix.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.3",

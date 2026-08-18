@@ -778,6 +778,9 @@
 <script src="js/trade-events-chat.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
+<!-- board.js(수정 금지)의 댓글 조회가 PostgREST 임베드를 쓰는데 외래키가 없어
+     항상 실패하던 문제를 클라이언트 감싸기로 우회합니다. board.js 뒤에 둡니다. -->
+<script src="js/comment-fix.js"></script>
 <script src="js/mypage.js"></script>
 <script src="js/symbol-selector.js"></script>
 <script src="js/page-nav.js"></script>
