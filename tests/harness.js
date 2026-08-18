@@ -52,6 +52,7 @@ function boot(opts) {
     "js/order-info-panel.js",
     "js/qty-price-order.js",
     "js/order-panel-amitalk.js",
+    "js/position-table-extra.js",
   ];
   for (const f of files) {
     const src = fs.readFileSync(path.join(REPO, f), "utf8");
@@ -62,7 +63,7 @@ function boot(opts) {
     }
   }
 
-  const order = ["Trading", "OrderInfoPanel", "UI", "QtyPriceOrder", "AmiTalkOrderPanel"];
+  const order = ["Trading", "OrderInfoPanel", "UI", "QtyPriceOrder", "AmiTalkOrderPanel", "PositionTableExtra"];
   for (const name of order) {
     if (win.App[name] && typeof win.App[name].init === "function") win.App[name].init();
   }

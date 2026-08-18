@@ -2094,3 +2094,20 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 무료 충전 버튼 자리 — 예전 프로모션 배너의 분홍 배경/테두리를 걷어냅니다. */
 .amitalk-order .ami-promo{background:none !important;border:none !important;}
+
+/* =========================================================================
+ * 포지션 표 — 레퍼런스 스타일
+ * =========================================================================
+ * 강제청산가는 주황, 미실현손익은 초록/빨강, 실현손익도 부호별 색.
+ * 종목 칸의 레버리지 줄은 초록(레퍼런스의 "Isolated 93.00x" 자리).
+ * ========================================================================= */
+.position-table #pos-liq{color:#F0932B;font-weight:600;}
+.position-table .position-symbol-sub{color:var(--green);font-weight:600;}
+.position-table .position-close-cell{white-space:nowrap;}
+.pos-close-btn{
+  padding:5px 12px;border-radius:3px;cursor:pointer;
+  background:var(--surface2);color:var(--text);border:1px solid var(--border);
+  font-family:var(--sans);font-size:16px;font-weight:600;transition:.12s;
+}
+.pos-close-btn:hover:not(:disabled){background:var(--surface3);}
+.pos-close-btn:disabled{color:var(--text-faint);cursor:not-allowed;}

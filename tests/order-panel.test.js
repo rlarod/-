@@ -378,6 +378,39 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     eq(doc.defaultView.localStorage.getItem("amitalk:orderSound"), "1");
   });
 
+  t("포지션 표: 추가 칸이 실제 계산값과 일치(하드코딩 없음)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.setLeverage(10);
+    App.Trading.openPosition("long", 5000, null, null);
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64000, time: Date.now() });
+    App.PositionTableExtra.renderForTest();
+
+    const snap = App.Trading.getSnapshot();
+    const notional = snap.position.qty * snap.currentPrice;
+
+    // 금액 = 수량 × 현재가
+    eq(doc.getElementById("pos-notional").textContent, App.Utils.formatCurrencyPlain(notional));
+
+    // 유지증거금률은 trading.js 안의 상수라 밖에 또 적으면 어긋납니다.
+    // 공개 API(calcLiquidationPrice)에서 역산한 값을 써야 합니다.
+    const mmr = App.PositionTableExtra.getMMRForTest();
+    ok(mmr > 0 && mmr < 0.1, "역산한 유지증거금률이 비정상: " + mmr);
+    eq(doc.getElementById("pos-maint-margin").textContent, App.Utils.formatCurrencyPlain(notional * mmr));
+    const src = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
+    ok(!/0\.005/.test(src), "유지증거금률을 하드코딩하면 안 됨");
+
+    // 청산 버튼은 trading.js의 기존 청산을 부를 뿐이어야 함
+    ok(/App\.Trading\.closePosition\(\)/.test(src), "기존 청산 함수를 써야 함");
+    click(doc.getElementById("pos-close-market"));
+    eq(App.Trading.getSnapshot().position, null, "시장가 청산이 동작해야 함");
+
+    // 실현손익은 청산 뒤에 반영
+    App.PositionTableExtra.renderForTest();
+    eq(doc.getElementById("pos-realized").textContent,
+       App.Utils.formatCurrencySigned(App.Trading.getSnapshot().realizedPnl));
+  });
+
   t("프로모션 영역 — 무료 충전 버튼(가짜 횟수 표시 없음)", () => {
     const { doc } = boot();
     const promo = doc.getElementById("ami-promo");

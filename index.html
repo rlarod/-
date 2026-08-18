@@ -443,8 +443,9 @@
             <div class="table-scroll">
               <table class="position-table" id="position-table">
                 <thead><tr id="position-thead-row">
-                  <th>심볼</th><th>수량</th><th>진입가격</th><th>현재가격</th>
-                  <th class="mobile-hide">청산가</th><th class="mobile-hide">증거금</th><th>손익(ROE%)</th><th class="mobile-hide">수익률</th>
+                  <th>종목</th><th>수량</th><th class="mobile-hide">금액</th><th>진입가</th><th>현재가</th>
+                  <th class="mobile-hide">강제청산가</th><th class="mobile-hide">개시증거금</th><th class="mobile-hide">유지증거금</th>
+                  <th>미실현손익</th><th class="mobile-hide">실현손익</th><th class="mobile-hide">수익률</th><th>청산</th>
                 </tr></thead>
                 <tbody><tr id="position-tbody-row">
                   <td class="position-symbol-cell">
@@ -452,15 +453,21 @@
                     <div class="position-symbol-sub"><span id="pos-leverage">-</span> · 무기한</div>
                   </td>
                   <td id="pos-qty">-</td>
+                  <td id="pos-notional" class="mobile-hide">-</td>
                   <td id="pos-entry">-</td>
                   <td id="pos-current">-</td>
                   <td id="pos-liq" class="mobile-hide">-</td>
                   <td id="pos-margin" class="mobile-hide">-</td>
+                  <td id="pos-maint-margin" class="mobile-hide">-</td>
                   <td>
                     <span id="pos-pnl">-</span>
                     <span class="position-roe-inline">(<span id="pos-pnl-pct">-</span>)</span>
                   </td>
+                  <td id="pos-realized" class="mobile-hide">-</td>
                   <td id="pos-return-rate" class="mobile-hide">-</td>
+                  <td class="position-close-cell">
+                    <button type="button" class="pos-close-btn" id="pos-close-market">시장가</button>
+                  </td>
                 </tr></tbody>
               </table>
             </div>
@@ -758,6 +765,7 @@
 <script src="js/ad-slots.js"></script>
 <script src="js/chat-event-style.js"></script>
 <script src="js/daily-recharge.js"></script>
+<script src="js/position-table-extra.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
