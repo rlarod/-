@@ -572,6 +572,32 @@ section("[5] 기존 기능 보존");
     eq(after, pts.toLocaleString() + " P");
   });
 
+  t("내 정보 값 색: 이익 빨강 / 손실 파랑 / 거래 없으면 검정", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/\.page-right \.up-state-profit \.up-value\{color:var\(--red\) !important;\}/.test(css), "이익은 빨강");
+    ok(/\.page-right \.up-state-loss   \.up-value\{color:var\(--blue\) !important;\}/.test(css), "손실은 파랑");
+    ok(/\.page-right \.up-state-flat   \.up-value\{color:var\(--text\) !important;\}/.test(css), "거래 없으면 검정");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const grid = () => doc.getElementById("user-panel-grid").className;
+    ok(/up-state-flat/.test(grid()), "거래 전에는 검정 상태");
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    ok(/up-state-flat/.test(grid()), "포지션만 열었을 때는 아직 검정(실현 손익 0)");
+
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
+    App.Trading.closePosition();
+    ok(/up-state-profit/.test(grid()), "이익 청산 후 빨강 상태");
+    ok(/^\+/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 + 표시");
+
+    App.Trading.openPosition("long", 5000, null, null);
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 40000, time: Date.now() });
+    App.Trading.closePosition();
+    ok(/up-state-loss/.test(grid()), "손실 청산 후 파랑 상태");
+    ok(/^-/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 - 표시");
+  });
+
   t("내 정보 값 표: 라벨 셀 회색 + 값마다 색(레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     // 레퍼런스 실측: 라벨 셀 #EEEEEE, 값 셀 흰색

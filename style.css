@@ -2065,3 +2065,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .page-right .up-nav button{font-size:14px;padding-left:0;padding-right:0;gap:1px;}
   .page-right .up-soon-badge{font-size:9px;letter-spacing:-0.06em;}
 }
+
+/* =========================================================================
+ * 내 정보 값 색 — 실현 손익 상태에 따라
+ * =========================================================================
+ *   이익(up-state-profit) : 빨강   손실(up-state-loss) : 파랑
+ *   거래 없음/본전(up-state-flat) : 검정
+ * 전역 .pnl-positive/.pnl-negative가 !important라 같은 강도로 지정합니다.
+ * ========================================================================= */
+.page-right .up-state-profit .up-value{color:var(--red) !important;}
+.page-right .up-state-loss   .up-value{color:var(--blue) !important;}
+.page-right .up-state-flat   .up-value{color:var(--text) !important;}

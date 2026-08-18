@@ -85,7 +85,7 @@ App.UserPanel = (function () {
       '<span class="up-progress-text" id="user-panel-progress-text">-</span>' +
       "</span></div>" +
 
-      '<div class="up-grid">' +
+      '<div class="up-grid" id="user-panel-grid">' +
       // 라벨은 레퍼런스(개미톡)의 선물 / 벅스 / USDT / 지갑 구성을 따릅니다.
       //   선물   = 선물 계좌 평가자산   (레퍼런스와 동일 이름)
       //   포인트 = 계급 점수            (레퍼런스의 "벅스" 자리 — 우리 실제 값)
@@ -144,6 +144,17 @@ App.UserPanel = (function () {
     const roeEl = el("user-panel-roe");
     roeEl.textContent = App.Utils.formatPercent(roe);
     roeEl.className = "up-value " + (roe > 0 ? "pnl-positive" : roe < 0 ? "pnl-negative" : "");
+
+    // 값 표 전체의 색 상태 — 실현 손익 기준.
+    //   이익  : 빨강 (수익률 앞에 +)
+    //   손실  : 파랑 (수익률 앞에 -)
+    //   0     : 검정 (거래가 없거나 본전)
+    // 부호(+/-)는 formatPercent가 이미 붙이므로 문자열은 건드리지 않습니다.
+    const grid = el("user-panel-grid");
+    if (grid) {
+      grid.classList.remove("up-state-profit", "up-state-loss", "up-state-flat");
+      grid.classList.add(realized > 0 ? "up-state-profit" : realized < 0 ? "up-state-loss" : "up-state-flat");
+    }
 
     // 다음 계급까지 진행률 — 현재 계급 구간 안에서 몇 %인지(실제 점수 기준)
     const rank = App.Rank.getUserRank(snapshot);
