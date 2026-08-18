@@ -2034,3 +2034,34 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .top-banner-right{display:none;}
 /* 우측이 빠진 만큼 헤더 공지 줄이 남은 폭을 씁니다 */
 .top-banner-inner > .header-notice{margin-right:0;}
+
+/* =========================================================================
+ * 내 정보 박스 — 제목 띠 제거 후 내부 재배분
+ * =========================================================================
+ * 레퍼런스는 제목 띠 없이 프로필 줄부터 시작합니다.
+ * 비워진 86px을 프로필 줄과 하단 메뉴가 나눠 갖도록 키웁니다.
+ * ========================================================================= */
+@media (min-width:1800px){
+  /* 프로필(닉네임·계급) 줄 — 레퍼런스처럼 크게 */
+  .page-right .up-head{
+    padding:clamp(14px, 0.85vw, 26px) clamp(10px, 0.55vw, 18px);
+  }
+  .page-right .up-nick{font-size:clamp(21px, 0.88vw, 32px);}
+  .page-right .up-rank-name{font-size:clamp(17px, 0.72vw, 26px);}
+  .page-right .up-avatar{
+    width:clamp(30px, 1.25vw, 46px);height:clamp(30px, 1.25vw, 46px);
+    font-size:clamp(14px, 0.6vw, 22px);
+  }
+  /* 하단 메뉴(랭킹/커뮤니티/…) — 레퍼런스처럼 크게 */
+  .page-right .up-nav button{
+    padding:clamp(13px, 0.72vw, 24px) 2px;
+    font-size:clamp(15px, 0.66vw, 23px);
+  }
+  .page-right .up-soon-badge{font-size:clamp(10px, 0.4vw, 14px);}
+}
+/* 1800~2100px 구간에서는 하단 메뉴 6개가 빠듯해 "리워드 준비중"이 잘렸습니다.
+   그 구간에서만 글자와 배지를 한 단계 줄입니다. */
+@media (min-width:1800px) and (max-width:2100px){
+  .page-right .up-nav button{font-size:14px;padding-left:0;padding-right:0;gap:1px;}
+  .page-right .up-soon-badge{font-size:9px;letter-spacing:-0.06em;}
+}

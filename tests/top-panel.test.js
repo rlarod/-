@@ -533,6 +533,26 @@ section("[5] 기존 기능 보존");
     ok(pad && parseInt(pad[2], 10) <= 10, "좌우 여백이 너무 큼: " + (pad && pad[2]));
   });
 
+  t("내 정보: 제목 띠 없이 프로필부터 시작(레퍼런스 구조)", () => {
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    // 제목 띠는 삭제가 아니라 주석 보관 — 되돌릴 수 있어야 합니다
+    ok(/<!--\s*\n\s*<div class="notice-board-tabs">\s*\n\s*<button class="notice-tab-btn active" type="button">🪖 내 정보<\/button>/.test(html),
+      "제목 띠 마크업은 주석으로 보관되어야 함");
+
+    const { doc } = boot({ nickname: "홍길동" });
+    const box = doc.querySelector(".page-right .user-panel-box");
+    eq(box.querySelector(".notice-board-tabs"), null, "내 정보 박스에 제목 띠가 없어야 함");
+    ok(box.querySelector("#user-panel-body"), "본문은 그대로");
+
+    // 비워진 공간을 프로필 줄과 하단 메뉴가 나눠 갖도록 키웠는지
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/\.page-right \.up-head\{\s*\n\s*padding:clamp\(/.test(css), "프로필 줄 여백이 폭에 비례해야 함");
+    ok(/\.page-right \.up-nav button\{\s*\n\s*padding:clamp\(/.test(css), "하단 메뉴 여백이 폭에 비례해야 함");
+    // 좁은 구간에서 "리워드 준비중"이 잘리지 않도록 별도 처리
+    ok(/@media \(min-width:1800px\) and \(max-width:2100px\)/.test(css),
+      "1800~2100px 구간 글자 축소 규칙 필요(메뉴 잘림 방지)");
+  });
+
   t("포인트는 실제 계급 점수 — 진입만으로는 늘지 않음(핵심 원칙)", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     const before = doc.getElementById("user-panel-points").textContent;
