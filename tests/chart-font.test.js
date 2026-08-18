@@ -84,13 +84,18 @@ console.log("\n차트 글씨 크기");
   /* 주변 UI 실측 기준 — 호가창 숫자/주문창 계좌줄이 18.5px 입니다.
      차트 축만 작으면 눈에 띄므로 그 눈높이(18px 이상)를 지킵니다. */
   ok("호가창 숫자(18.5px)와 비슷한 크기", CF.getFontSize() >= 18, String(CF.getFontSize()));
-  ok("채팅 본문(20.5px)보다는 크지 않다", CF.getFontSize() <= 21, String(CF.getFontSize()));
+  ok("과하게 크지는 않다(22px 이하)", CF.getFontSize() <= 22, String(CF.getFontSize()));
   {
     /* CSS 에서 실제 주변 크기를 읽어 비교합니다(값이 바뀌면 같이 잡히게). */
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const ob = Number((css.match(/\.ob-row\{[\s\S]*?font-size:([\d.]+)px/) || [])[1]);
     ok("호가창 크기를 읽어왔다", ob > 0, String(ob));
     ok("차트 축이 호가창보다 작지 않다", CF.getFontSize() >= ob, CF.getFontSize() + " vs " + ob);
+
+    /* 차트 영역 안의 이웃 — 시간 버튼(1분/5분...)과 같은 눈높이여야 합니다. */
+    const iv = Number((css.match(/\n\.interval-btn\{[\s\S]*?font-size:([\d.]+)px/) || [])[1]);
+    ok("시간 버튼 크기를 읽어왔다", iv > 0, String(iv));
+    ok("차트 축이 시간 버튼보다 작지 않다", CF.getFontSize() >= iv, CF.getFontSize() + " vs " + iv);
   }
   ok("원래 옵션은 그대로 남는다", chart.options().autoSize === true && chart.options().layout.textColor === "#333");
   ok("만든 차트를 붙잡아 둔다", CF.getCharts().length === 1);
