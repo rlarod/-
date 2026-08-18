@@ -120,13 +120,13 @@
       <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">코인선물</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">커뮤니티</button>
       <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-hotdeal">🔥 TL 핫딜 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn" id="page-nav-hotdeal" data-page="hotdeal">🔥 TL 핫딜</button>
       <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
       <!-- 전쟁터는 화면에서만 숨김(page-battle과 js/market-war.js는 그대로) -->
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-schedule">대회일정 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-join">참가신청 <span class="nav-soon-badge">준비중</span></button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-market">마켓 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-market">🎟 TL 마켓 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-notice">공지사항 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-support">고객센터 <span class="nav-soon-badge">준비중</span></button>
     </nav>
@@ -677,6 +677,68 @@
     </div>
   </div>
 
+  <!-- ===== TL 핫딜(기본 숨김) — page-nav.js가 전환, js/tl-hotdeal.js가 내용 담당 =====
+       상품/가격/재고/구매는 전부 Supabase(tl_products, purchase_tl_product)에서 옵니다.
+       화면에 하드코딩한 상품이나 잔액은 없습니다. -->
+  <div id="page-hotdeal" style="display:none;">
+    <div class="panel" id="hotdeal-panel">
+      <div class="field-label"><span>🔥 TL 핫딜</span></div>
+
+      <div class="hd-head">
+        <div class="hd-head-copy">
+          <p class="hd-lede">매매하고 모은 TL로 다양한 상품을 만나보세요.</p>
+        </div>
+        <div class="hd-balance">
+          <span class="hd-balance-label">보유 TL</span>
+          <b class="hd-balance-value" id="hd-balance">-</b>
+          <span class="hd-balance-sub" id="hd-balance-sub"></span>
+        </div>
+        <div class="hd-head-nav">
+          <button type="button" class="hd-tab-btn active" id="hd-tab-hotdeal">TL 핫딜</button>
+          <button type="button" class="hd-tab-btn nav-coming-soon" id="hd-tab-market">TL 마켓 <span class="nav-soon-badge">준비중</span></button>
+          <button type="button" class="hd-tab-btn" id="hd-tab-history">구매내역</button>
+        </div>
+      </div>
+
+      <div class="hd-filters">
+        <div class="hd-chip-row" id="hd-category-row"></div>
+        <div class="hd-chip-row" id="hd-price-row"></div>
+        <div class="hd-tools">
+          <input type="text" class="hd-search" id="hd-search" placeholder="🔍 상품명 또는 브랜드 검색" autocomplete="off">
+          <select class="hd-sort" id="hd-sort">
+            <option value="popular">인기순</option>
+            <option value="new">신상품순</option>
+            <option value="tl-asc">TL 낮은순</option>
+            <option value="tl-desc">TL 높은순</option>
+            <option value="ending">마감 임박순</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="hd-section" id="hd-hot-section" style="display:none;">
+        <div class="hd-section-title">🔥 오늘의 핫딜</div>
+        <div class="hd-grid" id="hd-hot-grid"></div>
+      </div>
+
+      <div class="hd-section">
+        <div class="hd-section-title">전체 상품 <span class="hd-count" id="hd-count"></span></div>
+        <div class="hd-grid" id="hd-grid"></div>
+        <div class="hd-empty" id="hd-empty" style="display:none;"></div>
+      </div>
+
+      <!-- 구매내역 -->
+      <div class="hd-section" id="hd-history-section" style="display:none;">
+        <div class="hd-section-title">구매내역</div>
+        <div class="table-scroll">
+          <table class="data-table" id="hd-history-table">
+            <thead><tr><th>상품</th><th>구매일</th><th>사용 TL</th><th>수량</th><th>상태</th></tr></thead>
+            <tbody id="hd-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 마이페이지(기본 숨김) — page-nav.js가 전환 담당, mypage.js는 trading.js의
        기존 'trading:update' 이벤트만 구독(trading.js/ui.js 무수정) ===== -->
   <div id="page-mypage" style="display:none;">
@@ -720,6 +782,10 @@
         <div class="mypage-item">
           <span class="mypage-item-label">TL 잔액</span>
           <span class="mypage-value" id="mypage-tl">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">사용한 TL</span>
+          <span class="mypage-value" id="mypage-tl-spent">-</span>
         </div>
       </div>
     </div>
@@ -846,6 +912,8 @@
 <script src="js/order-fee-preview.js"></script>
 <!-- TL 브랜드 — 마이페이지 TL 잔액, 로고 로딩 실패 시 글자 브랜드 대체 -->
 <script src="js/tl-brand.js"></script>
+<!-- TL 핫딜 — 상품/구매는 전부 Supabase RPC. 프론트에서 TL을 깎지 않습니다. -->
+<script src="js/tl-hotdeal.js"></script>
 <script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>

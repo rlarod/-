@@ -6,7 +6,7 @@
   "scripts": {
     "start": "serve -l 3000",
     "dev": "serve -l 3000",
-    "test": "node tests/order-panel.test.js && node tests/top-panel.test.js && node tests/comment-fix.test.js && node tests/recharge-rules.test.js && node tests/order-fee-preview.test.js && node tests/order-unit-mismatch.test.js && node tests/tl-brand.test.js"
+    "test": "node tests/order-panel.test.js && node tests/top-panel.test.js && node tests/comment-fix.test.js && node tests/recharge-rules.test.js && node tests/order-fee-preview.test.js && node tests/order-unit-mismatch.test.js && node tests/tl-brand.test.js && node tests/tl-hotdeal.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.3",

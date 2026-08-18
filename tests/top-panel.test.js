@@ -663,7 +663,7 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
-  t("메뉴 구성 — 동작 메뉴는 페이지 연결, 핫딜은 준비중 안내", () => {
+  t("메뉴 구성 — 동작 메뉴는 페이지 연결, TL 마켓은 준비중 안내", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const { doc } = boot({ nickname: "홍길동" });
 
@@ -672,17 +672,25 @@ section("[5] 기존 기능 보존");
       doc.querySelectorAll(".top-banner-nav-btn"),
       (b) => !b.classList.contains("nav-coming-soon")
     );
-    eq(working.length, 4, "동작하는 메뉴 4개(코인선물/커뮤니티/랭킹/마이페이지)");
+    // 2026-08-18: TL 핫딜이 실제 페이지가 되어 5개가 됐습니다.
+    eq(working.length, 5, "동작하는 메뉴 5개(코인선물/커뮤니티/랭킹/TL 핫딜/마이페이지)");
     working.forEach((b) => {
       const page = b.dataset.page;
       ok(page, b.textContent.trim() + " 에 연결 페이지가 없음");
       ok(doc.getElementById("page-" + page), "page-" + page + " 가 없음");
     });
 
-    // 핫딜은 노출하되 준비중 안내가 떠야 하므로 클래스를 유지하고 CSS로만 보여줍니다
+    // TL 핫딜은 실제 페이지 — 준비중이 아니어야 하고 전용 페이지가 있어야 합니다
     const hot = doc.getElementById("page-nav-hotdeal");
-    ok(hot && hot.classList.contains("nav-coming-soon"), "핫딜은 준비중 클래스 유지(클릭 안내용)");
-    ok(/#page-nav-hotdeal\{display:inline-flex;\}/.test(css), "핫딜만 숨김 해제하는 규칙 필요");
+    ok(hot && !hot.classList.contains("nav-coming-soon"), "TL 핫딜은 더 이상 준비중이 아님");
+    ok(hot && hot.dataset.page === "hotdeal", "TL 핫딜에 연결 페이지 필요");
+    ok(doc.getElementById("page-hotdeal"), "page-hotdeal 이 없음");
+
+    // TL 마켓(기능성 아이템)은 준비중이지만 메뉴에는 보여야 구분이 됩니다
+    const market = doc.getElementById("page-nav-market");
+    ok(market && market.classList.contains("nav-coming-soon"), "TL 마켓은 준비중");
+    ok(/TL 마켓/.test(market.textContent), "TL 마켓 이름 필요: " + market.textContent.trim());
+    ok(/#page-nav-market\{display:inline-flex;\}/.test(css), "TL 마켓 숨김 해제 규칙 필요");
 
     // 전쟁터는 화면에서만 숨기고 페이지·모듈은 그대로
     const battle = doc.getElementById("page-nav-battle");

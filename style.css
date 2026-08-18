@@ -2492,7 +2492,11 @@ html[data-theme="dark"] .amitalk-order #qty-percent-row .chip:hover{background:v
 /* 핫딜은 준비중이지만 메뉴에는 노출합니다.
    nav-coming-soon 클래스를 유지해야 클릭 시 안내가 뜨므로,
    숨김 규칙만 이 항목에 한해 되돌립니다(id 선택자가 더 강함). */
+/* 핫딜은 2026-08-18 부터 실제 페이지라 nav-coming-soon 이 아닙니다.
+   이 규칙은 되돌릴 때를 대비해 남겨둡니다(있어도 해가 없습니다). */
 .top-banner-nav-btn.nav-coming-soon#page-nav-hotdeal{display:inline-flex;}
+/* TL 마켓은 아직 준비중이지만 메뉴에는 보여야 합니다(TL 마켓 / TL 핫딜 구분 안내). */
+.top-banner-nav-btn.nav-coming-soon#page-nav-market{display:inline-flex;}
 /* 원화 모드에서는 가격 자릿수가 길어(96,456,000원) 단가 칸이 잘립니다.
    단가 3칸을 넓히고, 두 줄로 표시되는 금액 계열을 조금 양보합니다. */
 html[data-currency="KRW"] .position-table th:nth-child(4),
@@ -2638,3 +2642,128 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
    뒤에 흰 판(클리어 스페이스)을 깔아 가독성을 확보합니다. */
 /* 2026-08-18: 어두운 배경용 로고 원본(tl-logo-dark.png)을 받아서
    흰 판이 필요 없어졌습니다. 로고를 그대로 얹습니다. */
+
+/* =========================================================================
+ * TL 핫딜
+ * =========================================================================
+ * 새 색을 만들지 않습니다 — 기존 변수(--surface/--border/--text/--gold 등)만
+ * 씁니다. 그래서 다크모드는 변수가 바뀌면 자동으로 따라옵니다.
+ * 모서리는 사이트 규칙대로 최대 3px, 그림자는 아주 얕게만 씁니다.
+ * ========================================================================= */
+
+/* ---- 머리 영역: 안내문 / 보유 TL / 탭 ---- */
+.hd-head{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:14px 0 16px;border-bottom:1px solid var(--border-soft);
+}
+.hd-head-copy{flex:1 1 240px;min-width:0;}
+.hd-lede{margin:0;font-size:15px;color:var(--text-faint);}
+.hd-balance{
+  display:flex;flex-direction:column;gap:2px;flex:0 0 auto;
+  padding:10px 18px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface2);
+}
+.hd-balance-label{font-size:13px;color:var(--text-faint);}
+.hd-balance-value{font-size:24px;font-weight:700;color:var(--gold);line-height:1.2;}
+.hd-balance-sub{font-size:12px;color:var(--text-faint);}
+.hd-head-nav{display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;}
+.hd-tab-btn{
+  padding:9px 16px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;
+}
+.hd-tab-btn.active{background:var(--gold);border-color:var(--gold);color:#fff;}
+.hd-tab-btn:hover:not(.active){background:var(--surface2);}
+
+/* ---- 필터 ---- */
+.hd-filters{display:flex;flex-direction:column;gap:8px;padding:14px 0;}
+.hd-chip-row{display:flex;gap:6px;flex-wrap:wrap;}
+.hd-chip{
+  padding:7px 14px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;
+}
+.hd-chip.active{background:var(--gold);border-color:var(--gold);color:#fff;}
+.hd-chip:hover:not(.active){background:var(--surface2);}
+.hd-tools{display:flex;gap:8px;flex-wrap:wrap;}
+.hd-search{
+  flex:1 1 260px;min-width:0;height:38px;padding:0 12px;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;
+}
+.hd-sort{
+  height:38px;padding:0 10px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;cursor:pointer;
+}
+
+/* ---- 구역 ---- */
+.hd-section{padding:10px 0 22px;}
+.hd-section-title{
+  font-size:17px;font-weight:700;color:var(--text);
+  padding:10px 0;border-bottom:2px solid var(--border);margin-bottom:14px;
+}
+.hd-count{font-size:14px;font-weight:400;color:var(--text-faint);margin-left:6px;}
+.hd-empty{padding:44px 0;text-align:center;color:var(--text-faint);font-size:15px;}
+
+/* ---- 카드 격자: 5열 -> 1열 ---- */
+.hd-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+@media (max-width:1700px){.hd-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media (max-width:1200px){.hd-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width:820px){.hd-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:520px){.hd-grid{grid-template-columns:minmax(0,1fr);}}
+
+/* ---- 상품 카드 ---- */
+.hd-card{
+  position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;
+  padding:12px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,0.04);
+}
+.hd-card-out{opacity:0.55;}
+.hd-badges{display:flex;gap:4px;flex-wrap:wrap;min-height:20px;}
+.hd-badge{
+  font-size:11px;font-weight:700;padding:3px 7px;border-radius:3px;
+  background:var(--surface3);color:var(--text-faint);
+}
+.hd-badge-hot,.hd-badge-sale,.hd-badge-soon{background:var(--red);color:#fff;}
+.hd-badge-limited{background:var(--gold);color:#fff;}
+.hd-badge-out{background:var(--surface3);color:var(--text-faint);}
+.hd-thumb{
+  display:flex;align-items:center;justify-content:center;
+  height:104px;border:1px solid var(--border-soft);border-radius:3px;
+  background:var(--surface2);overflow:hidden;
+}
+.hd-thumb-img{width:100%;height:100%;object-fit:contain;}
+.hd-thumb-text{font-size:28px;font-weight:700;color:var(--text-faint);letter-spacing:-0.02em;}
+.hd-brand{font-size:13px;color:var(--text-faint);}
+.hd-name{
+  font-size:15px;font-weight:700;color:var(--text);line-height:1.35;
+  min-height:2.7em;overflow:hidden;
+}
+.hd-meta{display:flex;justify-content:space-between;gap:6px;font-size:13px;}
+.hd-price{color:var(--text);}
+.hd-stock{color:var(--text-faint);}
+.hd-tl-row{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  padding-top:6px;border-top:1px solid var(--border-soft);
+}
+.hd-tl{font-size:17px;font-weight:700;color:var(--gold);}
+.hd-tl-was{font-size:13px;color:var(--text-faint);text-decoration:line-through;}
+.hd-limit{font-size:12px;color:var(--text-faint);}
+.hd-actions{display:flex;gap:6px;margin-top:auto;padding-top:8px;}
+.hd-qty{
+  flex:0 0 74px;height:36px;padding:0 6px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;cursor:pointer;
+}
+.hd-buy-btn{
+  flex:1;height:36px;border:1px solid var(--gold);border-radius:3px;
+  background:var(--gold);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
+}
+.hd-buy-btn:hover:not(:disabled){filter:brightness(1.06);}
+.hd-buy-btn:disabled{
+  background:var(--surface3);border-color:var(--border);color:var(--text-faint);cursor:not-allowed;
+}
+
+/* ---- 다크모드 ----
+   색은 위에서 전부 변수로 썼기 때문에 자동으로 따라옵니다.
+   흰 카드가 그대로 뜨는 문제는 없습니다(.hd-card 배경이 var(--surface)).
+   어두운 배경에서만 그림자와 이미지 밝기를 조금 조정합니다. */
+html[data-theme="dark"] .hd-card{box-shadow:none;}
+html[data-theme="dark"] .hd-thumb{background:var(--surface3);}
