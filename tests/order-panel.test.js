@@ -411,6 +411,36 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
        App.Utils.formatCurrencySigned(App.Trading.getSnapshot().realizedPnl));
   });
 
+  t("포지션 표 칸 구성이 레퍼런스와 같음(추가 칸은 숨김, 삭제 아님)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    App.PositionTableExtra.renderForTest();
+
+    // 레퍼런스 칸 구성 그대로여야 함
+    const heads = Array.prototype.filter
+      .call(doc.querySelectorAll("#position-thead-row th"), (t) => !t.classList.contains("position-col-hidden"))
+      .map((t) => t.textContent.trim());
+    eq(
+      heads.join(","),
+      "종목,수량,금액,진입가,현재가,강제청산가,개시증거금,유지증거금,미실현손익,실현손익,청산"
+    );
+
+    // 숨긴 칸은 마크업과 값이 그대로 남아 있어야 함(삭제 금지)
+    App.PositionTableExtra.hiddenColumnsForTest.forEach((id) => {
+      const td = doc.getElementById(id);
+      ok(td, id + " 이 사라지면 안 됨");
+      ok(td.classList.contains("position-col-hidden"), id + " 은 숨김 처리되어야 함");
+    });
+
+    // 헤더 수와 본문 칸 수가 어긋나면 표가 밀립니다
+    const bodyVisible = Array.prototype.filter.call(
+      doc.querySelectorAll("#position-tbody-row td"),
+      (t) => !t.classList.contains("position-col-hidden")
+    ).length;
+    eq(bodyVisible, heads.length, "헤더 수와 본문 칸 수가 같아야 함");
+  });
+
   t("프로모션 영역 — 무료 충전 버튼(가짜 횟수 표시 없음)", () => {
     const { doc } = boot();
     const promo = doc.getElementById("ami-promo");

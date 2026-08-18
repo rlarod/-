@@ -2111,3 +2111,5 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .pos-close-btn:hover:not(:disabled){background:var(--surface3);}
 .pos-close-btn:disabled{color:var(--text-faint);cursor:not-allowed;}
+/* 레퍼런스 포지션 표에 없는 칸 — 화면에서만 숨김(마크업/값 채우기는 유지) */
+.position-table .position-col-hidden{display:none;}

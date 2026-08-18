@@ -44,6 +44,8 @@ App.PositionTableExtra = (function () {
 
   function render() {
     if (!dom.notional) return;
+    // ui.js가 TP/SL·진입수수료 칸을 나중에 만들기 때문에, 그릴 때마다 다시 확인합니다.
+    hideExtraColumns();
     const snap = App.Trading.getSnapshot();
     const pos = snap.position;
 
@@ -76,6 +78,28 @@ App.PositionTableExtra = (function () {
     if (dom.closeBtn) dom.closeBtn.disabled = false;
   }
 
+  /* ---------------- 레퍼런스에 없는 칸 숨김 ---------------- */
+  // 레퍼런스 포지션 표의 칸 구성:
+  //   종목 수량 금액 진입가 현재가 강제청산가 개시증거금 유지증거금 미실현손익 실현손익 청산
+  // 우리 표에만 있던 아래 4개는 화면에서만 숨깁니다. 마크업과 ui.js의 값
+  // 채우기는 그대로라, 이 배열을 비우면 즉시 다시 보입니다.
+  const HIDDEN_COLUMNS = ["pos-tp", "pos-sl", "pos-entry-fee", "pos-return-rate"];
+
+  function hideExtraColumns() {
+    const head = el("position-thead-row");
+    const body = el("position-tbody-row");
+    if (!head || !body) return;
+    HIDDEN_COLUMNS.forEach((id) => {
+      const td = el(id);
+      if (!td) return; // ui.js가 아직 안 만들었으면 다음 호출 때 처리
+      const idx = Array.prototype.indexOf.call(body.children, td);
+      if (idx < 0) return;
+      td.classList.add("position-col-hidden");
+      const th = head.children[idx];
+      if (th) th.classList.add("position-col-hidden");
+    });
+  }
+
   function init() {
     dom = {
       notional: el("pos-notional"),
@@ -94,6 +118,8 @@ App.PositionTableExtra = (function () {
       });
     }
 
+    hideExtraColumns();
+
     if (App.Bus) {
       App.Bus.on("price:update", render);
       App.Bus.on("trading:persisted", render);
@@ -101,5 +127,5 @@ App.PositionTableExtra = (function () {
     render();
   }
 
-  return { init, renderForTest: render, getMMRForTest: getMMR };
+  return { init, renderForTest: render, getMMRForTest: getMMR, hiddenColumnsForTest: HIDDEN_COLUMNS };
 })();
