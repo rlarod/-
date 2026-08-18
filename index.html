@@ -528,6 +528,16 @@
   <!-- 요청: 호가창을 하단 탭(포지션/미체결/주문내역/거래내역/자산)보다도 더 아래, 페이지 맨 밑으로 -->
   <!-- ===== MARKET WAR — 호가/체결 데이터를 실시간 전쟁 시각화로 표현 (신규) ===== -->
   <!-- ===== 관리자 전용(기본 숨김) — am_i_admin() RPC가 true를 반환할 때만 보여짐 ===== -->
+  <!-- 관리자 창은 거래 화면에 상시 노출하지 않고, 내 정보의 "관리자" 메뉴로
+       열도록 아래 모달 안으로 옮깁니다(js/admin-menu.js). 패널 자체는 그대로라
+       js/admin.js(수정 금지 파일)의 이벤트가 유지됩니다. -->
+  <div class="admin-modal" id="admin-modal" style="display:none;">
+    <div class="admin-modal-box">
+      <button type="button" class="admin-modal-close" id="admin-modal-close">✕</button>
+      <div id="admin-modal-slot"></div>
+    </div>
+  </div>
+
   <div class="panel admin-panel page-center" id="admin-panel" style="display:none;">
     <div class="field-label"><span>⚠️ 관리자</span></div>
     <button id="admin-reset-btn" class="admin-reset-btn">전체 시즌 초기화</button>
@@ -780,6 +790,7 @@
 <script src="js/daily-recharge.js"></script>
 <script src="js/position-table-extra.js"></script>
 <script src="js/limit-close.js"></script>
+<script src="js/admin-menu.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>

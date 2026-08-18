@@ -2147,3 +2147,40 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .pos-close-all-btn:disabled{color:var(--text-faint);cursor:not-allowed;}
 /* 레퍼런스에 없는 "자산" 탭 — 화면에서만 숨김(탭 내용·핸들러는 유지) */
 .ref-tab-hidden{display:none !important;}
+
+/* 관리자 창 — 내 정보의 "관리자" 메뉴로만 열림 */
+.admin-modal{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;
+}
+.admin-modal-box{
+  position:relative;background:var(--surface);border:1px solid var(--border);
+  border-radius:2px;padding:22px;min-width:340px;max-width:90vw;
+}
+.admin-modal-close{
+  position:absolute;top:8px;right:10px;background:none;border:none;
+  font-size:20px;color:var(--text-faint);cursor:pointer;line-height:1;
+}
+.admin-modal-close:hover{color:var(--red);}
+.admin-modal .admin-panel{display:block !important;margin:0;}
+#up-nav-admin{color:var(--red);font-weight:700;}
+/* 상시 노출되던 거래내역 표 — 화면에서만 숨김(마감손익 탭에 같은 내용 있음) */
+#cloud-history-panel.position-col-hidden{display:none !important;}
+
+/* 관리자 메뉴가 생기면 하단 메뉴가 7칸이 됩니다(관리자에게만 해당). */
+.page-right .up-nav:has(#up-nav-admin){grid-template-columns:repeat(7,minmax(0,1fr));}
+@media (max-width:1799px){
+  .page-right .up-nav:has(#up-nav-admin){grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+/* 7칸이 되면 좁아지므로 관리자에게만 글자·배지를 한 단계 줄입니다.
+   (2600px 미만에서 "리워드 준비중"이 잘리던 것 보정) */
+@media (min-width:1800px) and (max-width:2599px){
+  .page-right .up-nav:has(#up-nav-admin) button{font-size:13px;padding-left:0;padding-right:0;gap:1px;}
+  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge{font-size:8.5px;letter-spacing:-0.07em;}
+}
+/* 1800~1900px은 7칸이 가장 빠듯한 구간 — 준비중 배지를 아이콘 크기로 줄입니다. */
+@media (min-width:1800px) and (max-width:1900px){
+  .page-right .up-nav:has(#up-nav-admin) button{font-size:12px;}
+  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge{font-size:0;}
+  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge::after{content:"·";font-size:12px;}
+}

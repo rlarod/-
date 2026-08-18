@@ -166,7 +166,13 @@ App.PositionTableExtra = (function () {
 
   // 레퍼런스 포지션 영역에는 부분청산 줄이 없고, 청산 칸의 지정가/시장가가
   // 그 역할을 합니다. 아래 두 줄은 화면에서만 숨깁니다(ui.js는 무수정).
-  const HIDDEN_ROWS = ["partial-close-row", "partial-close-custom-row"];
+  const HIDDEN_ROWS = [
+    "partial-close-row",
+    "partial-close-custom-row",
+    // 레퍼런스 포지션 영역에는 표 아래 상시 거래내역이 없습니다.
+    // 같은 내용은 "마감손익" 탭에서 볼 수 있어 화면에서만 숨깁니다.
+    "cloud-history-panel",
+  ];
 
   function hideExtraRows() {
     HIDDEN_ROWS.forEach((id) => {

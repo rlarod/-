@@ -616,6 +616,37 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
+  t("관리자 창은 거래 화면에서 빠지고 내 정보 메뉴로만 열림", () => {
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    const js = fs.readFileSync(path.join(REPO, "js/admin-menu.js"), "utf8");
+
+    // 패널과 초기화 버튼은 그대로 남아 있어야 함(삭제 금지)
+    ok(/id="admin-panel"/.test(html), "관리자 패널이 사라지면 안 됨");
+    ok(/id="admin-reset-btn"/.test(html), "시즌 초기화 버튼이 사라지면 안 됨");
+    ok(/id="admin-modal"/.test(html), "관리자 모달 껍데기 필요");
+
+    // 권한 판정을 새로 만들면 admin.js와 갈라집니다 — 지켜보기만 해야 함
+    // 주석은 제외하고 실제 호출만 검사
+    const jsCode = js.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
+    ok(!/rpc\(\s*["']am_i_admin/.test(jsCode), "권한 확인을 중복 구현하면 안 됨");
+    ok(/MutationObserver/.test(js), "admin.js의 노출 여부를 지켜봐야 함");
+    ok(/panel\.style\.display !== "none"/.test(js), "관리자일 때만 메뉴를 꺼내야 함");
+
+    // 패널은 모달 안으로 "이동"이라 이벤트가 유지됨
+    ok(/slot\.appendChild\(panel\)/.test(js), "패널은 이동시켜야 함(복제 금지)");
+  });
+
+  t("상시 거래내역 표는 화면에서만 숨김(마감손익 탭에 동일 내용)", () => {
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    const js = fs.readFileSync(path.join(REPO, "js/position-table-extra.js"), "utf8");
+    ok(/id="cloud-history-panel"/.test(html), "거래내역 표가 사라지면 안 됨");
+    ok(/id="cloud-history-body"/.test(html), "거래내역 본문이 사라지면 안 됨");
+    ok(/"cloud-history-panel"/.test(js), "숨김 목록에 있어야 함");
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/#cloud-history-panel\.position-col-hidden\{display:none !important;\}/.test(css),
+      "인라인 style을 덮어쓸 규칙 필요");
+  });
+
   t("무료 충전: 서버가 금액·횟수·포지션을 판정하고 클라이언트는 반영만", () => {
     const js = fs.readFileSync(path.join(REPO, "js/daily-recharge.js"), "utf8");
     const sql = fs.readFileSync(path.join(REPO, "supabase/schema-daily-recharge.sql"), "utf8");
