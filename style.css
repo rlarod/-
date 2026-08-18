@@ -1998,13 +1998,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   padding:2px 0 2px 8px;border-radius:0;
 }
 .page-right .chat-msg-event .chat-msg-text{
-  color:var(--text-dim);font-weight:500;font-size:clamp(14.5px, 0.6vw, 20px);
+  color:var(--text-dim);font-weight:500;font-size:clamp(17px, 0.75vw, 26px);
 }
-.page-right .chat-msg-event.chat-event-profit{border-left-color:var(--green);}
-.page-right .chat-msg-event.chat-event-loss{border-left-color:var(--red);}
-.page-right .chat-msg-event.chat-event-liq{border-left-color:var(--red);}
-.page-right .chat-event-amount-up{color:var(--green);font-weight:700;}
-.page-right .chat-event-amount-down{color:var(--red);font-weight:700;}
+/* 국내 증시 관례 — 익절(이익) 빨강, 손절(손실) 파랑. 내 정보 값 표와 같은 기준. */
+.page-right .chat-msg-event.chat-event-profit{border-left-color:var(--red);}
+.page-right .chat-msg-event.chat-event-loss{border-left-color:var(--blue);}
+.page-right .chat-msg-event.chat-event-liq{border-left-color:var(--blue);}
+.page-right .chat-event-amount-up{color:var(--red);font-weight:700;}
+.page-right .chat-event-amount-down{color:var(--blue);font-weight:700;}
 
 /* 입력 줄 */
 .page-right .chat-input-row{

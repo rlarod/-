@@ -69,9 +69,26 @@ App.TradeEventsChat = (function () {
     }
   }
 
+  // 손익 금액을 원화로. 1억 이상은 "1.23억", 1만 이상은 "1,234만".
+  function formatKrwSigned(usd) {
+    const rate = App.Config && App.Config.USD_KRW ? App.Config.USD_KRW : 0;
+    if (!rate) return (usd >= 0 ? "+" : "") + usd.toFixed(2) + " USDT";
+    const won = Math.round(usd * rate);
+    const sign = won > 0 ? "+" : won < 0 ? "-" : "";
+    const abs = Math.abs(won);
+    let body;
+    if (abs >= 100000000) body = (abs / 100000000).toFixed(2) + "억";
+    else if (abs >= 10000) body = Math.round(abs / 10000).toLocaleString("ko-KR") + "만";
+    else body = abs.toLocaleString("ko-KR");
+    return sign + body + "원";
+  }
+
   function buildMessage(nickname, t) {
-    const sideLabel = t.side === "long" ? "LONG" : "SHORT";
-    const amountText = App.Utils ? App.Utils.formatCurrencySigned(t.pnl) : (t.pnl >= 0 ? "+" : "") + t.pnl.toFixed(2);
+    // 방향은 한글로 — 채팅은 한국어 문장이라 LONG/SHORT만 영문이면 어색합니다.
+    const sideLabel = t.side === "long" ? "매수" : "매도";
+    // 금액도 원화로 — 채팅은 사람이 읽는 문장이라 익숙한 단위가 낫습니다.
+    // 환율은 App.Config.USD_KRW 하나만 씁니다(다른 곳에 또 적지 않음).
+    const amountText = formatKrwSigned(t.pnl);
     if (t.reason === "강제청산") {
       return nickname + "님의 BTC " + sideLabel + " 포지션이 강제청산되었습니다 (" + amountText + ")";
     }

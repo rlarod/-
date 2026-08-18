@@ -13,7 +13,9 @@ App.ChatEventStyle = (function () {
   "use strict";
 
   // "+$1,234.56" / "-$1,234.56" 형태의 금액을 찾아 색을 입힙니다.
-  const AMOUNT = /([+-]\s?\$[\d,]+(?:\.\d+)?)/;
+  // "+1,234만원" / "-1.23억원" / "+5,000원" 형태의 금액을 찾습니다.
+  // (이전 "$1,234.56" 형식도 계속 인식하도록 둘 다 받습니다.)
+  const AMOUNT = /([+-]\s?(?:\$[\d,]+(?:\.\d+)?|[\d,.]+(?:억|만)?원))/;
 
   function decorate(row) {
     if (!row || row.dataset.eventStyled === "1") return;

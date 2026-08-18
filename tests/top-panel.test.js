@@ -731,6 +731,25 @@ section("[5] 기존 기능 보존");
     ok(/schema-daily-recharge\.sql/.test(js), "콘솔에 실행할 파일명을 안내해야 함");
   });
 
+  t("내 정보: USDT/원화 전환 버튼이 다시 그려져도 동작", () => {
+    const js = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");
+    // 패널은 값이 바뀔 때마다 다시 그려집니다. 버튼에 직접 리스너를 걸면 사라집니다.
+    ok(/body\.addEventListener\("click"/.test(js), "상위 요소에 위임해야 함");
+    ok(/closest\("\[data-cur\]"\)/.test(js), "통화 버튼 위임 선택자 필요");
+    // 통화가 바뀌면 값 표시도 따라가야 함
+    ok(/App\.Bus\.on\("currency:change", render\)/.test(js), "통화 변경 시 다시 그려야 함");
+    // 전환 자체는 기존 Config 함수를 그대로 씀(중복 구현 금지)
+    ok(/App\.Config\.setDisplayCurrency\(btn\.dataset\.cur\)/.test(js), "기존 통화 전환 함수를 써야 함");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    ok(doc.getElementById("up-cur-usdt") && doc.getElementById("up-cur-krw"), "통화 버튼 2개 필요");
+    const before = doc.getElementById("user-panel-equity").textContent;
+    App.Config.setDisplayCurrency("KRW");
+    ok(doc.getElementById("user-panel-equity").textContent !== before, "원화로 바뀌어야 함");
+    App.Config.setDisplayCurrency("USDT");
+    eq(doc.getElementById("user-panel-equity").textContent, before, "USDT로 되돌아와야 함");
+  });
+
   t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {
     // js/chat.js(수정 금지)는 그대로 두고, 그려진 뒤 DOM만 꾸미는 방식
     const js = fs.readFileSync(path.join(REPO, "js/chat-event-style.js"), "utf8");
@@ -748,20 +767,20 @@ section("[5] 기존 기능 보존");
       App.ChatEventStyle.decorateForTest(row);
       return row;
     };
-    const win = mk("홍길동님이 BTC LONG 포지션을 +$1,204.55 익절했습니다");
-    ok(win.classList.contains("chat-event-profit"), "익절은 초록 계열로 구분");
+    const win = mk("홍길동님이 BTC 매수 포지션을 +254만원 익절했습니다");
+    ok(win.classList.contains("chat-event-profit"), "익절은 빨강 계열로 구분");
     ok(win.querySelector(".chat-event-amount-up"), "이익 금액 강조 필요");
 
-    const lose = mk("홍길동님이 BTC SHORT 포지션을 -$832.10 손절했습니다");
-    ok(lose.classList.contains("chat-event-loss"), "손절은 빨강 계열로 구분");
+    const lose = mk("홍길동님이 BTC 매도 포지션을 -170만원 손절했습니다");
+    ok(lose.classList.contains("chat-event-loss"), "손절은 파랑 계열로 구분");
     ok(lose.querySelector(".chat-event-amount-down"), "손실 금액 강조 필요");
 
-    const liq = mk("홍길동님의 BTC LONG 포지션이 강제청산되었습니다 (-$5,000.00)");
+    const liq = mk("홍길동님의 BTC 매수 포지션이 강제청산되었습니다 (-1.23억원)");
     ok(liq.classList.contains("chat-event-liq"), "강제청산 구분 필요");
 
     // 문구·데이터는 바꾸지 않아야 함
     eq(win.querySelector(".chat-msg-text").textContent,
-      "홍길동님이 BTC LONG 포지션을 +$1,204.55 익절했습니다");
+      "홍길동님이 BTC 매수 포지션을 +254만원 익절했습니다");
   });
 
   t("내 정보 박스 내부: 남는 공간이 한 곳에 몰리지 않고 값 행이 나눠 가짐", () => {

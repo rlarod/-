@@ -85,6 +85,13 @@ App.UserPanel = (function () {
       '<span class="up-progress-text" id="user-panel-progress-text">-</span>' +
       "</span></div>" +
 
+      // USDT / 원화 전환 — 기존 App.Config.setDisplayCurrency를 그대로 부릅니다.
+      // (헤더에도 같은 버튼이 있지만 화면에서 숨겨져 있어 여기에 다시 둡니다.)
+      '<div class="up-currency" id="user-panel-currency">' +
+      '<button type="button" data-cur="USDT" id="up-cur-usdt">USDT</button>' +
+      '<button type="button" data-cur="KRW" id="up-cur-krw">원화</button>' +
+      "</div>" +
+
       '<div class="up-grid" id="user-panel-grid">' +
       // 라벨은 레퍼런스(개미톡)의 선물 / 벅스 / USDT / 지갑 구성을 따릅니다.
       //   선물   = 선물 계좌 평가자산   (레퍼런스와 동일 이름)
@@ -150,6 +157,17 @@ App.UserPanel = (function () {
     //   손실  : 파랑 (수익률 앞에 -)
     //   0     : 검정 (거래가 없거나 본전)
     // 부호(+/-)는 formatPercent가 이미 붙이므로 문자열은 건드리지 않습니다.
+    // 통화 버튼 활성 표시 — 현재 선택된 통화에 active
+    const displayCur = App.Config.getDisplayCurrency();
+    const cu = el("up-cur-usdt");
+    const ck = el("up-cur-krw");
+    if (cu && ck) {
+      cu.classList.toggle("active", displayCur === "USDT");
+      ck.classList.toggle("active", displayCur === "KRW");
+      // 패널은 값이 바뀔 때마다 다시 그려집니다. 버튼에 직접 리스너를 걸면
+      // 다시 그리는 순간 사라지므로, 바깥 컨테이너에 한 번만 위임합니다.
+    }
+
     const grid = el("user-panel-grid");
     if (grid) {
       grid.classList.remove("up-state-profit", "up-state-loss", "up-state-flat");
@@ -195,7 +213,20 @@ App.UserPanel = (function () {
     renderStats(snapshot);
   }
 
+  // 통화 버튼은 다시 그려져도 동작해야 하므로 상위 요소에 위임합니다.
+  function bindCurrencyOnce() {
+    const body = el("user-panel-body");
+    if (!body || body.dataset.curBound === "1") return;
+    body.dataset.curBound = "1";
+    body.addEventListener("click", (e) => {
+      const btn = e.target.closest ? e.target.closest("[data-cur]") : null;
+      if (!btn) return;
+      App.Config.setDisplayCurrency(btn.dataset.cur);
+    });
+  }
+
   function init() {
+    bindCurrencyOnce();
     dom = { body: el("user-panel-body") };
     if (!dom.body) return; // 마크업 없으면 조용히 종료
 
@@ -203,6 +234,8 @@ App.UserPanel = (function () {
     render();
     App.Bus.on("trading:update", render);
     App.Bus.on("rank:ready", render);
+    // 통화를 바꾸면 값 표시도 바로 따라가야 합니다.
+    App.Bus.on("currency:change", render);
     // auth.js가 로그인/로그아웃 이벤트를 쏘지 않으므로 상태만 주기적으로 확인합니다.
     pollTimer = setInterval(render, AUTH_POLL_MS);
   }
