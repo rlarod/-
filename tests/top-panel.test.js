@@ -616,6 +616,18 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
+  t("채팅 파란 띠 높이를 배너와 동일하게(단차 방지)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const banner = css.match(/\.ad-creative-wide\{[\s\S]*?\}/)[0];
+    const header = css.match(/\.page-right \.page-chat-panel > \.field-label\{[\s\S]*?\}/)[0];
+    const bh = banner.match(/height:(\d+)px/);
+    const hh = header.match(/height:(\d+)px/);
+    ok(bh && hh, "두 파란 띠 모두 높이가 지정돼야 함");
+    eq(hh[1], bh[1], "파란 띠 높이가 다르면 아랫변에 단차가 생김");
+    // 패널 테두리 1px 때문에 띠가 아래에서 시작하던 것 보정
+    ok(/margin:-1px -1px 0/.test(header), "테두리만큼 끌어올려야 윗변이 맞음");
+  });
+
   t("채팅 아랫변을 거래 행에 맞춤 — 화면 높이에 따라 어긋나지 않게", () => {
     const js = fs.readFileSync(path.join(REPO, "js/layout-align.js"), "utf8");
     // 채팅은 100vh 기준, 거래 행은 콘텐츠 기준이라 CSS만으로는 못 맞춥니다.
