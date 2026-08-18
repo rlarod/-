@@ -192,14 +192,27 @@ a:hover{text-decoration:underline;}
 .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none;}
 .brand-logo{
   height:68px;width:auto;display:block;
-  /* 이미지가 늦게 떠도 헤더 높이가 흔들리지 않게 자리를 미리 잡습니다. */
+  /* 이미지가 늦게 떠도 헤더 높이가 흔들리지 않게 자리를 미리 잡습니다.
+     밝은 버전과 다크 버전은 원본 비율이 서로 다릅니다(4.454 / 4.896). */
   aspect-ratio:1461 / 328;
 }
+.brand-logo.brand-logo-dark{aspect-ratio:1885 / 385;}
 .brand-logo-mark{display:none;height:52px;width:auto;aspect-ratio:525 / 328;}
+.brand-logo-mark.brand-logo-dark{aspect-ratio:648 / 385;}
+
+/* 밝은/어두운 배경용 로고 교체 — 기본은 밝은 버전, 다크모드에서만 다크 버전.
+   로고 자체를 CSS로 손대지 않고 파일만 바꿔 끼웁니다. */
+.brand-logo-dark{display:none;}
+html[data-theme="dark"] .brand-logo-light{display:none;}
+html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
+
 /* 좁아지면 글자 로고 대신 심볼만 — 로고를 찌그러뜨리지 않고 교체합니다. */
 @media (max-width:900px){
   .brand-logo{display:none;}
-  .brand-logo-mark{display:block;}
+  .brand-logo-mark.brand-logo-light{display:block;}
+  html[data-theme="dark"] .brand-logo.brand-logo-dark{display:none;}
+  html[data-theme="dark"] .brand-logo-mark.brand-logo-light{display:none;}
+  html[data-theme="dark"] .brand-logo-mark.brand-logo-dark{display:block;}
 }
 
 /* 옛 텍스트 브랜드(.mark/.name/.brand-tagline) 규칙은 마크업이 사라져도
@@ -2619,11 +2632,5 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
    (실측: 다크모드 헤더에서 TRADING 부분만 사라짐).
    로고 색을 바꾸는 것은 브랜드 지침 위반이므로, 로고는 원본 그대로 두고
    뒤에 흰 판(클리어 스페이스)을 깔아 가독성을 확보합니다. */
-html[data-theme="dark"] .brand-logo,
-html[data-theme="dark"] .brand-logo-mark{
-  background:#fff;
-  padding:6px 12px;
-  /* 이 사이트의 디자인 규칙: 모서리 최대 3px */
-  border-radius:3px;
-  box-sizing:content-box;
-}
+/* 2026-08-18: 어두운 배경용 로고 원본(tl-logo-dark.png)을 받아서
+   흰 판이 필요 없어졌습니다. 로고를 그대로 얹습니다. */

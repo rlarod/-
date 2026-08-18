@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>TL · TRADING LEAGUE — 모의투자 트레이딩 리그</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/tl-mark-32.png">
+<!-- 브라우저 탭이 어두운 테마일 때는 다크용 심볼 -->
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/tl-mark-dark-32.png" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="assets/brand/tl-mark-180.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -68,10 +70,17 @@
          로고 형태·비율·색은 손대지 않고 높이만 헤더에 맞춥니다.
          좁은 화면에서는 심볼만 남기고 글자 로고를 숨깁니다(형태 변형 아님). -->
     <a class="brand" href="#" id="brand-home" aria-label="TL TRADING LEAGUE">
-      <img class="brand-logo" src="assets/brand/tl-logo.png"
+      <!-- 밝은 배경용 -->
+      <img class="brand-logo brand-logo-light" src="assets/brand/tl-logo.png"
            alt="TL TRADING LEAGUE — 모의투자 트레이딩 리그" width="1461" height="328">
-      <img class="brand-logo-mark" src="assets/brand/tl-mark.png"
-           alt="TL" width="525" height="328">
+      <img class="brand-logo-mark brand-logo-light" src="assets/brand/tl-mark.png"
+           alt="" aria-hidden="true" width="525" height="328">
+      <!-- 어두운 배경용(주신 다크 버전) — TRADING 글자가 밝은 은회색이라
+           다크모드에서 흰 판 없이 그대로 읽힙니다. -->
+      <img class="brand-logo brand-logo-dark" src="assets/brand/tl-logo-dark.png"
+           alt="" aria-hidden="true" width="1885" height="385">
+      <img class="brand-logo-mark brand-logo-dark" src="assets/brand/tl-mark-dark.png"
+           alt="" aria-hidden="true" width="648" height="385">
     </a>
 
     <!-- 헤더 공지 한 줄 — 개미톡 헤더의 [공지] + 안내문 자리입니다.

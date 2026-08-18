@@ -28,7 +28,8 @@ console.log("\nTL 브랜드 적용");
 /* ---- 로고 파일 ---- */
 {
   const dir = path.join(REPO, "assets", "brand");
-  ["tl-logo.png", "tl-mark.png", "tl-mark-32.png", "tl-mark-180.png"].forEach((f) => {
+  ["tl-logo.png", "tl-mark.png", "tl-mark-32.png", "tl-mark-180.png",
+   "tl-logo-dark.png", "tl-mark-dark.png", "tl-mark-dark-32.png", "tl-mark-dark-180.png"].forEach((f) => {
     ok("로고 파일 존재: " + f, fs.existsSync(path.join(dir, f)));
   });
 
@@ -47,6 +48,12 @@ console.log("\nTL 브랜드 적용");
   /* 투명 배경이어야 다크모드에서 흰 사각형이 안 생깁니다. */
   const buf = fs.readFileSync(path.join(dir, "tl-logo.png"));
   ok("로고가 알파 채널을 가진 PNG (colorType 6)", buf.readUInt8(25) === 6, "colorType " + buf.readUInt8(25));
+
+  const fullD = pngSize(path.join(dir, "tl-logo-dark.png"));
+  const markD = pngSize(path.join(dir, "tl-mark-dark.png"));
+  ok("다크 로고 비율 4.896 (원본 그대로)", Math.abs(fullD.w / fullD.h - 4.8961) < 0.01, (fullD.w / fullD.h).toFixed(4));
+  ok("다크 심볼도 세로로 잘리지 않았다", fullD.h === markD.h, fullD.h + " vs " + markD.h);
+  ok("다크 로고도 투명 배경", fs.readFileSync(path.join(dir, "tl-logo-dark.png")).readUInt8(25) === 6);
 }
 
 /* ---- CSS 가 로고를 변형하지 않는지 ---- */
@@ -56,13 +63,16 @@ console.log("\nTL 브랜드 적용");
   ok("원본 비율을 aspect-ratio 로 고정", /aspect-ratio:1461 \/ 328/.test(css));
   ok("로고에 색 필터를 걸지 않았다", !/\.brand-logo[^{]*\{[^}]*filter:/.test(css));
   ok("높이가 충분히 크다(60px 이상)", /\.brand-logo\{[^}]*height:(6[0-9]|[7-9][0-9]|1[0-9]{2})px/.test(css));
-  ok("다크모드에서 로고 뒤에 흰 판을 깐다(색 변경 대신)", /html\[data-theme="dark"\] \.brand-logo/.test(css) && /background:#fff/.test(css));
+  ok("다크모드는 어두운 배경용 로고 원본으로 교체한다", /html\[data-theme="dark"\] \.brand-logo\.brand-logo-dark\{display:block;\}/.test(css));
+  ok("다크 전용 로고가 생겼으니 흰 판은 걷어냈다", !/html\[data-theme="dark"\] \.brand-logo[^{]*\{[^}]*background:#fff/.test(css));
+  ok("다크 로고도 원본 비율로 고정", /aspect-ratio:1885 \/ 385/.test(css) && /aspect-ratio:648 \/ 385/.test(css));
 }
 
 /* ---- 헤더 브랜드 ---- */
 {
-  ok("헤더에 TL 로고가 들어갔다", /class="brand-logo"[^>]*src="assets\/brand\/tl-logo\.png"/.test(html));
-  ok("좁은 화면용 심볼도 있다", /class="brand-logo-mark"[^>]*src="assets\/brand\/tl-mark\.png"/.test(html));
+  ok("헤더에 TL 로고가 들어갔다", /class="brand-logo brand-logo-light"[^>]*src="assets\/brand\/tl-logo\.png"/.test(html));
+  ok("좁은 화면용 심볼도 있다", /src="assets\/brand\/tl-mark\.png"/.test(html));
+  ok("어두운 배경용 로고도 헤더에 있다", /src="assets\/brand\/tl-logo-dark\.png"/.test(html));
   ok("alt 에 브랜드명이 들어있다", /alt="TL TRADING LEAGUE/.test(html));
   ok("BTC 아이콘(₿)을 메인 브랜드로 쓰지 않는다", !/<div class="mark">₿<\/div>/.test(html));
   ok("'BTC 모의투자' 문구가 화면에서 사라졌다", html.indexOf("BTC 모의투자") === -1);
