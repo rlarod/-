@@ -2188,3 +2188,38 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 #pos-pnl-cell{line-height:1.3;}
 #pos-pnl{display:block;font-weight:700;}
 #pos-pnl-cell .position-roe-inline{display:block;font-size:0.85em;font-weight:600;}
+
+/* =========================================================================
+ * 포지션 표 칸 고정
+ * =========================================================================
+ * 기본 table 레이아웃은 내용 길이에 따라 칸 너비를 매번 다시 계산합니다.
+ * 시세가 1틱 움직여 자릿수가 바뀔 때마다 칸이 흔들려 보이는 원인입니다.
+ * table-layout:fixed 로 바꾸고 칸마다 비율을 정해, 숫자가 바뀌어도
+ * 너비가 그대로 유지되게 합니다.
+ *
+ * 칸 순서: 종목 수량 금액 진입가 현재가 강제청산가 [TP SL 진입수수료(숨김)]
+ *          개시증거금 유지증거금 미실현손익 실현손익 [수익률(숨김)] 청산
+ * 숨긴 칸은 display:none이라 너비를 차지하지 않습니다.
+ * ========================================================================= */
+.position-table{table-layout:fixed;}
+.position-table th,
+.position-table td{overflow:hidden;text-overflow:ellipsis;}
+
+/* 숫자가 흔들리지 않도록 폭이 일정한 숫자 글꼴 사용 */
+.position-table td{font-variant-numeric:tabular-nums;}
+
+.position-table th:nth-child(1){width:9%;}    /* 종목 */
+.position-table th:nth-child(2){width:9%;}    /* 수량 */
+.position-table th:nth-child(3){width:12%;}   /* 금액 */
+.position-table th:nth-child(4){width:8%;}    /* 진입가 */
+.position-table th:nth-child(5){width:8%;}    /* 현재가 */
+.position-table th:nth-child(6){width:8%;}    /* 강제청산가 */
+
+/* 레퍼런스 포지션 표는 작고 촘촘합니다. 칸을 고정한 만큼 글자를 줄여
+   좁은 화면에서도 값이 잘리지 않게 합니다(폭에 비례). */
+.position-table th{font-size:clamp(12px, 0.52vw, 17px);padding-right:8px;}
+.position-table td{font-size:clamp(12.5px, 0.55vw, 18px);padding-right:8px;}
+.position-table .pos-money-krw{font-size:0.8em;}
+.position-table .position-symbol-name{font-size:clamp(13px, 0.58vw, 19px);}
+.position-table .position-symbol-sub{font-size:clamp(11px, 0.46vw, 15px);}
+.pos-close-btn{font-size:clamp(11.5px, 0.48vw, 15px);padding:4px 8px;}

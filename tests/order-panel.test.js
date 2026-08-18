@@ -448,6 +448,19 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     eq(bodyVisible, heads.length, "헤더 수와 본문 칸 수가 같아야 함");
   });
 
+  t("포지션 표 칸 폭 고정 — 시세가 바뀌어도 칸이 흔들리지 않음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    // 기본 table 레이아웃은 내용 길이에 따라 칸 너비를 매번 다시 계산합니다.
+    ok(/\.position-table\{table-layout:fixed;\}/.test(css), "칸 폭 고정 필요");
+    // 칸마다 비율이 정해져 있어야 내용이 바뀌어도 폭이 유지됩니다
+    ok(/\.position-table th:nth-child\(1\)\{width:\d+%;\}/.test(css), "칸별 폭 지정 필요");
+    // 숫자 폭이 일정해야 자릿수가 바뀌어도 덜 흔들립니다
+    ok(/\.position-table td\{font-variant-numeric:tabular-nums;\}/.test(css), "고정폭 숫자 필요");
+    // 폭이 고정된 만큼 넘치는 내용은 잘라야 표가 밀리지 않습니다
+    ok(/\.position-table th,\s*\n\.position-table td\{overflow:hidden;text-overflow:ellipsis;\}/.test(css),
+      "넘침 처리 필요");
+  });
+
   t("표시용 덮어쓰기가 ui.js의 요소를 지우지 않음(수량/청산가 공백 회귀 방지)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64224, time: Date.now() });
