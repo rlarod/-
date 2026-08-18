@@ -10,7 +10,7 @@
  *   getRankName(points)       점수 -> 계급 이름
  *   calculatePoints(snapshot) 거래 기록 -> 계급 점수
  *   getUserRank()             현재 사용자의 계급(점수 계산까지 한 번에)
- *   renderBadge(rank, opts)   계급장 HTML(SVG) 문자열
+ *   renderBadge(rank, opts)   계급장 HTML 문자열(실제 계급장 이미지, 없으면 SVG 도형)
  *   renderNameWithRank(nick)  "계급장 계급 닉네임" HTML 문자열
  *
  * 데이터 출처
@@ -165,6 +165,24 @@ App.Rank = (function () {
   function renderBadge(rank, opts) {
     const o = opts || {};
     const size = o.size || 18;
+
+    /* 2026-08-18 — 실제 계급장 이미지가 생겼습니다(assets/ranks/).
+       js/rank-badge.js 가 rank_id 로 파일을 골라줍니다.
+       이 함수를 부르는 곳(내 정보 패널, 계급 줄 등)이 전부 한 번에 바뀝니다.
+       이미지를 못 불러오는 상황이면 아래 기존 SVG 도형으로 그대로 넘어갑니다. */
+    if (App.RankBadge && typeof App.RankBadge.fileFor === "function") {
+      const src = App.RankBadge.fileFor(rank.rank_id);
+      if (src) {
+        return (
+          '<span class="rank-badge rank-tier-' + rank.rank_tier + '" title="' + rank.rank_name +
+          '" aria-label="' + rank.rank_name + '">' +
+          '<img class="rank-badge-img" src="' + src + '" alt="' + rank.rank_name +
+          '" style="height:' + size + 'px;width:auto;" loading="lazy">' +
+          "</span>"
+        );
+      }
+    }
+
     const style = TIER_STYLE[rank.rank_tier] || TIER_STYLE["병"];
     const count = tierIndex(rank);
     const unit = size * 0.42;

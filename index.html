@@ -950,7 +950,11 @@
 <script src="js/market-data/mock-adapter.js"></script>
 <script src="js/market-data.js"></script>
 <script src="js/notice-board.js"></script>
+<!-- 계급장 공통 렌더 — rank.js보다 먼저 실려야 renderBadge가 이미지를 씁니다 -->
+<script src="js/rank-badge.js"></script>
 <script src="js/rank.js"></script>
+<!-- 랭킹표·채팅에 계급장 붙이기(leaderboard.js/chat.js 무수정) -->
+<script src="js/rank-badge-attach.js"></script>
 <script src="js/user-panel.js"></script>
 <script src="js/ad-slots.js"></script>
 <script src="js/chat-event-style.js"></script>

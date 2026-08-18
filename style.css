@@ -2824,3 +2824,34 @@ html[data-theme="dark"] .top-mode-row > .leverage-field-top{
 /* TL 거래내역 증감 색 — 손익 색과 같은 규칙을 씁니다 */
 .mk-tx-minus{color:var(--red);}
 .mk-tx-plus{color:var(--green);}
+
+/* ===== 계급장 =====
+   assets/ranks/ 의 개별 PNG 를 씁니다(스프라이트 아님).
+   계급장마다 원본 비율이 다르므로 height 만 정하고 width 는 auto —
+   어떤 계급장도 찌그러지지 않습니다.
+   화면별 크기는 사장님이 주신 규격 그대로입니다. */
+.rank-badge{display:inline-flex;align-items:center;vertical-align:middle;}
+.rank-badge-img,
+img.rank-badge{width:auto;display:block;object-fit:contain;}
+
+img.rank-badge-chat{height:20px;}       /* 실시간 채팅 18~22px */
+img.rank-badge-community{height:22px;}  /* 커뮤니티 20~24px */
+img.rank-badge-ranking{height:36px;}    /* 랭킹 페이지 32~40px */
+img.rank-badge-profile{height:48px;}    /* 프로필 40~56px */
+
+/* 닉네임 앞에 붙을 때 간격 */
+img.rank-badge + .chat-msg-nick,
+.rank-badge + .chat-msg-nick{margin-left:5px;}
+#leaderboard-body img.rank-badge{margin-right:7px;}
+
+/* 어두운 배경에서 계급장이 묻히지 않게 아주 얕은 그림자만.
+   색은 건드리지 않습니다(원본 유지). */
+html[data-theme="dark"] .rank-badge-img,
+html[data-theme="dark"] img.rank-badge{
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,0.55));
+}
+
+@media (max-width:820px){
+  img.rank-badge-ranking{height:28px;}
+  img.rank-badge-profile{height:40px;}
+}
