@@ -1342,7 +1342,22 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 재충전/아이템·이더리움은 미구현(준비중) 항목이라, 메뉴/탭과 같은 원칙으로
    화면에서만 숨깁니다. 마크업과 클릭 안내는 그대로라 이 두 줄만 지우면 복구됩니다.
    덕분에 주문창이 약 160px 짧아져 거래 행(=차트) 높이도 함께 줄일 수 있습니다. */
-.amitalk-order .ami-promo{display:none;}
+/* 하루 1회 무료 충전 버튼 자리 — 이전에 "재충전 무료/아이템(준비중)"으로
+   숨겨뒀던 영역을 실제 기능이 생기면서 다시 노출합니다. */
+.amitalk-order .ami-promo{display:flex;flex-direction:column;gap:5px;align-items:stretch;background:none;border:none;padding:0;margin:10px 0 0;}
+.daily-recharge-btn{
+  width:100%;padding:11px 10px;border-radius:3px;cursor:pointer;
+  background:var(--gold);color:#fff;border:1px solid var(--gold);
+  font-family:var(--sans);font-size:17px;font-weight:700;transition:.12s;
+}
+.daily-recharge-btn:hover:not(:disabled){filter:brightness(1.08);}
+.daily-recharge-btn:disabled{
+  background:var(--surface2);color:var(--text-faint);
+  border-color:var(--border);cursor:not-allowed;
+}
+.daily-recharge-note{
+  font-size:13.5px;color:var(--text-faint);text-align:center;line-height:1.4;
+}
 .amitalk-order .ami-symbol-row:not(.active){display:none;}
 .amitalk-order .ami-promo{
   display:flex;align-items:baseline;justify-content:center;gap:6px;
@@ -2076,3 +2091,6 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .page-right .up-state-profit .up-value{color:var(--red) !important;}
 .page-right .up-state-loss   .up-value{color:var(--blue) !important;}
 .page-right .up-state-flat   .up-value{color:var(--text) !important;}
+
+/* 무료 충전 버튼 자리 — 예전 프로모션 배너의 분홍 배경/테두리를 걷어냅니다. */
+.amitalk-order .ami-promo{background:none !important;border:none !important;}

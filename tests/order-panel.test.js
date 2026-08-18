@@ -378,13 +378,18 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     eq(doc.defaultView.localStorage.getItem("amitalk:orderSound"), "1");
   });
 
-  t("프로모션 영역은 준비중 안내만 뜸(가짜 수치 없음)", () => {
-    const { doc, win } = boot();
+  t("프로모션 영역 — 무료 충전 버튼(가짜 횟수 표시 없음)", () => {
+    const { doc } = boot();
     const promo = doc.getElementById("ami-promo");
-    ok(/준비중/.test(promo.textContent), "준비중 배지 필요");
+    const btn = promo.querySelector("#daily-recharge-btn");
+    ok(btn, "무료 충전 버튼이 있어야 함");
+    ok(btn.disabled, "서버가 허용하기 전에는 눌리면 안 됨");
+    // 남은 횟수 같은 수치는 서버가 알려주기 전에는 표시하지 않습니다.
     ok(!/\d+회/.test(promo.textContent), "실제로 없는 횟수를 표시하면 안 됨");
-    click(promo);
-    ok(/준비중/.test(win.__lastAlert || ""), "클릭 시 안내 필요");
+    // 실제 버튼이 생겼으므로 예전 "준비중" 클릭 안내는 붙지 않아야 합니다.
+    const src = fs.readFileSync(path.join(REPO, "js/order-panel-amitalk.js"), "utf8");
+    ok(/!promo\.querySelector\("#daily-recharge-btn"\)/.test(src),
+      "충전 버튼이 있으면 준비중 안내를 붙이지 않아야 함");
   });
 
   t("하단 종목: BTC=거래중, ETH=준비중", () => {

@@ -616,6 +616,32 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
+  t("무료 충전: 서버가 금액·횟수·포지션을 판정하고 클라이언트는 반영만", () => {
+    const js = fs.readFileSync(path.join(REPO, "js/daily-recharge.js"), "utf8");
+    const sql = fs.readFileSync(path.join(REPO, "supabase/schema-daily-recharge.sql"), "utf8");
+
+    // 금액을 클라이언트가 정하면 조작할 수 있습니다 — 서버 상수여야 합니다.
+    ok(!/100000/.test(js.replace(/100,000/g, "")), "충전 금액을 클라이언트가 정하면 안 됨");
+    ok(/AMOUNT constant numeric := 100000/.test(sql), "금액은 서버 상수");
+
+    // 횟수 제한과 포지션 확인도 서버에서
+    ok(/already_claimed/.test(sql) && /has_position/.test(sql), "서버가 횟수·포지션을 검사해야 함");
+    ok(/interval '6 hours'/.test(sql) && /Asia\/Seoul/.test(sql), "한국시간 오전 6시 기준");
+    ok(/for update/.test(sql), "동시 요청 이중 충전 방지 필요");
+
+    // 기존 데이터를 지우지 않아야 함 (주석은 제외하고 실제 구문만 검사)
+    const sqlCode = sql.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+    ok(!/drop\s+table/i.test(sqlCode) && !/truncate/i.test(sqlCode), "기존 테이블을 지우면 안 됨");
+    ok(/add column if not exists/i.test(sql), "컬럼 추가는 안전하게");
+
+    // 클라이언트는 서버가 돌려준 잔고만 반영
+    ok(/saved\.balance = Number\(data\.balance\)/.test(js), "서버가 준 잔고를 그대로 반영");
+
+    // 버튼은 기본 비활성 — 서버가 허용해야만 열림
+    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    ok(/id="daily-recharge-btn" disabled/.test(html), "버튼은 기본 비활성이어야 함");
+  });
+
   t("채팅: 거래 이벤트가 손익 부호별로 구분 표시됨", () => {
     // js/chat.js(수정 금지)는 그대로 두고, 그려진 뒤 DOM만 꾸미는 방식
     const js = fs.readFileSync(path.join(REPO, "js/chat-event-style.js"), "utf8");

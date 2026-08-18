@@ -423,8 +423,13 @@
 
         <!-- ===== [11] 하단 프로모션 영역 — 재충전/아이템은 실제로 구현된 기능이
              아니라서 "준비중"으로 두고 클릭 시 안내만 뜹니다(가짜 수치 금지). ===== -->
+        <!-- 하루 1회 무료 충전 — 오전 6시(한국시간) 기준으로 횟수가 채워집니다.
+             금액·횟수·포지션 확인은 전부 서버(claim_daily_recharge)에서 합니다. -->
         <div class="ami-promo" id="ami-promo">
-          <span>재충전 무료 / 아이템</span><span class="ami-promo-badge">준비중</span>
+          <button type="button" class="daily-recharge-btn" id="daily-recharge-btn" disabled>
+            무료 충전 100,000 USDT
+          </button>
+          <span class="daily-recharge-note" id="daily-recharge-note"></span>
         </div>
         <div class="ami-symbols" id="ami-symbols"></div>
 
@@ -752,6 +757,7 @@
 <script src="js/user-panel.js"></script>
 <script src="js/ad-slots.js"></script>
 <script src="js/chat-event-style.js"></script>
+<script src="js/daily-recharge.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>

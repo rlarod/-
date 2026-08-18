@@ -206,8 +206,10 @@ App.AmiTalkOrderPanel = (function () {
 
   /* ---------------- (7) 하단 프로모션 / 종목 스트립 ---------------- */
   function initPromo() {
+    // 이 영역은 이제 "하루 1회 무료 충전" 버튼이 들어갑니다(js/daily-recharge.js).
+    // 예전 "준비중" 안내는 실제 버튼이 없는 경우에만 뜨도록 남겨둡니다.
     const promo = el("ami-promo");
-    if (promo) {
+    if (promo && !promo.querySelector("#daily-recharge-btn")) {
       promo.addEventListener("click", () => {
         alert("재충전 / 아이템 기능은 준비중입니다.");
       });
