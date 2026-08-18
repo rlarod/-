@@ -616,6 +616,21 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
+  t("채팅 아랫변을 거래 행에 맞춤 — 화면 높이에 따라 어긋나지 않게", () => {
+    const js = fs.readFileSync(path.join(REPO, "js/layout-align.js"), "utf8");
+    // 채팅은 100vh 기준, 거래 행은 콘텐츠 기준이라 CSS만으로는 못 맞춥니다.
+    ok(/getBoundingClientRect\(\)\.bottom/.test(js), "거래 행 실제 위치를 재야 함");
+    ok(/\.main-grid/.test(js) && /page-chat-col/.test(js), "거래 행과 채팅을 모두 참조해야 함");
+    // 좌우 2단이 풀리는 폭에서는 손대지 않아야 함
+    ok(/MIN_WIDTH = 1800/.test(js), "2단 기준 폭이 style.css와 같아야 함");
+    ok(/col\.style\.height = ""/.test(js), "2단이 아니면 CSS 기본값으로 되돌려야 함");
+    // 창 크기나 주문창 길이가 바뀌면 다시 맞춰야 함
+    ok(/addEventListener\("resize"/.test(js), "창 크기 변경 대응 필요");
+    ok(/ResizeObserver/.test(js), "거래 행 높이 변화 대응 필요");
+    // 세로 길이만 건드려야 함(색·글자·데이터 무관)
+    ok(!/textContent|innerHTML|color/.test(js), "레이아웃 외 항목을 건드리면 안 됨");
+  });
+
   t("관리자 창은 거래 화면에서 빠지고 내 정보 메뉴로만 열림", () => {
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
     const js = fs.readFileSync(path.join(REPO, "js/admin-menu.js"), "utf8");
