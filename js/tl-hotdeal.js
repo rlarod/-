@@ -152,11 +152,27 @@ App.TLHotdeal = (function () {
         return ea - eb;
       });
     } else {
-      // 인기순 — 별도 판매량 집계가 없으므로 관리자가 정한 노출 순서를 씁니다.
-      // (지어낸 인기 지표를 만들지 않습니다)
+      // 기본 순서 — 브랜드끼리 묶고, 브랜드 안에서는 금액이 싼 것부터.
+      // (예: 스타벅스 10,000 -> 20,000 -> 30,000, 그다음 메가커피 10,000 -> ...)
+      //
+      // 브랜드를 먼저 보여줄 순서는 코드에 이름을 박지 않고, 그 브랜드 상품 중
+      // 가장 작은 sort_order 로 정합니다. 관리자가 sort_order 만 바꾸면
+      // 브랜드 노출 순서가 바뀝니다(지어낸 인기 지표를 쓰지 않습니다).
+      var brandRank = {};
+      (products || []).forEach(function (p) {
+        var key = String(p.brand || "");
+        var so = Number(p.sort_order) || 0;
+        if (brandRank[key] === undefined || so < brandRank[key]) brandRank[key] = so;
+      });
       list.sort(function (a, b) {
-        var d = (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
-        return d !== 0 ? d : tlp(a) - tlp(b);
+        var ba = brandRank[String(a.brand || "")] || 0;
+        var bb = brandRank[String(b.brand || "")] || 0;
+        if (ba !== bb) return ba - bb;
+        var na = String(a.brand || ""), nb = String(b.brand || "");
+        if (na !== nb) return na < nb ? -1 : 1;
+        var pa = Number(a.price) || 0, pb = Number(b.price) || 0;
+        if (pa !== pb) return pa - pb;
+        return tlp(a) - tlp(b);
       });
     }
     return list;

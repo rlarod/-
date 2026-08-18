@@ -302,15 +302,60 @@ console.log("\n  구조·보안·디자인");
   ok("새 색을 만들지 않고 기존 변수 사용", /\.hd-buy-btn\{[\s\S]*?background:var\(--gold\)/.test(css));
   ok("카드 배경이 변수라 다크모드에서 안 뜬다", /\.hd-card\{[\s\S]*?background:var\(--surface\)/.test(css));
   ok("다크모드 전용 카드 규칙이 있다", /html\[data-theme="dark"\] \.hd-card/.test(css));
-  ok("PC 5열", /\.hd-grid\{[^}]*repeat\(5,minmax\(0,1fr\)\)/.test(css));
-  ["repeat(4", "repeat(3", "repeat(2", "minmax(0,1fr)"].forEach((step) => {
+  ok("PC 3열(2026-08-18 지시)", /\.hd-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/.test(css));
+  ["repeat(2", "minmax(0,1fr)"].forEach((step) => {
     ok("반응형 단계 존재: " + step, css.indexOf(".hd-grid{grid-template-columns:" + step) !== -1);
   });
+  ok("카테고리 줄은 화면에서만 숨김(마크업은 유지)", /#hd-category-row\{display:none;\}/.test(css) && /id="hd-category-row"/.test(html));
+  ok("가격대·검색·정렬은 그대로 남아있다", /id="hd-price-row"/.test(html) && /id="hd-search"/.test(html) && /id="hd-sort"/.test(html));
   ok("가로 스크롤이 생기지 않게 minmax(0,1fr) 사용", /\.hd-grid\{[^}]*minmax\(0,1fr\)/.test(css));
 
   /* 용어 */
-  ok("'벅스'/'코인' 표기를 쓰지 않는다", !/벅스/.test(js) && !/포인트로 구매/.test(js));
+  ok("포인트 단위를 '벅스'/'코인'으로 부르지 않는다(브랜드명 스타벅스는 예외)",
+     !/(보유|사용|획득)\s*(벅스|코인)/.test(js) && !/벅스\s*(단위|잔액)/.test(js));
   ok("단위는 TL", /return num\(n\) \+ " TL"/.test(js));
+}
+
+/* ---------- 기본 정렬: 브랜드 묶음 + 금액 오름차순 ---------- */
+console.log("\n  기본 정렬");
+{
+  const mixed = [
+    prod({ id: "m50", brand: "메가커피", category: "cafe", price: 50000, tl_price: 12500, sort_order: 18 }),
+    prod({ id: "s20", brand: "스타벅스", category: "cafe", price: 20000, tl_price: 5300, sort_order: 15 }),
+    prod({ id: "m10", brand: "메가커피", category: "cafe", price: 10000, tl_price: 2500, sort_order: 14 }),
+    prod({ id: "s30", brand: "스타벅스", category: "cafe", price: 30000, tl_price: 8000, sort_order: 16 }),
+    prod({ id: "m30", brand: "메가커피", category: "cafe", price: 30000, tl_price: 7400, sort_order: 17 }),
+    prod({ id: "s10", brand: "스타벅스", category: "cafe", price: 10000, tl_price: 2700, sort_order: 13 }),
+  ];
+  const order = HD.sortProducts(mixed, "popular").map((p) => p.id);
+  ok("스타벅스가 먼저, 그 안에서 금액 오름차순", order.slice(0, 3).join(",") === "s10,s20,s30", order.join(","));
+  ok("그다음 메가커피, 금액 오름차순", order.slice(3).join(",") === "m10,m30,m50", order.join(","));
+  ok("브랜드가 섞이지 않는다", order.join(",") === "s10,s20,s30,m10,m30,m50", order.join(","));
+
+  /* 브랜드 순서는 코드에 이름을 박은 게 아니라 sort_order 로 정해집니다 */
+  const flipped = mixed.map((p) =>
+    Object.assign({}, p, { sort_order: p.brand === "메가커피" ? p.sort_order - 10 : p.sort_order })
+  );
+  const order2 = HD.sortProducts(flipped, "popular").map((p) => p.id);
+  ok("sort_order 를 바꾸면 브랜드 순서도 바뀐다(이름 하드코딩 아님)", order2.slice(0, 3).join(",") === "m10,m30,m50", order2.join(","));
+}
+
+/* ---------- 글씨 크기 ---------- */
+{
+  const css2 = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  function px(re, label) {
+    const m = css2.match(re);
+    return m ? Number(m[1]) : -1;
+  }
+  const name = px(/\.hd-name\{[\s\S]*?font-size:(\d+)px/);
+  const tlSize = px(/\.hd-tl\{font-size:(\d+)px/);
+  const brand = px(/\.hd-brand\{font-size:(\d+)px/);
+  const btn = px(/\.hd-buy-btn\{[\s\S]*?font-size:(\d+)px/);
+  ok("상품명 18px 이상", name >= 18, String(name));
+  ok("TL 가격 22px 이상", tlSize >= 22, String(tlSize));
+  ok("브랜드명 15px 이상", brand >= 15, String(brand));
+  ok("구매 버튼 16px 이상", btn >= 16, String(btn));
+  ok("TL 가격이 상품명보다 크다(가장 눈에 띄어야 함)", tlSize > name, tlSize + " vs " + name);
 }
 
 /* ---------- 새로 정한 TL 가격이 기존 표와 어긋나지 않는지 ---------- */
