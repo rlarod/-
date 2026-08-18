@@ -2111,5 +2111,24 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .pos-close-btn:hover:not(:disabled){background:var(--surface3);}
 .pos-close-btn:disabled{color:var(--text-faint);cursor:not-allowed;}
-/* 레퍼런스 포지션 표에 없는 칸 — 화면에서만 숨김(마크업/값 채우기는 유지) */
+/* 레퍼런스 포지션 표에 없는 칸/줄 — 화면에서만 숨김(마크업/값 채우기는 유지).
+   ui.js가 포지션이 생길 때 이 줄들에 인라인 style을 다시 넣어서, 같은 강도로
+   덮어쓰려면 !important가 필요합니다. */
 .position-table .position-col-hidden{display:none;}
+#partial-close-row.position-col-hidden,
+#partial-close-custom-row.position-col-hidden{display:none !important;}
+
+/* 지정가 청산 — 포지션 표 청산 칸 */
+.position-close-cell{white-space:nowrap;}
+.pos-limit-box{display:flex;gap:4px;align-items:center;margin-top:5px;}
+.pos-limit-box input{
+  width:110px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;
+  font-family:var(--sans);font-size:15px;text-align:right;
+}
+.pos-limit-active{display:flex;gap:5px;align-items:center;justify-content:flex-end;}
+.pos-limit-active #pos-limit-active-text{font-size:15px;color:var(--gold);font-weight:600;}
+.pos-limit-clear{
+  background:none;border:none;color:var(--text-faint);cursor:pointer;
+  font-size:15px;padding:0 3px;
+}
+.pos-limit-clear:hover{color:var(--red);}

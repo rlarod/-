@@ -466,7 +466,17 @@
                   <td id="pos-realized" class="mobile-hide">-</td>
                   <td id="pos-return-rate" class="mobile-hide">-</td>
                   <td class="position-close-cell">
+                    <button type="button" class="pos-close-btn" id="pos-close-limit">지정가</button>
                     <button type="button" class="pos-close-btn" id="pos-close-market">시장가</button>
+                    <div class="pos-limit-box" id="pos-limit-box" style="display:none;">
+                      <input type="text" inputmode="decimal" id="pos-limit-price" placeholder="청산 가격">
+                      <button type="button" class="pos-close-btn" id="pos-limit-apply">확인</button>
+                      <button type="button" class="pos-close-btn" id="pos-limit-cancel">취소</button>
+                    </div>
+                    <div class="pos-limit-active" id="pos-limit-active" style="display:none;">
+                      <span id="pos-limit-active-text"></span>
+                      <button type="button" class="pos-limit-clear" id="pos-limit-clear">✕</button>
+                    </div>
                   </td>
                 </tr></tbody>
               </table>
@@ -766,6 +776,7 @@
 <script src="js/chat-event-style.js"></script>
 <script src="js/daily-recharge.js"></script>
 <script src="js/position-table-extra.js"></script>
+<script src="js/limit-close.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>

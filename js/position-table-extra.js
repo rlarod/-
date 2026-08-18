@@ -44,8 +44,10 @@ App.PositionTableExtra = (function () {
 
   function render() {
     if (!dom.notional) return;
-    // ui.js가 TP/SL·진입수수료 칸을 나중에 만들기 때문에, 그릴 때마다 다시 확인합니다.
+    // ui.js가 TP/SL·진입수수료 칸과 부분청산 줄을 나중에 만들기 때문에,
+    // 그릴 때마다 다시 확인합니다.
     hideExtraColumns();
+    hideExtraRows();
     const snap = App.Trading.getSnapshot();
     const pos = snap.position;
 
@@ -85,6 +87,17 @@ App.PositionTableExtra = (function () {
   // 채우기는 그대로라, 이 배열을 비우면 즉시 다시 보입니다.
   const HIDDEN_COLUMNS = ["pos-tp", "pos-sl", "pos-entry-fee", "pos-return-rate"];
 
+  // 레퍼런스 포지션 영역에는 부분청산 줄이 없고, 청산 칸의 지정가/시장가가
+  // 그 역할을 합니다. 아래 두 줄은 화면에서만 숨깁니다(ui.js는 무수정).
+  const HIDDEN_ROWS = ["partial-close-row", "partial-close-custom-row"];
+
+  function hideExtraRows() {
+    HIDDEN_ROWS.forEach((id) => {
+      const row = el(id);
+      if (row) row.classList.add("position-col-hidden");
+    });
+  }
+
   function hideExtraColumns() {
     const head = el("position-thead-row");
     const body = el("position-tbody-row");
@@ -119,6 +132,10 @@ App.PositionTableExtra = (function () {
     }
 
     hideExtraColumns();
+    hideExtraRows();
+    // ui.js가 부분청산 줄을 뒤늦게 만드는 경우가 있어 잠깐 뒤 한 번 더 확인합니다.
+    setTimeout(hideExtraRows, 0);
+    setTimeout(hideExtraRows, 500);
 
     if (App.Bus) {
       App.Bus.on("price:update", render);

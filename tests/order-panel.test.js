@@ -441,6 +441,53 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     eq(bodyVisible, heads.length, "헤더 수와 본문 칸 수가 같아야 함");
   });
 
+  t("지정가 청산 — 목표가 도달 시에만 기존 청산 함수를 부름", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.setLeverage(10);
+    App.Trading.openPosition("long", 5000, null, null);
+
+    // 롱인데 현재가보다 낮은 가격은 걸자마자 청산되므로 막아야 함
+    doc.getElementById("pos-limit-price").value = "62000";
+    App.LimitClose.applyForTest();
+    eq(App.LimitClose.getTargetForTest(), null, "잘못된 방향은 예약되면 안 됨");
+
+    doc.getElementById("pos-limit-price").value = "64000";
+    App.LimitClose.applyForTest();
+    ok(App.LimitClose.getTargetForTest(), "예약이 걸려야 함");
+
+    // 미도달이면 포지션 유지
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63500, time: Date.now() });
+    ok(App.Trading.getSnapshot().position, "목표가 전에는 청산되면 안 됨");
+
+    // 도달하면 청산 — 손익 계산은 trading.js가 하던 그대로
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64100, time: Date.now() });
+    eq(App.Trading.getSnapshot().position, null, "목표가 도달 시 청산되어야 함");
+    ok(App.Trading.getSnapshot().realizedPnl > 0, "실현손익이 반영되어야 함");
+
+    const src = fs.readFileSync(path.join(REPO, "js/limit-close.js"), "utf8");
+    ok(/App\.Trading\.closePosition\(\)/.test(src), "기존 청산 함수를 써야 함");
+    ok(!/realizedPnl\s*[+\-*/]?=/.test(src), "손익을 직접 계산하면 안 됨");
+  });
+
+  t("부분청산 줄은 화면에서만 숨김(기능·마크업 보존)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
+    App.Trading.openPosition("long", 5000, null, null);
+    App.PositionTableExtra.renderForTest();
+
+    ["partial-close-row", "partial-close-custom-row", "partial-close-input", "btn-partial-close-custom"].forEach((id) => {
+      ok(doc.getElementById(id), id + " 이 사라지면 안 됨");
+    });
+    ["partial-close-row", "partial-close-custom-row"].forEach((id) => {
+      ok(doc.getElementById(id).classList.contains("position-col-hidden"), id + " 은 숨김 처리되어야 함");
+    });
+    // ui.js가 인라인 style로 되살리므로 같은 강도로 덮어써야 함
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/#partial-close-row\.position-col-hidden,[\s\S]*?display:none !important;/.test(css),
+      "인라인 style을 덮어쓸 규칙이 필요함");
+  });
+
   t("프로모션 영역 — 무료 충전 버튼(가짜 횟수 표시 없음)", () => {
     const { doc } = boot();
     const promo = doc.getElementById("ami-promo");
