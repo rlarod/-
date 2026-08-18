@@ -98,18 +98,19 @@
 <div class="menu-bar">
   <div class="menu-bar-inner">
     <nav class="top-banner-nav">
+      <!-- 실제로 동작하는 메뉴만 노출합니다. 준비중 항목은 마크업을 남겨두고
+           .nav-coming-soon 규칙으로 화면에서만 숨깁니다(클릭 안내는 그대로). -->
       <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">코인선물</button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-schedule">대회일정 <span class="nav-soon-badge">준비중</span></button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-join">참가신청 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">커뮤니티</button>
       <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
+      <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
+      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-schedule">대회일정 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-join">참가신청 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-hotdeal">🔥 핫딜 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-market">마켓 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-notice">공지사항 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-support">고객센터 <span class="nav-soon-badge">준비중</span></button>
-      <!-- 화면에서만 숨김(코드/기능은 그대로 보존 — 나중에 다시 메뉴에 노출 가능) -->
-      <button class="top-banner-nav-btn" id="page-nav-battle" data-page="battle" style="display:none;">⚔ 전쟁터</button>
-      <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage" style="display:none;">👤 마이페이지</button>
     </nav>
   </div>
 </div>
