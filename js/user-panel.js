@@ -87,8 +87,8 @@ App.UserPanel = (function () {
 
       // USDT / 원화 전환 — 기존 App.Config.setDisplayCurrency를 그대로 부릅니다.
       // (헤더에도 같은 버튼이 있지만 화면에서 숨겨져 있어 여기에 다시 둡니다.)
-      // 밝은/다크 모드 전환 — 실제 전환은 js/theme.js가 합니다.
-      '<button type="button" class="theme-toggle" id="theme-toggle-btn">🌙 다크 모드</button>' +
+      // 테마 전환 버튼은 헤더 우측(#header-theme-btn)에만 둡니다.
+      // 두 곳에 있으면 같은 기능이 중복되어 여기서는 뺐습니다.
 
       '<div class="up-currency" id="user-panel-currency">' +
       '<button type="button" data-cur="USDT" id="up-cur-usdt">USDT</button>' +

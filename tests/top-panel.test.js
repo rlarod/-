@@ -741,17 +741,17 @@ section("[5] 기존 기능 보존");
     ok(!/원$/.test(App.Utils.formatCurrencyPlain(100000)), "USDT에는 원이 붙으면 안 됨");
   });
 
-  t("다크모드 버튼이 헤더 우측에도 있음", () => {
+  t("다크모드 버튼은 헤더 우측에만 있음", () => {
     const { doc, App } = boot({ nickname: "홍길동" });
     const header = doc.getElementById("header-theme-btn");
     ok(header, "헤더 다크모드 버튼 필요");
     // 헤더 우측 영역은 숨김 상태라, 그 안이 아니라 바깥에 있어야 보입니다
     ok(!header.closest(".top-banner-right"), "숨겨진 영역 안에 있으면 안 보임");
+    // 같은 기능이 두 곳에 있으면 헷갈리므로 내 정보에는 두지 않습니다
+    eq(doc.getElementById("theme-toggle-btn"), null, "내 정보에는 테마 버튼이 없어야 함");
 
-    // 두 버튼(헤더/내 정보)의 문구가 함께 바뀌어야 함
     App.Theme.setForTest("dark");
     eq(header.textContent.trim(), "☀ 밝은 모드");
-    eq(doc.getElementById("theme-toggle-btn").textContent.trim(), "☀ 밝은 모드");
     App.Theme.setForTest("light");
     eq(header.textContent.trim(), "🌙 다크 모드");
   });
@@ -782,7 +782,7 @@ section("[5] 기존 기능 보존");
     ok(!/Trading\.|realizedPnl|balance/.test(js), "테마 모듈이 거래 데이터를 건드리면 안 됨");
 
     const { doc, App } = boot({ nickname: "홍길동" });
-    ok(doc.getElementById("theme-toggle-btn"), "테마 버튼 필요");
+    ok(doc.getElementById("header-theme-btn"), "테마 버튼 필요");
     App.Theme.setForTest("dark");
     eq(doc.documentElement.getAttribute("data-theme"), "dark");
     App.Theme.setForTest("light");
