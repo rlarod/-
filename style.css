@@ -2303,3 +2303,81 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .page-right .up-currency button.active{background:var(--gold);color:#fff;}
 .page-right .up-currency button:hover:not(.active){background:var(--surface2);}
+
+/* =========================================================================
+ * 다크모드
+ * =========================================================================
+ * 사이트 색이 이미 변수로 정리돼 있어(변수 514곳 사용), 배경·글자·테두리
+ * 변수만 어두운 값으로 바꾸면 전체가 함께 바뀝니다.
+ *
+ * 강조색(빨강/파랑/초록/계급 색)은 그대로 둡니다 — 손익 판단에 쓰는 색이라
+ * 밝기가 달라지면 의미가 흔들립니다. 대신 어두운 배경에서 잘 보이도록
+ * 몇 개만 조금 밝게 조정합니다.
+ *
+ * html[data-theme="dark"] 하나만 붙였다 떼면 전환됩니다.
+ * ========================================================================= */
+html[data-theme="dark"]{
+  --bg:#0E1116;
+  --surface:#161A21;
+  --surface2:#1C212A;
+  --surface3:#232935;
+  --border:#2B3341;
+  --border-soft:#222834;
+  --text:#E6E8EC;
+  --text-dim:#A7B0BE;
+  --text-faint:#7B8494;
+
+  /* 어두운 배경에서 대비를 살짝 올린 값들 */
+  --gold:#4C8DFF;
+  --gold-soft:rgba(76,141,255,0.16);
+  --red:#FF5C63;
+  --red-soft:rgba(255,92,99,0.16);
+  --blue:#5B93FF;
+  --blue-soft:rgba(91,147,255,0.16);
+  --green:#20D68C;
+  --green-soft:rgba(32,214,140,0.16);
+}
+
+/* 변수를 쓰지 않고 색을 직접 적어둔 곳 — 다크모드에서만 덮어씁니다.
+   원래 규칙은 그대로 두어 밝은 모드에는 영향이 없습니다. */
+html[data-theme="dark"] .menu-bar{background:#0F4C82;}
+html[data-theme="dark"] .page-right .page-chat-panel > .field-label{background:#0F4C82;}
+html[data-theme="dark"] .pnl-positive{color:#20D68C !important;}
+html[data-theme="dark"] .page-right .up-label{background:var(--surface2);color:var(--text-dim);}
+html[data-theme="dark"] .page-right .up-value{background:var(--surface);}
+html[data-theme="dark"] .amitalk-order .ami-market-price-field .margin-input-wrap{background:var(--surface2);}
+html[data-theme="dark"] .amitalk-order .margin-input-wrap{background:var(--surface2);}
+html[data-theme="dark"] .amitalk-order .margin-input-wrap input{background:transparent;color:var(--text);}
+html[data-theme="dark"] .amitalk-order .margin-input-wrap input::placeholder{color:var(--text-faint);}
+html[data-theme="dark"] .chat-input-row input{background:var(--surface2);color:var(--text);}
+html[data-theme="dark"] .position-table .position-symbol-name{color:var(--text);}
+
+/* 흰색으로 고정된 글자는 파란 띠 위에 있는 것들이라 그대로 둡니다.
+   대신 흰 배경을 전제로 한 몇 곳만 표면색으로 바꿉니다. */
+html[data-theme="dark"] .notice-box,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .admin-modal-box{background:var(--surface);}
+
+/* 테마 전환 버튼 */
+.theme-toggle{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-top:none;border-left:none;border-right:none;cursor:pointer;
+  padding:clamp(9px, 0.5vw, 16px) 2px;
+  font-family:var(--sans);font-size:clamp(14px, 0.6vw, 21px);font-weight:600;
+  color:var(--text-dim);transition:.12s;
+}
+.theme-toggle:hover{background:var(--surface3);}
+
+/* 다크모드에서 대비가 부족했던 곳 — 실측으로 찾은 3가지만 보정합니다. */
+/* ① 매수/매도 버튼: 색 배경 위 글자가 회색이라 묻혔습니다 */
+html[data-theme="dark"] .amitalk-order .order-btn{color:#fff;}
+/* ② 계좌 숫자(평가/보유/가능): 배경과 거의 같은 밝기였습니다 */
+html[data-theme="dark"] .amitalk-order .order-account-row b{color:var(--text);}
+html[data-theme="dark"] .order-preview-row b,
+html[data-theme="dark"] .order-account-row b{color:var(--text-dim);}
+/* ③ 주문 미리보기의 대기 상태 글자 */
+html[data-theme="dark"] .amitalk-order .order-preview-row b.is-idle{color:var(--text-faint);}
+/* 광고 배너 — 다크모드에서는 톤을 낮춰 화면과 어울리게 합니다(그라데이션 유지) */
+html[data-theme="dark"] .ad-creative-wide{
+  background:linear-gradient(120deg,#123A73 0%,#1A4E9B 55%,#20407A 100%);
+}

@@ -51,7 +51,7 @@ function boot(opts) {
     };})();
   `);
 
-  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js"].forEach((f) => {
+  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js", "js/theme.js"].forEach((f) => {
     win.eval(fs.readFileSync(path.join(REPO, f), "utf8"));
   });
 
@@ -63,6 +63,7 @@ function boot(opts) {
   win.App.Rank.init();
   win.App.NoticeBoard.init(); // App.Board가 없으면 조용히 넘어감
   win.App.UserPanel.init();
+  win.App.Theme.init();
   return { dom, win, App: win.App, doc: win.document };
 }
 
@@ -729,6 +730,39 @@ section("[5] 기존 기능 보존");
     ok(/PGRST202/.test(js) && /42883/.test(js), "함수 없음 오류 코드를 구분해야 함");
     ok(/서버 설정이 아직 적용되지 않았습니다/.test(js), "SQL 미적용 전용 안내 필요");
     ok(/schema-daily-recharge\.sql/.test(js), "콘솔에 실행할 파일명을 안내해야 함");
+  });
+
+  t("다크모드: 변수만 바꿔서 전환, 밝은 모드에 영향 없음", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const js = fs.readFileSync(path.join(REPO, "js/theme.js"), "utf8");
+
+    // 색이 변수로 관리되므로 다크 블록에서 배경·글자·테두리만 덮으면 됩니다
+    const dark = css.match(/html\[data-theme="dark"\]\{[\s\S]*?\n\}/);
+    ok(dark, "다크 변수 블록 필요");
+    ["--bg", "--surface", "--text", "--border"].forEach((v) => {
+      ok(dark[0].indexOf(v) !== -1, v + " 가 다크 블록에 없음");
+    });
+
+    // 밝은 모드 규칙을 지우지 않고 덮어쓰기만 해야 되돌릴 수 있습니다
+    ok(/:root\{[\s\S]*?--bg:#F3F4F7/.test(css), "밝은 모드 기본값이 남아 있어야 함");
+
+    // 전환은 html 속성 하나로
+    ok(/setAttribute\("data-theme", DARK\)/.test(js) && /removeAttribute\("data-theme"\)/.test(js),
+      "속성 하나로 전환해야 함");
+    // 고른 값을 저장하고 다음 방문에 복원
+    ok(/localStorage/.test(js), "선택을 저장해야 함");
+    ok(/prefers-color-scheme/.test(js), "저장값이 없으면 운영체제 설정을 따라야 함");
+    // 버튼은 패널이 다시 그려져도 동작해야 함
+    ok(/themeBound/.test(js), "리스너를 위임해야 함");
+    // 거래 데이터에는 관여하지 않아야 함
+    ok(!/Trading\.|realizedPnl|balance/.test(js), "테마 모듈이 거래 데이터를 건드리면 안 됨");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    ok(doc.getElementById("theme-toggle-btn"), "테마 버튼 필요");
+    App.Theme.setForTest("dark");
+    eq(doc.documentElement.getAttribute("data-theme"), "dark");
+    App.Theme.setForTest("light");
+    eq(doc.documentElement.getAttribute("data-theme"), null, "밝은 모드는 속성이 없어야 함");
   });
 
   t("내 정보: USDT/원화 전환 버튼이 다시 그려져도 동작", () => {
