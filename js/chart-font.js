@@ -50,6 +50,76 @@ App.ChartFont = (function () {
     return null;
   }
 
+  /* ---- 굵게 ----
+     라이브러리에 글씨 굵기 옵션이 없습니다. 축 글꼴 문자열을
+     `${크기}px ${글꼴}` 로만 조립해서 굵기를 끼워 넣을 자리도 없습니다
+     (크기 자리에 "bold 21" 을 넣어봤더니 차트가 통째로 안 그려졌습니다).
+
+     그래서 "굵은 글꼴을 새 이름으로 등록"하는 방식을 씁니다.
+     TL_CHART_BOLD 라는 이름에 사이트 글꼴의 굵은 자족을 연결해두고,
+     차트에는 그 이름을 첫 번째 글꼴로 지정합니다.
+     못 불러오면 그냥 다음 글꼴(보통 굵기)로 넘어가므로 지금과 같아집니다. */
+  var BOLD_ALIAS = "TLChartBold";
+  var STYLE_ID = "tl-chart-bold-font";
+
+  /* --sans 의 첫 글꼴 이름만 뽑습니다(따옴표 제거). 이름을 코드에 박지 않습니다. */
+  function primaryFamilyName() {
+    var ff = siteFontFamily();
+    if (!ff) return null;
+    var first = String(ff).split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+    return first || null;
+  }
+
+  function installBoldAlias() {
+    if (typeof document === "undefined" || !document.head) return;
+    if (document.getElementById(STYLE_ID)) return;
+    var name = primaryFamilyName();
+    if (!name) return;
+
+    /* 1차 — 사용자 기기에 이미 깔린 굵은 자족을 씁니다(네트워크 불필요). */
+    var locals = [name + " Bold", name.replace(/\s+/g, "") + "-Bold", name + " SemiBold", name + " Black"];
+    var style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent =
+      "@font-face{font-family:'" + BOLD_ALIAS + "';font-style:normal;font-weight:400;font-display:swap;src:" +
+      locals.map(function (n) { return "local('" + n + "')"; }).join(",") + ";}";
+    document.head.appendChild(style);
+
+    /* 2차 — 웹폰트로 받아온 글꼴이면 같은 출처에서 700 굵기만 따로 받아
+       BOLD_ALIAS 이름으로 다시 선언합니다. 실패하면 1차 결과로 남습니다. */
+    try {
+      if (typeof fetch !== "function") return;
+      var url =
+        "https://fonts.googleapis.com/css2?family=" +
+        encodeURIComponent(name).replace(/%20/g, "+") +
+        ":wght@700&display=swap";
+      fetch(url)
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (css) {
+          if (!css) return;
+          var renamed = css
+            .replace(/font-family:\s*(['"])[^'"]+\1/g, "font-family:'" + BOLD_ALIAS + "'")
+            .replace(/font-weight:\s*700/g, "font-weight:400");
+          var s2 = document.createElement("style");
+          s2.setAttribute("data-tl-chart-bold", "web");
+          s2.textContent = renamed;
+          document.head.appendChild(s2);
+        })
+        .catch(function () {
+          /* 네트워크 실패 — 1차(local) 결과를 그대로 씁니다 */
+        });
+    } catch (e) {
+      /* 무시 */
+    }
+  }
+
+  /* 차트에 넣을 글꼴 = 굵은 별칭 + 사이트 글꼴(대체용) */
+  function chartFontFamily() {
+    var ff = siteFontFamily();
+    if (!ff) return null;
+    return "'" + BOLD_ALIAS + "'," + ff;
+  }
+
   var charts = [];
 
   function patch() {
@@ -66,7 +136,8 @@ App.ChartFont = (function () {
       /* chart.js 가 fontSize 를 직접 정하고 있으면 그 값을 존중합니다. */
       if (opts.layout.fontSize === undefined) opts.layout.fontSize = FONT_SIZE;
       /* 글꼴은 chart.js 가 지정해도 사이트 글꼴로 덮습니다(통일이 목적). */
-      var ff = siteFontFamily();
+      installBoldAlias();
+      var ff = chartFontFamily();
       if (ff) opts.layout.fontFamily = ff;
       var chart = origCreate.call(LC, container, opts);
       try {
@@ -133,7 +204,8 @@ App.ChartFont = (function () {
 
   return {
     setFontSize: setFontSize,
-    getFontFamily: siteFontFamily,
+    getFontFamily: chartFontFamily,
+    getSiteFontFamily: siteFontFamily,
     getFontSize: function () {
       return FONT_SIZE;
     },

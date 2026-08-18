@@ -62,10 +62,24 @@ function boot(lib) {
       readyState: "complete",
       addEventListener() {},
       documentElement: {},
+      __styles: [],
+      getElementById(id) {
+        return this.__styles.filter((n) => n.id === id)[0] || null;
+      },
+      createElement() {
+        return { id: "", textContent: "", setAttribute() {} };
+      },
+      head: null,
     },
     /* 사이트 글꼴을 CSS 변수에서 읽어오는지 확인하기 위한 흉내 */
     getComputedStyle: () => ({ getPropertyValue: (k) => (k === "--sans" ? " " + SITE_FONT + " " : "") }),
   };
+  sandbox.document.head = {
+    appendChild(node) {
+      sandbox.document.__styles.push(node);
+    },
+  };
+  sandbox.fetch = undefined; // 네트워크 없는 환경 — local() 별칭만 남습니다
   sandbox.__SITE_FONT = SITE_FONT;
   sandbox.window = sandbox;
   vm.createContext(sandbox);
@@ -121,7 +135,22 @@ console.log("\n차트 글씨 크기");
 
   /* 글꼴도 사이트와 맞춥니다 — chart.js 는 'JetBrains Mono' 를 쓰는데
      사이트는 본문 글꼴로 통일돼 있어 차트 축만 따로 놀았습니다. */
-  ok("글꼴을 CSS 변수(--sans)에서 읽어 적용한다", chart.options().layout.fontFamily === sb.__SITE_FONT, chart.options().layout.fontFamily);
+  ok("글꼴을 CSS 변수(--sans)에서 읽어 적용한다", chart.options().layout.fontFamily.indexOf(sb.__SITE_FONT) !== -1, chart.options().layout.fontFamily);
+
+  /* 굵게 — 라이브러리에 굵기 옵션이 없고, 글꼴 문자열이 `${크기}px ${글꼴}`
+     이라 굵기를 끼워 넣을 자리도 없습니다(크기 자리에 "bold 21" 을 넣으면
+     차트가 통째로 안 그려집니다 — 실제로 확인했습니다).
+     그래서 굵은 자족을 새 이름으로 등록해 첫 글꼴로 지정합니다. */
+  ok("굵은 글꼴 별칭을 맨 앞에 둔다", /^'TLChartBold',/.test(chart.options().layout.fontFamily), chart.options().layout.fontFamily);
+  ok("별칭 뒤에 사이트 글꼴이 대체용으로 남는다(못 불러와도 안 깨짐)", chart.options().layout.fontFamily.indexOf(sb.__SITE_FONT) > 0);
+  {
+    const style = sb.document.getElementById("tl-chart-bold-font");
+    ok("@font-face 규칙을 넣는다", !!style);
+    ok("굵은 자족을 local() 로 찾는다", /local\('Noto Sans KR Bold'\)/.test(style.textContent), style.textContent.slice(0, 80));
+    ok("별칭은 weight 400 으로 선언(그 자체가 굵은 자족)", /font-weight:400/.test(style.textContent));
+    ok("규칙을 두 번 넣지 않는다", sb.document.__styles.filter((n) => n.id === "tl-chart-bold-font").length === 1);
+  }
+  ok("크기(fontSize)에는 숫자만 넣는다(문자열이면 차트가 깨짐)", /opts\.layout\.fontSize = FONT_SIZE/.test(SRC) && typeof CF.getFontSize() === "number");
   ok("글꼴 이름을 코드에 박아두지 않았다", SRC.indexOf("Noto Sans") === -1 && SRC.indexOf("Pretendard") === -1);
   ok("만든 차트를 붙잡아 둔다", CF.getCharts().length === 1);
   ok("차트가 실제로 만들어졌다", created.length === 1);
@@ -129,7 +158,9 @@ console.log("\n차트 글씨 크기");
   {
     /* chart.js 가 다른 글꼴을 지정해도 사이트 글꼴로 덮어야 합니다. */
     const c2 = sb.LightweightCharts.createChart({}, { layout: { fontFamily: "'JetBrains Mono', monospace" } });
-    ok("chart.js 의 JetBrains Mono 를 사이트 글꼴로 덮는다", c2.options().layout.fontFamily === sb.__SITE_FONT, c2.options().layout.fontFamily);
+    ok("chart.js 의 JetBrains Mono 를 사이트 글꼴로 덮는다",
+       c2.options().layout.fontFamily.indexOf("JetBrains") === -1 && c2.options().layout.fontFamily.indexOf(sb.__SITE_FONT) !== -1,
+       c2.options().layout.fontFamily);
   }
 }
 
