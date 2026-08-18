@@ -1282,8 +1282,16 @@ section("[5] 기존 기능 보존");
     const inner = css.match(/\.top-banner-inner\{[\s\S]*?\}/)[0];
     const pad = inner.match(/padding:([\d.]+)px ([\d.]+)px/);
     ok(pad, "헤더 안쪽 여백 지정 필요");
-    ok(parseFloat(pad[1]) >= 25 && parseFloat(pad[1]) <= 35,
-      "헤더 높이가 레퍼런스 비율(6.41% of 콘텐츠 폭 = 123px)에서 벗어남: " + pad[1]);
+    // 2026-08-18: 브랜드가 텍스트(로고 블록 37px)에서 TL 로고 이미지로 바뀌면서
+    // 헤더 높이를 여백만으로 판단할 수 없게 됐습니다. 이제는 로고 높이가
+    // 헤더를 결정하므로, 여백이 아니라 "로고 높이 + 여백×2" 로 검사합니다.
+    // TL 브랜드 지침: 로고를 너무 작게 만들지 말 것.
+    const logoH = parseFloat((css.match(/\.brand-logo\{[\s\S]*?height:([\d.]+)px/) || [])[1]);
+    ok(logoH >= 100, "TL 로고가 너무 작음: " + logoH);
+    const headerH = logoH + parseFloat(pad[1]) * 2;
+    ok(headerH >= 120 && headerH <= 160,
+      "헤더 높이가 과하거나 부족함(로고 " + logoH + "px + 여백 " + pad[1] + "px×2 = " + headerH + "px)");
+    ok(parseFloat(pad[1]) <= 20, "로고를 키운 만큼 위아래 여백은 줄여야 함: " + pad[1]);
     ok(parseFloat(pad[2]) <= 10, "헤더 좌측 여백이 너무 큼: " + pad[2]);
     ok(size(/\.brand-tagline\{font-size:([\d.]+)px/, "태그라인") < size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름"), "태그라인은 로고 이름보다 작아야 함");
     ok(size(/\.ws-status\{[^}]*font-size:([\d.]+)px/, "연결 상태") <= 14, "연결 상태가 너무 큼");

@@ -134,7 +134,9 @@ a:hover{text-decoration:underline;}
   /* 02단계 실측 기준 — 레퍼런스의 (로고 높이 / 헤더 높이) = 0.591,
      (좌측 여백 / 콘텐츠 폭) = 0.44%, (로고~다음 요소 간격) ≈ 콘텐츠 폭의 2.5%.
      로고 블록 높이 37px 기준으로 헤더 63px, 좌측 8px, 간격 48px가 됩니다. */
-  max-width:var(--content-max);margin:0 auto;padding:30px 8px;
+  /* 로고를 키우면서(110px) 위아래 여백을 줄여 헤더가 과하게 두꺼워지지
+     않게 했습니다. 실측: 여백 30px -> 14px, 헤더 170px -> 138px. */
+  max-width:var(--content-max);margin:0 auto;padding:14px 8px;
   display:flex;align-items:center;gap:48px;flex-wrap:nowrap;min-width:0;
 }
 .top-banner-right{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-left:auto;flex:0 0 auto;}
@@ -191,13 +193,15 @@ a:hover{text-decoration:underline;}
    유지합니다. 사이트 이름이 바로 보이도록 충분히 크게 둡니다. */
 .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none;}
 .brand-logo{
-  height:68px;width:auto;display:block;
+  /* 사장님 지시(2026-08-18): 68px는 너무 작아 안 보임 -> 크게.
+     로고 자체는 그대로 두고 표시 높이만 키웁니다. */
+  height:110px;width:auto;display:block;
   /* 이미지가 늦게 떠도 헤더 높이가 흔들리지 않게 자리를 미리 잡습니다.
      밝은 버전과 다크 버전은 원본 비율이 서로 다릅니다(4.454 / 4.896). */
   aspect-ratio:1461 / 328;
 }
 .brand-logo.brand-logo-dark{aspect-ratio:1885 / 385;}
-.brand-logo-mark{display:none;height:52px;width:auto;aspect-ratio:525 / 328;}
+.brand-logo-mark{display:none;height:84px;width:auto;aspect-ratio:525 / 328;}
 .brand-logo-mark.brand-logo-dark{aspect-ratio:648 / 385;}
 
 /* 밝은/어두운 배경용 로고 교체 — 기본은 밝은 버전, 다크모드에서만 다크 버전.
