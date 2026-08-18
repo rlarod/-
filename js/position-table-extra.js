@@ -117,15 +117,22 @@ App.PositionTableExtra = (function () {
     // 개시증거금 · 미실현손익은 ui.js가 채운 뒤라 여기서 두 줄 표기로 바꿉니다.
     // (ui.js는 수정 금지 파일이라 출력 형식을 바꿀 수 없어, 그린 뒤에 다시 씁니다.)
     if (dom.marginCell) paintMoney(dom.marginCell, pos ? pos.margin : null);
-    if (dom.pnlCell && pos) {
-      const pnlWrap = dom.pnlCell;
-      paintMoney(pnlWrap, snap.unrealizedPnl, { signed: true });
-      const roe = document.createElement("div");
-      roe.className = "pos-money-roe";
-      roe.textContent = "(" + App.Utils.formatPercent(snap.roe) + ")";
-      pnlWrap.insertBefore(roe, pnlWrap.children[1] || null);
-    } else if (dom.pnlCell) {
-      dom.pnlCell.textContent = "-";
+    // 미실현손익도 같은 이유로 칸을 통째로 비우지 않습니다.
+    // #pos-pnl / #pos-pnl-pct 는 ui.js가 값을 쓰는 요소라 그대로 두고,
+    // 글자만 USDT 표기로 바꾸고 원화 줄을 아래에 덧붙입니다.
+    if (dom.pnlEl && pos) {
+      const m = money(snap.unrealizedPnl, { signed: true });
+      dom.pnlEl.textContent = m === "-" ? "-" : m.usdt;
+      if (dom.pnlPctEl) dom.pnlPctEl.textContent = App.Utils.formatPercent(snap.roe);
+      if (dom.pnlCell) {
+        let krw = dom.pnlCell.querySelector(".pos-money-krw");
+        if (!krw) {
+          krw = document.createElement("div");
+          krw.className = "pos-money-krw";
+          dom.pnlCell.appendChild(krw);
+        }
+        krw.textContent = m === "-" ? "" : m.krw;
+      }
     }
 
     // 일괄청산 버튼은 포지션이 있을 때만 의미가 있습니다.
@@ -140,7 +147,24 @@ App.PositionTableExtra = (function () {
 
     // 종목 부제 — 레퍼런스의 "Isolated 93.00x" 자리.
     // 우리 주문창은 교차(Cross) 방식이라 그대로 적습니다(없는 방식을 적지 않음).
-    if (dom.symbolSub) dom.symbolSub.textContent = "Cross " + Number(pos.leverage).toFixed(2) + "x";
+    //
+    // 주의: 이 칸 안에는 ui.js가 값을 쓰는 #pos-leverage 가 들어 있습니다.
+    // textContent로 통째로 덮어쓰면 그 요소가 사라지고, ui.js가 거기에 값을
+    // 넣다가 멈춰 뒤에 오는 수량·강제청산가가 비어버립니다(실제로 재현됨).
+    // 그래서 #pos-leverage 는 그대로 두고 주변 글자만 바꿉니다.
+    if (dom.levEl) {
+      dom.levEl.textContent = Number(pos.leverage).toFixed(2) + "x";
+      if (dom.symbolSub && dom.symbolSub.firstChild !== dom.prefixNode) {
+        dom.symbolSub.insertBefore(dom.prefixNode, dom.symbolSub.firstChild);
+      }
+      // "· 무기한" 같은 뒤쪽 텍스트는 레퍼런스에 없으므로 비웁니다.
+      let n = dom.levEl.nextSibling;
+      while (n) {
+        const next = n.nextSibling;
+        dom.symbolSub.removeChild(n);
+        n = next;
+      }
+    }
 
     const price = snap.currentPrice;
     // 금액 = 포지션 가치(수량 × 현재가). 현재가가 아직 없으면 진입가 기준.
@@ -205,6 +229,10 @@ App.PositionTableExtra = (function () {
       marginCell: el("pos-margin"),
       pnlCell: el("pos-pnl-cell"),
       symbolSub: document.querySelector(".position-symbol-sub"),
+      levEl: el("pos-leverage"),
+      pnlEl: el("pos-pnl"),
+      pnlPctEl: el("pos-pnl-pct"),
+      prefixNode: document.createTextNode("Cross "),
       closeAllBtn: el("pos-close-all"),
     };
     if (!dom.notional) return;

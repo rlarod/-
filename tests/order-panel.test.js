@@ -448,6 +448,30 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     eq(bodyVisible, heads.length, "헤더 수와 본문 칸 수가 같아야 함");
   });
 
+  t("표시용 덮어쓰기가 ui.js의 요소를 지우지 않음(수량/청산가 공백 회귀 방지)", () => {
+    const { doc, App } = boot();
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64224, time: Date.now() });
+    App.Trading.setLeverage(100);
+    App.Trading.openPosition("long", 10283, null, null);
+    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64058, time: Date.now() });
+    App.PositionTableExtra.renderForTest();
+
+    // ui.js가 값을 쓰는 요소들 — 하나라도 사라지면 그 뒤 줄이 실행되지 않아
+    // 수량·강제청산가가 빈칸이 됩니다(실제로 겪은 문제).
+    ["pos-leverage", "pos-pnl", "pos-pnl-pct"].forEach((id) => {
+      ok(doc.getElementById(id), id + " 를 지우면 ui.js 렌더가 중간에 멈춤");
+    });
+
+    // 값이 실제로 채워져 있어야 함
+    ok(doc.getElementById("pos-qty").textContent.trim() !== "-", "수량이 비면 안 됨");
+    ok(doc.getElementById("pos-liq").textContent.trim() !== "-", "강제청산가가 비면 안 됨");
+
+    // 종목 부제는 레버리지 요소를 남긴 채 주변 글자만 바꿔야 함
+    const sub = doc.querySelector(".position-symbol-sub");
+    ok(/^Cross /.test(sub.textContent.trim()), "부제는 Cross 표기");
+    ok(sub.querySelector("#pos-leverage"), "레버리지 요소가 부제 안에 남아 있어야 함");
+  });
+
   t("하단 탭 이름이 레퍼런스와 같음(자산 탭은 숨김, 삭제 아님)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 63000, time: Date.now() });
