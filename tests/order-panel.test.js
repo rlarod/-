@@ -457,7 +457,10 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     // 기본 table 레이아웃은 내용 길이에 따라 칸 너비를 매번 다시 계산합니다.
     ok(/\.position-table\{table-layout:fixed;\}/.test(css), "칸 폭 고정 필요");
     // 칸마다 비율이 정해져 있어야 내용이 바뀌어도 폭이 유지됩니다
-    ok(/\.position-table th:nth-child\(1\)\{width:\d+%;\}/.test(css), "칸별 폭 지정 필요");
+    ok(/\.position-table th:nth-child\(1\)\{width:[\d.]+%;\}/.test(css), "칸별 폭 지정 필요");
+    // 칸이 몇 개든 폭이 모두 지정돼 있어야 합니다(하나라도 빠지면 그 칸만 흔들림)
+    const declared = (css.match(/\.position-table th:nth-child\(\d+\)\{width:[\d.]+%;\}/g) || []).length;
+    ok(declared >= 8, "폭이 지정된 칸이 너무 적음: " + declared);
     // 숫자 폭이 일정해야 자릿수가 바뀌어도 덜 흔들립니다
     ok(/\.position-table td\{font-variant-numeric:tabular-nums;\}/.test(css), "고정폭 숫자 필요");
     // 폭이 고정된 만큼 넘치는 내용은 잘라야 표가 밀리지 않습니다

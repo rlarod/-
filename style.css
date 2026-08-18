@@ -2210,26 +2210,31 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 칸 비율 — 금액 계열(USDT + 원화 두 줄)은 넓게, 단가 계열은 좁게.
    합이 100%가 되도록 배분합니다(나머지는 미실현/실현/청산이 나눠 가짐). */
-.position-table th:nth-child(1){width:8%;}    /* 종목 */
-.position-table th:nth-child(2){width:10%;}   /* 수량 */
-.position-table th:nth-child(3){width:11%;}   /* 금액 */
-.position-table th:nth-child(4){width:7%;}    /* 진입가 */
-.position-table th:nth-child(5){width:7%;}    /* 현재가 */
-.position-table th:nth-child(6){width:7%;}    /* 강제청산가 */
+/* 실측으로 남는 여유를 재배분했습니다(2870px 기준 총 317px 여유).
+   수량·단가 칸이 남고 금액 계열이 빠듯해서, 남는 쪽을 줄이고 넘치는 쪽을 늘립니다. */
+.position-table th:nth-child(1){width:7.5%;}  /* 종목 */
+.position-table th:nth-child(2){width:8%;}    /* 수량 — 여유 81px이라 축소 */
+.position-table th:nth-child(3){width:11.5%;} /* 금액 */
+.position-table th:nth-child(4){width:6.6%;}  /* 진입가 */
+.position-table th:nth-child(5){width:6.6%;}  /* 현재가 */
+.position-table th:nth-child(6){width:6.6%;}  /* 강제청산가 */
+/* 청산 칸은 버튼 2개뿐이라 남습니다(글자 148 / 칸 239) — 줄여서 위에 보탭니다.
+   다만 버튼이 줄바꿈되지 않도록 최소 폭은 지킵니다. */
+.position-table th:last-child{width:7.5%;}
 /* 개시증거금 이후 칸들은 "USDT + 원화" 두 줄이라 조금 더 넓게 잡습니다.
    (1800px에서 개시증거금이 3px 넘치던 것 보정) */
-.position-table th:nth-child(7){width:12%;}   /* 개시증거금 */
-.position-table th:nth-child(8){width:12%;}   /* 유지증거금 */
+.position-table th:nth-child(7){width:12.5%;} /* 개시증거금 */
+.position-table th:nth-child(8){width:12.5%;} /* 유지증거금 */
 
 /* 레퍼런스 포지션 표는 작고 촘촘합니다. 칸을 고정한 만큼 글자를 줄여
    좁은 화면에서도 값이 잘리지 않게 합니다(폭에 비례). */
 /* 포지션 영역은 좌측 칼럼(시세바와 같은 폭) 안에 들어갑니다.
    글자는 키우되, 그 폭 안에서 값이 잘리지 않는 선까지만 올립니다. */
-.position-table th{font-size:clamp(16px, 0.66vw, 23px);padding-right:8px;}
-.position-table td{font-size:clamp(17px, 0.7vw, 25px);padding-right:8px;}
-.position-table .pos-money-krw{font-size:0.74em;}
-.position-table .position-symbol-name{font-size:clamp(17px, 0.72vw, 25px);}
-.position-table .position-symbol-sub{font-size:clamp(14px, 0.56vw, 20px);}
+.position-table th{font-size:clamp(17px, 0.75vw, 26px);padding-right:8px;}
+.position-table td{font-size:clamp(18px, 0.8vw, 29px);padding-right:8px;}
+.position-table .pos-money-krw{font-size:0.72em;}
+.position-table .position-symbol-name{font-size:clamp(18px, 0.82vw, 29px);}
+.position-table .position-symbol-sub{font-size:clamp(15px, 0.62vw, 22px);}
 .pos-close-btn{font-size:clamp(13px, 0.56vw, 19px);padding:5px 10px;}
 
 
@@ -2249,7 +2254,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 청산 칸(지정가/시장가 두 버튼)은 좁아지면 줄바꿈되므로 최소 폭을 줍니다. */
 .position-table th:last-child,
-.position-table td:last-child{min-width:120px;}
+.position-table td:last-child{min-width:150px;}
 @media (max-width:1799px){
   .position-card .table-scroll > .position-table{min-width:1560px;}
 }
@@ -2270,4 +2275,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .position-table th:nth-child(4),
   .position-table th:nth-child(5),
   .position-table th:nth-child(6){width:6.5%;}
+}
+
+/* 청산 칸(지정가/시장가 두 버튼)은 표가 좁아지면 자리가 모자랍니다.
+   2200px 미만에서는 버튼을 작게 만들어 한 줄에 들어가게 합니다. */
+@media (max-width:2199px){
+  .pos-close-btn{font-size:12px;padding:3px 6px;}
+  .position-close-cell{display:flex;gap:3px;justify-content:flex-end;}
 }
