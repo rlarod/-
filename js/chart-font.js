@@ -37,28 +37,53 @@ App.ChartFont = (function () {
 
   function patch() {
     if (typeof window.LightweightCharts === "undefined") return false;
-    if (window.LightweightCharts.__fontPatched) return true;
-
     var LC = window.LightweightCharts;
-    var origCreate = LC.createChart;
-    if (typeof origCreate !== "function") return false;
+    if (LC.__fontPatched) return true;
+    if (typeof LC.createChart !== "function") return false;
 
-    LC.createChart = function (container, options) {
+    var origCreate = LC.createChart;
+
+    function wrappedCreate(container, options) {
       var opts = options || {};
       opts.layout = opts.layout || {};
       /* chart.js 가 fontSize 를 직접 정하고 있으면 그 값을 존중합니다. */
       if (opts.layout.fontSize === undefined) opts.layout.fontSize = FONT_SIZE;
-
-      var chart = origCreate.call(this, container, opts);
+      var chart = origCreate.call(LC, container, opts);
       try {
         charts.push(chart);
       } catch (e) {
         /* 무시 — 글씨 크기는 이미 적용됐습니다 */
       }
       return chart;
-    };
+    }
 
-    LC.__fontPatched = true;
+    /* 라이브러리 객체는 동결(Object.freeze)돼 있어 createChart 를 덮어쓸 수
+       없습니다(실측: writable=false, configurable=false, isFrozen=true).
+       그냥 대입하면 strict mode 에서 예외가 나 모듈 전체가 죽습니다.
+       대신 원본을 프로토타입으로 삼는 새 객체를 만들어 전역만 바꿔칩니다.
+       CandlestickSeries·CrosshairMode 등 나머지는 프로토타입으로 그대로
+       읽히고, createChart 만 우리 것이 가려 줍니다.
+       (전역 window.LightweightCharts 는 writable=true 라 교체 가능합니다) */
+    try {
+      var proxy = Object.create(LC);
+      Object.defineProperty(proxy, "createChart", {
+        value: wrappedCreate,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+      Object.defineProperty(proxy, "__fontPatched", {
+        value: true,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
+      window.LightweightCharts = proxy;
+    } catch (e) {
+      console.warn("[chart-font.js] 라이브러리를 감싸지 못했습니다 — 글씨 크기는 기본값입니다.", e);
+      return false;
+    }
+
     return true;
   }
 

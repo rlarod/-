@@ -31,7 +31,7 @@ const SRC = fs.readFileSync(path.join(REPO, "js", "chart-font.js"), "utf8");
 function makeFakeLib() {
   const created = [];
   return {
-    lib: {
+    lib: Object.freeze({
       createChart(container, options) {
         const state = { options: JSON.parse(JSON.stringify(options || {})) };
         const chart = {
@@ -43,7 +43,10 @@ function makeFakeLib() {
         created.push({ container, chart, opts: state.options });
         return chart;
       },
-    },
+      /* 실제 라이브러리에도 있는 다른 속성들 — 프로토타입으로 읽혀야 합니다. */
+      CandlestickSeries: {},
+      CrosshairMode: { Normal: 1 },
+    }),
     created,
   };
 }
@@ -72,6 +75,15 @@ console.log("\n차트 글씨 크기");
 
   ok("모듈이 뜬다", !!CF);
   ok("라이브러리를 감쌌다", !!sb.LightweightCharts.__fontPatched);
+
+  /* 실제 라이브러리는 Object.freeze 상태이고 createChart 가 읽기 전용입니다
+     (실측: writable=false, configurable=false, isFrozen=true).
+     그냥 대입하면 예외가 나 모듈 전체가 죽습니다 — 실제로 그렇게 죽어서
+     글씨가 하나도 안 커졌던 적이 있습니다. 그래서 가짜 라이브러리도
+     동결해 두고 검사합니다. */
+  ok("동결된 라이브러리에서도 죽지 않는다", Object.isFrozen(lib));
+  ok("원본 라이브러리는 그대로 둔다(전역만 교체)", lib.createChart !== sb.LightweightCharts.createChart);
+  ok("나머지 속성은 프로토타입으로 읽힌다", sb.LightweightCharts.CandlestickSeries === lib.CandlestickSeries && sb.LightweightCharts.CrosshairMode.Normal === 1);
 
   /* chart.js 가 하는 것과 같은 호출 — fontSize 를 안 넘깁니다 */
   const chart = sb.LightweightCharts.createChart({}, {
