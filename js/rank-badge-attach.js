@@ -90,7 +90,12 @@ App.RankBadgeAttach = (function () {
       if (!rank) return;   // 모르면 아무것도 붙이지 않습니다(잘못된 계급장 방지)
 
       var img = App.RankBadge.el(rank, "ranking", rank.rank_name);
-      if (img) nickCell.insertBefore(img, nickCell.firstChild);
+      if (img) {
+        /* 계급장과 닉네임을 한 줄로 놓기 위해 이 칸에만 표시를 남깁니다
+           (leaderboard.js 는 수정 금지라 CSS 로만 정렬합니다). */
+        nickCell.classList.add("leaderboard-nick-cell");
+        nickCell.insertBefore(img, nickCell.firstChild);
+      }
       tr.setAttribute(MARK, "1");
     });
   }

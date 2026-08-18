@@ -137,6 +137,15 @@ console.log("\n계급장");
   ok("랭킹 32~40px", rank >= 32 && rank <= 40, String(rank));
   ok("프로필 40~56px", prof >= 40 && prof <= 56, String(prof));
   ok("작은 화면 -> 큰 화면 순서가 맞다", chat <= com && com <= rank && rank <= prof);
+  /* 2026-08-18: display:block 이라 계급장이 혼자 줄을 차지해 닉네임이
+     아래로 밀렸습니다(채팅·랭킹표에서 실제로 깨짐). inline 으로 고쳤습니다. */
+  ok("계급장은 inline — 혼자 줄을 차지하지 않는다", /img\.rank-badge\{[^}]*display:inline-block/.test(css));
+  ok("세로 가운데 정렬", /img\.rank-badge\{[^}]*vertical-align:middle/.test(css));
+  ok("채팅 줄이 한 줄로 정렬된다", /\.chat-msg\{display:flex;align-items:center/.test(css));
+  ok("시스템(거래 이벤트) 메시지는 가운데 정렬", /\.chat-msg-event\{justify-content:center;text-align:center;\}/.test(css));
+  ok("랭킹표 닉네임 칸이 한 줄", /#leaderboard-body td\.leaderboard-nick-cell\{[^}]*display:flex/.test(css));
+  ok("내 정보 머리글자 동그라미는 화면에서만 숨김(마크업 유지)", /\.up-avatar\{display:none;\}/.test(css) && /up-avatar/.test(fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8")));
+
   ok("가로는 auto — 비율을 안 찌그러뜨린다", /img\.rank-badge\{width:auto/.test(css) || /rank-badge-img,\s*\nimg\.rank-badge\{width:auto/.test(css));
   ok("다크모드에서도 색을 바꾸지 않는다(그림자만)", !/html\[data-theme="dark"\][^{]*rank-badge[^}]*filter:(?!drop-shadow)/.test(css));
 }

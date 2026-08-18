@@ -2831,8 +2831,10 @@ html[data-theme="dark"] .top-mode-row > .leverage-field-top{
    어떤 계급장도 찌그러지지 않습니다.
    화면별 크기는 사장님이 주신 규격 그대로입니다. */
 .rank-badge{display:inline-flex;align-items:center;vertical-align:middle;}
+/* display:block 이면 계급장이 혼자 줄을 차지해서 닉네임이 아래로 밀립니다
+   (채팅·랭킹표에서 실제로 그렇게 깨졌습니다). inline 으로 두고 세로 가운데 정렬. */
 .rank-badge-img,
-img.rank-badge{width:auto;display:block;object-fit:contain;}
+img.rank-badge{width:auto;display:inline-block;vertical-align:middle;object-fit:contain;flex:0 0 auto;}
 
 img.rank-badge-chat{height:20px;}       /* 실시간 채팅 18~22px */
 img.rank-badge-community{height:22px;}  /* 커뮤니티 20~24px */
@@ -2855,3 +2857,27 @@ html[data-theme="dark"] img.rank-badge{
   img.rank-badge-ranking{height:28px;}
   img.rank-badge-profile{height:40px;}
 }
+
+
+/* ===== 계급장이 붙는 줄 정렬 =====
+   계급장과 닉네임이 한 줄에 세로 가운데로 오도록 맞춥니다. */
+
+/* 실시간 채팅 — 닉네임 줄 */
+.chat-msg{display:flex;align-items:center;flex-wrap:wrap;gap:0;}
+.chat-msg > .chat-msg-text{flex:1 1 100%;}
+.chat-msg img.rank-badge{margin-right:5px;}
+
+/* 시스템(거래 이벤트) 메시지는 가운데 정렬 */
+.chat-msg-event{justify-content:center;text-align:center;}
+.chat-msg-event > .chat-msg-text{flex:1 1 100%;text-align:center;}
+
+/* 랭킹표 닉네임 칸 — 계급장과 닉네임을 한 줄로 */
+#leaderboard-body td.leaderboard-nick-cell{
+  display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;
+}
+#leaderboard-body td.leaderboard-nick-cell img.rank-badge{margin-right:0;}
+
+/* 내 정보 패널 — 계급장 왼쪽의 머리글자 동그라미는 화면에서만 숨깁니다.
+   마크업과 기능은 그대로라 이 한 줄만 지우면 되돌아옵니다. */
+.page-right .up-avatar,
+.up-avatar{display:none;}
