@@ -2000,12 +2000,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .page-right .chat-msg-event .chat-msg-text{
   color:var(--text-dim);font-weight:500;font-size:clamp(17px, 0.75vw, 26px);
 }
-/* 국내 증시 관례 — 익절(이익) 빨강, 손절(손실) 파랑. 내 정보 값 표와 같은 기준. */
-.page-right .chat-msg-event.chat-event-profit{border-left-color:var(--red);}
-.page-right .chat-msg-event.chat-event-loss{border-left-color:var(--blue);}
-.page-right .chat-msg-event.chat-event-liq{border-left-color:var(--blue);}
-.page-right .chat-event-amount-up{color:var(--red);font-weight:700;}
-.page-right .chat-event-amount-down{color:var(--blue);font-weight:700;}
+/* 채팅 거래 이벤트 — 문구 전체에 색을 입힙니다.
+   익절 = 초록 / 손절·강제청산 = 빨강. */
+.page-right .chat-msg-event.chat-event-profit{border-left-color:var(--green);}
+.page-right .chat-msg-event.chat-event-loss{border-left-color:var(--red);}
+.page-right .chat-msg-event.chat-event-liq{border-left-color:var(--red);}
+.page-right .chat-msg-event.chat-event-profit .chat-msg-text{color:var(--green);font-weight:600;}
+.page-right .chat-msg-event.chat-event-loss .chat-msg-text,
+.page-right .chat-msg-event.chat-event-liq .chat-msg-text{color:var(--red);font-weight:600;}
 
 /* 입력 줄 */
 .page-right .chat-input-row{

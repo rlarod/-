@@ -826,17 +826,25 @@ section("[5] 기존 기능 보존");
       return row;
     };
     const win = mk("홍길동님이 BTC 매수 포지션을 +254만원 익절했습니다");
-    ok(win.classList.contains("chat-event-profit"), "익절은 빨강 계열로 구분");
-    ok(win.querySelector(".chat-event-amount-up"), "이익 금액 강조 필요");
+    ok(win.classList.contains("chat-event-profit"), "익절은 초록 계열로 구분");
 
     const lose = mk("홍길동님이 BTC 매도 포지션을 -170만원 손절했습니다");
-    ok(lose.classList.contains("chat-event-loss"), "손절은 파랑 계열로 구분");
-    ok(lose.querySelector(".chat-event-amount-down"), "손실 금액 강조 필요");
+    ok(lose.classList.contains("chat-event-loss"), "손절은 빨강 계열로 구분");
+
+    // 문구 전체에 색이 들어가야 합니다(금액만 강조하지 않음)
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    ok(/\.chat-event-profit \.chat-msg-text\{color:var\(--green\)/.test(css), "익절 문구는 초록");
+    ok(/\.chat-event-liq \.chat-msg-text\{color:var\(--red\)/.test(css), "손절·청산 문구는 빨강");
+
+    // 예전에 달러로 저장된 메시지도 원화로 보여야 합니다
+    const old$ = mk("홍길동님이 BTC 매수 포지션을 $-1,696.82 손절했습니다");
+    ok(/원/.test(old$.querySelector(".chat-msg-text").textContent), "달러 표기가 원화로 바뀌어야 함");
+    ok(!/\$/.test(old$.querySelector(".chat-msg-text").textContent), "달러 기호가 남으면 안 됨");
 
     const liq = mk("홍길동님의 BTC 매수 포지션이 강제청산되었습니다 (-1.23억원)");
     ok(liq.classList.contains("chat-event-liq"), "강제청산 구분 필요");
 
-    // 문구·데이터는 바꾸지 않아야 함
+    // 이미 원화인 문구는 그대로 둡니다
     eq(win.querySelector(".chat-msg-text").textContent,
       "홍길동님이 BTC 매수 포지션을 +254만원 익절했습니다");
   });
