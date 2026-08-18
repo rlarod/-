@@ -40,10 +40,12 @@ App.Theme = (function () {
   }
 
   function paintButton() {
-    const btn = document.getElementById("theme-toggle-btn");
-    if (!btn) return;
     // 버튼에는 "누르면 무엇이 되는지"를 적습니다.
-    btn.textContent = current() === DARK ? "☀ 밝은 모드" : "🌙 다크 모드";
+    const label = current() === DARK ? "☀ 밝은 모드" : "🌙 다크 모드";
+    ["theme-toggle-btn", "header-theme-btn"].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.textContent = label;
+    });
   }
 
   function set(theme) {
@@ -82,6 +84,10 @@ App.Theme = (function () {
         if (btn) toggle();
       });
     }
+    // 헤더 버튼은 다시 그려지지 않으므로 직접 걸어도 됩니다.
+    const headerBtn = document.getElementById("header-theme-btn");
+    if (headerBtn) headerBtn.addEventListener("click", toggle);
+
     if (App.Bus) App.Bus.on("trading:update", paintButton);
     paintButton();
   }

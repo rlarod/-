@@ -732,6 +732,30 @@ section("[5] 기존 기능 보존");
     ok(/schema-daily-recharge\.sql/.test(js), "콘솔에 실행할 파일명을 안내해야 함");
   });
 
+  t("원화 표시에 '원'이 붙음", () => {
+    const { App } = boot({ nickname: "홍길동" });
+    App.Config.setDisplayCurrency("KRW");
+    const krw = App.Utils.formatCurrencyPlain(100000);
+    ok(/원$/.test(krw), "원화인데 단위가 없으면 어떤 통화인지 알 수 없음: " + krw);
+    App.Config.setDisplayCurrency("USDT");
+    ok(!/원$/.test(App.Utils.formatCurrencyPlain(100000)), "USDT에는 원이 붙으면 안 됨");
+  });
+
+  t("다크모드 버튼이 헤더 우측에도 있음", () => {
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const header = doc.getElementById("header-theme-btn");
+    ok(header, "헤더 다크모드 버튼 필요");
+    // 헤더 우측 영역은 숨김 상태라, 그 안이 아니라 바깥에 있어야 보입니다
+    ok(!header.closest(".top-banner-right"), "숨겨진 영역 안에 있으면 안 보임");
+
+    // 두 버튼(헤더/내 정보)의 문구가 함께 바뀌어야 함
+    App.Theme.setForTest("dark");
+    eq(header.textContent.trim(), "☀ 밝은 모드");
+    eq(doc.getElementById("theme-toggle-btn").textContent.trim(), "☀ 밝은 모드");
+    App.Theme.setForTest("light");
+    eq(header.textContent.trim(), "🌙 다크 모드");
+  });
+
   t("다크모드: 변수만 바꿔서 전환, 밝은 모드에 영향 없음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const js = fs.readFileSync(path.join(REPO, "js/theme.js"), "utf8");

@@ -2381,3 +2381,62 @@ html[data-theme="dark"] .amitalk-order .order-preview-row b.is-idle{color:var(--
 html[data-theme="dark"] .ad-creative-wide{
   background:linear-gradient(120deg,#123A73 0%,#1A4E9B 55%,#20407A 100%);
 }
+
+/* 주문창 안에 배경을 #fff로 직접 적어둔 곳들 — 다크모드에서만 표면색으로 */
+html[data-theme="dark"] .margin-mode-badge,
+html[data-theme="dark"] .amitalk-order .interval-btn,
+html[data-theme="dark"] .amitalk-order .chip,
+html[data-theme="dark"] .amitalk-order .order-preview-rows,
+html[data-theme="dark"] .amitalk-order .order-account-rows,
+html[data-theme="dark"] .amitalk-order .ami-tpsl,
+html[data-theme="dark"] .amitalk-order .ami-tpsl select,
+html[data-theme="dark"] .amitalk-order .ami-symbol-row,
+html[data-theme="dark"] .amitalk-order .ami-promo,
+html[data-theme="dark"] .daily-recharge-btn:disabled,
+html[data-theme="dark"] .pos-close-btn,
+html[data-theme="dark"] .pos-close-all-btn{
+  background:var(--surface2);color:var(--text);border-color:var(--border);
+}
+html[data-theme="dark"] .amitalk-order .interval-btn.active,
+html[data-theme="dark"] .amitalk-order .chip.active{background:var(--surface3);color:var(--text);}
+html[data-theme="dark"] .amitalk-order .ami-symbol-row.active{border-color:var(--gold);}
+html[data-theme="dark"] .amitalk-order select{background:var(--surface2);color:var(--text);}
+
+/* 헤더 우측 다크모드 버튼 — 헤더 우측 영역이 숨겨져 있어 그 자리에 단독으로 둡니다. */
+.header-theme-btn{
+  margin-left:auto;flex:0 0 auto;
+  background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  cursor:pointer;padding:clamp(9px, 0.5vw, 16px) clamp(14px, 0.8vw, 24px);
+  font-family:var(--sans);font-size:clamp(16px, 0.7vw, 25px);font-weight:600;
+  color:var(--text-dim);transition:.12s;white-space:nowrap;
+}
+.header-theme-btn:hover{background:var(--surface3);color:var(--text);}
+
+/* 내 정보 안의 전환 버튼 글자 확대(다크모드/밝은모드, USDT/원화) */
+.page-right .theme-toggle{
+  font-size:clamp(16px, 0.72vw, 25px);font-weight:700;color:var(--text-dim);
+  padding:clamp(11px, 0.6vw, 20px) 2px;
+}
+.page-right .up-currency button{font-size:clamp(16px, 0.72vw, 25px);}
+
+/* 남아 있던 밝은 배경 2곳 — 비율 칩과 TP/SL 토글 */
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .ami-tpsl-toggle{
+  background:var(--surface2);color:var(--text);border-color:var(--border);
+}
+html[data-theme="dark"] .chip:hover,
+html[data-theme="dark"] .ami-tpsl-toggle:hover{background:var(--surface3);}
+
+/* 비율 칩(10/25/50/75/100%)은 더 구체적인 선택자로 흰 배경이 지정돼 있어
+   다크모드에서도 같은 강도로 덮어야 합니다. */
+html[data-theme="dark"] .chip-row .chip,
+html[data-theme="dark"] .amitalk-order .chip-row .chip{
+  background:var(--surface2);color:var(--text);border-color:var(--border);
+}
+html[data-theme="dark"] .chip-row .chip:hover{background:var(--surface3);}
+
+/* #qty-percent-row는 id 선택자라 위 규칙보다 강합니다 — 같은 강도로 지정합니다. */
+html[data-theme="dark"] .amitalk-order #qty-percent-row .chip{
+  background:var(--surface2);color:var(--text);
+}
+html[data-theme="dark"] .amitalk-order #qty-percent-row .chip:hover{background:var(--surface3);}

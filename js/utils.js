@@ -37,7 +37,8 @@ App.Utils = (function () {
     if (usdValue === null || usdValue === undefined || isNaN(usdValue)) return "-";
     const cur = App.Config.getDisplayCurrency();
     if (cur === "KRW") {
-      return Math.round(usdValue * App.Config.USD_KRW).toLocaleString("ko-KR");
+      // 숫자만 있으면 어떤 통화인지 알 수 없어 "원"을 붙입니다.
+      return Math.round(usdValue * App.Config.USD_KRW).toLocaleString("ko-KR") + "원";
     }
     return usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
