@@ -2796,3 +2796,31 @@ html[data-theme="dark"] .hd-thumb{background:var(--surface3);}
 html[data-theme="dark"] .top-mode-row > .leverage-field-top{
   box-shadow:0 3px 8px rgba(0,0,0,0.5);
 }
+
+/* ===== TL 마켓 =====
+   핫딜 카드(.hd-*)를 그대로 재사용하고, 마켓만 다른 부분만 덧붙입니다.
+   새 색을 만들지 않습니다 — 기존 변수만 씁니다(다크모드 자동 대응). */
+.mk-card .hd-thumb.mk-thumb{aspect-ratio:2.2 / 1;background:var(--surface2);}
+.mk-icon{font-size:44px;font-weight:700;color:var(--gold);letter-spacing:-0.02em;}
+.mk-desc{
+  font-size:14px;line-height:1.5;color:var(--text-faint);
+  min-height:3em;overflow:hidden;
+}
+.mk-badge-dur{background:var(--surface3);color:var(--text-faint);}
+.mk-badge-own{background:var(--gold-soft);color:var(--gold);}
+.mk-badge-active{background:var(--gold);color:#fff;}
+
+/* 적용 중인 효과 줄 */
+.mk-active{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 14px;margin:6px 0 4px;
+  border:1px solid var(--border);border-radius:3px;background:var(--surface2);
+  font-size:15px;
+}
+.mk-active-label{color:var(--text-faint);}
+.mk-active-item{color:var(--text);}
+.mk-active-item b{color:var(--gold);}
+
+/* TL 거래내역 증감 색 — 손익 색과 같은 규칙을 씁니다 */
+.mk-tx-minus{color:var(--red);}
+.mk-tx-plus{color:var(--green);}

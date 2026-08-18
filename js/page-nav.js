@@ -33,12 +33,18 @@ App.PageNav = (function () {
     if (dom.boardPage) dom.boardPage.style.display = page === "board" ? "" : "none";
     if (dom.mypagePage) dom.mypagePage.style.display = page === "mypage" ? "" : "none";
     if (dom.hotdealPage) dom.hotdealPage.style.display = page === "hotdeal" ? "" : "none";
+    if (dom.marketPage) dom.marketPage.style.display = page === "market" ? "" : "none";
     if (dom.exchangeBtn) dom.exchangeBtn.classList.toggle("active", page === "exchange");
     if (dom.rankingBtn) dom.rankingBtn.classList.toggle("active", page === "ranking");
     if (dom.battleBtn) dom.battleBtn.classList.toggle("active", page === "battle");
     if (dom.boardBtn) dom.boardBtn.classList.toggle("active", page === "board");
     if (dom.mypageBtn) dom.mypageBtn.classList.toggle("active", page === "mypage");
     if (dom.hotdealBtn) dom.hotdealBtn.classList.toggle("active", page === "hotdeal");
+    if (dom.marketBtn) dom.marketBtn.classList.toggle("active", page === "market");
+
+    if (page === "market" && App.TLMarket && typeof App.TLMarket.refresh === "function") {
+      App.TLMarket.refresh();
+    }
 
     // TL 핫딜은 열릴 때 서버에서 상품/잔액을 새로 받아옵니다(재고가 바뀌었을 수 있음).
     if (page === "hotdeal" && App.TLHotdeal && typeof App.TLHotdeal.refresh === "function") {
@@ -61,12 +67,14 @@ App.PageNav = (function () {
       boardPage: el("page-board"),
       mypagePage: el("page-mypage"),
       hotdealPage: el("page-hotdeal"),
+      marketPage: el("page-market"),
       exchangeBtn: el("page-nav-exchange"),
       rankingBtn: el("page-nav-ranking"),
       battleBtn: el("page-nav-battle"),
       boardBtn: el("page-nav-board"),
       mypageBtn: el("page-nav-mypage"),
       hotdealBtn: el("page-nav-hotdeal"),
+      marketBtn: el("page-nav-market"),
     };
     if (!dom.exchangePage) return; // 마크업 없으면 조용히 종료
 
@@ -76,6 +84,7 @@ App.PageNav = (function () {
     if (dom.boardBtn) dom.boardBtn.addEventListener("click", () => showPage("board"));
     if (dom.mypageBtn) dom.mypageBtn.addEventListener("click", () => showPage("mypage"));
     if (dom.hotdealBtn) dom.hotdealBtn.addEventListener("click", () => showPage("hotdeal"));
+    if (dom.marketBtn) dom.marketBtn.addEventListener("click", () => showPage("market"));
 
     // 준비중 메뉴 — 페이지 전환 없이 안내만(요구사항: 실제 기능 없는 메뉴는 UI만 만들고 "준비중" 처리)
     document.querySelectorAll(".nav-coming-soon").forEach((btn) => {

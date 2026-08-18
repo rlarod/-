@@ -126,7 +126,7 @@
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-schedule">대회일정 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-join">참가신청 <span class="nav-soon-badge">준비중</span></button>
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-market">🎟 TL 마켓 <span class="nav-soon-badge">준비중</span></button>
+      <button class="top-banner-nav-btn" id="page-nav-market" data-page="market">🛒 TL 마켓</button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-notice">공지사항 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-support">고객센터 <span class="nav-soon-badge">준비중</span></button>
     </nav>
@@ -679,6 +679,73 @@
     </div>
   </div>
 
+  <!-- ===== TL 마켓(기본 숨김) — 모의투자 아이템 상점 =====
+       상품/가격/효과/재고/구매는 전부 Supabase(tl_market_products,
+       purchase_tl_market_item, use_user_item)에서 옵니다.
+       화면에 하드코딩한 상품이나 가격은 없습니다. -->
+  <div id="page-market" style="display:none;">
+    <div class="panel" id="market-panel">
+      <div class="field-label"><span>🛒 TL 마켓</span></div>
+
+      <div class="hd-head">
+        <div class="hd-head-copy">
+          <p class="hd-lede">매매로 모은 TL로 모의투자 아이템을 구매하세요.</p>
+        </div>
+        <div class="hd-balance">
+          <span class="hd-balance-label">보유 TL</span>
+          <b class="hd-balance-value" id="mk-balance">-</b>
+          <span class="hd-balance-sub" id="mk-balance-sub"></span>
+        </div>
+        <div class="hd-head-nav">
+          <button type="button" class="hd-tab-btn active" id="mk-tab-shop">TL 마켓</button>
+          <button type="button" class="hd-tab-btn" id="mk-tab-bag">아이템 보관함</button>
+          <button type="button" class="hd-tab-btn" id="mk-tab-hotdeal">TL 핫딜</button>
+          <button type="button" class="hd-tab-btn" id="mk-tab-tx">TL 거래내역</button>
+        </div>
+      </div>
+
+      <div class="hd-filters">
+        <div class="hd-chip-row" id="mk-category-row"></div>
+        <div class="hd-tools">
+          <input type="text" class="hd-search" id="mk-search" placeholder="🔍 아이템 검색" autocomplete="off">
+          <select class="hd-sort" id="mk-sort">
+            <option value="popular">인기순</option>
+            <option value="new">신상품순</option>
+            <option value="tl-asc">TL 낮은순</option>
+            <option value="tl-desc">TL 높은순</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 지금 켜져 있는 효과 -->
+      <div class="mk-active" id="mk-active" style="display:none;"></div>
+
+      <div class="hd-section" id="mk-shop-section">
+        <div class="hd-section-title">아이템 <span class="hd-count" id="mk-count"></span></div>
+        <div class="hd-grid" id="mk-grid"></div>
+        <div class="hd-empty" id="mk-empty" style="display:none;"></div>
+      </div>
+
+      <!-- 아이템 보관함 -->
+      <div class="hd-section" id="mk-bag-section" style="display:none;">
+        <div class="hd-section-title">내 아이템</div>
+        <div class="hd-grid" id="mk-bag-grid"></div>
+        <div class="hd-empty" id="mk-bag-empty" style="display:none;"></div>
+      </div>
+
+      <!-- TL 거래내역 -->
+      <div class="hd-section" id="mk-tx-section" style="display:none;">
+        <div class="hd-section-title">TL 거래내역</div>
+        <div class="table-scroll">
+          <table class="data-table" id="mk-tx-table">
+            <thead><tr><th>내용</th><th>일시</th><th>변동</th><th>잔액</th></tr></thead>
+            <tbody id="mk-tx-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TL 핫딜(기본 숨김) — page-nav.js가 전환, js/tl-hotdeal.js가 내용 담당 =====
        상품/가격/재고/구매는 전부 Supabase(tl_products, purchase_tl_product)에서 옵니다.
        화면에 하드코딩한 상품이나 잔액은 없습니다. -->
@@ -788,6 +855,10 @@
         <div class="mypage-item">
           <span class="mypage-item-label">사용한 TL</span>
           <span class="mypage-value" id="mypage-tl-spent">-</span>
+        </div>
+        <div class="mypage-item">
+          <span class="mypage-item-label">보유 아이템</span>
+          <span class="mypage-value" id="mypage-items">-</span>
         </div>
       </div>
     </div>
@@ -919,6 +990,10 @@
 <script src="js/tl-brand.js"></script>
 <!-- TL 핫딜 — 상품/구매는 전부 Supabase RPC. 프론트에서 TL을 깎지 않습니다. -->
 <script src="js/tl-hotdeal.js"></script>
+<!-- TL 마켓 — 아이템 구매/보관함/사용. TL 차감은 전부 서버 RPC. -->
+<script src="js/tl-market.js"></script>
+<!-- 레버리지 상한 게이트 — App.Trading.setLeverage를 감쌉니다(trading.js 무수정) -->
+<script src="js/leverage-gate.js"></script>
 <script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>
