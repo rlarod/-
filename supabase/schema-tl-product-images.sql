@@ -43,28 +43,43 @@ select count(*) as 전체상품,
 from public.tl_products;
 
 
--- ---------------- 4) 아직 등록 못 한 상품 ----------------
--- 이미지는 받았는데 상품 목록에 없는 것들입니다.
--- 처음 주신 목록에 없던 금액대라 TL 가격을 임의로 정하지 않았습니다.
+-- ---------------- 4) 30,000 / 50,000원권 신규 등록 ----------------
+-- 이미지는 받았는데 처음 목록에 없던 금액대입니다.
+-- TL 가격은 지어내지 않고, 사장님이 이미 정하신 가격표에서 규칙을 뽑아 계산했습니다.
 --
---   스타벅스 30,000원   assets/products/starbucks-30000.png
---   메가커피 30,000원   assets/products/mega-30000.png
---   메가커피 50,000원   assets/products/mega-50000.png
+--  [기준표] 배민·쿠팡·스타벅스 금액권이 모두 같은 값을 씁니다
+--     5,000원 ->  1,400 TL
+--    10,000원 ->  2,700 TL
+--    20,000원 ->  5,300 TL
+--    30,000원 ->  8,000 TL
+--    50,000원 -> 13,500 TL
 --
--- 참고 — 지금 등록된 비율
---   스타벅스 10,000원 -> 2,700 TL / 20,000원 -> 5,300 TL
---   메가커피 10,000원 -> 2,500 TL
---   배민·쿠팡 30,000원 -> 8,000 TL / 50,000원 -> 13,500 TL
+--  [스타벅스] 10,000/20,000원이 기준표와 똑같으므로 30,000원도 기준표 그대로
+--    -> 8,000 TL
 --
--- TL 가격을 정하신 뒤 <TL가격> 자리를 채우고 주석을 풀어 실행하세요.
+--  [메가커피] 10,000원이 2,500 TL 로 기준표(2,700)보다 1만원당 200 TL 쌉니다.
+--    같은 할인폭을 적용했고, 비율(2500/2700)로 계산해도 같은 값이 나옵니다.
+--      30,000원 : 8,000 - 600 = 7,400   (비율식 7,407 -> 100 단위로 맞춤)
+--      50,000원 : 13,500 - 1,000 = 12,500  (비율식도 정확히 12,500)
 --
--- insert into public.tl_products
---   (name, brand, category, price, tl_price, stock, max_purchase, sort_order, image_url)
--- values
---   ('금액권 30,000원', '스타벅스', 'cafe', 30000, <TL가격>, 50, 2, 16,
---    'assets/products/starbucks-30000.png'),
---   ('금액권 30,000원', '메가커피', 'cafe', 30000, <TL가격>, 50, 2, 17,
---    'assets/products/mega-30000.png'),
---   ('금액권 50,000원', '메가커피', 'cafe', 50000, <TL가격>, 50, 2, 18,
---    'assets/products/mega-50000.png')
--- on conflict do nothing;
+-- 재고 50 / 1인 2개 제한은 기존 상품과 동일하게 맞췄습니다.
+insert into public.tl_products
+  (name, brand, category, price, tl_price, stock, max_purchase, sort_order, image_url)
+values
+  ('금액권 30,000원', '스타벅스', 'cafe', 30000,  8000, 50, 2, 16,
+   'assets/products/starbucks-30000.png'),
+  ('금액권 30,000원', '메가커피', 'cafe', 30000,  7400, 50, 2, 17,
+   'assets/products/mega-30000.png'),
+  ('금액권 50,000원', '메가커피', 'cafe', 50000, 12500, 50, 2, 18,
+   'assets/products/mega-50000.png')
+on conflict do nothing;
+
+
+-- ---------------- 5) 최종 확인 ----------------
+-- 화면에 보이는 상품(이미지 있는 것)이 6개여야 합니다.
+select brand, name, price, tl_price,
+       round(tl_price / price, 4) as "원당TL",
+       coalesce(image_url, '(없음 — 화면에서 숨김)') as 이미지
+from public.tl_products
+where image_url is not null
+order by brand, price;

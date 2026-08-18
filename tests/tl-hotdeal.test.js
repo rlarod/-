@@ -313,6 +313,52 @@ console.log("\n  구조·보안·디자인");
   ok("단위는 TL", /return num\(n\) \+ " TL"/.test(js));
 }
 
+/* ---------- 새로 정한 TL 가격이 기존 표와 어긋나지 않는지 ---------- */
+console.log("\n  TL 가격 일관성");
+{
+  const sqlImg = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-product-images.sql"), "utf8");
+  const sqlMain = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
+
+  /* 사장님이 직접 정하신 기준표 */
+  const STD = { 5000: 1400, 10000: 2700, 20000: 5300, 30000: 8000, 50000: 13500 };
+
+  /* 기준표가 실제로 등록 SQL 에 그대로 들어있는지 먼저 확인 */
+  ok("배민 30,000원이 기준표대로 8,000 TL", /'배달의민족', 'delivery', 30000,\s*8000/.test(sqlMain));
+  ok("쿠팡 50,000원이 기준표대로 13,500 TL", /'쿠팡',\s*'shopping', 50000, 13500/.test(sqlMain));
+  ok("메가커피 10,000원은 2,500 TL (기준표보다 200 쌈)", /'메가커피',\s*'cafe',\s*10000,\s*2500/.test(sqlMain));
+
+  /* 새로 정한 값 */
+  function tlIn(sql, brand, won) {
+    const re = new RegExp("'" + brand + "', 'cafe', " + won + ",\\s*(\\d+)");
+    const m = sql.match(re);
+    return m ? Number(m[1]) : null;
+  }
+  const sb30 = tlIn(sqlImg, "스타벅스", 30000);
+  const mg30 = tlIn(sqlImg, "메가커피", 30000);
+  const mg50 = tlIn(sqlImg, "메가커피", 50000);
+
+  ok("스타벅스 30,000원 = 기준표 그대로 8,000 TL", sb30 === STD[30000], String(sb30));
+  ok("메가커피 30,000원 = 7,400 TL (1만원당 200 할인)", mg30 === STD[30000] - 600, String(mg30));
+  ok("메가커피 50,000원 = 12,500 TL (1만원당 200 할인)", mg50 === STD[50000] - 1000, String(mg50));
+
+  /* 비율식으로 계산해도 같은 답이 나와야 합니다(두 방법 교차 검증) */
+  const ratio = 2500 / 2700;
+  ok("메가 50,000원은 비율식(2500/2700)과 정확히 일치", Math.round(STD[50000] * ratio) === mg50, String(Math.round(STD[50000] * ratio)));
+  ok("메가 30,000원은 비율식과 10 TL 이내", Math.abs(STD[30000] * ratio - mg30) < 10, String(Math.round(STD[30000] * ratio)));
+
+  /* 금액이 커질수록 원당 TL 이 싸지는(=손해 안 보는) 방향인지 */
+  ok("스타벅스: 금액이 클수록 원당 TL 이 낮아진다", 2700 / 10000 >= sb30 / 30000);
+  ok("메가커피: 금액이 클수록 원당 TL 이 낮아진다", 2500 / 10000 >= mg50 / 50000);
+
+  /* 같은 금액이면 메가커피가 항상 더 싸야 합니다 */
+  ok("같은 30,000원이면 메가커피가 스타벅스보다 싸다", mg30 < sb30, mg30 + " vs " + sb30);
+
+  /* 100 TL 단위로 떨어지는 깔끔한 값인지 */
+  [sb30, mg30, mg50].forEach(function (v) {
+    ok(v + " TL 은 100 단위로 떨어진다", v % 100 === 0);
+  });
+}
+
 console.log("\n==========================================================");
 console.log("통과 " + pass + " / 실패 " + fail);
 if (fail === 0) console.log("전체 통과 ✅");
