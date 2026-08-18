@@ -23,19 +23,20 @@ App.LayoutAlign = (function () {
   let col = null;
   let grid = null;
   let chat = null;
+  // 채팅 윗변 ~ 거래 행 윗변 사이 거리(시세바·상품탭 높이). 거래 화면에서 실측해 둡니다.
+  let offsetFromChatTop = 275;
 
-  // 채팅 아랫변을 맞출 기준 요소를 찾습니다.
-  // 거래 화면이면 거래 행, 다른 페이지(커뮤니티/랭킹 등)면 그 페이지의 본문.
-  function anchorBottom() {
-    if (grid && grid.offsetParent) return grid.getBoundingClientRect().bottom;
-    // 거래 화면이 아니면 현재 보이는 페이지를 찾습니다(인라인 style로 전환됨).
-    const app = document.querySelector(".page-left .app");
-    if (!app) return null;
-    const pages = app.children;
-    for (let i = 0; i < pages.length; i++) {
-      if (pages[i].offsetParent) return pages[i].getBoundingClientRect().bottom;
-    }
-    return null;
+  // 채팅 높이는 거래 행(차트·호가창·주문창) 기준으로 고정합니다.
+  //
+  // 커뮤니티 같은 다른 페이지도 "차트/호가창/주문창 자리에 게시판이 들어간 것"
+  // 이라고 보기 때문에, 페이지 내용이 짧다고 채팅이 같이 줄어들면 안 됩니다.
+  // 그래서 거래 행이 숨어 있어도 그 높이를 그대로 씁니다.
+  function anchorHeight() {
+    if (!grid) return null;
+    // 숨겨져 있으면 getBoundingClientRect가 0이라, CSS에 지정된 높이를 읽습니다.
+    if (grid.offsetParent) return grid.getBoundingClientRect().height;
+    const h = parseFloat(getComputedStyle(grid).height);
+    return isFinite(h) && h > 0 ? h : null;
   }
 
   function apply() {
@@ -48,18 +49,16 @@ App.LayoutAlign = (function () {
       return;
     }
 
-    const bottom = anchorBottom();
-    if (bottom === null) return;
-    const chatTop = chat.getBoundingClientRect().top;
-    const h = Math.round(bottom - chatTop);
-    // 너무 짧으면 채팅이 찌그러지므로 최소 높이를 둡니다.
-    // (파란 헤더 134px + 메시지 영역 + 입력줄이 들어갈 최소치)
-    const MIN_H = 260;
-    if (h < MIN_H) {
-      col.style.height = MIN_H + "px";
-      col.style.maxHeight = MIN_H + "px";
-      return;
+    const gridH = anchorHeight();
+    if (gridH === null) return;
+
+    // 거래 행 윗변까지의 거리(시세바 등)를 더해 아랫변을 맞춥니다.
+    // 거래 화면일 때 실제로 재서 기억해두고, 다른 페이지에서도 같은 값을 씁니다.
+    if (grid && grid.offsetParent) {
+      offsetFromChatTop = grid.getBoundingClientRect().top - chat.getBoundingClientRect().top;
     }
+    const h = Math.round(offsetFromChatTop + gridH);
+    if (h <= 0) return;
 
     col.style.height = h + "px";
     col.style.maxHeight = h + "px";

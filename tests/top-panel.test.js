@@ -666,7 +666,11 @@ section("[5] 기존 기능 보존");
   t("채팅 아랫변을 거래 행에 맞춤 — 화면 높이에 따라 어긋나지 않게", () => {
     const js = fs.readFileSync(path.join(REPO, "js/layout-align.js"), "utf8");
     // 채팅은 100vh 기준, 거래 행은 콘텐츠 기준이라 CSS만으로는 못 맞춥니다.
-    ok(/getBoundingClientRect\(\)\.bottom/.test(js), "거래 행 실제 위치를 재야 함");
+    ok(/getBoundingClientRect\(\)/.test(js), "거래 행 실제 크기를 재야 함");
+    // 커뮤니티 등 다른 페이지에서도 채팅이 줄어들면 안 됩니다
+    // (차트/호가창/주문창 자리에 그 페이지가 들어간 것으로 봅니다).
+    ok(/offsetParent[\s\S]*?getComputedStyle\(grid\)\.height/.test(js),
+      "거래 행이 숨어 있어도 그 높이를 써야 함");
     ok(/\.main-grid/.test(js) && /page-chat-col/.test(js), "거래 행과 채팅을 모두 참조해야 함");
     // 좌우 2단이 풀리는 폭에서는 손대지 않아야 함
     ok(/MIN_WIDTH = 1800/.test(js), "2단 기준 폭이 style.css와 같아야 함");
