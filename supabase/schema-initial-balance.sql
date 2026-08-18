@@ -61,11 +61,44 @@ create trigger trg_force_starting_balance
 -- 이미 낸 손익(balance - initial_balance)은 그대로 보존됩니다.
 --   예) 잔고 12,000 / 초기 10,000 (= +2,000 수익)
 --       -> 잔고 102,000 / 초기 100,000 (= +2,000 수익, 그대로)
-update public.trading_accounts
-   set balance         = balance + (public.starting_balance() - initial_balance),
-       initial_balance = public.starting_balance(),
-       updated_at      = now()
- where initial_balance is distinct from public.starting_balance();
+--
+-- ★ 이 DB 에는 initial_balance 변경을 막는 트리거가 걸려 있습니다.
+--   (check_trading_account_update() — 사용자가 자기 초기자산을 조작해
+--    수익률을 부풀리는 것을 막는 안전장치입니다. 좋은 장치라 없애지 않습니다.)
+--   그래서 이 관리 작업 동안에만 잠깐 끄고, 끝나면 반드시 다시 켭니다.
+--   중간에 실패해도 전체가 하나의 트랜잭션이라 트리거는 원래대로 돌아갑니다.
+do $$
+declare
+  t record;
+  moved integer;
+begin
+  -- (a) trading_accounts 의 사용자 정의 트리거를 잠시 끕니다.
+  for t in
+    select tgname from pg_trigger
+     where tgrelid = 'public.trading_accounts'::regclass
+       and not tgisinternal
+  loop
+    execute format('alter table public.trading_accounts disable trigger %I', t.tgname);
+  end loop;
+
+  -- (b) 보정
+  update public.trading_accounts
+     set balance         = balance + (public.starting_balance() - initial_balance),
+         initial_balance = public.starting_balance(),
+         updated_at      = now()
+   where initial_balance is distinct from public.starting_balance();
+  get diagnostics moved = row_count;
+  raise notice '초기자산 보정된 계정 수: %', moved;
+
+  -- (c) 반드시 다시 켭니다.
+  for t in
+    select tgname from pg_trigger
+     where tgrelid = 'public.trading_accounts'::regclass
+       and not tgisinternal
+  loop
+    execute format('alter table public.trading_accounts enable trigger %I', t.tgname);
+  end loop;
+end $$;
 
 
 -- ---------------- 4) 관리자 시즌 초기화도 같은 금액으로 ----------------
@@ -114,7 +147,25 @@ grant execute on function public.reset_season to authenticated;
 
 
 -- ---------------- 5) 확인 ----------------
+-- (1) 보정 결과 — '안맞는계정' 이 0 이어야 합니다.
 select count(*) as 전체계정,
        count(*) filter (where initial_balance = 100000) as 초기자산_10만USDT,
        count(*) filter (where initial_balance <> 100000) as 안맞는계정
 from public.trading_accounts;
+
+-- (2) 트리거가 전부 다시 켜졌는지 — enabled 가 모두 'O'(원래대로) 여야 합니다.
+select tgname as 트리거,
+       case tgenabled when 'O' then 'O (켜짐)'
+                      when 'D' then 'D (꺼짐 — 문제!)'
+                      else tgenabled::text end as 상태
+from pg_trigger
+where tgrelid = 'public.trading_accounts'::regclass and not tgisinternal;
+
+-- (3) 이 DB 에만 있고 저장소에는 없는 방어 트리거의 실제 내용입니다.
+--     reset_season() 도 initial_balance 를 바꾸므로 같은 트리거에 막힐 수
+--     있습니다. 아래 결과를 개발자에게 보여주시면 확인해 드립니다.
+select p.proname as 함수명, pg_get_functiondef(p.oid) as 정의
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in ('check_trading_account_update');
