@@ -46,6 +46,12 @@ App.LayoutAlign = (function () {
     if (window.innerWidth < MIN_WIDTH || !chat.offsetParent) {
       col.style.height = "";
       col.style.maxHeight = "";
+      // 2단이 아니면 페이지 높이도 원래대로 되돌립니다.
+      document.querySelectorAll(".page-left .app > div").forEach((pg) => {
+        pg.style.minHeight = "";
+        const pn = pg.querySelector(".panel");
+        if (pn) pn.style.minHeight = "";
+      });
       return;
     }
 
@@ -62,6 +68,35 @@ App.LayoutAlign = (function () {
 
     col.style.height = h + "px";
     col.style.maxHeight = h + "px";
+
+    alignPageToChat(h);
+  }
+
+  // 거래 화면이 아닌 페이지(커뮤니티/랭킹/마이페이지)의 본문도 채팅과 같은
+  // 아랫변까지 늘립니다. 글이 적어도 오른쪽 채팅만 길게 남지 않게 하기 위함입니다.
+  function alignPageToChat(chatHeight) {
+    const app = document.querySelector(".page-left .app");
+    if (!app) return;
+
+    let page = null;
+    for (let i = 0; i < app.children.length; i++) {
+      if (app.children[i].offsetParent) {
+        page = app.children[i];
+        break;
+      }
+    }
+    // 거래 화면은 원래 높이를 그대로 씁니다(차트·주문창이 채우고 있음).
+    if (!page || page.id === "page-exchange") return;
+
+    const chatBottom = chat.getBoundingClientRect().bottom;
+    const pageTop = page.getBoundingClientRect().top;
+    const target = Math.round(chatBottom - pageTop);
+    if (target <= 0) return;
+
+    page.style.minHeight = target + "px";
+    // 페이지 안의 첫 패널도 같이 늘려 빈 배경이 드러나지 않게 합니다.
+    const panel = page.querySelector(".panel");
+    if (panel) panel.style.minHeight = target + "px";
   }
 
   function init() {

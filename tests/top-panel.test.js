@@ -671,6 +671,9 @@ section("[5] 기존 기능 보존");
     // (차트/호가창/주문창 자리에 그 페이지가 들어간 것으로 봅니다).
     ok(/offsetParent[\s\S]*?getComputedStyle\(grid\)\.height/.test(js),
       "거래 행이 숨어 있어도 그 높이를 써야 함");
+    // 게시판 등 다른 페이지 본문도 채팅과 같은 아랫변까지 늘려야 합니다
+    ok(/alignPageToChat/.test(js), "페이지 본문도 채팅 높이에 맞춰야 함");
+    ok(/page\.id === "page-exchange"/.test(js), "거래 화면은 원래 높이를 유지해야 함");
     ok(/\.main-grid/.test(js) && /page-chat-col/.test(js), "거래 행과 채팅을 모두 참조해야 함");
     // 좌우 2단이 풀리는 폭에서는 손대지 않아야 함
     ok(/MIN_WIDTH = 1800/.test(js), "2단 기준 폭이 style.css와 같아야 함");
