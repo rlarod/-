@@ -181,8 +181,25 @@ App.AmiTalkOrderPanel = (function () {
     const badge = el("lev-mode-badge");
     const field = el("leverage-field-top");
     if (!badge || !field) return;
-    badge.addEventListener("click", () => {
-      field.style.display = field.style.display === "none" ? "" : "none";
+    /* 슬라이더는 아래 내용을 밀어내지 않도록 겹쳐 뜹니다(CSS).
+       떠 있는 동안 아래 버튼을 가리므로, 바깥을 누르거나 ESC 를 누르면
+       닫히게 했습니다. 배지를 다시 눌러 닫는 방식도 그대로 둡니다. */
+    function isOpen() {
+      return field.style.display !== "none";
+    }
+    function close() {
+      field.style.display = "none";
+    }
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      field.style.display = isOpen() ? "none" : "";
+    });
+    field.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("click", () => {
+      if (isOpen()) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && isOpen()) close();
     });
     const modeBadge = el("margin-mode-badge");
     if (modeBadge) {

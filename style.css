@@ -2777,3 +2777,19 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
    어두운 배경에서만 그림자와 이미지 밝기를 조금 조정합니다. */
 html[data-theme="dark"] .hd-card{box-shadow:none;}
 html[data-theme="dark"] .hd-thumb{background:var(--surface3);}
+
+/* ===== 레버리지 슬라이더 — 겹쳐 띄우기 =====
+   펼칠 때 아래 내용을 밀어내면 주문창이 넘쳐서 스크롤이 생겼습니다(실측).
+   교차/레버리지 줄 바로 아래에 떠 있게 해서 주문창 높이를 바꾸지 않습니다.
+   마크업과 기능(#lev-slider)은 그대로입니다. */
+.top-mode-row{position:relative;}
+.top-mode-row > .leverage-field-top{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
+  margin:0;padding:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:3px;
+  box-shadow:0 3px 8px rgba(0,0,0,0.16);
+}
+.top-mode-row > .leverage-field-top #lev-slider{width:100%;display:block;}
+html[data-theme="dark"] .top-mode-row > .leverage-field-top{
+  box-shadow:0 3px 8px rgba(0,0,0,0.5);
+}
