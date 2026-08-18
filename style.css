@@ -2442,3 +2442,7 @@ html[data-theme="dark"] .amitalk-order #qty-percent-row .chip{
   background:var(--surface2);color:var(--text);
 }
 html[data-theme="dark"] .amitalk-order #qty-percent-row .chip:hover{background:var(--surface3);}
+/* 핫딜은 준비중이지만 메뉴에는 노출합니다.
+   nav-coming-soon 클래스를 유지해야 클릭 시 안내가 뜨므로,
+   숨김 규칙만 이 항목에 한해 되돌립니다(id 선택자가 더 강함). */
+.top-banner-nav-btn.nav-coming-soon#page-nav-hotdeal{display:inline-flex;}

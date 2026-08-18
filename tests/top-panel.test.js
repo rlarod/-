@@ -617,30 +617,36 @@ section("[5] 기존 기능 보존");
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
 
-  t("메뉴는 실제로 동작하는 것만 노출(준비중은 마크업 보존)", () => {
-    const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+  t("메뉴 구성 — 동작 메뉴는 페이지 연결, 핫딜은 준비중 안내", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const { doc } = boot({ nickname: "홍길동" });
 
-    // 노출 메뉴는 전부 실제 페이지가 있어야 합니다(죽은 메뉴 금지)
-    const shown = Array.prototype.filter.call(
+    // 페이지가 연결된(=동작하는) 메뉴는 전부 실제 페이지가 있어야 합니다
+    const working = Array.prototype.filter.call(
       doc.querySelectorAll(".top-banner-nav-btn"),
       (b) => !b.classList.contains("nav-coming-soon")
     );
-    eq(shown.length, 5, "동작하는 메뉴 5개");
-    shown.forEach((b) => {
+    eq(working.length, 4, "동작하는 메뉴 4개(코인선물/커뮤니티/랭킹/마이페이지)");
+    working.forEach((b) => {
       const page = b.dataset.page;
       ok(page, b.textContent.trim() + " 에 연결 페이지가 없음");
       ok(doc.getElementById("page-" + page), "page-" + page + " 가 없음");
     });
 
-    // 준비중 메뉴는 지우지 않고 남겨둡니다
-    ["schedule", "join", "hotdeal", "market", "notice", "support"].forEach((id) => {
-      const el = doc.getElementById("page-nav-" + id);
-      ok(el, "page-nav-" + id + " 이 사라지면 안 됨");
-      ok(el.classList.contains("nav-coming-soon"), id + " 은 준비중 표시 유지");
+    // 핫딜은 노출하되 준비중 안내가 떠야 하므로 클래스를 유지하고 CSS로만 보여줍니다
+    const hot = doc.getElementById("page-nav-hotdeal");
+    ok(hot && hot.classList.contains("nav-coming-soon"), "핫딜은 준비중 클래스 유지(클릭 안내용)");
+    ok(/#page-nav-hotdeal\{display:inline-flex;\}/.test(css), "핫딜만 숨김 해제하는 규칙 필요");
+
+    // 전쟁터는 화면에서만 숨기고 페이지·모듈은 그대로
+    const battle = doc.getElementById("page-nav-battle");
+    ok(battle && battle.classList.contains("nav-coming-soon"), "전쟁터는 화면에서 숨김");
+    ok(doc.getElementById("page-battle"), "전쟁터 페이지가 사라지면 안 됨");
+
+    // 나머지 준비중 메뉴도 마크업 보존
+    ["schedule", "join", "market", "notice", "support"].forEach((id) => {
+      ok(doc.getElementById("page-nav-" + id), "page-nav-" + id + " 이 사라지면 안 됨");
     });
-    // 인라인 style로 숨기던 방식이 남아 있으면 CSS 규칙과 충돌합니다
-    ok(!/id="page-nav-battle"[^>]*display:none/.test(html), "동작하는 메뉴에 인라인 숨김이 남으면 안 됨");
   });
 
   t("채팅 파란 띠 높이를 배너와 동일하게(단차 방지)", () => {
