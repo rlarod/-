@@ -2291,3 +2291,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .pos-close-btn{font-size:12px;padding:3px 6px;}
   .position-close-cell{display:flex;gap:3px;justify-content:flex-end;}
 }
+
+/* 통화 줄은 두 칸으로 꽉 채웁니다. 위쪽 .up-currency 규칙이 다른 곳에서
+   덮여 폭이 줄어드는 일이 없도록 여기서 한 번 더 지정합니다. */
+.page-right .up-currency{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+/* 통화 버튼이 다른 규칙(#EEEEEE 배경 등)에 덮이지 않도록 같은 강도로 지정합니다. */
+.page-right .up-currency button{
+  background:var(--surface);color:var(--text-dim);
+  font-size:clamp(15px, 0.66vw, 23px);font-weight:700;
+  padding:clamp(10px, 0.55vw, 18px) 2px;
+}
+.page-right .up-currency button.active{background:var(--gold);color:#fff;}
+.page-right .up-currency button:hover:not(.active){background:var(--surface2);}
