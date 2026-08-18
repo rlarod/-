@@ -62,12 +62,17 @@ App.OrderFeePreview = (function () {
   }
 
   /* 가격 — qty-price-order.js 의 getEffectivePrice() 와 같은 기준입니다.
-     limit-price-input 의 값은 이미 내부 단위(USDT)라 변환하지 않습니다. */
+     limit-price-input 은 화면 통화(원) 값이라 USDT 로 되돌립니다. */
   function getEffectivePrice(snap) {
     if (isLimitMode()) {
       var input = el("limit-price-input");
-      var v = parseFloat((input && input.value) || "");
-      return isNaN(v) || v <= 0 ? null : v;
+      var raw = (input && input.value) || "";
+      var v = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+      if (isNaN(v) || v <= 0) return null;
+      if (App.Config && typeof App.Config.getDisplayCurrency === "function" && App.Config.getDisplayCurrency() === "KRW") {
+        return v / App.Config.USD_KRW;
+      }
+      return v;
     }
     return snap && snap.currentPrice ? snap.currentPrice : null;
   }

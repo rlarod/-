@@ -32,10 +32,27 @@ App.QtyPriceOrder = (function () {
     return !!(limitBtn && limitBtn.classList.contains("active"));
   }
 
+  /* 표시 통화 ↔ 내부 단위(USDT) 변환 — ui.js의 toDisplayValue/fromDisplayValue와
+     같은 규칙입니다. 이 파일이 읽고 쓰는 입력칸(#limit-price-input, #margin-input)은
+     전부 "화면에 보이는 통화" 기준이고, 계산 엔진은 전부 USDT입니다. */
+  function toDisplayFloor(usdValue) {
+    if (!App.Config || typeof App.Config.getDisplayCurrency !== "function") return usdValue;
+    if (App.Config.getDisplayCurrency() === "KRW") return Math.floor(usdValue * App.Config.USD_KRW);
+    return Math.floor(usdValue * 100) / 100;
+  }
+  function fromDisplay(displayValue) {
+    if (!App.Config || typeof App.Config.getDisplayCurrency !== "function") return displayValue;
+    if (App.Config.getDisplayCurrency() === "KRW") return displayValue / App.Config.USD_KRW;
+    return displayValue;
+  }
+
   function getEffectivePrice() {
     if (isLimitMode()) {
-      const v = parseFloat((dom.priceInput && dom.priceInput.value) || "");
-      return isNaN(v) || v <= 0 ? null : v;
+      // 입력칸에는 "96,521,700원"처럼 쉼표·단위가 붙어 있습니다. 그냥 parseFloat하면
+      // 쉼표 앞에서 끊겨 96이 됩니다. 숫자만 남긴 뒤 USDT로 되돌립니다.
+      const raw = (dom.priceInput && dom.priceInput.value) || "";
+      const v = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+      return isNaN(v) || v <= 0 ? null : fromDisplay(v);
     }
     const snap = App.Trading ? App.Trading.getSnapshot() : null;
     return snap && snap.currentPrice ? snap.currentPrice : null;
@@ -49,6 +66,12 @@ App.QtyPriceOrder = (function () {
 
   // 수량(BTC) + 가격 + 레버리지로부터 증거금을 역산해서, ui.js가 읽는
   // 기존 #margin-input에 채워 넣습니다(새 계산이 아니라 값 변환).
+  //
+  // 버그 수정(2026-08-18): 여기서 USDT 값을 그대로 써 넣었는데, ui.js의
+  // getMarginValue()는 이 칸을 "화면 통화"로 읽고 fromDisplayValue()로 나눕니다.
+  // 그래서 원화 모드에서 증거금이 1,500으로 한 번 더 나뉘었습니다.
+  // 실측: 100% 클릭 시 119,939.79 USDT 의도 -> 실제 진입 80.01 USDT.
+  // ui.js와 같은 규칙으로 화면 통화 단위를 써 넣어 맞춥니다.
   function syncMargin() {
     const marginInput = el("margin-input");
     if (!marginInput || !dom.qtyInput) return;
@@ -58,7 +81,9 @@ App.QtyPriceOrder = (function () {
     if (!isNaN(qty) && qty > 0 && price) {
       const notional = qty * price;
       const margin = notional / leverage;
-      marginInput.value = margin;
+      // 반올림하면 한계선을 위로 넘어 "증거금+수수료가 자산보다 큼"으로
+      // 거부되므로 ui.js의 MAX 버튼과 똑같이 항상 버림합니다.
+      marginInput.value = toDisplayFloor(margin);
     } else {
       marginInput.value = "0";
     }
