@@ -610,10 +610,10 @@ section("[5] 기존 기능 보존");
     eq(after, pts.toLocaleString() + " P");
   });
 
-  t("내 정보 값 색: 이익 빨강 / 손실 파랑 / 거래 없으면 검정", () => {
+  t("내 정보 값 색: 이익 초록 / 손실 빨강 / 보유 없으면 중립", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    ok(/\.page-right \.up-state-profit \.up-value\{color:var\(--red\) !important;\}/.test(css), "이익은 빨강");
-    ok(/\.page-right \.up-state-loss   \.up-value\{color:var\(--blue\) !important;\}/.test(css), "손실은 파랑");
+    ok(/\.page-right \.up-state-profit \.up-value\{color:var\(--green\) !important;\}/.test(css), "이익은 초록");
+    ok(/\.page-right \.up-state-loss   \.up-value\{color:var\(--red\) !important;\}/.test(css), "손실은 빨강");
     ok(/\.page-right \.up-state-flat   \.up-value\{color:var\(--text\) !important;\}/.test(css), "거래 없으면 검정");
 
     const { doc, App } = boot({ nickname: "홍길동" });
@@ -626,11 +626,11 @@ section("[5] 기존 기능 보존");
 
     // 손익·수익률이 미실현 기준이라 색도 보유 중 평가손익을 따릅니다.
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61000, time: Date.now() });
-    ok(/up-state-profit/.test(grid()), "평가이익이면 빨강 상태");
+    ok(/up-state-profit/.test(grid()), "평가이익이면 초록 상태");
     ok(/^\+/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 + 표시");
 
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 59000, time: Date.now() });
-    ok(/up-state-loss/.test(grid()), "평가손실이면 파랑 상태");
+    ok(/up-state-loss/.test(grid()), "평가손실이면 빨강 상태");
     ok(/^-/.test(doc.getElementById("user-panel-roe").textContent), "수익률 앞에 - 표시");
 
     App.Trading.closePosition();
@@ -657,8 +657,8 @@ section("[5] 기존 기능 보존");
       "손익 0일 때는 중립색이어야 함(가짜 강조 방지)");
     ok(/\.page-right #user-panel-points\{color:var\(--gold\)/.test(css), "포인트는 강조색");
     // 내 정보 값 표는 국내 증시 관례 — 상승 빨강(+) / 하락 파랑(-)
-    ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--red\) !important;\}/.test(css), "이익은 빨강");
-    ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--blue\) !important;\}/.test(css), "손실은 파랑");
+    ok(/\.page-right \.up-value\.pnl-positive\{color:var\(--green\) !important;\}/.test(css), "이익은 초록");
+    ok(/\.page-right \.up-value\.pnl-negative\{color:var\(--red\) !important;\}/.test(css), "손실은 빨강");
     // 거래 화면(호가창/포지션)의 기존 색 관례는 건드리지 않았는지 확인
     ok(/\n\.pnl-positive\{color:#34D399 !important;\}/.test(css), "전역 손익 색은 그대로여야 함");
   });
