@@ -51,7 +51,7 @@ function boot(opts) {
     };})();
   `);
 
-  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js", "js/theme.js"].forEach((f) => {
+  ["js/config.js", "js/utils.js", "js/storage.js", "js/trading.js", "js/rank.js", "js/notice-board.js", "js/user-panel.js", "js/ad-slots.js", "js/chat-event-style.js", "js/theme.js", "js/board-gallery-style.js"].forEach((f) => {
     win.eval(fs.readFileSync(path.join(REPO, f), "utf8"));
   });
 
@@ -64,6 +64,7 @@ function boot(opts) {
   win.App.NoticeBoard.init(); // App.Board가 없으면 조용히 넘어감
   win.App.UserPanel.init();
   win.App.Theme.init();
+  win.App.BoardGalleryStyle.init();
   return { dom, win, App: win.App, doc: win.document };
 }
 
@@ -736,6 +737,31 @@ section("[5] 기존 기능 보존");
     ok(/PGRST202/.test(js) && /42883/.test(js), "함수 없음 오류 코드를 구분해야 함");
     ok(/서버 설정이 아직 적용되지 않았습니다/.test(js), "SQL 미적용 전용 안내 필요");
     ok(/schema-daily-recharge\.sql/.test(js), "콘솔에 실행할 파일명을 안내해야 함");
+  });
+
+  t("커뮤니티 목록이 갤러리형 칸 구성", () => {
+    const js = fs.readFileSync(path.join(REPO, "js/board-gallery-style.js"), "utf8");
+    // board.js(수정 금지)가 그린 뒤 순서만 바꾸는 방식이어야 합니다
+    ok(/MutationObserver/.test(js), "board.js가 다시 그릴 때마다 재적용해야 함");
+    // 값을 새로 만들지 않고 board.js가 넣은 것을 읽어 씁니다
+    ok(/tds\[0\]\.innerHTML/.test(js), "제목은 board.js가 넣은 값을 그대로 써야 함");
+    ok(!/like_count|comment_count|created_at/.test(js), "데이터를 직접 계산하면 안 됨");
+
+    const { doc, App } = boot({ nickname: "홍길동" });
+    const body = doc.getElementById("board-list-body");
+    ok(body, "게시판 목록 필요");
+    body.innerHTML =
+      '<tr class="board-row" data-id="a">' +
+      '<td style="text-align:left;">첫 글</td><td>김갱</td><td>👍 5</td><td>💬 2</td><td>10</td><td>1분 전</td></tr>';
+    App.BoardGalleryStyle.applyForTest();
+
+    const head = [].map.call(doc.querySelectorAll(".board-gallery thead th"), (t) => t.textContent);
+    eq(head.join(","), "번호,제목,글쓴이,작성일,조회,추천");
+
+    const row = body.querySelector("tr.board-row");
+    eq(row.children.length, 6, "칸 수 유지");
+    eq(row.dataset.id, "a", "글 id가 유지되어야 클릭이 동작함");
+    ok(/\[2\]/.test(row.children[1].textContent), "댓글 수는 제목 뒤에");
   });
 
   t("원화 표시에 '원'이 붙음", () => {

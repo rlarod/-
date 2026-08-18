@@ -2454,3 +2454,29 @@ html[data-currency="KRW"] .position-table th:nth-child(6){width:9%;}
 html[data-currency="KRW"] .position-table th:nth-child(7),
 html[data-currency="KRW"] .position-table th:nth-child(8){width:10.5%;}
 html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
+
+/* =========================================================================
+ * 커뮤니티 목록 — 갤러리형 게시판
+ * =========================================================================
+ * 칸 순서: 번호 | 제목 | 글쓴이 | 작성일 | 조회 | 추천
+ * ========================================================================= */
+.board-gallery{table-layout:fixed;width:100%;}
+.board-gallery th{
+  background:var(--surface2);color:var(--text-dim);
+  font-size:16px;font-weight:600;padding:9px 8px;text-align:center;
+  border-bottom:1px solid var(--border);
+}
+.board-gallery td{
+  font-size:16px;padding:8px;text-align:center;color:var(--text-dim);
+  border-bottom:1px solid var(--border-soft);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.board-gallery .bg-no{width:8%;color:var(--text-faint);font-size:15px;}
+.board-gallery .bg-title{width:48%;text-align:left;color:var(--text);font-weight:500;}
+.board-gallery .bg-author{width:15%;}
+.board-gallery .bg-date{width:11%;font-size:15px;}
+.board-gallery .bg-view{width:9%;}
+.board-gallery .bg-like{width:9%;font-weight:600;}
+/* 댓글 수는 제목 뒤에 작게(레퍼런스와 동일) */
+.board-gallery .bg-comment{color:var(--gold);font-weight:700;font-size:14.5px;}
+.board-gallery tr.board-row:hover .bg-title{color:var(--gold);text-decoration:underline;}
