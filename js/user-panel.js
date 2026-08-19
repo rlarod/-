@@ -47,31 +47,89 @@ App.UserPanel = (function () {
   /* ---------------- 렌더 ---------------- */
   function renderLoggedOut() {
     if (!dom.body) return;
+    /* 2026-08-18: 전체 화면 로그인 창을 없애고 이 칸 안에서 바로
+       로그인·회원가입을 합니다. 여기 innerHTML 로 칸을 통째로 다시 그리기
+       때문에, 밖에서 폼을 옮겨 넣으면 다음 갱신 때 지워집니다.
+       그래서 이 칸이 직접 폼을 그리고, 실제 처리는 js/auth.js 의
+       원래 폼(#auth-gate)에 값을 넘겨 그대로 재사용합니다. */
     dom.body.innerHTML =
       '<div class="user-panel-guest">' +
-      '<div class="user-panel-guest-icon">🪖</div>' +
-      '<p class="user-panel-guest-text">로그인이 필요합니다.</p>' +
-      '<div class="user-panel-guest-actions">' +
-      '<button type="button" class="user-panel-btn user-panel-btn-primary" id="user-panel-login">로그인</button>' +
-      '<button type="button" class="user-panel-btn" id="user-panel-signup">회원가입</button>' +
+      '<div class="up-login-title">로그인</div>' +
+      '<div class="up-login-sub">닉네임과 비밀번호로 시작하세요</div>' +
+      '<input type="text" class="up-login-input" id="up-login-nick" maxlength="12" placeholder="닉네임" autocomplete="off">' +
+      '<input type="password" class="up-login-input" id="up-login-pw" placeholder="비밀번호" autocomplete="off">' +
+      '<input type="password" class="up-login-input" id="up-login-pw2" placeholder="비밀번호 확인" autocomplete="off" style="display:none;">' +
+      '<div class="up-login-err" id="up-login-err"></div>' +
+      '<button type="button" class="user-panel-btn user-panel-btn-primary up-login-submit" id="up-login-submit">로그인</button>' +
+      '<div class="up-login-toggle">' +
+      '<span id="up-login-toggle-text">처음 방문하셨나요?</span> ' +
+      '<a href="#" id="up-login-toggle-link">회원가입</a>' +
       "</div></div>";
-    const go = () => {
-      // 기존 로그인 화면(auth.js의 게이트)을 그대로 띄웁니다.
-      // 비회원이 그냥 둘러볼 때는 게이트가 자동으로 닫히므로,
-      // '사용자가 직접 열었다'고 알려주는 경로를 씁니다(js/guest-access.js).
-      if (App.GuestAccess && typeof App.GuestAccess.openLogin === "function") {
-        App.GuestAccess.openLogin();
+    bindInlineLogin();
+  }
+
+  /* 이 칸의 입력값을 auth.js 의 원래 폼에 넣고 그쪽 버튼을 눌러줍니다.
+     로그인/회원가입 검증·에러 문구는 전부 auth.js 것을 그대로 씁니다. */
+  function bindInlineLogin() {
+    let signup = false;
+    const g = (id) => document.getElementById(id);
+    const nick = g("up-login-nick");
+    const pw = g("up-login-pw");
+    const pw2 = g("up-login-pw2");
+    const err = g("up-login-err");
+    const submit = g("up-login-submit");
+    const toggle = g("up-login-toggle-link");
+    const toggleText = g("up-login-toggle-text");
+    if (!nick || !submit) return;
+
+    function setMode(isSignup) {
+      signup = isSignup;
+      pw2.style.display = signup ? "" : "none";
+      submit.textContent = signup ? "회원가입" : "로그인";
+      toggleText.textContent = signup ? "이미 계정이 있나요?" : "처음 방문하셨나요?";
+      toggle.textContent = signup ? "로그인" : "회원가입";
+      err.textContent = "";
+      /* auth.js 쪽 폼도 같은 모드로 맞춥니다. */
+      const link = g("auth-toggle-link");
+      const gateSubmit = g("auth-submit-btn");
+      const wantSignup = signup;
+      const isGateSignup = gateSubmit && gateSubmit.textContent.indexOf("회원가입") !== -1;
+      if (link && isGateSignup !== wantSignup) link.click();
+    }
+
+    function go() {
+      const gNick = g("auth-nickname-input");
+      const gPw = g("auth-password-input");
+      const gPw2 = g("auth-password-confirm-input");
+      const gBtn = g("auth-submit-btn");
+      if (!gNick || !gPw || !gBtn) {
+        err.textContent = "로그인 기능을 사용할 수 없습니다.";
         return;
       }
-      const gate = el("auth-gate");
-      if (gate) gate.style.display = "flex";
-      const input = el("auth-nickname-input");
-      if (input) input.focus();
-    };
-    const l = el("user-panel-login");
-    const s = el("user-panel-signup");
-    if (l) l.addEventListener("click", go);
-    if (s) s.addEventListener("click", go);
+      gNick.value = nick.value;
+      gPw.value = pw.value;
+      if (gPw2) gPw2.value = pw2.value;
+      [gNick, gPw, gPw2].forEach((el2) => {
+        if (el2) el2.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      gBtn.click();
+      /* auth.js 가 표시한 오류 문구를 이 칸으로 옮겨 보여줍니다. */
+      setTimeout(() => {
+        const gErr = g("auth-err");
+        if (gErr && gErr.textContent) err.textContent = gErr.textContent;
+      }, 400);
+      setTimeout(() => {
+        const gErr = g("auth-err");
+        if (gErr && gErr.textContent) err.textContent = gErr.textContent;
+      }, 1500);
+    }
+
+    submit.addEventListener("click", go);
+    [nick, pw, pw2].forEach((el2) => {
+      if (el2) el2.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    });
+    toggle.addEventListener("click", (e) => { e.preventDefault(); setMode(!signup); });
+    setMode(false);
   }
 
   // 개미톡 사용자 패널 구조: 헤더(아바타+계급+닉네임+진행률) → 2×2 값 표 → 하단 링크 줄.

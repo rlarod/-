@@ -39,15 +39,17 @@ App.GuestAccess = (function () {
   }
 
   /* 사용자가 명시적으로 로그인 창을 열 때 씁니다. */
+  /* 로그인 폼은 이제 '내 정보' 칸 안에 있습니다(js/inline-login.js).
+     전체 화면 창을 띄우는 대신 그 칸으로 데려가 커서를 놓습니다. */
+  /* 로그인 폼은 '내 정보' 칸 안에 있습니다(js/user-panel.js).
+     전체 화면 창을 띄우지 않고 그 칸으로 데려가 커서를 놓습니다. */
   function openLogin() {
-    var g = gateEl();
-    if (!g) return;
-    userOpened = true;
-    g.style.display = "flex";
-    var input = document.getElementById("auth-nickname-input");
-    if (input) {
-      try { input.focus(); } catch (e) { /* 무시 */ }
-    }
+    var input = document.getElementById("up-login-nick");
+    if (!input) return;
+    try {
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+      input.focus();
+    } catch (e) { /* 무시 */ }
   }
 
   function closeGate() {
@@ -80,7 +82,7 @@ App.GuestAccess = (function () {
   /* 로그인이 필요한 자리에 빈칸 대신 안내를 넣습니다.
      비회원이 들어와도 "왜 비었는지" 알 수 있게 합니다. */
   function markGuestAreas() {
-    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
+    if (App.Auth && typeof App.Auth.getNickname === "function" && App.Auth.getNickname()) return;
     var input = document.getElementById("chat-input");
     if (input && !input.getAttribute("data-guest-note")) {
       input.setAttribute("data-guest-note", "1");
@@ -125,7 +127,7 @@ App.GuestAccess = (function () {
     wrapBoot();
     if (bootCalled) return;                       // 이미 누가 불렀음
     if (!App.bootApp) return;
-    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
+    if (App.Auth && typeof App.Auth.getNickname === "function" && App.Auth.getNickname()) return;
     try {
       App.bootApp();                              // 감싸둔 함수라 bootCalled 가 켜집니다
       console.warn("[guest-access.js] 비회원이라 로그인 없이 부팅했습니다.");

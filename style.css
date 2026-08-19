@@ -2990,3 +2990,25 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
    숨기지 않고 살짝 흐리게만 해서 '무엇이 있는지'는 보이게 합니다. */
 .login-required{opacity:0.6;cursor:pointer;}
 .login-required:hover{opacity:0.75;}
+
+/* ===== 내 정보 칸 안의 로그인 폼 =====
+   전체 화면 창(.auth-gate)을 없애고 카드만 옮겨왔습니다.
+   원래 카드 스타일을 좁은 칸에 맞게만 조정합니다. */
+/* ===== 내 정보 칸 안의 로그인 폼 =====
+   전체 화면 창을 없애고 이 칸에서 바로 로그인/회원가입합니다.
+   새 색을 만들지 않고 기존 변수만 씁니다(다크모드 자동 대응). */
+.user-panel-guest{padding:16px 14px;}
+.up-login-title{font-size:19px;font-weight:700;color:var(--text);text-align:center;}
+.up-login-sub{font-size:13px;color:var(--text-faint);text-align:center;margin:2px 0 12px;}
+.up-login-input{
+  width:100%;height:42px;padding:0 12px;margin-bottom:8px;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface2);color:var(--text);
+  font-family:inherit;font-size:15px;box-sizing:border-box;
+}
+.up-login-input:focus{outline:none;border-color:var(--gold);}
+.up-login-err{min-height:18px;color:var(--red);font-size:13px;margin-bottom:6px;}
+.up-login-submit{width:100%;height:44px;font-size:16px;}
+.up-login-toggle{margin-top:10px;text-align:center;font-size:13px;color:var(--text-faint);}
+.up-login-toggle a{color:var(--gold);font-weight:700;text-decoration:none;}
+.up-login-toggle a:hover{text-decoration:underline;}

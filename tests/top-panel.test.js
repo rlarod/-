@@ -321,12 +321,16 @@ section("[3] 계급 점수 — 실제 거래 기록 기반");
 /* ===================================================================== */
 section("[4] 사용자 정보 패널");
 {
-  t("로그아웃 상태 — 로그인/회원가입 안내", () => {
+  t("로그아웃 상태 — 이 칸에서 바로 로그인/회원가입", () => {
+    // 2026-08-18: 전체 화면 로그인 창을 없애고 이 칸에서 직접 처리합니다.
     const { doc } = boot({ nickname: "" });
     const body = doc.getElementById("user-panel-body");
-    ok(/로그인이 필요합니다/.test(body.textContent));
-    ok(body.querySelector("#user-panel-login"), "로그인 버튼 필요");
-    ok(body.querySelector("#user-panel-signup"), "회원가입 버튼 필요");
+    ok(/로그인/.test(body.textContent), "로그인 안내 필요");
+    ok(body.querySelector("#up-login-nick"), "닉네임 입력칸 필요");
+    ok(body.querySelector("#up-login-pw"), "비밀번호 입력칸 필요");
+    ok(body.querySelector("#up-login-pw2"), "비밀번호 확인칸 필요(회원가입용)");
+    ok(body.querySelector("#up-login-submit"), "제출 버튼 필요");
+    ok(body.querySelector("#up-login-toggle-link"), "로그인/회원가입 전환 필요");
     ok(!body.querySelector("#user-panel-equity"), "로그아웃 상태에 자산이 보이면 안 됨");
   });
 
@@ -1319,7 +1323,7 @@ section("[5] 기존 기능 보존");
 
     // 로그인/로그아웃 두 상태를 모두 지원해야 함
     const js = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");
-    ok(/renderLoggedOut/.test(js) && /user-panel-login/.test(js), "로그아웃 상태 UI 필요");
+    ok(/renderLoggedOut/.test(js) && /up-login-submit/.test(js), "로그아웃 상태 UI 필요");
     ok(/renderShell/.test(js) && /user-panel-equity/.test(js), "로그인 상태 UI 필요");
 
     // 사이드 박스도 공통 박스 규격을 따라야 함

@@ -89,7 +89,7 @@ console.log("\n② TL 지급 공식");
 console.log("\n③ 비회원 접근");
 {
   ok("자동으로 뜬 로그인 게이트만 닫는다", /if \(isOpen\(g\) && !userOpened\)/.test(guestSrc));
-  ok("사용자가 직접 열면 그대로 보여준다", /function openLogin/.test(guestSrc) && /userOpened = true/.test(guestSrc));
+  ok("로그인 창으로 데려가는 경로가 있다", /function openLogin/.test(guestSrc) && /up-login-nick/.test(guestSrc));
   ok("게이트를 지우지 않는다(로그인 기능 유지)", /auth-gate/.test(html) && !/remove\(\)/.test(guestSrc));
   ok("auth.js 는 손대지 않는다", /js\/guest-access\.js/.test(html));
   ok("게이트 변화를 감시한다", /MutationObserver/.test(guestSrc));
@@ -106,7 +106,7 @@ console.log("\n③ 비회원 접근");
   ok("ESC·바깥 클릭으로 닫힌다", /Escape/.test(guestSrc) && /e\.target === g/.test(guestSrc));
 
   const up = fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8");
-  ok("내 정보 로그인 버튼이 새 경로를 쓴다", /App\.GuestAccess[\s\S]{0,60}openLogin\(\)/.test(up));
+  ok("내 정보 칸이 직접 로그인 폼을 그린다", /up-login-submit/.test(up) && /bindInlineLogin/.test(up));
 }
 
 console.log("\n③-2 비회원은 보기만 (거래 차단)");
@@ -142,8 +142,13 @@ console.log("\n④ 비회원 내 정보");
 {
   const up = fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8");
   ok("비회원 안내가 있다", /user-panel-guest/.test(up));
-  ok("로그인 버튼", /id="user-panel-login">로그인</.test(up));
-  ok("회원가입 버튼", /id="user-panel-signup">회원가입</.test(up));
+  /* 2026-08-18: 전체 화면 로그인 창을 없애고 이 칸에서 바로 처리합니다. */
+  ok("닉네임·비밀번호 입력칸", /id="up-login-nick"/.test(up) && /id="up-login-pw"/.test(up));
+  ok("회원가입 전환", /id="up-login-toggle-link"/.test(up) && /회원가입/.test(up));
+  ok("로그인 처리는 auth.js 폼에 넘겨 재사용", /auth-nickname-input/.test(up) && /auth-submit-btn/.test(up));
+  ok("auth.js 오류 문구를 이 칸에 표시", /auth-err/.test(up));
+  const il = fs.readFileSync(path.join(REPO, "js", "inline-login.js"), "utf8");
+  ok("전체 화면 로그인 창은 띄우지 않는다", /hideGate\(\);   \/\/ 전체 화면 창은 절대 띄우지 않습니다/.test(il));
   ok("로그인하면 기존 화면으로 돌아간다", /renderShell/.test(up) && /isLoggedIn\(\)/.test(up));
 }
 

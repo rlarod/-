@@ -39,8 +39,11 @@ App.LoginRequired = (function () {
 
   var notified = 0;
 
+  /* 로그인 판단 — App.Auth 에는 isLoggedIn 이 없습니다(init, getNickname 뿐).
+     isLoggedIn 을 부르면 항상 false 가 나와 로그인해도 막히는 버그가
+     있었습니다. user-panel.js 와 같은 방식으로 닉네임 유무를 봅니다. */
   function isLoggedIn() {
-    return !!(App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn());
+    return !!(App.Auth && typeof App.Auth.getNickname === "function" && App.Auth.getNickname());
   }
 
   /* '매수은(는)' 처럼 어색하지 않게 받침에 맞는 조사를 붙입니다. */
