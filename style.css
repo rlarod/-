@@ -2985,3 +2985,8 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   .lev-modal-value b{font-size:36px;}
   .lev-preset{min-width:48px;font-size:14px;}
 }
+
+/* 비회원에게 잠긴 버튼 — 눌러도 로그인 안내가 뜹니다.
+   숨기지 않고 살짝 흐리게만 해서 '무엇이 있는지'는 보이게 합니다. */
+.login-required{opacity:0.6;cursor:pointer;}
+.login-required:hover{opacity:0.75;}

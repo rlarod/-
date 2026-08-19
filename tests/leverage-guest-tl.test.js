@@ -109,6 +109,35 @@ console.log("\n③ 비회원 접근");
   ok("내 정보 로그인 버튼이 새 경로를 쓴다", /App\.GuestAccess[\s\S]{0,60}openLogin\(\)/.test(up));
 }
 
+console.log("\n③-2 비회원은 보기만 (거래 차단)");
+{
+  const lr = fs.readFileSync(path.join(REPO, "js", "login-required.js"), "utf8");
+  ok("매수·매도 버튼을 막는다", /"btn-long"/.test(lr) && /"btn-short"/.test(lr));
+  ok("채팅 전송·글쓰기·댓글·무료충전도 막는다",
+     /"chat-send"/.test(lr) && /"board-write-btn"/.test(lr) &&
+     /"board-comment-submit"/.test(lr) && /"daily-recharge-btn"/.test(lr));
+  ok("캡처 단계로 원래 처리보다 먼저 가로챈다", /stopImmediatePropagation\(\)/.test(lr) && /true \/\/ 캡처 단계/.test(lr));
+  ok("채팅 Enter 전송도 막는다", /e\.key !== "Enter"/.test(lr));
+  ok("주문 함수 자체도 감싼다(화면 우회 방지)", /GUARDED_TRADING = \["openPosition"/.test(lr));
+  ok("청산·주문취소까지 포함", /closePosition/.test(lr) && /cancelPendingOrder/.test(lr));
+  ok("로그인하면 원래대로 통과", /if \(!isLoggedIn\(\)\)[\s\S]{0,120}return orig\.apply/.test(lr));
+  ok("막을 때 로그인 창을 띄운다", /App\.GuestAccess[\s\S]{0,60}openLogin\(\)/.test(lr));
+  ok("수정 금지 파일을 건드리지 않는다(별도 모듈)", /js\/login-required\.js/.test(html));
+
+  /* 한국어 조사 — '매수은(는)' 처럼 어색하지 않아야 합니다 */
+  const particle = (w) => {
+    const last = w.charCodeAt(w.length - 1);
+    if (last < 0xac00 || last > 0xd7a3) return w + "는 ";
+    return w + (((last - 0xac00) % 28 !== 0) ? "은 " : "는 ");
+  };
+  ok("받침 없는 말에는 '는'", particle("매수") === "매수는 ");
+  ok("받침 있는 말에는 '은'", particle("채팅") === "채팅은 " && particle("댓글") === "댓글은 ");
+  ok("조사 처리를 실제로 쓴다", /withParticle\(what\)/.test(lr));
+
+  const cssLR = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  ok("잠긴 버튼은 숨기지 않고 흐리게만", /\.login-required\{opacity:0\.6/.test(cssLR));
+}
+
 console.log("\n④ 비회원 내 정보");
 {
   const up = fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8");
