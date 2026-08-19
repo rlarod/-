@@ -93,6 +93,16 @@ console.log("\n③ 비회원 접근");
   ok("게이트를 지우지 않는다(로그인 기능 유지)", /auth-gate/.test(html) && !/remove\(\)/.test(guestSrc));
   ok("auth.js 는 손대지 않는다", /js\/guest-access\.js/.test(html));
   ok("게이트 변화를 감시한다", /MutationObserver/.test(guestSrc));
+  /* 진짜 원인이었던 부분 — auth.js 는 게이트를 띄울 때 .app 에 pending-auth 를
+     붙여 화면 전체를 display:none 으로 숨깁니다(style.css). 게이트만 닫고
+     이 클래스를 안 떼면 게시판·랭킹·핫딜까지 전부 안 보입니다. */
+  ok("pending-auth 를 떼어 화면을 되살린다", /function clearPendingAuth/.test(guestSrc) && /classList\.remove\("pending-auth"\)/.test(guestSrc));
+  ok("게이트를 닫을 때도 같이 뗀다", /g\.style\.display = "none";\s*\n\s*clearPendingAuth\(\);/.test(guestSrc));
+  ok("나중에 다시 붙어도 감시해서 뗀다", /attributeFilter: \["class"\]/.test(guestSrc));
+  ok("부팅은 짐작하지 않고 기록으로 판단", /var bootCalled = false/.test(guestSrc) && /if \(bootCalled\) return;/.test(guestSrc));
+
+  const cssG = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  ok("pending-auth 규칙은 그대로 둔다(로그인 창 띄울 때 필요)", /\.app\.pending-auth\{display:none;\}/.test(cssG));
   ok("ESC·바깥 클릭으로 닫힌다", /Escape/.test(guestSrc) && /e\.target === g/.test(guestSrc));
 
   const up = fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8");

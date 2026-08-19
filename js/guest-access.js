@@ -55,6 +55,16 @@ App.GuestAccess = (function () {
     if (!g) return;
     userOpened = false;
     g.style.display = "none";
+    clearPendingAuth();
+  }
+
+  /* auth.js 는 게이트를 띄울 때 .app 에 pending-auth 를 붙여
+     거래 화면 전체를 display:none 으로 숨깁니다(style.css).
+     게이트만 닫고 이 클래스를 안 떼면 화면이 통째로 비어 보입니다
+     — 실제로 게시판·랭킹·핫딜·마켓까지 전부 안 보였던 원인입니다. */
+  function clearPendingAuth() {
+    var app = document.querySelector(".app.pending-auth");
+    if (app) app.classList.remove("pending-auth");
   }
 
   /* 자동으로 떠오른 게이트만 닫습니다. */
@@ -63,6 +73,7 @@ App.GuestAccess = (function () {
     if (!g) return;
     if (isOpen(g) && !userOpened) {
       g.style.display = "none";
+      clearPendingAuth();
     }
   }
 
@@ -128,6 +139,7 @@ App.GuestAccess = (function () {
     if (!g) return;
 
     wrapBoot();
+    clearPendingAuth();
     guard();
     markGuestAreas();
     setTimeout(markGuestAreas, 1500);
@@ -138,6 +150,14 @@ App.GuestAccess = (function () {
     if (typeof MutationObserver !== "undefined") {
       observer = new MutationObserver(function () { guard(); });
       observer.observe(g, { attributes: true, attributeFilter: ["style", "class"] });
+
+      /* auth.js 가 나중에 pending-auth 를 다시 붙일 수 있으므로 같이 지켜봅니다. */
+      var app = document.querySelector(".app");
+      if (app) {
+        new MutationObserver(function () {
+          if (!userOpened && app.classList.contains("pending-auth")) clearPendingAuth();
+        }).observe(app, { attributes: true, attributeFilter: ["class"] });
+      }
     }
 
     /* 로그인 창 안에서 닫기/취소를 누르면 다시 '자동' 상태로 돌립니다. */
@@ -158,5 +178,5 @@ App.GuestAccess = (function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, openLogin: openLogin, closeGate: closeGate, markGuestAreas: markGuestAreas, ensureBooted: ensureBooted, isUserOpened: function () { return userOpened; } };
+  return { init: init, openLogin: openLogin, closeGate: closeGate, clearPendingAuth: clearPendingAuth, markGuestAreas: markGuestAreas, ensureBooted: ensureBooted, isUserOpened: function () { return userOpened; } };
 })();
