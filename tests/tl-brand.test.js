@@ -117,8 +117,9 @@ console.log("\nTL 브랜드 적용");
      /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-dark\{display:block;\}/.test(css) &&
      /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-light\{display:none;\}/.test(css));
   ok("헤더 로고와 다른 그림을 쓴다", /src="assets\/brand\/tl-header-light\.jpg"/.test(html) && /src="assets\/brand\/tl-promo\.jpg"/.test(html));
-  ok("소재 원본 비율(2.58:1) 유지", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?aspect-ratio:2\.58 \/ 1/.test(css));
-  ok("너무 높아지지 않게 최대 높이", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?max-height:340px/.test(css));
+  /* 2026-08-18: 배너 아랫변을 오른쪽 '실시간 채팅' 헤더 아랫변과 맞춥니다. */
+  ok("배너 높이가 채팅 헤더와 같은 134px", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?height:134px/.test(css));
+  ok("cover 로 칸을 꽉 채운다", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?object-fit:cover/.test(css));
   ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?width:100%;height:auto/.test(css));
   ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));
   ok("이미지를 못 불러오면 문구로 되돌아간다", /ad-banner-failed/.test(css) && /ad-banner-failed/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
@@ -140,9 +141,13 @@ console.log("\nTL 브랜드 적용");
     const light = jpegSize(path.join(REPO, "assets", "brand", "tl-promo-light.jpg"));
     ok("두 광고 배너 크기를 읽어왔다", !!dark && !!light);
     if (dark && light) {
-      ok("어두운 광고 2.58:1", Math.abs(dark.w / dark.h - 2.58) < 0.03, (dark.w / dark.h).toFixed(3));
-      ok("밝은 광고도 2.58:1", Math.abs(light.w / light.h - 2.58) < 0.03, (light.w / light.h).toFixed(3));
+      /* 화면 폭마다 칸 비율이 6.6~11.1 로 달라져(실측) 한 비율로는 못 맞춥니다.
+         글자를 가운데 두고 좌우를 배경으로 넓게 채워 어떤 폭에서도
+         cover 로 잘리지 않게 만들었습니다. */
+      ok("어두운 광고가 아주 넓다(12:1)", dark.w / dark.h > 11, (dark.w / dark.h).toFixed(2));
+      ok("밝은 광고도 아주 넓다(12:1)", light.w / light.h > 11, (light.w / light.h).toFixed(2));
       ok("두 광고 비율이 같다(전환 시 높이 안 흔들림)", Math.abs(dark.w / dark.h - light.w / light.h) < 0.02);
+      ok("표시 높이(134px)의 2배 이상이라 선명하다", dark.h >= 268 && light.h >= 268, dark.h + "/" + light.h);
     }
   }
 
