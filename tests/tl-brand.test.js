@@ -108,8 +108,14 @@ console.log("\nTL 브랜드 적용");
   /* 2026-08-18: 상단 배너를 공식 이미지로 교체 */
   /* 2026-08-18: 중간 광고 자리를 홍보 배너로 교체.
      헤더 로고와 같은 그림이 두 번 나오던 문제도 함께 해소했습니다. */
-  ok("중간 광고가 홍보 배너로 교체됨", /class="ad-banner-img"[^>]*src="assets\/brand\/tl-promo\.jpg"/.test(html));
-  ok("홍보 배너 원본이 보관돼 있다", fs.existsSync(path.join(REPO, "assets", "brand", "tl-promo-original.jpg")));
+  ok("중간 광고 밝은 배경용", /class="ad-banner-img ad-banner-light"[^>]*src="assets\/brand\/tl-promo-light\.jpg"/.test(html));
+  ok("중간 광고 어두운 배경용", /class="ad-banner-img ad-banner-dark"[^>]*src="assets\/brand\/tl-promo\.jpg"/.test(html));
+  ok("두 원본이 모두 보관돼 있다",
+     fs.existsSync(path.join(REPO, "assets", "brand", "tl-promo-original.jpg")) &&
+     fs.existsSync(path.join(REPO, "assets", "brand", "tl-promo-light-original.jpg")));
+  ok("다크모드에서 어두운 광고로 바꿔 낀다",
+     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-dark\{display:block;\}/.test(css) &&
+     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-light\{display:none;\}/.test(css));
   ok("헤더 로고와 다른 그림을 쓴다", /src="assets\/brand\/tl-header-light\.jpg"/.test(html) && /src="assets\/brand\/tl-promo\.jpg"/.test(html));
   ok("소재 원본 비율(2.58:1) 유지", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?aspect-ratio:2\.58 \/ 1/.test(css));
   ok("너무 높아지지 않게 최대 높이", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?max-height:340px/.test(css));
@@ -130,9 +136,14 @@ console.log("\nTL 브랜드 적용");
       }
       return null;
     }
-    const promo = jpegSize(path.join(REPO, "assets", "brand", "tl-promo.jpg"));
-    ok("홍보 배너 크기를 읽어왔다", !!promo);
-    if (promo) ok("파일도 2.58:1", Math.abs(promo.w / promo.h - 2.58) < 0.03, (promo.w / promo.h).toFixed(3));
+    const dark = jpegSize(path.join(REPO, "assets", "brand", "tl-promo.jpg"));
+    const light = jpegSize(path.join(REPO, "assets", "brand", "tl-promo-light.jpg"));
+    ok("두 광고 배너 크기를 읽어왔다", !!dark && !!light);
+    if (dark && light) {
+      ok("어두운 광고 2.58:1", Math.abs(dark.w / dark.h - 2.58) < 0.03, (dark.w / dark.h).toFixed(3));
+      ok("밝은 광고도 2.58:1", Math.abs(light.w / light.h - 2.58) < 0.03, (light.w / light.h).toFixed(3));
+      ok("두 광고 비율이 같다(전환 시 높이 안 흔들림)", Math.abs(dark.w / dark.h - light.w / light.h) < 0.02);
+    }
   }
 
   ok("배너 클릭 이동(data-ad-link)은 그대로", /class="ad-creative ad-creative-wide ad-creative-image" data-ad-link="page-nav-board"/.test(html));

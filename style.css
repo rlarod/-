@@ -2896,6 +2896,11 @@ html[data-theme="dark"] img.rank-badge{
   display:block;width:100%;height:auto;aspect-ratio:2.58 / 1;
   max-height:340px;object-fit:cover;object-position:center;
 }
+/* 테마별 교체 — 기본은 밝은 배경용, 다크모드에서만 어두운 배경용.
+   두 소재 모두 2.58:1 이라 전환해도 배너 높이가 안 흔들립니다. */
+.ad-creative-image .ad-banner-dark{display:none;}
+html[data-theme="dark"] .ad-creative-image .ad-banner-light{display:none;}
+html[data-theme="dark"] .ad-creative-image .ad-banner-dark{display:block;}
 /* 이미지가 정상일 때 문구 소재는 숨깁니다(마크업은 남겨둡니다). */
 .ad-creative-image .ad-creative-mark,
 .ad-creative-image .ad-creative-title,
