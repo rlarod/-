@@ -3104,3 +3104,37 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .mpi-ok{color:var(--green);font-size:13px;}
 .mpi-no{color:var(--text-faint);font-size:13px;}
 .mpi-empty{margin:6px 0;font-size:14px;color:var(--text-faint);}
+
+/* ===== 마이페이지 — 내역과 계정 관리 ===== */
+.mh-box{
+  margin:14px 0;padding:14px;
+  border:1px solid var(--border);border-radius:3px;background:var(--surface2);
+}
+.mh-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px;}
+.mh-empty{margin:6px 0;font-size:14px;color:var(--text-faint);}
+.mh-table{width:100%;border-collapse:collapse;font-size:14px;}
+.mh-table th{
+  text-align:left;padding:8px 6px;color:var(--text-faint);font-weight:400;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.mh-table td{padding:8px 6px;color:var(--text);border-bottom:1px solid var(--border);}
+.mh-table tr:last-child td{border-bottom:0;}
+.mh-plus{color:var(--green);}
+.mh-minus{color:var(--red);}
+.mh-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.mh-btn{
+  height:42px;padding:0 18px;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);
+  font-family:inherit;font-size:15px;cursor:pointer;
+}
+.mh-btn:hover{background:var(--surface2);}
+.mh-btn-danger{border-color:var(--red);color:var(--red);}
+.mh-btn-danger:hover{background:var(--red);color:#fff;}
+.mh-warn{margin:10px 0 0;font-size:13px;color:var(--text-faint);line-height:1.5;}
+/* 좁은 화면에서 표가 넘치면 옆으로 밀어 봅니다 */
+@media (max-width:640px){
+  .mh-box{overflow-x:auto;}
+  .mh-table{min-width:420px;}
+  .mh-btn{flex:1 1 auto;}
+}

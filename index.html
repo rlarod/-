@@ -832,6 +832,32 @@
         <div class="mpi-title">내 계정 정보</div>
         <div id="my-private-info"><p class="mpi-empty">불러오는 중…</p></div>
       </div>
+
+      <!-- TL 내역 / 구매 내역 — 전부 서버 함수로만 가져옵니다 -->
+      <div class="mh-box">
+        <div class="mh-title">TL 내역</div>
+        <div id="mh-tl"><p class="mh-empty">불러오는 중…</p></div>
+      </div>
+
+      <div class="mh-box">
+        <div class="mh-title">TL 핫딜 구매 내역</div>
+        <div id="mh-hotdeal"><p class="mh-empty">불러오는 중…</p></div>
+      </div>
+
+      <div class="mh-box">
+        <div class="mh-title">TL 마켓 아이템</div>
+        <div id="mh-market"><p class="mh-empty">불러오는 중…</p></div>
+      </div>
+
+      <!-- 계정 관리 -->
+      <div class="mh-box">
+        <div class="mh-title">계정 관리</div>
+        <div class="mh-actions">
+          <button type="button" class="mh-btn" id="mh-logout">로그아웃</button>
+          <button type="button" class="mh-btn mh-btn-danger" id="mh-delete-account">회원탈퇴</button>
+        </div>
+        <p class="mh-warn">회원탈퇴 시 거래 기록·보유 TL·구매 내역·작성한 글이 모두 삭제되며 되돌릴 수 없습니다.</p>
+      </div>
       <div class="mypage-grid">
         <div class="mypage-item mypage-item-highlight">
           <span class="mypage-item-label">총자산(Equity)</span>
@@ -975,6 +1001,8 @@
 <script src="js/mypage.js"></script>
 <!-- 마이페이지 내 계정 정보(개인정보는 본인만, 전화번호는 마스킹) -->
 <script src="js/my-private-info.js"></script>
+<!-- 마이페이지 내역(TL·핫딜·마켓)과 계정 관리 -->
+<script src="js/mypage-history.js"></script>
 <script src="js/symbol-selector.js"></script>
 <script src="js/page-nav.js"></script>
 <!-- 통화를 바꿔도 안 따라오던 화면들을 다시 그립니다 -->
