@@ -66,11 +66,28 @@ App.GuestAccess = (function () {
     }
   }
 
+  /* 로그인이 필요한 자리에 빈칸 대신 안내를 넣습니다.
+     비회원이 들어와도 "왜 비었는지" 알 수 있게 합니다. */
+  function markGuestAreas() {
+    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
+    var input = document.getElementById("chat-input");
+    if (input && !input.getAttribute("data-guest-note")) {
+      input.setAttribute("data-guest-note", "1");
+      input.placeholder = "로그인 후 채팅에 참여할 수 있습니다";
+      input.addEventListener("focus", function () {
+        input.blur();
+        openLogin();
+      });
+    }
+  }
+
   function init() {
     var g = gateEl();
     if (!g) return;
 
     guard();
+    markGuestAreas();
+    setTimeout(markGuestAreas, 1500);
 
     if (typeof MutationObserver !== "undefined") {
       observer = new MutationObserver(function () { guard(); });
@@ -88,12 +105,12 @@ App.GuestAccess = (function () {
     /* 로그인에 성공하면 auth.js 가 알아서 게이트를 닫습니다.
        그때 플래그도 정리해 둡니다. */
     if (App.Bus && typeof App.Bus.on === "function") {
-      App.Bus.on("auth:changed", function () { userOpened = false; });
+      App.Bus.on("auth:changed", function () { userOpened = false; markGuestAreas(); });
     }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, openLogin: openLogin, closeGate: closeGate, isUserOpened: function () { return userOpened; } };
+  return { init: init, openLogin: openLogin, closeGate: closeGate, markGuestAreas: markGuestAreas, isUserOpened: function () { return userOpened; } };
 })();
