@@ -57,6 +57,12 @@ App.UserPanel = (function () {
       "</div></div>";
     const go = () => {
       // 기존 로그인 화면(auth.js의 게이트)을 그대로 띄웁니다.
+      // 비회원이 그냥 둘러볼 때는 게이트가 자동으로 닫히므로,
+      // '사용자가 직접 열었다'고 알려주는 경로를 씁니다(js/guest-access.js).
+      if (App.GuestAccess && typeof App.GuestAccess.openLogin === "function") {
+        App.GuestAccess.openLogin();
+        return;
+      }
       const gate = el("auth-gate");
       if (gate) gate.style.display = "flex";
       const input = el("auth-nickname-input");

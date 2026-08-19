@@ -937,6 +937,8 @@
 <script src="main.js"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
+<!-- 비회원도 홈을 바로 보게 — 자동으로 뜨는 로그인 게이트만 닫습니다(auth.js 무수정) -->
+<script src="js/guest-access.js"></script>
 <script src="js/season.js"></script>
 <script src="js/supabase-sync.js"></script>
 <script src="js/trade-history.js"></script>
@@ -1007,6 +1009,8 @@
 <script src="js/tl-market.js"></script>
 <!-- 레버리지 상한 게이트 — App.Trading.setLeverage를 감쌉니다(trading.js 무수정) -->
 <script src="js/leverage-gate.js"></script>
+<!-- 레버리지 설정 팝업 — 확인을 눌러야 실제 적용됩니다 -->
+<script src="js/leverage-modal.js"></script>
 <script src="js/order-panel-amitalk.js"></script>
 </body>
 </html>

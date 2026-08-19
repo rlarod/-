@@ -27,8 +27,15 @@ window.App = window.App || {};
 App.LeverageGate = (function () {
   "use strict";
 
-  /* 기본 상한. 관리자가 바꾸고 싶으면 이 값만 고치면 됩니다. */
-  var DEFAULT_MAX = 50;
+  /* ===== 최대 레버리지 설정 — 이 한 곳만 바꾸면 사이트 전체가 따라옵니다 =====
+     지금은 모든 사용자에게 100배를 열어둡니다(이용권 없이도 100배 가능).
+     나중에 이용자가 많아지면 이 값을 50으로 내리기만 하면
+     기본 50배 + 이용권 사용 시 100배 구조로 즉시 전환됩니다.
+     이용권 처리는 이미 아래에 다 들어 있어서 코드를 더 고칠 필요가 없습니다. */
+  var DEFAULT_MAX = 100;
+
+  /* 슬라이더·팝업 등 화면에서 쓸 수 있게 밖으로도 내줍니다.
+     레버리지 상한을 코드 여기저기에 박지 않기 위한 단일 출처입니다. */
   var ITEM_TYPE = "leverage_boost";
   var REFRESH_MS = 60000;
 
@@ -142,6 +149,10 @@ App.LeverageGate = (function () {
     refresh: refresh,
     currentMax: currentMax,
     getDefaultMax: function () { return DEFAULT_MAX; },
+    setDefaultMax: function (n) {
+      var v = Number(n);
+      if (isFinite(v) && v >= 1) { DEFAULT_MAX = Math.floor(v); applyToUi(); }
+    },
     _setBoost: function (max, expiresAt) { boostedMax = max; boostExpiresAt = expiresAt; applyToUi(); },
   };
 })();

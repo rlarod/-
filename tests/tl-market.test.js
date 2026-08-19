@@ -260,13 +260,18 @@ console.log("\n  레버리지 게이트");
 {
   const sbx = boot("leverage-gate.js");
   const LG = sbx.App.LeverageGate;
-  ok("기본 상한 50배", LG.currentMax() === 50, String(LG.currentMax()));
+  /* 2026-08-18 지시: 지금은 모두에게 100배를 엽니다.
+     나중에 DEFAULT_MAX 를 50 으로 내리면 이용권 구조가 그대로 살아납니다. */
+  ok("기본 상한 100배 (현재 운영값)", LG.currentMax() === 100, String(LG.currentMax()));
+  LG.setDefaultMax(50);
+  ok("설정값을 50으로 내리면 50배 제한", LG.currentMax() === 50, String(LG.currentMax()));
   LG._setBoost(100, new Date(Date.now() + 3600000).toISOString());
-  ok("이용권 사용 중 100배", LG.currentMax() === 100, String(LG.currentMax()));
+  ok("50배 제한에서 이용권 사용 중 100배", LG.currentMax() === 100, String(LG.currentMax()));
   LG._setBoost(100, new Date(Date.now() - 1000).toISOString());
   ok("만료되면 다시 50배", LG.currentMax() === 50, String(LG.currentMax()));
   LG._setBoost(20, new Date(Date.now() + 3600000).toISOString());
   ok("기본보다 낮은 값으로는 안 내려간다", LG.currentMax() === 50, String(LG.currentMax()));
+  LG.setDefaultMax(100);
 
   const gate = fs.readFileSync(path.join(REPO, "js", "leverage-gate.js"), "utf8");
   ok("App.Trading.setLeverage 를 감싼다", /App\.Trading\.setLeverage = function/.test(gate));
