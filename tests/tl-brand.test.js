@@ -106,8 +106,39 @@ console.log("\nTL 브랜드 적용");
   ok("옛 텍스트 브랜드 CSS 를 지우지 않고 남겼다", /\.brand \.name\{/.test(css) && /\.brand-tagline\{/.test(css));
   ok("로고 로딩 실패 대비가 있다", /brand-text/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
   /* 2026-08-18: 상단 배너를 공식 이미지로 교체 */
-  ok("배너가 이미지 소재로 교체됨", /class="ad-banner-img"[^>]*src="assets\/brand\/tl-banner\.jpg"/.test(html));
-  ok("배너 원본이 보관돼 있다", fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-original.jpg")));
+  ok("밝은 배경용 배너", /class="ad-banner-img ad-banner-light"[^>]*src="assets\/brand\/tl-banner-light\.jpg"/.test(html));
+  ok("어두운 배경용 배너", /class="ad-banner-img ad-banner-dark"[^>]*src="assets\/brand\/tl-banner\.jpg"/.test(html));
+  ok("두 배너 원본이 모두 보관돼 있다",
+     fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-original.jpg")) &&
+     fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-light-original.jpg")));
+  ok("다크모드에서 어두운 배너로 바꿔 낀다",
+     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-dark\{display:block;\}/.test(css) &&
+     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-light\{display:none;\}/.test(css));
+  {
+    /* 두 배너 비율이 같아야 테마 전환 때 높이가 안 흔들립니다. PNG/JPEG 헤더에서 직접 읽습니다. */
+    function jpegSize(file) {
+      const buf = fs.readFileSync(file);
+      let i = 2;
+      while (i < buf.length) {
+        if (buf[i] !== 0xff) { i++; continue; }
+        const marker = buf[i + 1];
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+        }
+        i += 2 + buf.readUInt16BE(i + 2);
+      }
+      return null;
+    }
+    const dir = path.join(REPO, "assets", "brand");
+    const d = jpegSize(path.join(dir, "tl-banner.jpg"));
+    const l = jpegSize(path.join(dir, "tl-banner-light.jpg"));
+    ok("두 배너 크기를 읽어왔다", !!d && !!l);
+    if (d && l) {
+      ok("어두운 배너가 4:1", Math.abs(d.w / d.h - 4) < 0.02, (d.w / d.h).toFixed(3));
+      ok("밝은 배너도 4:1", Math.abs(l.w / l.h - 4) < 0.02, (l.w / l.h).toFixed(3));
+      ok("두 배너 비율이 같다(전환 시 높이 안 흔들림)", Math.abs(d.w / d.h - l.w / l.h) < 0.02);
+    }
+  }
   ok("배너 비율을 4:1 로 고정(찌그러짐 방지)", /\.ad-creative-image \.ad-banner-img\{[^}]*aspect-ratio:4 \/ 1/.test(css));
   ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[^}]*width:100%;height:auto/.test(css));
   ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));

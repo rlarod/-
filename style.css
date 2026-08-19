@@ -2892,6 +2892,12 @@ html[data-theme="dark"] img.rank-badge{
 .ad-creative-image .ad-banner-img{
   display:block;width:100%;height:auto;aspect-ratio:4 / 1;object-fit:cover;
 }
+/* 테마별 교체 — 로고와 같은 방식입니다. 기본은 밝은 배경용,
+   다크모드에서만 어두운 배경용으로 바꿔 끼웁니다.
+   두 배너 모두 4:1 이라 전환해도 높이가 안 흔들립니다. */
+.ad-creative-image .ad-banner-dark{display:none;}
+html[data-theme="dark"] .ad-creative-image .ad-banner-light{display:none;}
+html[data-theme="dark"] .ad-creative-image .ad-banner-dark{display:block;}
 /* 이미지가 정상일 때 문구 소재는 숨깁니다(마크업은 남겨둡니다). */
 .ad-creative-image .ad-creative-mark,
 .ad-creative-image .ad-creative-title,
@@ -2899,7 +2905,8 @@ html[data-theme="dark"] img.rank-badge{
 .ad-creative-image .ad-creative-cta{display:none;}
 /* 이미지를 못 불러오면 문구 소재로 되돌아갑니다. */
 .ad-creative-image.ad-banner-failed{height:134px;padding:0 26px;gap:14px;display:flex;align-items:center;}
-.ad-creative-image.ad-banner-failed .ad-banner-img{display:none;}
+.ad-creative-image.ad-banner-failed .ad-banner-img,
+html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{display:none;}
 .ad-creative-image.ad-banner-failed .ad-creative-mark,
 .ad-creative-image.ad-banner-failed .ad-creative-title,
 .ad-creative-image.ad-banner-failed .ad-creative-sub,
