@@ -67,8 +67,20 @@ App.TLBrand = (function () {
     });
   }
 
+  /* 배너 이미지를 못 불러오면 기존 문구 소재로 되돌립니다(빈 배너 방지). */
+  function guardBanner() {
+    var img = document.querySelector(".ad-creative-image .ad-banner-img");
+    if (!img) return;
+    img.addEventListener("error", function () {
+      var box = img.closest(".ad-creative-image");
+      if (box) box.classList.add("ad-banner-failed");
+      console.warn("[tl-brand.js] 배너 이미지를 불러오지 못해 문구 소재로 대체했습니다.");
+    });
+  }
+
   function init() {
     guardLogo();
+    guardBanner();
     renderTlBalance();
     if (App.Bus && typeof App.Bus.on === "function") {
       App.Bus.on("trading:update", renderTlBalance);

@@ -105,6 +105,15 @@ console.log("\nTL 브랜드 적용");
 {
   ok("옛 텍스트 브랜드 CSS 를 지우지 않고 남겼다", /\.brand \.name\{/.test(css) && /\.brand-tagline\{/.test(css));
   ok("로고 로딩 실패 대비가 있다", /brand-text/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
+  /* 2026-08-18: 상단 배너를 공식 이미지로 교체 */
+  ok("배너가 이미지 소재로 교체됨", /class="ad-banner-img"[^>]*src="assets\/brand\/tl-banner\.jpg"/.test(html));
+  ok("배너 원본이 보관돼 있다", fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-original.jpg")));
+  ok("배너 비율을 4:1 로 고정(찌그러짐 방지)", /\.ad-creative-image \.ad-banner-img\{[^}]*aspect-ratio:4 \/ 1/.test(css));
+  ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[^}]*width:100%;height:auto/.test(css));
+  ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));
+  ok("이미지를 못 불러오면 문구로 되돌아간다", /ad-banner-failed/.test(css) && /ad-banner-failed/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
+  ok("배너 클릭 이동(data-ad-link)은 그대로", /class="ad-creative ad-creative-wide ad-creative-image" data-ad-link="page-nav-board"/.test(html));
+
   ok("기존 페이지 구조(거래/게시판/랭킹/마이페이지)가 그대로", ["page-exchange", "page-board", "page-ranking", "page-mypage"].every((id) => html.indexOf('id="' + id + '"') !== -1));
 }
 
