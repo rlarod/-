@@ -85,6 +85,16 @@ console.log("\n채팅 안전장치");
   ok("스크립트가 연결됐다", /js\/chat-status-calm\.js/.test(html));
 }
 
+/* ---------- 거래 알림이 도배되지 않는가 ---------- */
+{
+  /* 기록이 잠깐 0건으로 보였다가 되돌아오면 전부 '새 거래' 로 착각해
+     같은 알림을 수백 번 보냅니다. 실제로 채팅이 도배됐습니다. */
+  ok("한꺼번에 여러 건이면 알림을 건너뛴다", /MAX_BURST = 5/.test(eventJs) && /newCount > MAX_BURST/.test(eventJs));
+  ok("건너뛴 이유를 콘솔에 남긴다", /도배 방지/.test(eventJs));
+  ok("거래 기록 자체는 건드리지 않는다", /거래 기록은 그대로입니다/.test(eventJs));
+  ok("기준은 항상 최신으로 맞춘다", /lastSeenClosedCount = list\.length;/.test(eventJs));
+}
+
 /* ---------- 권한 ---------- */
 {
   ok("남의 이름으로 못 보낸다", /chat_insert_own[\s\S]{0,120}auth\.uid\(\) = user_id/.test(schema));

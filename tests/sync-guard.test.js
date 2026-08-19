@@ -54,7 +54,11 @@ console.log("\n서버 기록 보호");
 
   ok("유실이 의심돼도 이벤트는 전달한다", !!last && last.name === "trading:persisted");
   ok("잔고는 그대로 전달한다(안 그러면 지갑이 초기화됨)", last.payload.balance === 88000, String(last.payload.balance));
-  ok("거래 기록만 비워서 서버 기록을 지킨다", Array.isArray(last.payload.closedTrades) && last.payload.closedTrades.length === 0);
+  /* 처음에는 closedTrades 를 비워서 넘겼는데, 알림 모듈이 그걸 보고
+     기준을 0 으로 되돌려 같은 알림을 200번 보냈습니다(채팅 도배).
+     게다가 supabase-sync 는 거래를 추가만 하고 지우지 않으므로
+     그 보호는 애초에 필요 없었습니다. 지금은 알리기만 합니다. */
+  ok("거래 목록을 건드리지 않는다(알림 도배 방지)", Array.isArray(last.payload.closedTrades));
   ok("막은 횟수를 센다", G.getBlockedCount() === 1);
 }
 
@@ -88,7 +92,7 @@ console.log("\n서버 기록 보호");
   G._setBaseline({ realizedPnl: -1, tradeCount: 8 });
   const original = { closedTrades: new Array(2), balance: 77000, realizedPnl: -5 };
   App.Bus.emit("trading:persisted", original);
-  ok("넘긴 원본 객체는 그대로 둔다(사본을 만든다)", original.closedTrades.length === 2, String(original.closedTrades.length));
+  ok("넘긴 원본 객체를 훼손하지 않는다", original.closedTrades.length === 2, String(original.closedTrades.length));
 }
 
 /* ---------- 연결 ---------- */
@@ -100,7 +104,9 @@ console.log("\n서버 기록 보호");
 
   ok("supabase-sync 보다 먼저 실린다", at("js/sync-guard.js") >= 0 && at("js/sync-guard.js") < at("js/supabase-sync.js"));
   ok("이벤트를 통째로 막지 않는다(잔고 저장 보호)", !/return undefined;\s*\/\/ 서버로/.test(src));
-  ok("왜 통째로 막으면 안 되는지 적어뒀다", /잔고까지 서버에 안 올라갑니다/.test(src));
+  ok("payload 를 바꾸지 않는다(알림 도배 방지)", !/safe\.closedTrades = \[\]/.test(src));
+  ok("왜 건드리면 안 되는지 적어뒀다", /같은 알림을 200번/.test(src));
+  ok("서버 기록은 추가만 되어 안전하다는 근거를 적어뒀다", /서버 기록을 지우지 않습니다/.test(src));
   ok("supabase-sync 는 건드리지 않았다", !/SyncGuard/.test(fs.readFileSync(path.join(REPO, "js", "supabase-sync.js"), "utf8")));
 }
 

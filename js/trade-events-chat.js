@@ -40,9 +40,25 @@ App.TradeEventsChat = (function () {
       lastSeenClosedCount = list.length; // 줄어든 경우(예: 다른 탭 초기화) 기준 재조정
       return;
     }
-    const newCount = list.length - lastSeenClosedCount;
-    const newTrades = list.slice(0, newCount); // 앞쪽이 최신
+    let newCount = list.length - lastSeenClosedCount;
     lastSeenClosedCount = list.length;
+
+    /* 한 번에 여러 건이 쏟아지는 건 정상이 아닙니다.
+       기록이 잠깐 0건으로 보였다가 되돌아오면(복원 중 등) 전부
+       '새 거래' 로 착각해 같은 알림을 수백 번 보내게 됩니다
+       — 실제로 채팅이 도배됐습니다.
+       사람이 한 번에 청산할 수 있는 건 많아야 몇 건이므로,
+       그 이상은 알림을 건너뜁니다(거래 기록 자체는 그대로 남습니다). */
+    const MAX_BURST = 5;
+    if (newCount > MAX_BURST) {
+      console.warn(
+        "[trade-events-chat.js] 한꺼번에 " + newCount +
+        "건이 새로 잡혀 알림을 건너뜁니다(도배 방지). 거래 기록은 그대로입니다."
+      );
+      return;
+    }
+
+    const newTrades = list.slice(0, newCount); // 앞쪽이 최신
 
     const client = sb();
     if (!client) return;

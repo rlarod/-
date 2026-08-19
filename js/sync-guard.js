@@ -121,26 +121,20 @@ App.SyncGuard = (function () {
       if (name === "trading:persisted" && looksLikeDataLoss(payload)) {
         blocked++;
         tellUser();
-        /* 중요: 이벤트를 통째로 막으면 안 됩니다.
-           이 이벤트 하나에 잔고·포지션·거래·주문 저장이 모두 들어 있어서,
-           막으면 잔고까지 서버에 안 올라갑니다. 그러면 새로고침할 때마다
-           서버의 옛 잔고(시작값)로 되돌아갑니다 — 실제로 그렇게 됐습니다.
+        /* 여기서 payload 를 건드리면 안 됩니다.
+           처음에는 closedTrades 를 빈 목록으로 바꿔 넘겼는데,
+           js/trade-events-chat.js 가 그걸 보고 '기록이 0건이 됐다' 며
+           기준을 0 으로 되돌렸습니다. 그다음 200건이 들어오자 전부
+           새 거래로 착각해 같은 알림을 200번 보냈습니다(채팅 도배).
 
-           그래서 이벤트는 그대로 보내되, 거래 기록만 손대지 않도록
-           빈 목록으로 바꿔 넘깁니다.
-           supabase-sync 는 closedTrades 가 줄면 기준만 맞추고 아무것도
-           저장하지 않으므로, 서버의 거래 기록이 안전하게 보존됩니다.
-           잔고·포지션은 정상적으로 저장됩니다. */
-        try {
-          var safe = {};
-          for (var k in payload) { if (Object.prototype.hasOwnProperty.call(payload, k)) safe[k] = payload[k]; }
-          safe.closedTrades = [];
-          payload = safe;
-        } catch (e) {
-          console.warn("[sync-guard.js] 안전 사본 생성 실패:", e);
-        }
-        return orig.apply(App.Bus, [name, payload]);
+           게다가 그 보호는 애초에 필요 없었습니다.
+           js/supabase-sync.js 의 syncNewTrades 는 '늘어난 만큼만 추가'
+           할 뿐 서버 기록을 지우지 않습니다. 로컬이 비어도 서버의
+           거래 기록은 그대로 남습니다.
+
+           그래서 지금은 알리기만 하고 값은 그대로 흘려보냅니다. */
       }
+
       /* 정상 저장이면 기준값을 최신으로 올려둡니다. */
       if (name === "trading:persisted" && payload && Array.isArray(payload.closedTrades)) {
         if (!serverBaseline) serverBaseline = { realizedPnl: 0, tradeCount: 0 };
