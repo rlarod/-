@@ -475,7 +475,12 @@ App.TLHotdeal = (function () {
       if (dom.balanceSub) dom.balanceSub.textContent = "로그인 후 확인할 수 있습니다";
       return;
     }
-    dom.balance.textContent = tl(b.balance);
+    /* 잔액이 음수로 내려가는 경우가 있습니다(시즌 초기화 때 획득은
+       0이 되는데 사용 기록이 남는 상황 — schema-reset-season-fix.sql 로
+       고쳤지만 이미 음수가 된 계정이 있을 수 있습니다).
+       'ㅡ5,300 TL' 로 보이면 사용자가 당황하므로 표시만 0으로 막습니다.
+       구매 판정은 서버가 실제 값으로 하므로 이 표시가 이득을 주지 않습니다. */
+    dom.balance.textContent = tl(Math.max(0, Number(b.balance) || 0));
     if (dom.balanceSub) {
       /* 지급/환불(granted)이 있으면 같이 보여줍니다. 없으면 표시하지 않습니다
          — 서버가 안 주는 값을 지어내지 않습니다. */
