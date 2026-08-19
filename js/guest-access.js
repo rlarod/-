@@ -80,18 +80,27 @@ App.GuestAccess = (function () {
   }
 
   /* 로그인이 필요한 자리에 빈칸 대신 안내를 넣습니다.
-     비회원이 들어와도 "왜 비었는지" 알 수 있게 합니다. */
+     비회원이 들어와도 "왜 비었는지" 알 수 있게 합니다.
+
+     주의: 처음에는 focus 를 가로채 입력을 막았는데, 그 처리가 한 번
+     걸리면 로그인해도 풀리지 않아 회원이 채팅을 아예 못 쓰게 됐습니다.
+     그래서 안내 문구만 바꾸고, 입력을 막는 일은 하지 않습니다.
+     실제 전송 차단은 js/login-required.js 가 로그인 여부를 그때그때
+     확인해서 처리합니다(로그인하면 자동으로 풀립니다). */
+  var GUEST_PLACEHOLDER = "로그인 후 채팅에 참여할 수 있습니다";
+  var MEMBER_PLACEHOLDER = "메시지를 입력하세요...";
+
   function markGuestAreas() {
-    if (App.Auth && typeof App.Auth.getNickname === "function" && App.Auth.getNickname()) return;
     var input = document.getElementById("chat-input");
-    if (input && !input.getAttribute("data-guest-note")) {
-      input.setAttribute("data-guest-note", "1");
-      input.placeholder = "로그인 후 채팅에 참여할 수 있습니다";
-      input.addEventListener("focus", function () {
-        input.blur();
-        openLogin();
-      });
+    if (!input) return;
+    var loggedIn = !!(App.Auth && typeof App.Auth.getNickname === "function" && App.Auth.getNickname());
+
+    if (loggedIn) {
+      /* 로그인하면 원래 안내로 되돌립니다. */
+      if (input.placeholder === GUEST_PLACEHOLDER) input.placeholder = MEMBER_PLACEHOLDER;
+      return;
     }
+    if (input.placeholder !== GUEST_PLACEHOLDER) input.placeholder = GUEST_PLACEHOLDER;
   }
 
   /* ── 가장 중요한 부분 ──────────────────────────────────────────────
@@ -145,6 +154,8 @@ App.GuestAccess = (function () {
     guard();
     markGuestAreas();
     setTimeout(markGuestAreas, 1500);
+    setTimeout(markGuestAreas, 4000);
+    setInterval(markGuestAreas, 5000);
     /* 로그인 복구(세션 확인)에 시간이 걸리므로 잠깐 기다렸다 확인합니다. */
     setTimeout(ensureBooted, 1200);
     setTimeout(ensureBooted, 3000);

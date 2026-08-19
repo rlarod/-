@@ -105,6 +105,15 @@ console.log("\n③ 비회원 접근");
   ok("pending-auth 규칙은 그대로 둔다(로그인 창 띄울 때 필요)", /\.app\.pending-auth\{display:none;\}/.test(cssG));
   ok("ESC·바깥 클릭으로 닫힌다", /Escape/.test(guestSrc) && /e\.target === g/.test(guestSrc));
 
+  /* 2026-08-18: 비회원 안내를 넣으면서 채팅 입력칸의 focus 를 가로채
+     입력을 막았는데, 그 처리가 한 번 걸리면 로그인해도 풀리지 않아
+     회원이 채팅을 아예 못 썼습니다. 안내 문구만 바꾸도록 고쳤습니다. */
+  ok("채팅 입력을 가로막지 않는다", !/addEventListener\("focus"/.test(guestSrc) && !/\.blur\(\)/.test(guestSrc));
+  ok("비회원에게는 안내 문구를 보여준다", /로그인 후 채팅에 참여할 수 있습니다/.test(guestSrc));
+  ok("로그인하면 원래 문구로 되돌린다", /MEMBER_PLACEHOLDER/.test(guestSrc) && /메시지를 입력하세요/.test(guestSrc));
+  ok("로그인 여부를 그때그때 다시 확인한다", /var loggedIn = /.test(guestSrc) && /setInterval\(markGuestAreas/.test(guestSrc));
+  ok("전송 차단은 login-required 가 맡는다", /chat-send-btn/.test(lr));
+
   const up = fs.readFileSync(path.join(REPO, "js", "user-panel.js"), "utf8");
   ok("내 정보 칸이 직접 로그인 폼을 그린다", /up-login-submit/.test(up) && /bindInlineLogin/.test(up));
 }
