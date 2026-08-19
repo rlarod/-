@@ -73,8 +73,10 @@ console.log("\n마이페이지");
 
   /* 마지막 확인 구문은 pg_proc(시스템 테이블)을 보므로 잘라냅니다.
      sql 변수는 주석이 이미 제거된 상태라 pg_proc 를 기준으로 자릅니다. */
-  const cut = sql.indexOf("from pg_proc");
-  const body = cut > 0 ? sql.slice(0, cut) : sql;
+  /* 마지막 확인 구문은 pg_proc(시스템 테이블)을 보고, 거기서도 별칭 p 를
+     씁니다. p.proname 이 from 절보다 앞에 나오므로 select 부터 잘라냅니다. */
+  const cut = sql.indexOf("p.proname");
+  const body = cut > 0 ? sql.slice(0, sql.lastIndexOf("select", cut)) : sql;
 
   [["tl_transactions", "t"], ["tl_purchases", "p"],
    ["user_items", "ui"], ["item_usage_logs", "l"]].forEach(function (pair) {
