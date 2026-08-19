@@ -269,18 +269,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("로그인 후 지금 보던 페이지로 돌아온다",
       c && c[1].options.redirectTo === "https://tl.test/index.html", c && JSON.stringify(c[1].options));
 
-    /* KOE205 재발 방지.
-       scopes 를 안 주면 Supabase 가 기본값으로 account_email 과
-       profile_image 까지 요청하는데, 카카오 콘솔에 그 동의항목이
-       없으면 카카오가 로그인을 통째로 거부합니다.
-       2026-08-19 실제로 이 에러로 막혔습니다. */
-    ok("요청 항목을 직접 지정한다(기본값에 맡기지 않음)",
-      c && typeof c[1].options.scopes === "string" && c[1].options.scopes.length > 0);
-    ok("닉네임만 요청한다", c && c[1].options.scopes === "profile_nickname", c && c[1].options.scopes);
-    ok("이메일을 요청하지 않는다(별도 심사 필요 — 없어도 되는 정보)",
-      c && c[1].options.scopes.indexOf("account_email") === -1);
-    ok("프로필사진을 요청하지 않는다(안 쓰는 정보)",
-      c && c[1].options.scopes.indexOf("profile_image") === -1);
+    /* 요청 항목(scope)은 지정하지 않습니다 — 지정해도 Supabase 가 무시하고
+       닉네임·프로필사진·이메일 세 개를 그대로 보냅니다(supabase#36878).
+       지정해두면 "이건 우리가 정한다" 는 오해를 남기므로 아예 넣지 않고,
+       세 개를 카카오 콘솔의 동의항목에 등록하는 쪽으로 해결합니다.
+       2026-08-19: scopes 로 막아보려다 실패한 이력이 있어 못박아 둡니다. */
+    ok("요청 항목을 코드에서 정하지 않는다(Supabase 가 무시함)",
+      c && !("scopes" in c[1].options), c && JSON.stringify(c[1].options));
   }
 
   /* ---------- 폼이 다시 그려져도 버튼이 살아있다 ---------- */

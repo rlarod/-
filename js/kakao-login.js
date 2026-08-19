@@ -42,11 +42,20 @@ App.KakaoLogin = (function () {
   var BTN_ID = "kakao-login-btn";
   var GATE_ID = "kakao-nick-gate";
 
-  /* 카카오에 요청하는 정보 — 닉네임 하나뿐입니다.
-     카카오 콘솔의 [카카오 로그인] > [동의항목] 에 설정된 것만 요청할 수
-     있고, 설정 안 된 걸 요청하면 로그인 자체가 막힙니다(KOE205).
-     이메일·프로필사진은 우리가 안 쓰므로 요청하지 않습니다. */
-  var SCOPES = "profile_nickname";
+  /* ── 요청 항목(scope)은 우리가 못 정합니다 ──────────────────────────────
+   * Supabase 는 카카오에 대해 항상 아래 세 가지를 요청합니다.
+   *     profile_nickname, profile_image, account_email
+   * signInWithOAuth 에 scopes 를 넘겨도 무시하고 세 개를 그대로 보냅니다
+   * (Supabase 쪽에 버그로 등록된 알려진 문제 — supabase/supabase#36878).
+   *
+   * 그래서 카카오 콘솔의 [카카오 로그인] > [동의항목] 에 세 개가 전부
+   * 설정돼 있어야 합니다. 하나라도 빠지면 로그인 자체가 거부됩니다
+   * (잘못된 요청 KOE205 — 2026-08-19 닉네임만 설정한 상태에서 막혔습니다).
+   *
+   * 우리가 실제로 쓰는 건 닉네임뿐이고, 프로필사진은 안 씁니다.
+   * 이메일은 받아도 되고 못 받아도 됩니다(Supabase 의
+   * "Allow users without an email" 이 ON 이라 없어도 계정이 생깁니다).
+   * ------------------------------------------------------------------ */
 
   function sb() {
     return App.SupabaseClient && typeof App.SupabaseClient.get === "function"
@@ -168,17 +177,7 @@ App.KakaoLogin = (function () {
     try {
       var res = await client.auth.signInWithOAuth({
         provider: PROVIDER,
-        options: {
-          redirectTo: redirectTo,
-          /* 요청할 정보를 닉네임 하나로 못박습니다.
-             이걸 비워두면 Supabase 가 기본값으로 이메일(account_email)과
-             프로필사진(profile_image)까지 달라고 하는데, 카카오 콘솔에
-             그 항목들이 설정돼 있지 않으면 카카오가 통째로 거부합니다
-             (잘못된 요청 KOE205 — 2026-08-19 실제로 이걸로 막혔습니다).
-             이메일은 카카오에 별도 심사(영업일 3~5일)를 받아야 쓸 수 있고,
-             우리는 닉네임만 있으면 되므로 처음부터 요청하지 않습니다. */
-          scopes: SCOPES,
-        },
+        options: { redirectTo: redirectTo },
       });
       if (res && res.error) throw res.error;
     } catch (e) {
