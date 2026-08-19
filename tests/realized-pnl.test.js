@@ -126,6 +126,17 @@ console.log("\n실현손익 (진입 수수료 반영)");
 {
   const src = fs.readFileSync(path.join(REPO, "js", "realized-pnl-fix.js"), "utf8");
   ok("getSnapshot 을 감싼다", /App\.Trading\.getSnapshot = function/.test(src));
+  /* getSnapshot 만 감싸면 부족합니다. trading.js 는 자기 안에서
+     getSnapshot() 을 불러 Bus 로 뿌리는데, 그 호출은 모듈 내부라
+     밖에서 감싼 함수를 타지 않습니다.
+     실측: 스냅샷 69.58 인데 마이페이지는 77.08 을 표시했습니다.
+     trading:persisted 는 서버 저장(realized_pnl)으로 이어지고
+     그 값이 랭킹 기준이라 순위까지 어긋납니다. */
+  ok("이벤트도 감싼다", /App\.Bus\.emit = function/.test(src));
+  ok("화면 갱신 이벤트를 보정한다", /"trading:update"/.test(src));
+  ok("서버 저장 이벤트도 보정한다", /"trading:persisted"/.test(src));
+  ok("이벤트를 두 번 감싸지 않는다", /App\.Bus\.__realizedPnlFixed/.test(src));
+  ok("다른 이벤트는 건드리지 않는다", /FIXED_EVENTS\.indexOf\(name\) !== -1/.test(src));
   ok("두 번 감싸지 않는다", /__realizedPnlFixed/.test(src));
   ok("실패해도 원래 값을 돌려준다", /보정 실패 — 원래 값 사용/.test(src));
 

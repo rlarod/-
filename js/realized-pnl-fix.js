@@ -72,35 +72,68 @@ App.RealizedPnlFix = (function () {
     return snap;
   }
 
+  function safeRecompute(snap) {
+    try {
+      return recompute(snap);
+    } catch (e) {
+      console.warn("[realized-pnl-fix.js] 보정 실패 — 원래 값 사용:", e);
+      return snap;
+    }
+  }
+
   function wrap() {
     if (!App.Trading || typeof App.Trading.getSnapshot !== "function") return false;
     if (App.Trading.__realizedPnlFixed) return true;
     var orig = App.Trading.getSnapshot;
     App.Trading.getSnapshot = function () {
-      var snap = orig.apply(App.Trading, arguments);
-      try {
-        return recompute(snap);
-      } catch (e) {
-        console.warn("[realized-pnl-fix.js] 보정 실패 — 원래 값 사용:", e);
-        return snap;
-      }
+      return safeRecompute(orig.apply(App.Trading, arguments));
     };
     App.Trading.__realizedPnlFixed = true;
     return true;
   }
 
+  /* getSnapshot 을 감싸는 것만으로는 부족합니다.
+     trading.js 는 자기 안에서 getSnapshot() 을 불러
+     App.Bus.emit("trading:update", ...) 로 뿌립니다. 그 호출은 모듈
+     내부라 밖에서 감싼 함수를 타지 않습니다.
+     그래서 마이페이지처럼 이벤트로 값을 받는 화면은 보정 전 값을
+     보고 있었습니다(실측: 스냅샷 69.58 인데 마이페이지 77.08).
+     서버 저장도 마찬가지입니다 — js/supabase-sync.js 가
+     "trading:persisted" 이벤트로 받은 스냅샷의 realizedPnl 을
+     trading_accounts.realized_pnl 에 그대로 넣습니다. 그 값은 랭킹의
+     기준이라, 보정 전 값이 저장되면 순위까지 어긋납니다.
+     그래서 두 이벤트 모두 지나갈 때 보정합니다. */
+  var FIXED_EVENTS = ["trading:update", "trading:persisted"];
+
+  function wrapBus() {
+    if (!App.Bus || typeof App.Bus.emit !== "function") return false;
+    if (App.Bus.__realizedPnlFixed) return true;
+    var origEmit = App.Bus.emit;
+    App.Bus.emit = function (name, payload) {
+      if (FIXED_EVENTS.indexOf(name) !== -1 && payload && Array.isArray(payload.closedTrades)) {
+        payload = safeRecompute(payload);
+      }
+      return origEmit.apply(App.Bus, [name, payload].concat(
+        Array.prototype.slice.call(arguments, 2)
+      ));
+    };
+    App.Bus.__realizedPnlFixed = true;
+    return true;
+  }
+
   function init() {
-    if (wrap()) return;
+    var done = wrap() && wrapBus();
+    if (done) return;
     var tries = 0;
     var t = setInterval(function () {
-      if (wrap() || ++tries > 100) clearInterval(t);
+      if ((wrap() && wrapBus()) || ++tries > 100) clearInterval(t);
     }, 100);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, entryFeeOf: entryFeeOf, recompute: recompute };
+  return { init: init, entryFeeOf: entryFeeOf, recompute: recompute, wrapBus: wrapBus, FIXED_EVENTS: FIXED_EVENTS };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = App.RealizedPnlFix;
