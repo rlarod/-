@@ -3138,3 +3138,71 @@ html[data-theme="dark"] .menu-bar-inner::after{
   .mh-table{min-width:420px;}
   .mh-btn{flex:1 1 auto;}
 }
+
+/* ===== 카카오 로그인 =====
+   카카오 디자인 가이드의 지정 색(#FEE500 / 글자 #191600)을 그대로 씁니다.
+   브랜드 컬러가 아니라 카카오 규정이라 임의로 바꾸지 않습니다. */
+/* 로그인 폼(.user-panel-guest)은 flex column + align-items:center 입니다.
+   폭을 지정하지 않으면 글자 크기만큼만 줄어들어 로그인 버튼과 단차가 납니다.
+   실측: 폭을 안 주면 228px, 로그인 버튼은 408px. */
+.kakao-login-wrap{width:100%;}
+.kakao-login-or{
+  display:flex;align-items:center;gap:8px;
+  margin:2px 0 10px;color:var(--text-faint);font-size:12px;
+}
+.kakao-login-or::before,.kakao-login-or::after{
+  content:"";flex:1;height:1px;background:var(--border-soft);
+}
+.kakao-login-btn{
+  width:100%;height:44px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  border:none;border-radius:3px;cursor:pointer;
+  background:#FEE500;color:#191600;
+  font-family:inherit;font-size:15px;font-weight:700;
+}
+.kakao-login-btn:hover{filter:brightness(0.96);}
+.kakao-login-btn:active{filter:brightness(0.92);}
+.kakao-login-icon{display:flex;align-items:center;}
+.kakao-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
+.kakao-login-err:not(:empty){min-height:18px;}
+
+/* ===== 카카오 신규 회원 닉네임 설정 =====
+   auth.js 가 세션을 확인하기 전에 떠야 해서 화면 전체를 덮습니다.
+   여기서 닉네임을 못 받으면 auth.js 가 곧바로 로그아웃시킵니다. */
+.kakao-nick-gate{
+  position:fixed;inset:0;z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(0,0,0,0.55);
+}
+.kakao-nick-card{
+  width:100%;max-width:340px;box-sizing:border-box;
+  padding:24px 22px;border-radius:3px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.kakao-nick-title{font-size:19px;font-weight:700;color:var(--text);text-align:center;}
+.kakao-nick-sub{font-size:13px;color:var(--text-faint);text-align:center;margin:4px 0 16px;}
+.kakao-nick-input{
+  width:100%;height:44px;padding:0 12px;box-sizing:border-box;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface2);color:var(--text);
+  font-family:inherit;font-size:16px;text-align:center;
+}
+.kakao-nick-input:focus{outline:none;border-color:var(--tl-blue);}
+.kakao-nick-rule{
+  margin-top:8px;font-size:12px;line-height:1.5;
+  color:var(--text-faint);text-align:center;
+}
+.kakao-nick-err{min-height:18px;margin-top:6px;color:var(--red);font-size:13px;text-align:center;}
+.kakao-nick-submit{
+  width:100%;height:44px;margin-top:6px;
+  border:none;border-radius:3px;cursor:pointer;
+  background:var(--tl-blue);color:#fff;
+  font-family:inherit;font-size:16px;font-weight:700;
+}
+.kakao-nick-submit:disabled{opacity:0.6;cursor:default;}
+.kakao-nick-cancel{
+  width:100%;height:36px;margin-top:8px;
+  border:none;background:none;cursor:pointer;
+  color:var(--text-faint);font-family:inherit;font-size:13px;
+}
+.kakao-nick-cancel:hover{text-decoration:underline;}
