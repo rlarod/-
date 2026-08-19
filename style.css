@@ -3012,3 +3012,39 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 .up-login-toggle{margin-top:10px;text-align:center;font-size:13px;color:var(--text-faint);}
 .up-login-toggle a{color:var(--gold);font-weight:700;text-decoration:none;}
 .up-login-toggle a:hover{text-decoration:underline;}
+
+/* ===== 좁은 화면 메뉴 — 더 있다는 신호 =====
+   메뉴가 한 줄에 안 들어가면 가로로 밀 수 있는데(이미 동작함),
+   스크롤바를 숨겨둬서 '더 있다'는 걸 알 수가 없었습니다.
+   실측: 390px 화면에서 메뉴는 470px 필요 — 마이페이지·TL 마켓이 안 보임.
+   메뉴를 지우거나 줄이지 않고, 오른쪽 끝에 옅은 그림자를 겹쳐
+   밀 수 있다는 신호만 줍니다. */
+.menu-bar-inner{position:relative;}
+.menu-bar-inner::after{
+  content:"";position:absolute;top:0;right:0;bottom:0;width:26px;
+  pointer-events:none;opacity:0;transition:opacity .2s ease;
+  background:linear-gradient(to right, rgba(23,105,179,0), #1769B3);
+}
+/* 끝까지 밀지 않았을 때만 보입니다(js/menu-scroll-hint.js). */
+.menu-bar-inner.has-more::after{opacity:1;}
+html[data-theme="dark"] .menu-bar-inner::after{
+  background:linear-gradient(to right, rgba(15,76,130,0), #0F4C82);
+}
+/* 좁은 화면에서는 메뉴 좌우 여백을 줄여 한 개라도 더 보이게 */
+@media (max-width:520px){
+  .menu-bar-inner{padding:0 4px;}
+  .top-banner-nav-btn{padding-left:10px;padding-right:10px;}
+}
+
+/* ===== 좁은 화면 — 핫딜/마켓 탭 줄바꿈 =====
+   마켓 탭 4개가 482px 라 390px 화면에서 111px 넘쳤습니다(실측).
+   페이지 전체가 가로로 밀려서 보기 불편했습니다.
+   탭을 지우지 않고 줄을 바꿔 담습니다. */
+@media (max-width:640px){
+  .hd-head{gap:12px;}
+  .hd-head-nav{flex-wrap:wrap;width:100%;}
+  .hd-head-nav .hd-tab-btn{flex:1 1 auto;min-width:0;padding:10px 12px;font-size:15px;}
+  .hd-balance{width:100%;}
+  .hd-tools{flex-direction:column;}
+  .hd-tools .hd-search,.hd-tools .hd-sort{width:100%;flex:1 1 auto;}
+}
