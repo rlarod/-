@@ -106,6 +106,26 @@ console.log("\n서버 저장 컬럼");
      missing.length ? "없는 컬럼: " + missing.join(", ") : "");
 }
 
+/* ---------- upsert 를 방해하는 트리거가 없는가 ---------- */
+{
+  /* trg_force_starting_balance 는 BEFORE INSERT 트리거인데,
+     앱은 잔고를 upsert(INSERT ... ON CONFLICT DO UPDATE)로 저장합니다.
+     PostgreSQL 은 충돌 확인 '전에' BEFORE INSERT 를 실행하므로,
+     트리거가 balance 를 시작값으로 덮으면 갱신이 통째로 무효가 됩니다.
+     실제로 그래서 새로고침마다 지갑이 1.5억으로 돌아갔습니다. */
+  const files = fs.readdirSync(path.join(REPO, "supabase")).filter((f) => f.endsWith(".sql"));
+  const all = files.map((f) => fs.readFileSync(path.join(REPO, "supabase", f), "utf8")).join("\n");
+  const code = all.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+
+  ok("잔고를 upsert 로 저장한다", /trading_accounts"\)\.upsert/.test(sync));
+  ok("시작값 강제 트리거가 기존 계정을 건드리지 않는다",
+     /if exists \(select 1 from public\.trading_accounts t where t\.user_id = new\.user_id\) then\s*\n\s*return new;/.test(code));
+  ok("신규 계정에는 여전히 시작값을 준다",
+     /new\.initial_balance := public\.starting_balance\(\)/.test(code));
+  ok("해결 SQL 이 저장소에 있다",
+     fs.existsSync(path.join(REPO, "supabase", "지갑초기화-해결.sql")));
+}
+
 /* ---------- 실패를 조용히 넘기지 않는가 ---------- */
 {
   /* 저장이 실패해도 콘솔에만 남고 사용자는 모릅니다.
