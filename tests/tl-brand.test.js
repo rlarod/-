@@ -120,7 +120,7 @@ console.log("\nTL 브랜드 적용");
   /* 2026-08-18: 배너 아랫변을 오른쪽 '실시간 채팅' 헤더 아랫변과 맞춥니다. */
   ok("배너 높이가 채팅 헤더와 같은 134px", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?height:134px/.test(css));
   ok("cover 로 칸을 꽉 채운다", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?object-fit:cover/.test(css));
-  ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?width:100%;height:auto/.test(css));
+  ok("가로 100%, 높이는 채팅 헤더와 같은 고정값", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?width:100%;height:134px/.test(css));
   ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));
   ok("이미지를 못 불러오면 문구로 되돌아간다", /ad-banner-failed/.test(css) && /ad-banner-failed/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
   {
