@@ -90,20 +90,35 @@ App.GuestAccess = (function () {
      로그인을 잠깐 기다린 뒤에도 부팅이 안 됐으면 여기서 직접 띄웁니다.
      App.bootApp 은 auth.js 안에 중복 부팅 방지 장치가 있고, main.js 쪽도
      boot() 를 한 번만 수행하므로 두 번 불려도 안전합니다. */
-  var bootKicked = false;
+  /* ── 부팅은 딱 한 번만 ──────────────────────────────────────────────
+     App.bootApp() 을 감싸서 "이미 불렸는지"를 확실히 기록합니다.
+     화면을 보고 짐작하면(호가 행이 있나 없나 등) 시세가 늦게 올 때
+     '아직 안 됐다'고 잘못 판단해 두 번 부팅하게 됩니다.
+     두 번 부팅하면 화면이 두 번 만들어져 게시판·랭킹·핫딜까지 전부
+     깨집니다(실제로 그랬습니다). 그래서 짐작하지 않고 기록으로 판단합니다. */
+  var bootCalled = false;
+
+  function wrapBoot() {
+    if (!App.bootApp || App.bootApp.__guestWrapped) return;
+    var orig = App.bootApp;
+    var wrapped = function () {
+      bootCalled = true;
+      return orig.apply(this, arguments);
+    };
+    wrapped.__guestWrapped = true;
+    App.bootApp = wrapped;
+  }
+
+  /* 로그인을 기다렸는데도 아무도 부팅을 안 했으면 여기서 한 번 띄웁니다. */
   function ensureBooted() {
-    if (bootKicked) return;
-    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
+    wrapBoot();
+    if (bootCalled) return;                       // 이미 누가 불렀음
     if (!App.bootApp) return;
-    /* 이미 부팅됐는지: 부팅되면 App.Trading 이 화면을 잡습니다. */
-    var started = !!(App.UI && App.UI.__booted) || !!document.querySelector("#ob-asks .ob-row");
-    if (started) { bootKicked = true; return; }
-    bootKicked = true;
+    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
     try {
-      App.bootApp();
+      App.bootApp();                              // 감싸둔 함수라 bootCalled 가 켜집니다
       console.warn("[guest-access.js] 비회원이라 로그인 없이 부팅했습니다.");
     } catch (e) {
-      bootKicked = false;
       console.warn("[guest-access.js] 비회원 부팅 실패:", e);
     }
   }
@@ -112,6 +127,7 @@ App.GuestAccess = (function () {
     var g = gateEl();
     if (!g) return;
 
+    wrapBoot();
     guard();
     markGuestAreas();
     setTimeout(markGuestAreas, 1500);
