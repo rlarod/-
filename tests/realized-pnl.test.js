@@ -51,7 +51,19 @@ console.log("\n실현손익 (진입 수수료 반영)");
   const t = trade(1000, 10, 60000, 61000, "long");
   const got = FIX.entryFeeOf(t, feeRate);
   ok("진입 수수료를 정확히 되살린다", Math.abs(got - 5) < 0.001, got.toFixed(4));
+  /* trading.js 는 forced 같은 플래그가 아니라 reason 문자열로 구분합니다
+     (const isForced = reason === "강제청산").
+     처음에 플래그로 찾다가 강제청산 실현손익이 -1000.47 로 기록됐습니다.
+     실제 손실은 -1005(증거금 1,000 + 진입수수료 5)였습니다. */
+  ok("강제청산은 reason 으로 판별한다", FIX.entryFeeOf({ reason: "강제청산", fee: 5 }, feeRate) === 5);
   ok("강제청산은 fee 전체가 진입 수수료", FIX.entryFeeOf({ forced: true, fee: 7.5 }, feeRate) === 7.5);
+  {
+    /* 강제청산 거래 한 건: 증거금 1,000 전액 손실 + 진입수수료 5 */
+    const forced = { reason: "강제청산", qty: 10000 / 60000, entry: 60000, exit: 54300, margin: 1000, pnl: -1000, fee: 5 };
+    const snap = { closedTrades: [forced], realizedPnl: -1000, feeRate };
+    FIX.recompute(snap);
+    ok("강제청산 실현손익 = -1005 (실제 손실과 일치)", Math.abs(snap.realizedPnl + 1005) < 0.01, snap.realizedPnl.toFixed(2));
+  }
   ok("이상한 거래는 0 으로", FIX.entryFeeOf({}, feeRate) === 0 && FIX.entryFeeOf(null, feeRate) === 0);
 }
 

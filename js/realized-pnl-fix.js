@@ -43,8 +43,12 @@ App.RealizedPnlFix = (function () {
     var fee = Number(trade.fee);
     if (!isFinite(fee) || fee <= 0) return 0;
 
-    /* 강제청산은 trading.js 가 진입 수수료만 fee 에 담습니다. */
-    if (trade.forced || trade.isForced) return fee;
+    /* 강제청산은 trading.js 가 진입 수수료만 fee 에 담습니다.
+       구분은 forced 같은 플래그가 아니라 reason 문자열입니다
+       (trading.js: const isForced = reason === "강제청산").
+       처음에 플래그로 찾다가 강제청산에서 청산수수료를 빼버려
+       실현손익이 -1000.47 로 기록됐습니다(실제 손실 -1005). */
+    if (trade.reason === "강제청산" || trade.forced || trade.isForced) return fee;
 
     var taker = feeRate && isFinite(feeRate.taker) ? feeRate.taker : 0.0005;
     var qty = Number(trade.qty) || 0;
