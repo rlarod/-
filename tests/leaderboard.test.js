@@ -57,7 +57,12 @@ console.log("\n랭킹");
 /* ---------- 안전 ---------- */
 {
   ok("테이블을 만들거나 지우지 않는다", !/create table|drop table|truncate/i.test(fix));
-  ok("뷰·함수만 다시 만든다", /create or replace view public\.leaderboard/.test(fix) && /create or replace function public\.get_leaderboard/.test(fix));
+  /* create or replace 는 컬럼 이름·순서가 바뀌면 거부합니다
+     (ERROR: cannot change name of view column). 그래서 먼저 지우고
+     다시 만듭니다. 뷰·함수는 정의일 뿐이라 데이터가 사라지지 않습니다. */
+  ok("뷰를 먼저 지우고 다시 만든다", /drop view if exists public\.leaderboard cascade;/.test(fix) && /create view public\.leaderboard as/.test(fix));
+  ok("함수도 먼저 지우고 다시 만든다", /drop function if exists public\.get_leaderboard\(int\);/.test(fix) && /drop function if exists public\.get_my_rank\(\);/.test(fix));
+  ok("지우는 대상은 뷰와 함수뿐", !/drop (table|schema|database|policy|trigger)/i.test(fix));
   ok("비회원도 랭킹을 볼 수 있다", /grant execute on function public\.get_leaderboard to anon/.test(fix));
   ok("내 순위는 로그인한 본인 것만", /where ranked\.user_id = auth\.uid\(\)/.test(fix));
 }

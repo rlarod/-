@@ -34,7 +34,15 @@
 
 
 -- ---------------- 1) 랭킹 뷰 ----------------
-create or replace view public.leaderboard as
+-- create or replace 는 컬럼 순서·이름이 바뀌면 거부합니다
+--   ERROR: cannot change name of view column "total_asset" to "balance"
+-- 그래서 먼저 지우고 다시 만듭니다.
+-- 뷰는 데이터를 담고 있지 않습니다(테이블을 조회하는 정의일 뿐) —
+-- 지워도 거래·회원 데이터는 그대로입니다.
+-- 이 뷰를 참조하는 get_leaderboard() 도 아래에서 다시 만듭니다.
+drop view if exists public.leaderboard cascade;
+
+create view public.leaderboard as
   select
     p.nickname,
     ta.initial_balance,
@@ -57,7 +65,10 @@ create or replace view public.leaderboard as
 
 -- ---------------- 2) 랭킹 목록 ----------------
 -- 화면이 쓰는 칸을 전부 내려줍니다(total_asset, profit_amount 추가).
-create or replace function public.get_leaderboard(limit_count int default 100)
+-- 반환 칸이 늘어나므로 함수도 먼저 지웁니다(같은 이유).
+drop function if exists public.get_leaderboard(int);
+
+create function public.get_leaderboard(limit_count int default 100)
 returns table (
   nickname text,
   roe_percent numeric,
@@ -79,7 +90,9 @@ grant execute on function public.get_leaderboard to anon;
 
 
 -- ---------------- 3) 내 순위 ----------------
-create or replace function public.get_my_rank()
+drop function if exists public.get_my_rank();
+
+create function public.get_my_rank()
 returns table (rank bigint, nickname text, roe_percent numeric, balance numeric)
 language sql
 security definer
