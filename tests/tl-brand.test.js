@@ -60,19 +60,19 @@ console.log("\nTL 브랜드 적용");
 {
   const brandBlock = css.slice(css.indexOf(".brand-logo{"), css.indexOf(".brand-logo{") + 400);
   ok("로고 가로는 auto — 찌그러뜨리지 않는다", /width:auto/.test(brandBlock));
-  ok("원본 비율을 aspect-ratio 로 고정", /aspect-ratio:1461 \/ 328/.test(css));
+  ok("원본 비율을 aspect-ratio 로 고정", /aspect-ratio:925 \/ 220/.test(css));
   ok("로고에 색 필터를 걸지 않았다", !/\.brand-logo[^{]*\{[^}]*filter:/.test(css));
   ok("로고가 한눈에 보일 만큼 크다(100px 이상)", /\.brand-logo\{[^}]*height:(1[0-9]{2}|[2-9][0-9]{2})px/.test(css));
   ok("다크모드는 어두운 배경용 로고 원본으로 교체한다", /html\[data-theme="dark"\] \.brand-logo\.brand-logo-dark\{display:block;\}/.test(css));
   ok("다크 전용 로고가 생겼으니 흰 판은 걷어냈다", !/html\[data-theme="dark"\] \.brand-logo[^{]*\{[^}]*background:#fff/.test(css));
-  ok("다크 로고도 원본 비율로 고정", /aspect-ratio:1885 \/ 385/.test(css) && /aspect-ratio:648 \/ 385/.test(css));
+  ok("다크 로고도 원본 비율로 고정", /aspect-ratio:902 \/ 220/.test(css) && /aspect-ratio:311 \/ 220/.test(css));
 }
 
 /* ---- 헤더 브랜드 ---- */
 {
-  ok("헤더에 TL 로고가 들어갔다", /class="brand-logo brand-logo-light"[^>]*src="assets\/brand\/tl-logo\.png"/.test(html));
-  ok("좁은 화면용 심볼도 있다", /src="assets\/brand\/tl-mark\.png"/.test(html));
-  ok("어두운 배경용 로고도 헤더에 있다", /src="assets\/brand\/tl-logo-dark\.png"/.test(html));
+  ok("헤더에 TL 로고가 들어갔다", /class="brand-logo brand-logo-light"[^>]*src="assets\/brand\/tl-header-light\.jpg"/.test(html));
+  ok("좁은 화면용 심볼도 있다", /src="assets\/brand\/tl-header-mark-light\.jpg"/.test(html));
+  ok("어두운 배경용 로고도 헤더에 있다", /src="assets\/brand\/tl-header-dark\.jpg"/.test(html));
   ok("alt 에 브랜드명이 들어있다", /alt="TL TRADING LEAGUE/.test(html));
   ok("BTC 아이콘(₿)을 메인 브랜드로 쓰지 않는다", !/<div class="mark">₿<\/div>/.test(html));
   ok("'BTC 모의투자' 문구가 화면에서 사라졌다", html.indexOf("BTC 모의투자") === -1);
