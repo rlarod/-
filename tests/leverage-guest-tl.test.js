@@ -113,9 +113,24 @@ console.log("\n③-2 비회원은 보기만 (거래 차단)");
 {
   const lr = fs.readFileSync(path.join(REPO, "js", "login-required.js"), "utf8");
   ok("매수·매도 버튼을 막는다", /"btn-long"/.test(lr) && /"btn-short"/.test(lr));
-  ok("채팅 전송·글쓰기·댓글·무료충전도 막는다",
-     /"chat-send"/.test(lr) && /"board-write-btn"/.test(lr) &&
-     /"board-comment-submit"/.test(lr) && /"daily-recharge-btn"/.test(lr));
+  ok("채팅·글쓰기·댓글·추천·무료충전도 막는다",
+     /"chat-send-btn"/.test(lr) && /"board-write-btn"/.test(lr) &&
+     /"board-comment-submit-btn"/.test(lr) && /"board-like-btn"/.test(lr) &&
+     /"daily-recharge-btn"/.test(lr));
+
+  /* 2026-08-18: 가드가 존재하지 않는 id 를 보고 있어 채팅 전송과 댓글 등록이
+     비회원에게 그대로 열려 있었습니다(chat-send / board-comment-submit ->
+     실제로는 chat-send-btn / board-comment-submit-btn).
+     이름이 어긋나면 조용히 안 막히므로, 모든 대상 id 가 index.html 에
+     실재하는지 매번 확인합니다. */
+  {
+    const htmlIds = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+    const targets = [...lr.matchAll(/\{ id: "([^"]+)", label: "([^"]+)" \}/g)].map((m) => [m[1], m[2]]);
+    ok("가드 대상이 10개 이상", targets.length >= 10, String(targets.length));
+    const missing = targets.filter(([id]) => !htmlIds.has(id));
+    ok("가드 대상 id 가 전부 화면에 실재한다", missing.length === 0, missing.map((t) => t[1] + "(" + t[0] + ")").join(", "));
+  }
+  ok("댓글 입력칸 Enter 도 막는다", /board-comment-input/.test(lr));
   ok("캡처 단계로 원래 처리보다 먼저 가로챈다", /stopImmediatePropagation\(\)/.test(lr) && /true \/\/ 캡처 단계/.test(lr));
   ok("채팅 Enter 전송도 막는다", /e\.key !== "Enter"/.test(lr));
   ok("주문 함수 자체도 감싼다(화면 우회 방지)", /GUARDED_TRADING = \["openPosition"/.test(lr));

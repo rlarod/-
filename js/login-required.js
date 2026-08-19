@@ -28,9 +28,13 @@ App.LoginRequired = (function () {
   var GUARDED_BUTTONS = [
     { id: "btn-long", label: "매수" },
     { id: "btn-short", label: "매도" },
-    { id: "chat-send", label: "채팅 전송" },
+    { id: "chat-send-btn", label: "채팅 전송" },
     { id: "board-write-btn", label: "글쓰기" },
-    { id: "board-comment-submit", label: "댓글" },
+    { id: "board-comment-submit-btn", label: "댓글" },
+    { id: "board-like-btn", label: "추천" },
+    { id: "board-dislike-btn", label: "비추천" },
+    { id: "board-write-submit-btn", label: "글 등록" },
+    { id: "board-delete-btn", label: "글 삭제" },
     { id: "daily-recharge-btn", label: "무료 충전" },
   ];
 
@@ -86,22 +90,26 @@ App.LoginRequired = (function () {
       );
     });
 
-    /* 채팅 입력칸에서 Enter 로 보내는 경로도 막습니다. */
-    var chat = document.getElementById("chat-input");
-    if (chat && !chat.getAttribute("data-login-guarded")) {
-      chat.setAttribute("data-login-guarded", "1");
-      chat.addEventListener(
+    /* 입력칸에서 Enter 로 보내는 경로도 막습니다. */
+    [
+      { id: "chat-input", label: "채팅" },
+      { id: "board-comment-input", label: "댓글" },
+    ].forEach(function (item) {
+      var input = document.getElementById(item.id);
+      if (!input || input.getAttribute("data-login-guarded")) return;
+      input.setAttribute("data-login-guarded", "1");
+      input.addEventListener(
         "keydown",
         function (e) {
           if (isLoggedIn()) return;
           if (e.key !== "Enter") return;
           e.preventDefault();
           e.stopImmediatePropagation();
-          askLogin("채팅");
+          askLogin(item.label);
         },
         true
       );
-    }
+    });
   }
 
   /* ---------------- 2) 주문 함수 감싸기 ---------------- */
