@@ -3048,3 +3048,30 @@ html[data-theme="dark"] .menu-bar-inner::after{
   .hd-tools{flex-direction:column;}
   .hd-tools .hd-search,.hd-tools .hd-sort{width:100%;flex:1 1 auto;}
 }
+
+/* ===== 다른 창에서 거래가 있었을 때 안내 띠 =====
+   새 색을 만들지 않고 기존 변수만 씁니다. 모서리 3px(사이트 규칙). */
+.multi-tab-banner{
+  position:fixed;left:0;right:0;bottom:0;z-index:1500;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px 16px;
+  background:var(--surface);border-top:1px solid var(--gold);
+  box-shadow:0 -3px 8px rgba(0,0,0,0.18);
+  font-size:15px;color:var(--text);
+}
+.multi-tab-banner .mtb-text{flex:1 1 300px;min-width:0;line-height:1.5;}
+.multi-tab-banner .mtb-btn{
+  flex:0 0 auto;height:40px;padding:0 16px;
+  border:1px solid var(--gold);border-radius:3px;
+  background:var(--gold);color:#fff;
+  font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+}
+.multi-tab-banner .mtb-close{
+  flex:0 0 auto;border:0;background:transparent;color:var(--text-faint);
+  font-size:24px;line-height:1;cursor:pointer;padding:0 4px;
+}
+.multi-tab-banner .mtb-close:hover{color:var(--text);}
+@media (max-width:520px){
+  .multi-tab-banner{font-size:14px;padding:10px 12px;}
+  .multi-tab-banner .mtb-btn{width:100%;}
+}
