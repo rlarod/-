@@ -274,6 +274,18 @@ console.log("\n  구조·보안·디자인");
   ok("구매는 서버 RPC 로만", /rpc\("purchase_tl_product"/.test(js));
   ok("클라이언트가 가격을 보내지 않는다(상품 id + 수량만)", /p_product_id: product\.id, p_quantity: quantity/.test(js));
   ok("잔액도 서버 RPC 로 받는다", /rpc\("tl_balance_info"\)/.test(js));
+  /* 2026-08-18: tl_balance() 는 모든 거래를 더하는데 tl_balance_info() 는
+     음수만 빼서, 환불·지급이 생기면 화면 잔액과 실제 잔액이 어긋났습니다
+     (획득 10,000 / -5,300 / +1,000 / +2,000 -> 실제 7,700 vs 화면 4,700).
+     tl_balance_info() 가 tl_balance() 를 그대로 쓰도록 고쳤습니다. */
+  {
+    const fix = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-balance-fix.sql"), "utf8");
+    const fixCode = fix.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+    ok("화면 잔액이 구매 판정 잔액과 같은 함수를 쓴다", /'balance', public\.tl_balance\(uid\)/.test(fixCode));
+    ok("지급(양수)도 따로 집계한다", /granted/.test(fixCode) && /x\.amount > 0/.test(fixCode));
+    ok("테이블은 건드리지 않는다", !/create table|drop table|truncate/i.test(fixCode));
+    ok("화면이 지급 표시를 지원한다", /지급 " \+ tl\(b\.granted\)/.test(js));
+  }
   ok("프론트에서 재고를 직접 깎지 않는다", !/stock\s*-=|stock\s*=\s*stock\s*-/.test(js));
   ok("SQL 이 잔액을 직접 계산한다", /bal := public\.tl_balance\(uid\)/.test(sqlCode));
   ok("SQL 이 상품 행을 잠근다(동시 구매 대비)", /from public\.tl_products where id = p_product_id for update/.test(sqlCode));

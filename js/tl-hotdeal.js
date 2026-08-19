@@ -477,7 +477,12 @@ App.TLHotdeal = (function () {
     }
     dom.balance.textContent = tl(b.balance);
     if (dom.balanceSub) {
-      dom.balanceSub.textContent = "획득 " + tl(b.earned) + " · 사용 " + tl(b.spent);
+      /* 지급/환불(granted)이 있으면 같이 보여줍니다. 없으면 표시하지 않습니다
+         — 서버가 안 주는 값을 지어내지 않습니다. */
+      var parts = ["획득 " + tl(b.earned)];
+      if (Number(b.granted)) parts.push("지급 " + tl(b.granted));
+      parts.push("사용 " + tl(b.spent));
+      dom.balanceSub.textContent = parts.join(" · ");
     }
   }
 
