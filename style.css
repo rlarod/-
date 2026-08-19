@@ -201,9 +201,10 @@ a:hover{text-decoration:underline;}
   /* 2026-08-18: 배너 소재의 로고 부분으로 교체 — 비율이 바뀌었습니다. */
   aspect-ratio:925 / 220;
 }
-.brand-logo.brand-logo-dark{aspect-ratio:902 / 220;}
+/* 2026-08-19: 투명 배경 다크 로고로 교체 — 비율이 바뀌었습니다. */
+.brand-logo.brand-logo-dark{aspect-ratio:2120 / 412;}
 .brand-logo-mark{display:none;height:84px;width:auto;aspect-ratio:310 / 220;}
-.brand-logo-mark.brand-logo-dark{aspect-ratio:311 / 220;}
+.brand-logo-mark.brand-logo-dark{aspect-ratio:522 / 412;}
 
 /* 밝은/어두운 배경용 로고 교체 — 기본은 밝은 버전, 다크모드에서만 다크 버전.
    로고 자체를 CSS로 손대지 않고 파일만 바꿔 끼웁니다. */

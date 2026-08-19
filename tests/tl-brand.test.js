@@ -65,14 +65,18 @@ console.log("\nTL 브랜드 적용");
   ok("로고가 한눈에 보일 만큼 크다(100px 이상)", /\.brand-logo\{[^}]*height:(1[0-9]{2}|[2-9][0-9]{2})px/.test(css));
   ok("다크모드는 어두운 배경용 로고 원본으로 교체한다", /html\[data-theme="dark"\] \.brand-logo\.brand-logo-dark\{display:block;\}/.test(css));
   ok("다크 전용 로고가 생겼으니 흰 판은 걷어냈다", !/html\[data-theme="dark"\] \.brand-logo[^{]*\{[^}]*background:#fff/.test(css));
-  ok("다크 로고도 원본 비율로 고정", /aspect-ratio:902 \/ 220/.test(css) && /aspect-ratio:311 \/ 220/.test(css));
+  /* 2026-08-19: 투명 배경 PNG 로 교체 — 어두운 배경 위에서 흰 글자가
+     그대로 보입니다(배경판 없음). 비율이 바뀌어 함께 갱신했습니다. */
+  ok("다크 로고도 원본 비율로 고정", /aspect-ratio:2120 \/ 412/.test(css) && /aspect-ratio:522 \/ 412/.test(css));
+  ok("다크 로고는 투명 PNG", /tl-header-dark\.png/.test(html) && /tl-header-mark-dark\.png/.test(html));
+  ok("라이트 로고는 그대로", /tl-header-light\.jpg/.test(html));
 }
 
 /* ---- 헤더 브랜드 ---- */
 {
   ok("헤더에 TL 로고가 들어갔다", /class="brand-logo brand-logo-light"[^>]*src="assets\/brand\/tl-header-light\.jpg"/.test(html));
   ok("좁은 화면용 심볼도 있다", /src="assets\/brand\/tl-header-mark-light\.jpg"/.test(html));
-  ok("어두운 배경용 로고도 헤더에 있다", /src="assets\/brand\/tl-header-dark\.jpg"/.test(html));
+  ok("어두운 배경용 로고도 헤더에 있다", /src="assets\/brand\/tl-header-dark\.png"/.test(html));
   ok("alt 에 브랜드명이 들어있다", /alt="TL TRADING LEAGUE/.test(html));
   ok("BTC 아이콘(₿)을 메인 브랜드로 쓰지 않는다", !/<div class="mark">₿<\/div>/.test(html));
   ok("'BTC 모의투자' 문구가 화면에서 사라졌다", html.indexOf("BTC 모의투자") === -1);
