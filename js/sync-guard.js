@@ -121,7 +121,25 @@ App.SyncGuard = (function () {
       if (name === "trading:persisted" && looksLikeDataLoss(payload)) {
         blocked++;
         tellUser();
-        return undefined;   // 서버로 안 내보냅니다(로컬 저장은 이미 끝난 상태)
+        /* 중요: 이벤트를 통째로 막으면 안 됩니다.
+           이 이벤트 하나에 잔고·포지션·거래·주문 저장이 모두 들어 있어서,
+           막으면 잔고까지 서버에 안 올라갑니다. 그러면 새로고침할 때마다
+           서버의 옛 잔고(시작값)로 되돌아갑니다 — 실제로 그렇게 됐습니다.
+
+           그래서 이벤트는 그대로 보내되, 거래 기록만 손대지 않도록
+           빈 목록으로 바꿔 넘깁니다.
+           supabase-sync 는 closedTrades 가 줄면 기준만 맞추고 아무것도
+           저장하지 않으므로, 서버의 거래 기록이 안전하게 보존됩니다.
+           잔고·포지션은 정상적으로 저장됩니다. */
+        try {
+          var safe = {};
+          for (var k in payload) { if (Object.prototype.hasOwnProperty.call(payload, k)) safe[k] = payload[k]; }
+          safe.closedTrades = [];
+          payload = safe;
+        } catch (e) {
+          console.warn("[sync-guard.js] 안전 사본 생성 실패:", e);
+        }
+        return orig.apply(App.Bus, [name, payload]);
       }
       /* 정상 저장이면 기준값을 최신으로 올려둡니다. */
       if (name === "trading:persisted" && payload && Array.isArray(payload.closedTrades)) {
