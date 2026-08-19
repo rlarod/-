@@ -88,6 +88,35 @@ console.log("\n시세 검사");
   ok("버린 개수를 센다", G.getDroppedCount() === 1, String(G.getDroppedCount()));
 }
 
+/* ---------- 호가 ---------- */
+{
+  /* js/orderbook.js 는 수량이 0 이하인 호가만 거르고 가격은 안 거릅니다.
+     실측: 가격 'abc' -> NaN, '-100' -> 음수가 그대로 통과했습니다.
+     호가를 클릭하면 그 값이 TP 입력칸으로 들어가 주문에 영향을 줍니다. */
+  const G = boot();
+  const book = {
+    bids: [{ price: 59990, qty: 1 }, { price: NaN, qty: 1 }, { price: -100, qty: 2 }, { price: 59980, qty: 0 }],
+    asks: [{ price: 60010, qty: 1 }, { price: null, qty: 3 }, { price: 60020, qty: -1 }],
+  };
+  G.checkBook(book);
+  ok("NaN 가격 호가를 버린다", book.bids.every((r) => isFinite(r.price)));
+  ok("음수 가격 호가를 버린다", book.bids.every((r) => r.price > 0));
+  ok("수량 0 이하 호가를 버린다", book.bids.concat(book.asks).every((r) => r.qty > 0));
+  ok("정상 호가는 남긴다", book.bids.length === 1 && book.asks.length === 1,
+     JSON.stringify(book.bids) + " / " + JSON.stringify(book.asks));
+  ok("버린 개수를 센다", G.getDroppedCount() === 5, String(G.getDroppedCount()));
+
+  ok("호가가 없어도 안 터진다", (() => {
+    const e = { bids: null, asks: undefined };
+    G.checkBook(e);
+    return Array.isArray(e.bids) && Array.isArray(e.asks);
+  })());
+  ok("payload 자체가 없어도 안 터진다", G.checkBook(null) === null && G.checkBook(undefined) === undefined);
+
+  const src2 = fs.readFileSync(path.join(REPO, "js", "orderbook.js"), "utf8");
+  ok("orderbook.js 는 건드리지 않았다", !/PriceGuard/.test(src2));
+}
+
 /* ---------- 연결 ---------- */
 {
   const src = fs.readFileSync(path.join(REPO, "js", "price-guard.js"), "utf8");
@@ -97,7 +126,7 @@ console.log("\n시세 검사");
 
   ok("trading.js 보다 먼저 실린다", at("js/price-guard.js") >= 0 && at("js/price-guard.js") < at("js/trading.js"));
   ok("이벤트를 감싼다", /App\.Bus\.emit = function/.test(src));
-  ok("price:update 만 검사한다", /name === "price:update"/.test(src));
+  ok("시세와 호가를 검사한다", /name === "price:update"/.test(src) && /name === "orderbook:update"/.test(src));
   ok("두 번 감싸지 않는다", /App\.Bus\.__priceGuarded/.test(src));
   ok("버린 값을 콘솔에 남긴다", /이상한 시세를 버렸습니다/.test(src));
 

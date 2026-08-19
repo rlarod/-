@@ -68,6 +68,37 @@ App.PriceGuard = (function () {
     return true;
   }
 
+  /* ---- 호가 ----
+     js/orderbook.js 는 수량이 0 이하인 호가만 거르고 가격은 안 거릅니다.
+     실측: 가격이 'abc' 면 NaN, '-100' 이면 음수가 그대로 통과합니다.
+     호가를 클릭하면 그 값이 TP 입력칸으로 들어가므로 주문에 영향을 줍니다.
+     orderbook.js 는 수정 금지라, 버스로 공유되는 값을 여기서 거릅니다. */
+  function cleanRows(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.filter(function (r) {
+      if (!r) return false;
+      var p = Number(r.price);
+      var q = Number(r.qty);
+      return isFinite(p) && p > 0 && isFinite(q) && q > 0;
+    });
+  }
+
+  function checkBook(payload) {
+    if (!payload || typeof payload !== "object") return payload;
+    var before = (Array.isArray(payload.bids) ? payload.bids.length : 0) +
+                 (Array.isArray(payload.asks) ? payload.asks.length : 0);
+    payload.bids = cleanRows(payload.bids);
+    payload.asks = cleanRows(payload.asks);
+    var after = payload.bids.length + payload.asks.length;
+    if (after < before) {
+      dropped += before - after;
+      if (dropped <= 20) {
+        console.warn("[price-guard.js] 이상한 호가 " + (before - after) + "건을 버렸습니다.");
+      }
+    }
+    return payload;
+  }
+
   function wrap() {
     if (!App.Bus || typeof App.Bus.emit !== "function") return false;
     if (App.Bus.__priceGuarded) return true;
@@ -75,6 +106,10 @@ App.PriceGuard = (function () {
     App.Bus.emit = function (name, payload) {
       if (name === "price:update" && !check(payload)) {
         return undefined; // 이상한 값은 아무에게도 전달하지 않습니다
+      }
+      if (name === "orderbook:update") {
+        payload = checkBook(payload);
+        return orig.apply(App.Bus, [name, payload]);
       }
       return orig.apply(App.Bus, arguments);
     };
@@ -97,6 +132,8 @@ App.PriceGuard = (function () {
     init: init,
     isSane: isSane,
     check: check,
+    checkBook: checkBook,
+    cleanRows: cleanRows,
     getDroppedCount: function () { return dropped; },
     getLastGood: function (symbol) { return lastGood[symbol]; },
     _reset: function () { lastGood = {}; dropped = 0; },
