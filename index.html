@@ -826,6 +826,12 @@
         <span class="mypage-nickname-label">닉네임</span>
         <span class="mypage-nickname-value" id="mypage-nickname">-</span>
       </div>
+
+      <!-- 내 계정 정보 — 전화번호는 서버에서 가려서 옵니다(010-****-5678) -->
+      <div class="mpi-box">
+        <div class="mpi-title">내 계정 정보</div>
+        <div id="my-private-info"><p class="mpi-empty">불러오는 중…</p></div>
+      </div>
       <div class="mypage-grid">
         <div class="mypage-item mypage-item-highlight">
           <span class="mypage-item-label">총자산(Equity)</span>
@@ -967,6 +973,8 @@
      항상 실패하던 문제를 클라이언트 감싸기로 우회합니다. board.js 뒤에 둡니다. -->
 <script src="js/comment-fix.js"></script>
 <script src="js/mypage.js"></script>
+<!-- 마이페이지 내 계정 정보(개인정보는 본인만, 전화번호는 마스킹) -->
+<script src="js/my-private-info.js"></script>
 <script src="js/symbol-selector.js"></script>
 <script src="js/page-nav.js"></script>
 <!-- 통화를 바꿔도 안 따라오던 화면들을 다시 그립니다 -->

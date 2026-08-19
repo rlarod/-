@@ -3086,3 +3086,21 @@ html[data-theme="dark"] .menu-bar-inner::after{
 /* 잠깐 끊긴 동안에는 화면에서만 감춥니다(글자는 그대로 둡니다 —
    지우면 감시 로직이 상태를 초기화해 영영 안 보이게 됩니다). */
 .chat-err.chat-err-hold{visibility:hidden;}
+
+/* ===== 마이페이지 — 내 계정 정보 =====
+   개인정보 영역입니다. 전화번호는 서버에서 가려서 옵니다. */
+.mpi-box{
+  margin:14px 0;padding:14px;
+  border:1px solid var(--border);border-radius:3px;background:var(--surface2);
+}
+.mpi-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px;}
+.mpi-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.mpi-row:last-child{border-bottom:0;}
+.mpi-label{font-size:14px;color:var(--text-faint);flex:0 0 auto;}
+.mpi-value{font-size:15px;color:var(--text);text-align:right;word-break:break-all;}
+.mpi-ok{color:var(--green);font-size:13px;}
+.mpi-no{color:var(--text-faint);font-size:13px;}
+.mpi-empty{margin:6px 0;font-size:14px;color:var(--text-faint);}
