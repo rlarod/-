@@ -3075,3 +3075,13 @@ html[data-theme="dark"] .menu-bar-inner::after{
   .multi-tab-banner{font-size:14px;padding:10px 12px;}
   .multi-tab-banner .mtb-btn{width:100%;}
 }
+
+/* 재연결 안내는 오류가 아니라 '복구 중' 이므로 빨강 대신 흐린 안내색으로.
+   전송 실패·금지어 같은 진짜 오류는 기존 빨강 그대로입니다. */
+.chat-err.chat-err-calm{
+  color:var(--text-faint);
+  font-weight:400;
+}
+/* 잠깐 끊긴 동안에는 화면에서만 감춥니다(글자는 그대로 둡니다 —
+   지우면 감시 로직이 상태를 초기화해 영영 안 보이게 됩니다). */
+.chat-err.chat-err-hold{visibility:hidden;}

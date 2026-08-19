@@ -67,6 +67,24 @@ console.log("\n채팅 안전장치");
   ok("거래 이벤트는 message_type 으로 구분해 보낸다", /message_type: "trade_event"/.test(eventJs));
 }
 
+/* ---------- 재연결 안내가 깜빡이지 않는가 ---------- */
+{
+  /* 연결이 자주 끊겼다 붙으면 빨간 안내가 켜졌다 꺼졌다를 반복해
+     화면이 계속 깜빡였습니다. 실제로는 곧 복구되는데도 사용자는
+     크게 잘못된 줄 압니다. */
+  const calm = fs.readFileSync(path.join(REPO, "js", "chat-status-calm.js"), "utf8");
+  const cssC = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+
+  ok("바로 띄우지 않고 잠깐 기다린다", /HOLD_MS = 3000/.test(calm));
+  ok("재연결 안내만 골라낸다", /실시간 연결이 끊겼습니다/.test(calm));
+  ok("한 번 띄우면 껐다 켜지 않는다", /if \(showing\)/.test(calm));
+  ok("글자를 지우지 않고 화면에서만 감춘다", /chat-err-hold/.test(calm) && /visibility:hidden/.test(cssC));
+  ok("복구 중은 빨강 대신 흐린 색", /\.chat-err\.chat-err-calm\{[\s\S]{0,80}var\(--text-faint\)/.test(cssC));
+  ok("진짜 오류는 손대지 않는다", /if \(!isReconnectMsg\(text\)\)/.test(calm));
+  ok("chat.js 는 건드리지 않았다", !/ChatStatusCalm/.test(chatJs));
+  ok("스크립트가 연결됐다", /js\/chat-status-calm\.js/.test(html));
+}
+
 /* ---------- 권한 ---------- */
 {
   ok("남의 이름으로 못 보낸다", /chat_insert_own[\s\S]{0,120}auth\.uid\(\) = user_id/.test(schema));
