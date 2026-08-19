@@ -33,7 +33,8 @@ as $$
     t.created_at,
     case when t.amount < 0 then '사용' else '지급' end,
     t.amount,
-    coalesce(t.reason, t.tx_type, '-')
+    -- 실제 컬럼명은 description / type 입니다(reason·tx_type 아님).
+    coalesce(nullif(t.description, ''), t.type, '-')
   from public.tl_transactions t
   where t.user_id = auth.uid()
   order by t.created_at desc
@@ -60,13 +61,13 @@ set search_path = public
 as $$
   select
     p.created_at,
-    coalesce(pr.name, '(삭제된 상품)'),
-    coalesce(pr.brand, '-'),
+    -- 구매 당시 상품명·브랜드가 이미 저장돼 있습니다(상품이 바뀌어도 안전).
+    p.product_name,
+    p.product_brand,
     p.quantity,
     p.total_tl,
-    coalesce(p.status, 'completed')
+    p.status
   from public.tl_purchases p
-  left join public.tl_products pr on pr.id = p.product_id
   where p.user_id = auth.uid()
   order by p.created_at desc
   limit limit_count;
@@ -88,24 +89,26 @@ begin
     create or replace function public.my_market_items(limit_count int default 50)
     returns table (
       구매시각 timestamptz,
-      아이템   text,
-      수량     int,
-      사용여부 text,
-      만료시각 timestamptz
+      아이템     text,
+      수량       int,
+      상태       text,
+      마지막사용 timestamptz
     )
     language sql
     stable
     security definer
     set search_path = public
     as $inner$
+      -- user_items 는 '지금 몇 개 갖고 있나' 를 담습니다(사용 시각 없음).
+      -- 사용 여부는 item_usage_logs 를 세어 판단합니다.
       select
         ui.created_at,
-        coalesce(mp.name, '(삭제된 아이템)'),
+        ui.product_name,
         ui.quantity,
-        case when ui.used_at is not null then '사용함' else '보유중' end,
-        ui.expires_at
+        case when ui.quantity > 0 then '보유중' else '모두 사용' end,
+        (select max(l.used_at) from public.item_usage_logs l
+          where l.user_id = ui.user_id and l.product_id = ui.product_id)
       from public.user_items ui
-      left join public.tl_market_products mp on mp.id = ui.product_id
       where ui.user_id = auth.uid()
       order by ui.created_at desc
       limit limit_count;

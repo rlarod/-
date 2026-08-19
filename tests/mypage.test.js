@@ -53,6 +53,38 @@ console.log("\n마이페이지");
   ok("없는 값을 지어내지 않는다", !/샘플|예시 데이터|dummy/.test(js));
 }
 
+/* ---------- 없는 컬럼을 쓰고 있지 않은가 ---------- */
+{
+  /* 처음에 t.reason / t.tx_type / ui.used_at / ui.expires_at 처럼
+     실제로 없는 컬럼을 써서 SQL 이 실행조차 안 됐습니다.
+     (ERROR: column t.reason does not exist)
+     코드가 참조하는 컬럼이 진짜 있는지 매번 대조합니다. */
+  function tableColumns(name) {
+    const out = new Set();
+    fs.readdirSync(path.join(REPO, "supabase")).filter((f) => f.endsWith(".sql")).forEach((f) => {
+      const x = fs.readFileSync(path.join(REPO, "supabase", f), "utf8");
+      const i = x.indexOf("create table if not exists public." + name);
+      if (i < 0) return;
+      const body = x.slice(i, x.indexOf(");", i));
+      (body.match(/^ {2}(\w+)\s/gm) || []).forEach((m) => out.add(m.trim()));
+    });
+    return out;
+  }
+
+  /* 마지막 확인 구문은 pg_proc(시스템 테이블)을 보므로 잘라냅니다.
+     sql 변수는 주석이 이미 제거된 상태라 pg_proc 를 기준으로 자릅니다. */
+  const cut = sql.indexOf("from pg_proc");
+  const body = cut > 0 ? sql.slice(0, cut) : sql;
+
+  [["tl_transactions", "t"], ["tl_purchases", "p"],
+   ["user_items", "ui"], ["item_usage_logs", "l"]].forEach(function (pair) {
+    const have = tableColumns(pair[0]);
+    const used = new Set([...body.matchAll(new RegExp("\\b" + pair[1] + "\\.(\\w+)", "g"))].map((m) => m[1]));
+    const missing = [...used].filter((c) => !have.has(c));
+    ok(pair[0] + " 컬럼이 전부 실재한다", missing.length === 0, missing.join(", "));
+  });
+}
+
 /* ---------- 회원탈퇴가 안전한가 ---------- */
 {
   ok("탈퇴 함수가 있다", /function public\.delete_my_account/.test(sql));

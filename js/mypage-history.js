@@ -107,10 +107,10 @@ App.MypageHistory = (function () {
       return "<tr><td>" + fmtTime(r["구매시각"]) + "</td>" +
              "<td>" + esc(r["아이템"]) + "</td>" +
              "<td>" + (Number(r["수량"]) || 1) + "개</td>" +
-             "<td>" + esc(r["사용여부"]) + "</td>" +
-             "<td>" + (r["만료시각"] ? fmtTime(r["만료시각"]) : "-") + "</td></tr>";
+             "<td>" + esc(r["상태"]) + "</td>" +
+             "<td>" + (r["마지막사용"] ? fmtTime(r["마지막사용"]) : "-") + "</td></tr>";
     });
-    box.innerHTML = table(["시각", "아이템", "수량", "상태", "만료"], body) ||
+    box.innerHTML = table(["구매", "아이템", "수량", "상태", "마지막 사용"], body) ||
                     empty("보유한 아이템이 없습니다.");
   }
 
