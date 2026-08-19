@@ -81,6 +81,33 @@ App.GuestAccess = (function () {
     }
   }
 
+  /* ── 가장 중요한 부분 ──────────────────────────────────────────────
+     main.js 는 App.Auth.init() 에게 부팅을 맡기고, auth.js 는
+     "로그인에 성공했을 때만" App.bootApp() 을 부릅니다.
+     그래서 게이트만 숨기면 비회원은 부팅이 아예 안 돌아
+     공지·게시판·차트·호가창이 전부 빈칸으로 남습니다(실제로 그랬습니다).
+
+     로그인을 잠깐 기다린 뒤에도 부팅이 안 됐으면 여기서 직접 띄웁니다.
+     App.bootApp 은 auth.js 안에 중복 부팅 방지 장치가 있고, main.js 쪽도
+     boot() 를 한 번만 수행하므로 두 번 불려도 안전합니다. */
+  var bootKicked = false;
+  function ensureBooted() {
+    if (bootKicked) return;
+    if (App.Auth && typeof App.Auth.isLoggedIn === "function" && App.Auth.isLoggedIn()) return;
+    if (!App.bootApp) return;
+    /* 이미 부팅됐는지: 부팅되면 App.Trading 이 화면을 잡습니다. */
+    var started = !!(App.UI && App.UI.__booted) || !!document.querySelector("#ob-asks .ob-row");
+    if (started) { bootKicked = true; return; }
+    bootKicked = true;
+    try {
+      App.bootApp();
+      console.warn("[guest-access.js] 비회원이라 로그인 없이 부팅했습니다.");
+    } catch (e) {
+      bootKicked = false;
+      console.warn("[guest-access.js] 비회원 부팅 실패:", e);
+    }
+  }
+
   function init() {
     var g = gateEl();
     if (!g) return;
@@ -88,6 +115,9 @@ App.GuestAccess = (function () {
     guard();
     markGuestAreas();
     setTimeout(markGuestAreas, 1500);
+    /* 로그인 복구(세션 확인)에 시간이 걸리므로 잠깐 기다렸다 확인합니다. */
+    setTimeout(ensureBooted, 1200);
+    setTimeout(ensureBooted, 3000);
 
     if (typeof MutationObserver !== "undefined") {
       observer = new MutationObserver(function () { guard(); });
@@ -112,5 +142,5 @@ App.GuestAccess = (function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, openLogin: openLogin, closeGate: closeGate, markGuestAreas: markGuestAreas, isUserOpened: function () { return userOpened; } };
+  return { init: init, openLogin: openLogin, closeGate: closeGate, markGuestAreas: markGuestAreas, ensureBooted: ensureBooted, isUserOpened: function () { return userOpened; } };
 })();
