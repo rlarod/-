@@ -39,8 +39,9 @@ App.RealizedPnlFix = (function () {
 
   /* 거래 한 건의 진입 수수료를 되살립니다. */
   function entryFeeOf(trade, feeRate) {
-    var fee = Number(trade && trade.fee);
-    if (!isFinite(fee)) return 0;
+    if (!trade || typeof trade !== "object") return 0;   // null/undefined 방어
+    var fee = Number(trade.fee);
+    if (!isFinite(fee) || fee <= 0) return 0;
 
     /* 강제청산은 trading.js 가 진입 수수료만 fee 에 담습니다. */
     if (trade.forced || trade.isForced) return fee;
