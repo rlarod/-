@@ -55,14 +55,34 @@ App.TradeEventsChat = (function () {
     const ordered = newTrades.slice().reverse();
     for (const t of ordered) {
       const message = buildMessage(nickname, t);
-      try {
-        const { error } = await client.from("chat_messages").insert({
+      /* 채팅 도배 방지 트리거가 1.5초 간격을 강제합니다. 거래 이벤트는
+         supabase/schema-chat-event-exempt.sql 로 예외 처리했지만,
+         그 SQL 을 아직 안 돌린 서버에서는 여전히 막힙니다.
+         그래서 rate_limited 면 잠깐 기다렸다 한 번 더 시도합니다.
+         이렇게 하지 않으면 빠른 매매 때 청산 알림이 조용히 사라집니다. */
+      const send = () =>
+        client.from("chat_messages").insert({
           user_id: userId,
           nickname, // 실제 저장값은 서버 트리거가 profiles 기준으로 덮어씀(기존과 동일)
           message,
           message_type: "trade_event",
         });
-        if (error) console.warn("[trade-events-chat.js] 이벤트 메시지 전송 실패:", error);
+
+      try {
+        let { error } = await send();
+        if (error && /rate_limited/.test(String(error.message || error))) {
+          await new Promise((r) => setTimeout(r, 1700));
+          ({ error } = await send());
+        }
+        if (error) {
+          console.warn(
+            "[trade-events-chat.js] 이벤트 메시지 전송 실패:",
+            error,
+            /rate_limited/.test(String(error.message || error))
+              ? "(도배 제한에 막혔습니다 — schema-chat-event-exempt.sql 실행 필요)"
+              : ""
+          );
+        }
       } catch (e) {
         console.warn("[trade-events-chat.js] 이벤트 메시지 전송 중 오류:", e);
       }
