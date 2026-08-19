@@ -106,16 +106,17 @@ console.log("\nTL 브랜드 적용");
   ok("옛 텍스트 브랜드 CSS 를 지우지 않고 남겼다", /\.brand \.name\{/.test(css) && /\.brand-tagline\{/.test(css));
   ok("로고 로딩 실패 대비가 있다", /brand-text/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
   /* 2026-08-18: 상단 배너를 공식 이미지로 교체 */
-  ok("밝은 배경용 배너", /class="ad-banner-img ad-banner-light"[^>]*src="assets\/brand\/tl-banner-light\.jpg"/.test(html));
-  ok("어두운 배경용 배너", /class="ad-banner-img ad-banner-dark"[^>]*src="assets\/brand\/tl-banner\.jpg"/.test(html));
-  ok("두 배너 원본이 모두 보관돼 있다",
-     fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-original.jpg")) &&
-     fs.existsSync(path.join(REPO, "assets", "brand", "tl-banner-light-original.jpg")));
-  ok("다크모드에서 어두운 배너로 바꿔 낀다",
-     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-dark\{display:block;\}/.test(css) &&
-     /html\[data-theme="dark"\] \.ad-creative-image \.ad-banner-light\{display:none;\}/.test(css));
+  /* 2026-08-18: 중간 광고 자리를 홍보 배너로 교체.
+     헤더 로고와 같은 그림이 두 번 나오던 문제도 함께 해소했습니다. */
+  ok("중간 광고가 홍보 배너로 교체됨", /class="ad-banner-img"[^>]*src="assets\/brand\/tl-promo\.jpg"/.test(html));
+  ok("홍보 배너 원본이 보관돼 있다", fs.existsSync(path.join(REPO, "assets", "brand", "tl-promo-original.jpg")));
+  ok("헤더 로고와 다른 그림을 쓴다", /src="assets\/brand\/tl-header-light\.jpg"/.test(html) && /src="assets\/brand\/tl-promo\.jpg"/.test(html));
+  ok("소재 원본 비율(2.58:1) 유지", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?aspect-ratio:2\.58 \/ 1/.test(css));
+  ok("너무 높아지지 않게 최대 높이", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?max-height:340px/.test(css));
+  ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[\s\S]*?width:100%;height:auto/.test(css));
+  ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));
+  ok("이미지를 못 불러오면 문구로 되돌아간다", /ad-banner-failed/.test(css) && /ad-banner-failed/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
   {
-    /* 두 배너 비율이 같아야 테마 전환 때 높이가 안 흔들립니다. PNG/JPEG 헤더에서 직접 읽습니다. */
     function jpegSize(file) {
       const buf = fs.readFileSync(file);
       let i = 2;
@@ -129,20 +130,11 @@ console.log("\nTL 브랜드 적용");
       }
       return null;
     }
-    const dir = path.join(REPO, "assets", "brand");
-    const d = jpegSize(path.join(dir, "tl-banner.jpg"));
-    const l = jpegSize(path.join(dir, "tl-banner-light.jpg"));
-    ok("두 배너 크기를 읽어왔다", !!d && !!l);
-    if (d && l) {
-      ok("어두운 배너가 4:1", Math.abs(d.w / d.h - 4) < 0.02, (d.w / d.h).toFixed(3));
-      ok("밝은 배너도 4:1", Math.abs(l.w / l.h - 4) < 0.02, (l.w / l.h).toFixed(3));
-      ok("두 배너 비율이 같다(전환 시 높이 안 흔들림)", Math.abs(d.w / d.h - l.w / l.h) < 0.02);
-    }
+    const promo = jpegSize(path.join(REPO, "assets", "brand", "tl-promo.jpg"));
+    ok("홍보 배너 크기를 읽어왔다", !!promo);
+    if (promo) ok("파일도 2.58:1", Math.abs(promo.w / promo.h - 2.58) < 0.03, (promo.w / promo.h).toFixed(3));
   }
-  ok("배너 비율을 4:1 로 고정(찌그러짐 방지)", /\.ad-creative-image \.ad-banner-img\{[^}]*aspect-ratio:4 \/ 1/.test(css));
-  ok("가로 100%, 세로 auto", /\.ad-creative-image \.ad-banner-img\{[^}]*width:100%;height:auto/.test(css));
-  ok("기존 문구 소재를 지우지 않고 숨김", /ad-creative-title/.test(html) && /\.ad-creative-image \.ad-creative-title[\s\S]{0,120}display:none/.test(css));
-  ok("이미지를 못 불러오면 문구로 되돌아간다", /ad-banner-failed/.test(css) && /ad-banner-failed/.test(fs.readFileSync(path.join(REPO, "js", "tl-brand.js"), "utf8")));
+
   ok("배너 클릭 이동(data-ad-link)은 그대로", /class="ad-creative ad-creative-wide ad-creative-image" data-ad-link="page-nav-board"/.test(html));
 
   ok("기존 페이지 구조(거래/게시판/랭킹/마이페이지)가 그대로", ["page-exchange", "page-board", "page-ranking", "page-mypage"].every((id) => html.indexOf('id="' + id + '"') !== -1));

@@ -2891,14 +2891,11 @@ html[data-theme="dark"] img.rank-badge{
   height:auto;padding:0;gap:0;position:relative;display:block;overflow:hidden;
 }
 .ad-creative-image .ad-banner-img{
-  display:block;width:100%;height:auto;aspect-ratio:4 / 1;object-fit:cover;
+  /* 소재 원본 비율(2.58:1) 그대로 — 찌그러지지 않습니다.
+     너무 높아지지 않게 최대 높이만 걸고, 넘치면 가운데를 보여줍니다. */
+  display:block;width:100%;height:auto;aspect-ratio:2.58 / 1;
+  max-height:340px;object-fit:cover;object-position:center;
 }
-/* 테마별 교체 — 로고와 같은 방식입니다. 기본은 밝은 배경용,
-   다크모드에서만 어두운 배경용으로 바꿔 끼웁니다.
-   두 배너 모두 4:1 이라 전환해도 높이가 안 흔들립니다. */
-.ad-creative-image .ad-banner-dark{display:none;}
-html[data-theme="dark"] .ad-creative-image .ad-banner-light{display:none;}
-html[data-theme="dark"] .ad-creative-image .ad-banner-dark{display:block;}
 /* 이미지가 정상일 때 문구 소재는 숨깁니다(마크업은 남겨둡니다). */
 .ad-creative-image .ad-creative-mark,
 .ad-creative-image .ad-creative-title,
