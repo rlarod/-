@@ -304,7 +304,14 @@ console.log("\n  구조·보안·디자인");
   ok("핫딜 테이블을 건드리지 않는다", !/tl_products\b/.test(sqlCode) && !/tl_purchases/.test(sqlCode));
   ok("기존 테이블을 지우지 않는다", !/\b(drop\s+table|truncate)\b/i.test(sqlCode));
   ok("관리자 확장용 컬럼이 다 있다", ["tl_price", "item_type", "effect_value", "duration_hours", "stock", "status", "max_purchase", "is_visible"].every((c) => new RegExp("\\b" + c + "\\b").test(sqlCode)));
-  ok("가격을 코드에 박지 않았다", !/50 TL|100 TL|200 TL|300 TL|250 TL|500 TL/.test(js));
+  {
+    /* 주석에도 예시로 금액이 적히므로 주석을 뺀 실제 코드만 검사합니다
+       (설명글의 '5,300 TL' 이 하드코딩으로 잘못 잡혔습니다). */
+    const codeOnly = js
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+    ok("가격을 코드에 박지 않았다", !/\b(50|100|200|300|250|500) TL/.test(codeOnly));
+  }
 
   ok("마켓 페이지 마크업 존재", /id="page-market"/.test(html));
   ok("메뉴가 실제 페이지로 연결", /id="page-nav-market" data-page="market"/.test(html));
