@@ -3139,73 +3139,73 @@ html[data-theme="dark"] .menu-bar-inner::after{
   .mh-btn{flex:1 1 auto;}
 }
 
-/* ===== 카카오 로그인 =====
-   카카오 디자인 가이드의 지정 색(#FEE500 / 글자 #191600)을 그대로 씁니다.
-   브랜드 컬러가 아니라 카카오 규정이라 임의로 바꾸지 않습니다. */
-/* 로그인 폼(.user-panel-guest)은 flex column + align-items:center 입니다.
-   폭을 지정하지 않으면 글자 크기만큼만 줄어들어 로그인 버튼과 단차가 납니다.
-   실측: 폭을 안 주면 228px, 로그인 버튼은 408px. */
-.kakao-login-wrap{width:100%;}
-.kakao-login-or{
+/* ===== 간편 로그인 (카카오·네이버) =====
+   버튼 색은 각 회사의 지정 색입니다. 브랜드 가이드라 임의로 바꾸지 않습니다.
+     카카오 #FEE500 / 글자 #191600
+     네이버 #03C75A / 글자 흰색 */
+.social-login-wrap{width:100%;}
+.social-login-or{
   display:flex;align-items:center;gap:8px;
   margin:2px 0 10px;color:var(--text-faint);font-size:12px;
 }
-.kakao-login-or::before,.kakao-login-or::after{
+.social-login-or::before,.social-login-or::after{
   content:"";flex:1;height:1px;background:var(--border-soft);
 }
-.kakao-login-btn{
-  width:100%;height:44px;
+.social-login-btn{
+  width:100%;height:44px;margin-bottom:6px;
   display:flex;align-items:center;justify-content:center;gap:7px;
   border:none;border-radius:3px;cursor:pointer;
-  background:#FEE500;color:#191600;
   font-family:inherit;font-size:15px;font-weight:700;
 }
-.kakao-login-btn:hover{filter:brightness(0.96);}
-.kakao-login-btn:active{filter:brightness(0.92);}
-.kakao-login-icon{display:flex;align-items:center;}
-.kakao-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
-.kakao-login-err:not(:empty){min-height:18px;}
+.social-login-btn:last-of-type{margin-bottom:0;}
+.social-login-btn:hover{filter:brightness(0.96);}
+.social-login-btn:active{filter:brightness(0.92);}
+.kakao-login-btn{background:#FEE500;color:#191600;}
+.naver-login-btn{background:#03C75A;color:#fff;}
+.social-login-icon{display:flex;align-items:center;}
+.social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
+.social-login-err:not(:empty){min-height:18px;}
 
-/* ===== 카카오 신규 회원 닉네임 설정 =====
+/* ===== 간편 로그인 신규 회원 닉네임 설정 =====
    auth.js 가 세션을 확인하기 전에 떠야 해서 화면 전체를 덮습니다.
    여기서 닉네임을 못 받으면 auth.js 가 곧바로 로그아웃시킵니다. */
-.kakao-nick-gate{
+.social-nick-gate{
   position:fixed;inset:0;z-index:9000;
   display:flex;align-items:center;justify-content:center;
   padding:20px;background:rgba(0,0,0,0.55);
 }
-.kakao-nick-card{
+.social-nick-card{
   width:100%;max-width:340px;box-sizing:border-box;
   padding:24px 22px;border-radius:3px;
   background:var(--surface);border:1px solid var(--border);
 }
-.kakao-nick-title{font-size:19px;font-weight:700;color:var(--text);text-align:center;}
-.kakao-nick-sub{font-size:13px;color:var(--text-faint);text-align:center;margin:4px 0 16px;}
-.kakao-nick-input{
+.social-nick-title{font-size:19px;font-weight:700;color:var(--text);text-align:center;}
+.social-nick-sub{font-size:13px;color:var(--text-faint);text-align:center;margin:4px 0 16px;}
+.social-nick-input{
   width:100%;height:44px;padding:0 12px;box-sizing:border-box;
   border:1px solid var(--border);border-radius:3px;
   background:var(--surface2);color:var(--text);
   font-family:inherit;font-size:16px;text-align:center;
 }
-.kakao-nick-input:focus{outline:none;border-color:var(--tl-blue);}
-.kakao-nick-rule{
+.social-nick-input:focus{outline:none;border-color:var(--tl-blue);}
+.social-nick-rule{
   margin-top:8px;font-size:12px;line-height:1.5;
   color:var(--text-faint);text-align:center;
 }
-.kakao-nick-err{min-height:18px;margin-top:6px;color:var(--red);font-size:13px;text-align:center;}
-.kakao-nick-submit{
+.social-nick-err{min-height:18px;margin-top:6px;color:var(--red);font-size:13px;text-align:center;}
+.social-nick-submit{
   width:100%;height:44px;margin-top:6px;
   border:none;border-radius:3px;cursor:pointer;
   background:var(--tl-blue);color:#fff;
   font-family:inherit;font-size:16px;font-weight:700;
 }
-.kakao-nick-submit:disabled{opacity:0.6;cursor:default;}
-.kakao-nick-cancel{
+.social-nick-submit:disabled{opacity:0.6;cursor:default;}
+.social-nick-cancel{
   width:100%;height:36px;margin-top:8px;
   border:none;background:none;cursor:pointer;
   color:var(--text-faint);font-family:inherit;font-size:13px;
 }
-.kakao-nick-cancel:hover{text-decoration:underline;}
+.social-nick-cancel:hover{text-decoration:underline;}
 
 /* ===== 넓은 화면에서 로그인 폼이 내 정보 박스에 담기게 =====
    1800px 이상에서는 공지·게시판·내 정보 박스 높이를 245px 로 맞춥니다
@@ -3215,22 +3215,24 @@ html[data-theme="dark"] .menu-bar-inner::after{
    박스 높이는 세 개가 같이 움직여야 해서 못 건드리므로, 폼 쪽을 줄입니다.
    지우는 건 없고 겹치는 안내 문구만 숨깁니다(마크업은 그대로). */
 @media (min-width:1800px){
-  .page-right > .user-panel-box .user-panel-guest{gap:3px;padding:6px 14px;}
+  .page-right > .user-panel-box .user-panel-guest{gap:2px;padding:4px 14px;}
   /* "닉네임과 비밀번호로 시작하세요" — 바로 아래 입력칸이 같은 말을 합니다 */
   .page-right > .user-panel-box .up-login-sub{display:none;}
-  .page-right > .user-panel-box .up-login-title{font-size:16px;}
-  .page-right > .user-panel-box .up-login-input{height:34px;}
+  .page-right > .user-panel-box .up-login-title{display:none;}
+  /* 제목 '로그인' 은 로그인 버튼과 겹치는 말이라 좁은 자리에서는 뺍니다.
+     간편 로그인 버튼이 둘로 늘면서 자리가 부족해졌습니다. */
+  .page-right > .user-panel-box .up-login-input{height:32px;}
   /* 오류 문구 자리 — 오류가 없을 때는 자리를 차지하지 않게 */
   .page-right > .user-panel-box .up-login-err:empty{display:none;}
-  .page-right > .user-panel-box .up-login-submit{height:36px;}
+  .page-right > .user-panel-box .up-login-submit{height:32px;}
   /* "또는" 구분선 — 버튼 색이 확연히 달라서 없어도 구분됩니다 */
-  .page-right > .user-panel-box .kakao-login-or{display:none;}
-  .page-right > .user-panel-box .kakao-login-btn{height:36px;font-size:14px;}
-  .page-right > .user-panel-box .kakao-login-err:empty{display:none;}
+  .page-right > .user-panel-box .social-login-or{display:none;}
+  .page-right > .user-panel-box .social-login-btn{height:32px;font-size:13px;margin-bottom:3px;}
+  .page-right > .user-panel-box .social-login-err:empty{display:none;}
   /* 오류 문구가 뜨면 그만큼 자리가 더 필요합니다.
      그때는 "로그인" 제목을 접어서 자리를 내줍니다(오류가 사라지면 되돌아옴). */
   .page-right > .user-panel-box .user-panel-guest:has(.up-login-err:not(:empty)) .up-login-title,
-  .page-right > .user-panel-box .user-panel-guest:has(.kakao-login-err:not(:empty)) .up-login-title{
+  .page-right > .user-panel-box .user-panel-guest:has(.social-login-err:not(:empty)) .up-login-title{
     display:none;
   }
 }
