@@ -279,23 +279,56 @@ section("[3] 계급 점수 — 실제 거래 기록 기반");
     eq(App.Rank.getUserRank().rank_name, "이병");
   });
 
-  t("청산 거래 1건당 10점 + 실현수익률 1%당 20점", () => {
+  t("계급 점수는 자산이 초기자금의 몇 배인가로 정해짐", () => {
     const { App } = boot();
-    const snap = tradeN(App, 3);
-    const expected = snap.closedTrades.length * 10 + Math.max(0, (snap.realizedPnl / 100000) * 100) * 20;
-    eq(Math.round(App.Rank.calculatePoints(snap)), Math.round(expected));
-    ok(snap.closedTrades.length === 3, "실제 청산 3건이어야 함");
+    /* 2026-08-19 방향 변경.
+       예전에는 '청산 1건당 10점 + 수익률 1%당 20점' 이라 거래를 많이 하기만
+       하면 올랐습니다. 손실 -21% 인 사람이 중장을 달고 있었습니다.
+       이제 거래 횟수는 점수에 넣지 않고 지금 자산만 봅니다. */
+    const P = (bal, used) => App.Rank.calculatePoints({ balance: bal, usedMargin: used || 0 });
+    eq(Math.round(P(100000)), 0, "초기자금 그대로면 0점");
+    eq(Math.round(P(200000)), 1000, "2배면 1000점");
+    eq(Math.round(P(400000)), 2000, "4배면 2000점");
+    eq(Math.round(P(800000)), 3000, "8배면 3000점");
+    ok(P(150000) < P(200000) && P(200000) < P(300000), "자산이 늘면 점수도 늘어야 함");
+    /* 같은 금액을 더 벌어도 위로 갈수록 점수 증가폭이 작아져야 합니다.
+       (10만 → 20만 은 1000점, 20만 → 30만 은 585점)
+       그래야 한 번 크게 번 사람이 영영 1등이 되지 않습니다. */
+    ok(P(300000) - P(200000) < P(200000) - P(100000),
+      "같은 금액을 벌어도 위로 갈수록 증가폭이 작아야 함: " +
+      Math.round(P(300000) - P(200000)) + " vs " + Math.round(P(200000) - P(100000)));
   });
 
-  t("손실이 나도 계급이 0점 아래로 내려가지 않음", () => {
+  t("자산이 줄면 계급도 내려감(강등)", () => {
     const { App } = boot();
-    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
-    App.Trading.openPosition("long", 2000, null, null);
-    App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 58000, time: Date.now() });
-    App.Trading.closePosition("수동청산");
-    const snap = App.Trading.getSnapshot();
-    ok(snap.realizedPnl < 0, "손실이어야 함");
-    eq(App.Rank.calculatePoints(snap), 10, "거래 1건 점수만 남아야 함");
+    const P = (bal) => App.Rank.calculatePoints({ balance: bal, usedMargin: 0 });
+    const N = (bal) => App.Rank.getRankName(P(bal));
+    ok(P(300000) > P(200000), "3배가 2배보다 높아야 함");
+    ok(P(200000) > P(150000), "손실을 보면 점수가 줄어야 함");
+    ok(App.Rank.calculateRank(P(300000)).rank_level > App.Rank.calculateRank(P(150000)).rank_level,
+      "자산이 반으로 줄면 계급도 내려가야 함: " + N(300000) + " → " + N(150000));
+  });
+
+  t("포지션을 잡아도 계급은 그대로", () => {
+    const { App } = boot();
+    const 전 = App.Rank.calculatePoints({ balance: 300000, usedMargin: 0 });
+    const 후 = App.Rank.calculatePoints({ balance: 100000, usedMargin: 200000 });
+    eq(Math.round(후), Math.round(전), "증거금으로 묶인 돈도 자산에 포함해야 함");
+  });
+
+  t("미실현 손익은 계급에 반영하지 않음", () => {
+    const src = fs.readFileSync(path.join(REPO, "js", "rank.js"), "utf8");
+    const fn = src.slice(src.indexOf("function calculatePoints"), src.indexOf("function getUserRank"));
+    ok(!/unrealizedPnl/.test(fn), "미실현 손익이 공식에 들어감");
+    ok(!/\bequity\b/.test(fn), "equity 는 미실현 손익을 포함하므로 쓰면 안 됨");
+  });
+
+  t("손실이 나도 계급 점수가 0 아래로 내려가지 않음", () => {
+    const { App } = boot();
+    const P = (bal) => App.Rank.calculatePoints({ balance: bal, usedMargin: 0 });
+    eq(P(50000), 0, "원금 절반이면 0점(이병)");
+    eq(P(0), 0, "전액 손실도 0점");
+    eq(App.Rank.getRankName(P(10000)), "이병");
   });
 
   t("거래를 쌓으면 계급이 올라감", () => {

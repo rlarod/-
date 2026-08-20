@@ -1,3 +1,15 @@
+
+/* 주문창 구역만 잘라냅니다.
+   예전에는 "주문창(Order Panel)" 부터 파일 끝까지를 전부 검사했습니다.
+   그래서 뒤에 새 규칙을 덧붙일 때마다 주문창과 무관한 코드가 이 검사에
+   걸렸습니다(2026-08-19 채팅 강제청산 스타일이 실제로 걸렸습니다).
+   다음 구역 표시(===== 로 시작하는 주석) 앞까지만 봅니다. */
+function orderPanelBlock(css) {
+  const start = css.indexOf("주문창(Order Panel)");
+  if (start === -1) return "";
+  const next = css.indexOf("/* =====", start + 20);
+  return next === -1 ? css.slice(start) : css.slice(start, next);
+}
 /* =========================================================================
  * 주문창 개미톡 매칭 + 기존 기능 보존 회귀 테스트
  * =========================================================================
@@ -714,7 +726,7 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
 
   t("숫자에 모노스페이스를 쓰지 않고 tabular-nums로 정렬", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const block = css.slice(css.indexOf("주문창(Order Panel)"));
+    const block = orderPanelBlock(css);
     ok(!/var\(--mono\)/.test(block), "주문창에 모노스페이스(--mono)가 남아있으면 안 됨");
     ["\\.margin-input-wrap input", "\\.order-preview-row b", "\\.order-account-row b"].forEach((sel) => {
       const m = block.match(new RegExp("\\.amitalk-order " + sel + "\\{[\\s\\S]*?\\}"));
@@ -782,7 +794,7 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
 
   t("과도한 볼드 금지 — 주문창에 font-weight:800 이상 없음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const block = css.slice(css.indexOf("주문창(Order Panel)"));
+    const block = orderPanelBlock(css);
     ok(!/font-weight:(800|900)/.test(block), "800/900 굵기는 쓰지 않음");
   });
 
@@ -790,7 +802,7 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
   // "최소 크기"와 "요소 간 상대 위계"로 검사합니다.
   t("주문창 폰트 크기 — 최소 크기와 위계가 유지됨", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    const block = css.slice(css.indexOf("주문창(Order Panel)"));
+    const block = orderPanelBlock(css);
     const size = (re, label) => {
       const m = block.match(re);
       ok(m, label + " 규칙을 찾을 수 없음");

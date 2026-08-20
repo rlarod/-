@@ -56,11 +56,33 @@ App.Rank = (function () {
     { rank_id: 19, rank_name: "대장", rank_level: 19, rank_tier: "장성", min_points: 2070 },
   ];
 
-  // 점수 배점 — 청산한 거래 1건당 10점 + 실현 수익률 1%당 20점.
-  // 손실이어도 계급이 내려가지 않도록 수익률 기여분은 0 미만으로 안 갑니다.
-  const POINTS_PER_CLOSED_TRADE = 10;
-  const POINTS_PER_RETURN_PCT = 20;
-  const INITIAL_BALANCE = 100000; // trading.js의 초기자산과 동일 기준(수익률 분모)
+  /* ------------------------------------------------------------------
+   * 점수 = 지금 가진 자산이 초기자금의 몇 배인가.
+   *
+   * 예전 방식은 "청산한 거래 1건당 10점 + 수익률 1%당 20점" 이었습니다.
+   * 거래를 많이 하기만 하면 점수가 올라서, 손실 -21% 인 사람이 중장을
+   * 달고 있었습니다. 계급이 실력을 나타내지 못했습니다.
+   *
+   * 새 방식 — 거래 횟수는 점수에 넣지 않습니다. 지금 자산만 봅니다.
+   *   점수 = 1000 × log2(자산 / 초기자금)
+   *
+   * log2 를 쓰는 이유: 벌수록 올리기 어려워집니다. 2배면 1000점,
+   * 4배면 2000점, 8배가 되어야 3000점입니다. 안 그러면 한 번 크게 번
+   * 사람이 영영 1등이라 뒤에 온 사람이 따라잡을 수 없습니다.
+   *   1.5배 → 585점(준위)  2배 → 1000점(대위)  4.2배 → 2070점(대장)
+   *
+   * 원금 아래로 내려가면 0점(이병)입니다. 원금도 못 지키면 계급이
+   * 없는 셈입니다. 반대로 자산이 줄면 점수도 줄어 강등됩니다.
+   *
+   * ── 포지션을 잡아도 계급은 그대로 ──────────────────────────────────
+   * '자산' 은 지갑 잔고 + 포지션에 묶인 증거금입니다.
+   * 포지션을 잡으면 지갑에서 증거금이 빠져나가지만 그건 잃은 돈이
+   * 아니므로 그대로 더합니다. 미실현 손익은 넣지 않습니다 — 아직
+   * 확정되지 않은 숫자라, 넣으면 가격이 출렁일 때마다 계급이
+   * 오르내립니다. 청산해서 손익이 확정된 다음에 반영됩니다.
+   * ------------------------------------------------------------------ */
+  const POINTS_PER_DOUBLING = 1000; // 자산이 2배가 될 때마다 오르는 점수
+  const INITIAL_BALANCE = 100000;   // trading.js의 초기자산
 
   let rankTable = RANK_TABLE.slice();
   let bonusPoints = 0; // profiles.rank_points (SQL 패치를 실행한 경우에만 채워짐)
@@ -93,14 +115,25 @@ App.Rank = (function () {
     return calculateRank(points).rank_name;
   }
 
-  // 실제 거래 기록 -> 점수. 여기 말고 다른 곳에서 점수를 만들지 않습니다.
+  /* 계급 계산에 쓰는 '자산' — 지갑 잔고 + 포지션에 묶인 증거금.
+     미실현 손익은 뺍니다(위 설명 참고). */
+  function getRankAssets(snapshot) {
+    if (!snapshot) return INITIAL_BALANCE;
+    const balance = typeof snapshot.balance === "number" ? snapshot.balance : 0;
+    const used = typeof snapshot.usedMargin === "number" ? snapshot.usedMargin : 0;
+    const assets = balance + used;
+    return isFinite(assets) && assets > 0 ? assets : 0;
+  }
+
+  // 자산 -> 점수. 여기 말고 다른 곳에서 점수를 만들지 않습니다.
   function calculatePoints(snapshot) {
     if (!snapshot) return bonusPoints;
-    const closed = Array.isArray(snapshot.closedTrades) ? snapshot.closedTrades.length : 0;
-    const realized = typeof snapshot.realizedPnl === "number" ? snapshot.realizedPnl : 0;
-    const returnPct = (realized / INITIAL_BALANCE) * 100;
-    const fromReturn = Math.max(0, returnPct) * POINTS_PER_RETURN_PCT;
-    return closed * POINTS_PER_CLOSED_TRADE + fromReturn + bonusPoints;
+    const assets = getRankAssets(snapshot);
+    if (assets <= 0) return bonusPoints; // 다 잃었으면 이병
+    const ratio = assets / INITIAL_BALANCE;
+    const fromAssets = Math.log2(ratio) * POINTS_PER_DOUBLING;
+    // 원금 아래로 내려가면 0점 — 마이너스 점수는 만들지 않습니다.
+    return Math.max(0, fromAssets) + bonusPoints;
   }
 
   function getUserRank(snapshot) {
@@ -256,6 +289,7 @@ App.Rank = (function () {
     getRankName,
     calculatePoints,
     getUserRank,
+    getRankAssets,
     renderBadge,
     renderNameWithRank,
   };

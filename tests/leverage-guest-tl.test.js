@@ -59,11 +59,16 @@ console.log("\n① 최대 레버리지");
 
 console.log("\n② TL 지급 공식");
 {
-  /* rank.js 의 상수를 소스에서 읽어 시나리오로 검증합니다. */
-  const perTrade = Number((rankSrc.match(/POINTS_PER_CLOSED_TRADE = (\d+)/) || [])[1]);
-  const perPct = Number((rankSrc.match(/POINTS_PER_RETURN_PCT = (\d+)/) || [])[1]);
-  const init = Number((rankSrc.match(/INITIAL_BALANCE = (\d+)/) || [])[1]);
-  ok("공식 상수를 읽어왔다", perTrade > 0 && perPct > 0 && init > 0, [perTrade, perPct, init].join(","));
+  /* TL 화폐 공식은 서버 tl_earned() 가 정본입니다.
+     2026-08-19 계급 점수를 자산 기준으로 바꾸면서, 계급은 rank_points() 로
+     떼어냈고 TL 화폐는 예전 공식 그대로 뒀습니다. 그래서 여기서는
+     rank.js 가 아니라 서버 SQL 에서 상수를 읽습니다. */
+  const tlSql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
+  const earned = tlSql.slice(tlSql.indexOf("function public.tl_earned"));
+  const perTrade = Number((earned.match(/\)\s*,\s*0\)\s*\*\s*(\d+)/) || [])[1]);
+  const perPct = Number((earned.match(/\)\s*\*\s*(\d+)\s*\n?\s*\+ coalesce/) || [])[1]);
+  const init = 100000;
+  ok("공식 상수를 읽어왔다", perTrade > 0 && perPct > 0, [perTrade, perPct].join(","));
 
   const tl = (closed, realized) => closed * perTrade + Math.max(0, (realized / init) * 100) * perPct;
 
@@ -73,8 +78,25 @@ console.log("\n② TL 지급 공식");
   ok("부분 청산도 청산 건수로 반영", tl(2, 1000) > tl(1, 1000));
   ok("같은 상태면 항상 같은 값(중복 지급 불가)", tl(2, 2000) === tl(2, 2000));
 
-  ok("미실현손익은 공식에 없다(실현 기준)", /realizedPnl/.test(rankSrc) && !/unrealizedPnl/.test(rankSrc.slice(rankSrc.indexOf("function calculatePoints"), rankSrc.indexOf("function getUserRank"))));
-  ok("손실에서 0으로 막는 처리", /Math\.max\(0, returnPct\)/.test(rankSrc));
+  /* 2026-08-19 계급 점수 방식이 '자산 배율' 로 바뀌었습니다.
+     미실현 손익을 넣지 않는 원칙은 그대로입니다 — 확정되지 않은 숫자를
+     넣으면 가격이 출렁일 때마다 계급이 오르내립니다. */
+  const 점수함수 = rankSrc.slice(rankSrc.indexOf("function calculatePoints"), rankSrc.indexOf("function getUserRank"));
+  ok("미실현손익은 공식에 없다", !/unrealizedPnl/.test(점수함수));
+  ok("equity(미실현 포함)도 쓰지 않는다", !/\bequity\b/.test(점수함수));
+  ok("자산 기준으로 계산한다", /getRankAssets/.test(점수함수));
+  ok("원금 아래에서 0으로 막는 처리", /Math\.max\(0, fromAssets\)/.test(rankSrc));
+
+  /* 계급 점수는 TL 과 분리됐습니다 — 화면과 서버가 같은 공식이어야
+     내 화면의 계급과 랭킹표의 계급이 어긋나지 않습니다. */
+  const rankSql = fs.readFileSync(path.join(REPO, "supabase", "schema-rank-assets.sql"), "utf8");
+  ok("서버에 계급 점수 함수가 따로 있다", /function public\.rank_points\(/.test(rankSql));
+  ok("서버도 자산 배율(log2)로 계산한다", /log\(2,/.test(rankSql));
+  ok("서버도 2배당 1000점", /\* 1000/.test(rankSql));
+  ok("서버도 원금 아래에서 0으로 막는다", /greatest\(0,/.test(rankSql));
+  ok("서버도 미실현 손익을 쓰지 않는다", !/unrealized/i.test(rankSql));
+  ok("랭킹표가 새 점수를 쓴다", /rank_points_all[\s\S]{0,400}public\.rank_points\(p\.id\)/.test(rankSql));
+  ok("TL 화폐 공식은 건드리지 않았다", !/create or replace function public\.tl_earned/.test(rankSql));
 
   /* 서버도 같은 공식이어야 새로고침·재로그인 후에도 같은 값이 나옵니다. */
   const sql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");

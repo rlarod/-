@@ -3422,3 +3422,35 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
    ※ 로그인 폼(닉네임+비밀번호)은 남겨둡니다 — 이미 그 방식으로 가입한
      회원들이 못 들어오게 되면 안 됩니다. */
 .up-login-toggle{display:none;}
+
+/* ===== 강제청산 알림 — 손절보다 확실히 위험해 보이게 =====
+   손절과 강제청산이 둘 다 같은 빨강이라 구분이 안 됐습니다. 강제청산은
+   증거금을 전부 잃는 사건이라 무게가 다릅니다.
+   빨강을 더 진하게 하는 대신 '배경을 깐 경고 띠' 로 성격을 바꿉니다.
+   글자만 빨간 줄과 나란히 있으면 형태 차이로 먼저 눈에 들어옵니다. */
+.chat-msg-event.chat-event-liq{
+  background:rgba(240,80,110,0.12);
+  border:1px solid rgba(240,80,110,0.35);
+  border-radius:6px;
+  padding:7px 10px;
+  margin:4px 0;
+}
+.chat-msg-event.chat-event-liq .chat-msg-text{
+  color:#FF8A9B;              /* 배경이 깔려 어두운 빨강은 안 읽힙니다 */
+  font-weight:800;
+  letter-spacing:-0.01em;
+}
+.chat-msg-event.chat-event-liq .chat-event-icon{
+  filter:none;
+}
+/* 채팅 칸(오른쪽) 안에서도 같은 처리 — 그쪽은 왼쪽 세로선 방식이라
+   따로 덮어써야 합니다. */
+.page-right .chat-msg-event.chat-event-liq{
+  background:rgba(240,80,110,0.12);
+  border:1px solid rgba(240,80,110,0.35);
+  border-radius:6px;
+  padding:6px 9px;
+}
+.page-right .chat-msg-event.chat-event-liq .chat-msg-text{
+  color:#FF8A9B;font-weight:800;
+}
