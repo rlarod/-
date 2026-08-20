@@ -29,11 +29,22 @@ console.log("\n랭킹");
 
 /* ---------- 순위 기준 ---------- */
 {
-  ok("실현 손익으로 정렬한다", /order by ta\.realized_pnl desc/.test(fix));
+  /* 2026-08-20 — 이 표의 이름이 '수익률 랭킹' 이라 정렬 기준도 수익률입니다.
+     예전에는 수익금 순이라 이름과 기준이 달랐습니다. */
+  ok("수익률로 정렬한다", /order by round\(\(ta\.realized_pnl/.test(fix));
   ok("가용 잔고로 정렬하지 않는다", !/order by ta\.balance desc/.test(fix));
-  ok("동점이면 수익률로 가른다", /realized_pnl desc nulls last,[\s\S]{0,140}roe_percent|realized_pnl desc nulls last,[\s\S]{0,140}\* 100, 2\) desc/.test(fix));
-  ok("내 순위도 같은 기준을 쓴다",
-     (fix.match(/order by ta\.realized_pnl desc/g) || []).length >= 2);
+  ok("수익률이 같으면 수익금으로 가른다",
+    /\* 100, 2\) desc nulls last,\s*\n?\s*ta\.realized_pnl desc/.test(fix));
+  ok("내 순위도 목록과 같은 기준을 쓴다",
+     (fix.match(/order by round\(\(ta\.realized_pnl/g) || []).length >= 2,
+     "여기만 다르면 '목록엔 3등인데 내 순위는 5등' 이 됩니다");
+
+  /* 총자산은 계급 점수와 같은 기준이어야 두 화면 숫자가 맞습니다. */
+  ok("총자산은 초기자금 + 확정 손익",
+    /\(ta\.initial_balance \+ ta\.realized_pnl\)\s*as total_asset/.test(fix),
+    "지갑 잔고를 쓰면 포지션 보유 중에 줄고, 무료 충전이 섞입니다");
+  ok("내 순위의 총자산도 같은 기준",
+    (fix.match(/ta\.initial_balance \+ ta\.realized_pnl/g) || []).length >= 2);
 
   /* 공지에 적힌 기준과 실제가 같아야 합니다. */
   ok("공지가 실현 손익 기준이라고 안내한다", /실현 손익\) 기준으로 계산/.test(noticeJs));

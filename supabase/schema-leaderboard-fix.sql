@@ -28,6 +28,17 @@
 --   포지션만 열어두고 버티는 쪽이 유리해지는 문제도 생깁니다.
 --   화면이 쓰는 total_asset / profit_amount 도 같이 내려줍니다.
 --
+-- 2026-08-20 추가로 고친 것 2가지
+--
+-- 4) 총자산이 지갑 잔고였음
+--    포지션을 잡으면 증거금이 지갑에서 빠져 총자산이 줄었고, 무료 충전
+--    (하루 2회)이 지갑에 더해져 충전만 받은 사람이 자산 순위가 높게
+--    보였습니다. 총자산을 '초기자금 + 확정 손익' 으로 바꿉니다.
+--    계급 점수(rank_points)와 같은 기준이라 두 화면 숫자가 맞습니다.
+--
+-- 5) 이름은 '수익률 랭킹' 인데 정렬은 수익금 순이었음
+--    정렬 기준을 수익률로 바꿉니다. 수익률이 같으면 수익금이 큰 쪽이 위.
+--
 -- 기존 것을 지우지 않습니다. 뷰와 함수만 다시 만듭니다.
 -- 여러 번 실행해도 안전합니다.
 -- =========================================================================
@@ -48,9 +59,18 @@ create view public.leaderboard as
     ta.initial_balance,
     ta.balance,
     ta.realized_pnl,
-    -- 총자산 = 잔고 + 실현손익이 이미 반영된 값이라 balance 그대로 씁니다.
-    -- (미실현은 청산 전이므로 랭킹에 넣지 않습니다 — 공지 기준)
-    ta.balance                                    as total_asset,
+    -- 총자산 = 초기자금 + 확정 손익
+    --
+    -- 예전에는 ta.balance(지갑 잔고)를 그대로 썼는데 두 가지가 어긋났습니다
+    -- (2026-08-20).
+    --   1) 포지션을 잡으면 증거금이 지갑에서 빠져나가 총자산이 줄어듭니다.
+    --      묶인 돈이지 잃은 돈이 아닌데 거래 중인 사람만 순위가 내려갔다가
+    --      청산하면 돌아왔습니다.
+    --   2) 무료 충전(하루 2회)이 지갑에 그대로 더해져, 충전만 꼬박꼬박
+    --      받은 사람이 자산 순위가 높게 보였습니다. 실력과 무관합니다.
+    -- 계급 점수(rank_points)와 같은 기준이라 두 화면 숫자가 일치합니다.
+    -- 미실현 손익은 넣지 않습니다 — 청산 전이라 확정된 값이 아닙니다.
+    (ta.initial_balance + ta.realized_pnl)        as total_asset,
     -- 수익금 = 실현 손익 (청산된 거래만)
     ta.realized_pnl                               as profit_amount,
     -- 수익률 = 실현손익 / 시작자산 x 100
@@ -58,9 +78,11 @@ create view public.leaderboard as
     ta.updated_at
   from public.trading_accounts ta
   join public.profiles p on p.id = ta.user_id
-  -- 순위: 실현 손익이 큰 순서. 같으면 시작자산 대비 수익률로 가릅니다.
-  order by ta.realized_pnl desc nulls last,
-           round((ta.realized_pnl / nullif(ta.initial_balance, 0)) * 100, 2) desc nulls last;
+  -- 순위: 수익률이 높은 순서. 이 표의 이름이 '수익률 랭킹' 이므로
+  -- 정렬 기준도 수익률이어야 합니다(예전에는 수익금 순이라 이름과
+  -- 기준이 달랐습니다). 수익률이 같으면 수익금이 큰 쪽을 위로 둡니다.
+  order by round((ta.realized_pnl / nullif(ta.initial_balance, 0)) * 100, 2) desc nulls last,
+           ta.realized_pnl desc nulls last;
 
 
 -- ---------------- 2) 랭킹 목록 ----------------
@@ -101,13 +123,16 @@ as $$
   select ranked.rank, ranked.nickname, ranked.roe_percent, ranked.balance
   from (
     select
+      -- 목록과 정확히 같은 순서여야 합니다.
+      -- 여기만 다르면 "목록에는 3등인데 내 순위는 5등" 이 됩니다.
       row_number() over (
-        order by ta.realized_pnl desc nulls last,
-                 round((ta.realized_pnl / nullif(ta.initial_balance, 0)) * 100, 2) desc nulls last
+        order by round((ta.realized_pnl / nullif(ta.initial_balance, 0)) * 100, 2) desc nulls last,
+                 ta.realized_pnl desc nulls last
       ) as rank,
       p.nickname,
       round((ta.realized_pnl / nullif(ta.initial_balance, 0)) * 100, 2) as roe_percent,
-      ta.balance,
+      -- 목록의 총자산과 같은 기준(초기자금 + 확정 손익)
+      (ta.initial_balance + ta.realized_pnl) as balance,
       ta.user_id
     from public.trading_accounts ta
     join public.profiles p on p.id = ta.user_id
