@@ -3486,3 +3486,21 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
   line-height:1.5;
 }
 .lev-modal-note{font-size:13px;color:var(--text-faint);margin-top:10px;}
+
+/* ===== 채팅 안내 줄 — 자리를 항상 같게 =====
+   글자가 들어올 때마다 높이가 14px ↔ 28px 로 오갔습니다(실측).
+   그때마다 메시지 영역이 그만큼 줄었다 늘었다 해서 화면이 흔들립니다.
+   글자가 있든 없든 같은 자리를 차지하게 고정하고, 길어져도 두 줄로
+   넘어가지 않게 한 줄로 자릅니다(뒤는 ... 으로). */
+.chat-err{
+  height:28px;
+  min-height:28px;
+  line-height:28px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.page-right .chat-err{
+  height:28px;min-height:28px;line-height:28px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}

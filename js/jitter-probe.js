@@ -42,6 +42,12 @@ App.JitterProbe = (function () {
     ["오른쪽 전체", ".page-right"],
     ["채팅 칸", ".page-chat-col"],
     ["채팅 메시지", "#chat-messages"],
+    ["내 정보 박스", ".user-panel-box"],
+    ["내 정보 내용", "#user-panel-body"],
+    ["채팅 안내줄", ".page-right .chat-err"],
+    ["채팅 입력줄", ".page-right .chat-input-row"],
+    ["공지 박스", ".notice-box"],
+    ["롱숏 비율", ".market-war-panel"],
   ];
 
   var box = null;
@@ -94,6 +100,7 @@ App.JitterProbe = (function () {
         });
         return v.length ? Math.max.apply(null, v) - Math.min.apply(null, v) : 0;
       })();
+      lines.push("창 너비: " + window.innerWidth + "px");
       lines.push("채팅 칸 흔들림: " + 진폭 + "px");
       lines.push("");
 
