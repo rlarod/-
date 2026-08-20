@@ -45,13 +45,14 @@ console.log("\n매매 사이클 랭킹");
   ok("아무리 크게 잃어도 0%", 표시(-18158792, 100000) === 0);
   ok("초기화 직후는 0%", 수익률(0, 100000) === 0);
 
-  ok("랭킹도 같은 식을 쓴다",
-    /greatest\(0, ta\.realized_pnl\) \/ nullif\(ta\.initial_balance, 0\)\) \* 100/.test(LB));
-  ok("화면도 같은 식을 쓴다", /Math\.max\(0, pnl\) \/ base\) \* 100/.test(SRC));
-
-  /* 2026-08-20 — 손실은 0% 로 끊습니다. 원금을 다 잃고 무료 충전으로
-     또 잃으면 손실이 끝없이 커집니다(실제로 -17,147% 가 찍혔습니다). */
-  ok("손실은 0% 로 끊는다", /Math\.max\(0, pnl\)/.test(SRC));
+  const FLOOR = fs.readFileSync(path.join(REPO, "supabase", "schema-leaderboard-floor.sql"), "utf8");
+  ok("랭킹도 같은 기준을 쓴다",
+    /coalesce\(rp\.ranking_profit, 0\) \/ nullif\(ta\.initial_balance, 0\)/.test(FLOOR));
+  /* 2026-08-20 — 랭킹 수익금은 서버(ranking_profit 뷰)가 정본입니다.
+     거래를 시간 순으로 훑으며 누적을 0 에서 끊습니다. 자세한 검사는
+     tests/leaderboard-floor.test.js 에 있습니다. */
+  ok("화면이 서버 랭킹 수익금을 읽는다", /from\("ranking_profit"\)/.test(SRC));
+  ok("못 읽으면 0 에서 끊어 대신 쓴다", /Math\.max\(0, pnl\)/.test(SRC));
   ok("실제 손익은 그대로 보관한다", /realized_pnl: pnl/.test(SRC),
     "랭킹 표시만 0 에서 끊고 거래내역에는 진짜 숫자가 나와야 합니다");
 }

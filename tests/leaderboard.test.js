@@ -21,7 +21,10 @@ function ok(name, cond, detail) {
 }
 const strip = (s) => s.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
 
-const fix = strip(fs.readFileSync(path.join(REPO, "supabase", "schema-leaderboard-fix.sql"), "utf8"));
+/* 2026-08-20 — 랭킹 계산이 schema-leaderboard-floor.sql 로 옮겨졌습니다.
+   누적을 0 에서 끊어야 해서 거래 표를 훑는 뷰가 필요했기 때문입니다.
+   schema-leaderboard-fix.sql 은 그 이전 단계로 남아 있습니다. */
+const fix = strip(fs.readFileSync(path.join(REPO, "supabase", "schema-leaderboard-floor.sql"), "utf8"));
 const lbJs = fs.readFileSync(path.join(REPO, "js", "leaderboard.js"), "utf8");
 const noticeJs = fs.readFileSync(path.join(REPO, "js", "notice-board.js"), "utf8");
 
@@ -31,30 +34,29 @@ console.log("\n랭킹");
 {
   /* 2026-08-20 — 이 표의 이름이 '수익률 랭킹' 이라 정렬 기준도 수익률입니다.
      예전에는 수익금 순이라 이름과 기준이 달랐습니다. */
-  ok("수익률로 정렬한다", /order by round\(\(greatest\(0, ta\.realized_pnl\)/.test(fix));
+  ok("수익률로 정렬한다", /order by round\(\(coalesce\(rp\.ranking_profit/.test(fix));
   ok("가용 잔고로 정렬하지 않는다", !/order by ta\.balance desc/.test(fix));
   ok("수익률이 같으면 수익금으로 가른다",
-    /\* 100, 2\) desc nulls last,\s*\n?\s*greatest\(0, ta\.realized_pnl\) desc/.test(fix));
+    /\* 100, 2\) desc nulls last,\s*\n?\s*coalesce\(rp\.ranking_profit, 0\) desc/.test(fix));
   ok("내 순위도 목록과 같은 기준을 쓴다",
-     (fix.match(/order by round\(\(greatest\(0, ta\.realized_pnl\)/g) || []).length >= 2,
+     (fix.match(/order by round\(\(coalesce\(rp\.ranking_profit/g) || []).length >= 2,
      "여기만 다르면 '목록엔 3등인데 내 순위는 5등' 이 됩니다");
 
   /* 2026-08-20 — 원금을 다 잃고 무료 충전으로 또 잃으면 손실이 끝없이
      커져 -17,147% 같은 숫자가 나왔습니다. 랭킹은 '얼마나 벌었나' 표이므로
      기준자본 아래는 계산하지 않습니다. */
-  ok("손실은 0% 로 끊는다",
-    /greatest\(0, ta\.realized_pnl\) \/ nullif\(ta\.initial_balance, 0\)/.test(fix),
-    "손실을 그대로 나누면 음수가 무한히 커집니다");
-  ok("수익금도 0 이 바닥", /greatest\(0, ta\.realized_pnl\)\s*as profit_amount/.test(fix));
+  ok("누적을 0 에서 끊는다", /least\(0, coalesce\(min\(누적\), 0\)\)/.test(fix),
+    "잃으면 0 으로 내려앉고 그다음 버는 것은 바로 올라갑니다");
+  ok("수익금은 0 이 바닥", /coalesce\(rp\.ranking_profit, 0\)\s*as profit_amount/.test(fix));
   ok("총자산은 기준자본이 바닥",
-    /ta\.initial_balance \+ greatest\(0, ta\.realized_pnl\)\)\s*as total_asset/.test(fix));
+    /ta\.initial_balance \+ coalesce\(rp\.ranking_profit, 0\)\)/.test(fix));
   /* 원본은 건드리지 않습니다 — 마이페이지·거래내역은 실제 손익을 보여줍니다. */
   ok("원본 데이터를 바꾸지 않는다", !/update public\.trading_accounts/.test(fix),
     "표시만 0 에서 끊고 저장된 값은 그대로 둡니다");
 
   /* 총자산은 계급 점수와 같은 기준이어야 두 화면 숫자가 맞습니다. */
   ok("내 순위의 총자산도 같은 기준",
-    (fix.match(/ta\.initial_balance \+ greatest\(0, ta\.realized_pnl\)/g) || []).length >= 2,
+    (fix.match(/ta\.initial_balance \+ coalesce\(rp\.ranking_profit, 0\)/g) || []).length >= 2,
     "지갑 잔고를 쓰면 포지션 보유 중에 줄고, 무료 충전이 섞입니다");
 
   /* 공지에 적힌 기준과 실제가 같아야 합니다. */
@@ -72,7 +74,7 @@ console.log("\n랭킹");
 
 /* ---------- 수익률 ---------- */
 {
-  ok("수익률은 실현 수익 / 기준자본", /greatest\(0, ta\.realized_pnl\) \/ nullif\(ta\.initial_balance, 0\)\) \* 100/.test(fix));
+  ok("수익률은 랭킹 수익금 / 기준자본", /coalesce\(rp\.ranking_profit, 0\) \/ nullif\(ta\.initial_balance, 0\)/.test(fix));
   ok("시작자산 0 이어도 안 터진다", /nullif\(ta\.initial_balance, 0\)/.test(fix));
 }
 

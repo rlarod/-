@@ -60,17 +60,37 @@ App.CyclePnl = (function () {
 
       var base = Number(res.data.initial_balance);
       var pnl = Number(res.data.realized_pnl);
+
+      /* 랭킹 수익금은 서버가 따로 계산합니다(0 이 바닥).
+         읽지 못하면 아래에서 실제 손익으로 대신 계산합니다. */
+      var 랭킹수익 = null;
+      try {
+        var rp = await client
+          .from("ranking_profit")
+          .select("ranking_profit")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (rp && !rp.error && rp.data) 랭킹수익 = Number(rp.data.ranking_profit);
+      } catch (e) {
+        /* 아직 SQL 을 안 돌린 서버 — 아래 대체 계산을 씁니다 */
+      }
       상태 = {
         cycle_no: res.data.cycle_no || 1,
         initial_balance: base,
         realized_pnl: pnl,
-        /* 랭킹 뷰와 완전히 같은 식입니다. 한쪽만 바꾸면 두 화면이 어긋납니다.
-           손실은 0% 로 끊습니다 — 원금을 다 잃고 무료 충전으로 또 잃으면
-           손실이 끝없이 커져 -17,147% 같은 숫자가 나옵니다(실제로 그랬습니다).
-           랭킹은 "얼마나 벌었나" 를 보는 표이므로 기준자본 아래는 세지
-           않습니다. 실제 손익은 아래 realized_pnl 에 그대로 남아 있고,
-           거래내역에는 진짜 숫자가 나옵니다. */
-        roe: base > 0 ? (Math.max(0, pnl) / base) * 100 : 0,
+        /* 랭킹 수익금 — 0 이 바닥입니다.
+           거래를 시간 순으로 훑으며 누적을 쌓되 0 아래로 안 내려갑니다.
+             누적 = max(0, 누적 + 이번거래손익)
+           잃으면 0 으로 내려앉고, 그다음 버는 것은 바로 올라갑니다.
+           마이너스를 그대로 들고 가면 -18,158,792 을 다 메우기 전까지
+           아무리 벌어도 0% 라 사실상 복구가 불가능합니다(실제 상황).
+           서버(ranking_profit 뷰)가 정본이고, 못 읽으면 실제 손익을
+           0 에서 끊어 대신 씁니다. */
+        ranking_profit: 랭킹수익 !== null ? 랭킹수익 : Math.max(0, pnl),
+        roe:
+          base > 0
+            ? ((랭킹수익 !== null ? 랭킹수익 : Math.max(0, pnl)) / base) * 100
+            : 0,
       };
       return 상태;
     } catch (e) {
