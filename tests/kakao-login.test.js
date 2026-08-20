@@ -305,6 +305,36 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("카카오 버튼 폭을 100% 로 잡았다(로그인 버튼과 단차 방지)",
       /\.kakao-login-wrap\{[^}]*width:100%/.test(css));
     ok("카카오 지정 색을 쓴다", css.includes("#FEE500"));
+
+    /* 넓은 화면 스크롤 재발 방지.
+       1800px 이상에서는 공지·게시판·내 정보 박스 높이가 245px 로 묶여
+       있습니다(--top-box-h). 로그인 폼이 그 안에 안 들어가면 박스 안에서
+       세로 스크롤이 생깁니다. 2026-08-19 실측: 폼 436px vs 담을 공간 243px.
+       폼을 늘리는 수정을 할 때 이 압축 규칙을 지우면 다시 스크롤이 생깁니다. */
+    const wide = css.slice(css.indexOf("로그인 폼이 내 정보 박스에 담기게"));
+    ok("1800px 이상 전용 압축 규칙이 있다", wide.indexOf("@media (min-width:1800px)") !== -1);
+    ok("압축은 넓은 화면에만 건다(좁은 화면·모바일은 원래대로)",
+      /@media \(min-width:1800px\)\{[^]*\.user-panel-guest\{gap:/.test(wide));
+    ok("겹치는 안내 문구는 숨기기만 한다(마크업 보존)",
+      wide.includes(".up-login-sub{display:none;}") && !css.includes("up-login-sub 삭제"));
+    ok("오류 문구 자리는 오류가 있을 때만 차지한다",
+      wide.includes(".up-login-err:empty{display:none;}"));
+    ok("오류가 뜨면 제목을 접어 자리를 낸다",
+      wide.includes(":has(.up-login-err:not(:empty))"));
+
+    /* 실측으로 확인한 높이 예산 — 합계가 243px 을 넘으면 스크롤이 돌아옵니다. */
+    const grab = (re) => { const m = wide.match(re); return m ? parseInt(m[1], 10) : null; };
+    const gap = grab(/\.user-panel-guest\{gap:(\d+)px/);
+    const padV = grab(/\.user-panel-guest\{gap:\d+px;padding:(\d+)px/);
+    const inputH = grab(/\.up-login-input\{height:(\d+)px/);
+    const submitH = grab(/\.up-login-submit\{height:(\d+)px/);
+    const kakaoH = grab(/\.kakao-login-btn\{height:(\d+)px/);
+    ok("입력칸·버튼 높이가 압축값으로 잡혀 있다",
+      inputH && submitH && kakaoH && inputH <= 36 && submitH <= 38 && kakaoH <= 38,
+      "입력 " + inputH + " 로그인 " + submitH + " 카카오 " + kakaoH);
+    const 예산 = 22 /*제목*/ + inputH * 2 + submitH + kakaoH + 18 /*회원가입 줄*/ +
+      gap * 6 + padV * 2;
+    ok("높이 예산이 담을 공간(243px) 안에 든다", 예산 <= 243, "계산 " + 예산 + "px");
   }
 
   console.log("통과 " + pass + " / 실패 " + fail);

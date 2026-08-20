@@ -3206,3 +3206,31 @@ html[data-theme="dark"] .menu-bar-inner::after{
   color:var(--text-faint);font-family:inherit;font-size:13px;
 }
 .kakao-nick-cancel:hover{text-decoration:underline;}
+
+/* ===== 넓은 화면에서 로그인 폼이 내 정보 박스에 담기게 =====
+   1800px 이상에서는 공지·게시판·내 정보 박스 높이를 245px 로 맞춥니다
+   (--top-box-h). 그 높이는 "로그인한 상태"의 내 정보(174px) 기준이라
+   로그아웃 상태의 로그인 폼(436px)은 처음부터 들어가지 않았고,
+   박스 안에서 세로 스크롤이 생겼습니다.
+   박스 높이는 세 개가 같이 움직여야 해서 못 건드리므로, 폼 쪽을 줄입니다.
+   지우는 건 없고 겹치는 안내 문구만 숨깁니다(마크업은 그대로). */
+@media (min-width:1800px){
+  .page-right > .user-panel-box .user-panel-guest{gap:3px;padding:6px 14px;}
+  /* "닉네임과 비밀번호로 시작하세요" — 바로 아래 입력칸이 같은 말을 합니다 */
+  .page-right > .user-panel-box .up-login-sub{display:none;}
+  .page-right > .user-panel-box .up-login-title{font-size:16px;}
+  .page-right > .user-panel-box .up-login-input{height:34px;}
+  /* 오류 문구 자리 — 오류가 없을 때는 자리를 차지하지 않게 */
+  .page-right > .user-panel-box .up-login-err:empty{display:none;}
+  .page-right > .user-panel-box .up-login-submit{height:36px;}
+  /* "또는" 구분선 — 버튼 색이 확연히 달라서 없어도 구분됩니다 */
+  .page-right > .user-panel-box .kakao-login-or{display:none;}
+  .page-right > .user-panel-box .kakao-login-btn{height:36px;font-size:14px;}
+  .page-right > .user-panel-box .kakao-login-err:empty{display:none;}
+  /* 오류 문구가 뜨면 그만큼 자리가 더 필요합니다.
+     그때는 "로그인" 제목을 접어서 자리를 내줍니다(오류가 사라지면 되돌아옴). */
+  .page-right > .user-panel-box .user-panel-guest:has(.up-login-err:not(:empty)) .up-login-title,
+  .page-right > .user-panel-box .user-panel-guest:has(.kakao-login-err:not(:empty)) .up-login-title{
+    display:none;
+  }
+}
