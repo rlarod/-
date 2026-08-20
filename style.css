@@ -3454,3 +3454,35 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
 .page-right .chat-msg-event.chat-event-liq .chat-msg-text{
   color:#FF8A9B;font-weight:800;
 }
+
+/* ===== 레버리지 창 — 위험 안내를 크게 =====
+   예전에는 '현재 최대 100배까지 사용할 수 있습니다' 한 줄뿐이라, 100배가
+   무엇을 뜻하는지 알 수 없었습니다. 실제로 몇 % 움직이면 청산되는지를
+   계산해 크게 보여줍니다(숫자는 js/trading.js 의 청산가 공식 그대로). */
+.lev-modal-warn{
+  margin:14px 0 0;
+  padding:12px 14px;
+  background:rgba(240,80,110,0.10);
+  border:1px solid rgba(240,80,110,0.30);
+  border-radius:8px;
+  text-align:left;
+}
+.lev-modal-warn-main{
+  margin:0 0 6px;
+  color:#FF8A9B;
+  font-size:15px;
+  font-weight:700;
+  line-height:1.45;
+}
+/* 20배 이상은 한 단계 더 세게 — 이때부터 1%대에서 청산됩니다 */
+.lev-modal-warn-main.lev-modal-warn-high{
+  font-size:16px;
+  color:#FF6A80;
+}
+.lev-modal-warn-sub{
+  margin:2px 0 0;
+  color:var(--text-faint);
+  font-size:13px;
+  line-height:1.5;
+}
+.lev-modal-note{font-size:13px;color:var(--text-faint);margin-top:10px;}

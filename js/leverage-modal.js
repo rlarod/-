@@ -25,6 +25,7 @@ window.App = window.App || {};
 App.LeverageModal = (function () {
   "use strict";
 
+  var MMR = 0.005; // 유지증거금률 — js/trading.js 의 MMR 과 같은 값이어야 합니다
   var PRESETS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
   var dom = {};
@@ -65,6 +66,11 @@ App.LeverageModal = (function () {
       '<div class="lev-modal-presets" id="lev-modal-presets"></div>' +
       '<input type="range" class="lev-modal-range" id="lev-modal-range" min="1" max="100" value="10">' +
       '<div class="lev-modal-scale"><span>1x</span><span id="lev-modal-max">100x</span></div>' +
+      '<div class="lev-modal-warn">' +
+      '<p class="lev-modal-warn-main" id="lev-modal-warn"></p>' +
+      '<p class="lev-modal-warn-sub">강제청산되면 그 포지션에 넣은 증거금을 전부 잃습니다.</p>' +
+      '<p class="lev-modal-warn-sub">배율이 높을수록 넣을 수 있는 증거금 한도도 함께 줄어듭니다.</p>' +
+      "</div>" +
       '<p class="lev-modal-note" id="lev-modal-note"></p>' +
       "</div>" +
       '<div class="lev-modal-foot">' +
@@ -80,6 +86,7 @@ App.LeverageModal = (function () {
       range: el("lev-modal-range"),
       maxLabel: el("lev-modal-max"),
       note: el("lev-modal-note"),
+      warn: el("lev-modal-warn"),
       ok: el("lev-modal-ok"),
       cancel: el("lev-modal-cancel"),
       x: el("lev-modal-x"),
@@ -128,6 +135,26 @@ App.LeverageModal = (function () {
       max > base
         ? "이용권 적용 중 — 최대 " + max + "배까지 사용할 수 있습니다."
         : "현재 최대 " + max + "배까지 사용할 수 있습니다.";
+
+    /* 위험 안내 — 이 배율이면 가격이 몇 % 반대로 가면 청산되는지 실제로 계산합니다.
+       js/trading.js 의 청산가 공식과 같은 식입니다.
+         LONG  청산가 = 진입가 × (1 − 1/배율 + 유지증거금률)
+       즉 진입가 대비 (1/배율 − 유지증거금률) 만큼 반대로 움직이면 청산입니다.
+       유지증거금률 0.5% 도 trading.js 의 MMR 과 같은 값입니다.
+       숫자를 지어내지 않고 실제 규칙 그대로 보여줍니다. */
+    if (dom.warn) {
+      var 청산폭 = (1 / n - MMR) * 100;
+      if (청산폭 <= 0) {
+        dom.warn.textContent = "이 배율에서는 진입 즉시 청산될 수 있습니다.";
+      } else {
+        var 폭글자 = 청산폭.toFixed(청산폭 < 1 ? 2 : 1) + "%";
+        /* '만' 은 작을 때만 붙입니다 — "99.5%만" 은 말이 안 됩니다. */
+        dom.warn.textContent = 청산폭 < 10
+          ? n + "배 — 가격이 약 " + 폭글자 + "만 반대로 움직여도 강제청산됩니다."
+          : n + "배 — 가격이 약 " + 폭글자 + " 반대로 움직이면 강제청산됩니다.";
+      }
+      dom.warn.classList.toggle("lev-modal-warn-high", n >= 20);
+    }
   }
 
   function open() {

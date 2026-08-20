@@ -57,6 +57,39 @@ console.log("\n① 최대 레버리지");
   ok("팝업에 최대값을 하드코딩하지 않았다", !/max\s*=\s*100\b/.test(modalSrc.replace(/return 100;/, "")));
 }
 
+/* ---------- 레버리지 창의 위험 안내 ---------- */
+{
+  const modal = fs.readFileSync(path.join(REPO, "js", "leverage-modal.js"), "utf8");
+  const tradingSrc = fs.readFileSync(path.join(REPO, "js", "trading.js"), "utf8");
+
+  /* 예전에는 '현재 최대 100배까지 사용할 수 있습니다' 한 줄뿐이라
+     100배가 무엇을 뜻하는지 알 수 없었습니다. 실제로 몇 % 움직이면
+     청산되는지 계산해서 보여줍니다(2026-08-19). */
+  ok("위험 안내 블록이 있다", /lev-modal-warn/.test(modal));
+  ok("청산까지 남은 폭을 실제로 계산한다", /1 \/ n - MMR/.test(modal));
+
+  /* 숫자를 지어내지 않으려면 청산 공식이 trading.js 와 같아야 합니다.
+     한쪽만 바뀌면 창에 적힌 % 와 실제 청산 시점이 달라집니다. */
+  const modalMMR = Number((modal.match(/var MMR = ([\d.]+)/) || [])[1]);
+  const tradingMMR = Number((tradingSrc.match(/const MMR = ([\d.]+)/) || [])[1]);
+  ok("유지증거금률이 거래 엔진과 같다", modalMMR === tradingMMR, modalMMR + " vs " + tradingMMR);
+
+  /* 실제 계산 결과 확인 — 청산폭 = (1/배율 − 유지증거금률) × 100 */
+  const 청산폭 = (n) => (1 / n - tradingMMR) * 100;
+  ok("100배는 1% 안쪽에서 청산", 청산폭(100) < 1, 청산폭(100).toFixed(2) + "%");
+  ok("10배는 10% 안쪽에서 청산", 청산폭(10) < 10 && 청산폭(10) > 9, 청산폭(10).toFixed(1) + "%");
+  ok("배율이 높을수록 청산이 가까워진다", 청산폭(100) < 청산폭(50) && 청산폭(50) < 청산폭(10));
+
+  ok("증거금 전액 손실을 알려준다", /증거금을 전부 잃습니다/.test(modal));
+  ok("높은 배율은 더 강하게 표시한다", /lev-modal-warn-high/.test(modal) && /n >= 20/.test(modal));
+
+  const cssSrc = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  ok("경고가 눈에 띄는 색을 쓴다", /\.lev-modal-warn-main\{[^}]*color:#FF8A9B/.test(cssSrc));
+  ok("경고 글자가 안내 문구보다 크다",
+    /\.lev-modal-warn-main\{[^}]*font-size:15px/.test(cssSrc) &&
+    /\.lev-modal-note\{font-size:13px/.test(cssSrc));
+}
+
 console.log("\n② TL 지급 공식");
 {
   /* TL 화폐 공식은 서버 tl_earned() 가 정본입니다.
