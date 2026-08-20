@@ -427,6 +427,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(/auth-toggle-link/.test(fs.readFileSync(path.join(REPO, "index.html"), "utf8")),
       "회원가입 링크 마크업이 지워짐");
 
+    /* 닉네임 설정 창 — 가입 과정에서 딱 한 번 보고, 여기서 정한 닉네임은
+       나중에 바꿀 수 없습니다. 작게 띄우면 대충 넘기게 됩니다.
+       2026-08-20 사용자 요청으로 키웠고, 다시 작아지지 않게 못박습니다. */
+    const nickCard = css.match(/\.social-nick-card\{([^}]*)\}/);
+    const cardW = nickCard && nickCard[1].match(/max-width:(\d+)px/);
+    ok("닉네임 창이 충분히 넓다", cardW && parseInt(cardW[1], 10) >= 420, cardW && cardW[1]);
+    const nickInput = css.match(/\.social-nick-input\{([^}]*)\}/);
+    const inH = nickInput && nickInput[1].match(/height:(\d+)px/);
+    const inF = nickInput && nickInput[1].match(/font-size:(\d+)px/);
+    ok("닉네임 입력칸이 크다", inH && parseInt(inH[1], 10) >= 54, inH && inH[1]);
+    ok("입력한 닉네임 글자가 크다", inF && parseInt(inF[1], 10) >= 20, inF && inF[1]);
+    ok("제목이 눈에 들어온다", /\.social-nick-title\{font-size:2[0-9]px/.test(css));
+    ok("규칙 안내도 읽을 만한 크기", /\.social-nick-rule\{[^}]*font-size:1[4-9]px/.test(css));
+    ok("닉네임 창 스타일이 한 벌만 있다",
+      (css.match(/\.social-nick-card\{/g) || []).length === 1,
+      "같은 규칙이 두 벌이면 뒤엣것이 앞을 덮어써 수정이 안 먹습니다");
+
     /* 색으로 순서를 잡습니다: 파랑(우리) → 노랑(카카오) → 초록(네이버) */
     ok("로그인 버튼이 우리 브랜드 색이다",
       /\.up-login-submit\{[^}]*background:var\(--tl-blue\)/.test(css),
