@@ -369,7 +369,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const h = btn && btn[1].match(/height:(\d+)px/);
     ok(h && parseInt(h[1], 10) >= 46, "버튼이 너무 낮음: " + (h && h[1]));
     const fs2 = btn && btn[1].match(/font-size:(\d+)px/);
-    ok(fs2 && parseInt(fs2[1], 10) >= 15, "글자가 너무 작음: " + (fs2 && fs2[1]));
+    ok(fs2 && parseInt(fs2[1], 10) >= 18, "글자가 너무 작음: " + (fs2 && fs2[1]));
     ok(/\.social-login-row\{[^}]*flex-direction:column/.test(css), "두 버튼을 위아래로 쌓지 않음");
     ok(SRC.includes("aria-label=") && SRC.includes("title="),
       "읽어주는 프로그램용 이름이 빠짐");
@@ -402,8 +402,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     const grab = (re) => { const m = wide.match(re); return m ? parseInt(m[1], 10) : null; };
     const inputH = grab(/\.up-login-input\{height:(\d+)px/);
-    ok("입력칸을 알아볼 수 있는 크기로 둔다", inputH && inputH >= 38,
+    ok("입력칸을 알아볼 수 있는 크기로 둔다", inputH && inputH >= 42,
       "너무 낮으면 '여기 쓰면 된다' 는 신호가 약해집니다: " + inputH);
+    const inputFs = grab(/\.up-login-input\{height:\d+px;font-size:(\d+)px/);
+    ok(inputFs && inputFs >= 16, "입력칸 글자가 너무 작음: " + inputFs);
+    ok(/\.up-login-submit\{\s*font-size:(1[8-9]|[2-9]\d)px/.test(css),
+      "로그인 버튼 글자가 간편 로그인 버튼보다 작으면 순서가 뒤집혀 보입니다");
 
     /* 입력칸이 배경에 묻히지 않게 하는 장치들 */
     ok("입력칸에 마우스를 올리면 테두리가 진해진다", /\.up-login-input:hover\{border-color/.test(css));
