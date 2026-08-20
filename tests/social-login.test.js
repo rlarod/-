@@ -416,6 +416,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("키보드로 이동할 때도 위치가 보인다", /:focus-visible\{[\s\S]{0,60}outline:2px solid/.test(css));
     ok("움직임을 줄인 설정을 존중한다", /prefers-reduced-motion/.test(css));
 
+    /* 신규 가입은 카카오·네이버로만 받기로 했습니다(2026-08-19).
+       js/auth.js 는 수정 금지라 회원가입 코드는 살아 있고 화면에서만 감춥니다.
+       ※ 로그인 폼은 남깁니다 — 이미 닉네임+비밀번호로 가입한 회원이
+         못 들어오면 안 됩니다. 이 두 가지를 함께 못박아 둡니다. */
+    ok(/\.up-login-toggle\{display:none;\}/.test(css), "회원가입 전환 줄이 다시 보임");
+    const authJs = fs.readFileSync(path.join(REPO, "js", "auth.js"), "utf8");
+    ok(/회원가입/.test(authJs), "회원가입 코드가 지워짐 — 감추기만 해야 합니다");
+    ok(/signUp/.test(authJs), "가입 기능 자체가 사라짐");
+    ok(/auth-toggle-link/.test(fs.readFileSync(path.join(REPO, "index.html"), "utf8")),
+      "회원가입 링크 마크업이 지워짐");
+
     /* 색으로 순서를 잡습니다: 파랑(우리) → 노랑(카카오) → 초록(네이버) */
     ok("로그인 버튼이 우리 브랜드 색이다",
       /\.up-login-submit\{[^}]*background:var\(--tl-blue\)/.test(css),
