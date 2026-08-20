@@ -340,4 +340,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log("통과 " + pass + " / 실패 " + fail);
   if (fail) { console.log("실패 있음 ❌"); process.exit(1); }
   console.log("전체 통과 ✅");
+  /* jsdom 창들이 타이머·감시자를 붙들고 있어 그냥 두면 프로세스가 끝나지
+     않습니다. npm test 는 && 로 이어져 있어 여기서 멈추면 뒤 테스트가
+     아예 실행되지 않습니다. 결과를 다 낸 뒤 명시적으로 끝냅니다. */
+  process.exit(0);
 })();
