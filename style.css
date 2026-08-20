@@ -3540,3 +3540,68 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
   background:var(--gold-soft);border:1px solid var(--gold);border-radius:6px;
   color:var(--gold);font-size:14px;font-weight:700;text-align:center;
 }
+
+/* =========================================================================
+ * 다크 리디자인 — 빨강이 잘못 쓰인 자리 정리
+ * =========================================================================
+ * 이 화면에서 빨강은 "하락·손실" 을 뜻합니다. 그런데 공지 라벨, 상품 탭,
+ * 헤더 공지 태그처럼 손익과 아무 상관 없는 곳에도 빨강이 쓰이고 있어
+ * 화면 전체가 "뭔가 나쁜 일이 일어난" 것처럼 읽혔습니다.
+ * 강조가 필요한 자리는 포인트 색(--gold)이나 브랜드 파랑으로 바꿉니다.
+ * 빨강은 손익 표시에만 남깁니다.
+ * ========================================================================= */
+
+/* 지금 보고 있는 상품 탭(코인선물) — 강조는 맞지만 하락이 아닙니다 */
+html[data-theme="dark"] .product-tab-btn.active{
+  color:var(--gold);
+  border-color:var(--gold);
+  background:var(--gold-soft);
+}
+
+/* 공지 라벨 [공지] — 안내 문구지 손실이 아닙니다.
+   [안내]와 구분은 유지해야 하므로, 공지는 브랜드 파랑으로 둡니다. */
+html[data-theme="dark"] .notice-tag-notice{color:var(--tl-blue);}
+
+/* 헤더의 '공지' 태그 — 같은 이유로 파랑 */
+html[data-theme="dark"] .header-notice-tag{
+  background:var(--tl-blue);
+  color:#fff;
+}
+
+/* 심볼 배지 — 금색 배경에 흰 글자라 읽기 어려웠습니다(실측).
+   밝은 배경에는 어두운 글자를 씁니다. 카카오 버튼과 같은 원칙입니다. */
+html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
+  background:var(--gold);
+  color:#191600;
+}
+
+/* ===== 글자가 칸 밖으로 삐져나오던 자리 =====
+   실측으로 두 군데를 찾았습니다. 둘 다 글자가 두 줄로 접히면서 정해진
+   높이를 넘어, 아래 요소와 포개져 보였습니다. */
+
+/* 1) 증거금 방식 버튼 — "교차(Cross) ▾" 가 두 줄로 접혀
+      아래 지정가/시장가 버튼 위로 흘러내렸습니다. */
+.margin-mode-badge{
+  white-space:nowrap;
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  line-height:1.2;
+}
+
+/* 2) 종목 줄 — "비트코인 (BTCUSDT)" 가 두 줄이 되면서
+      오른쪽 '거래중' 배지와 22x26px 겹쳤습니다(실측).
+      배지 자리를 먼저 확보하고 이름이 그 안에서만 놓이게 합니다. */
+.amitalk-order .ami-symbol-row{
+  justify-content:space-between;
+  gap:8px;
+  padding-left:14px;padding-right:14px;
+}
+.amitalk-order .ami-symbol-row > span:first-child{
+  min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-align:left;
+}
+.amitalk-order .ami-symbol-badge{
+  flex:0 0 auto;
+  position:static;   /* 겹침의 원인이던 겹쳐 놓기를 풀고 나란히 놓습니다 */
+}

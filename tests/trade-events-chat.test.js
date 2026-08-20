@@ -63,8 +63,13 @@ function boot(opts) {
   return { win, sent, store, bus: win.App.Bus };
 }
 
+/* 청산 시각은 '이번 접속 중' 이어야 알림이 나갑니다(모듈이 켜진 시각 기준).
+   예전에는 여유를 10ms 만 뒀는데, 여러 테스트를 한꺼번에 돌릴 때 모듈이
+   켜지는 게 그보다 늦어져 가끔 실패했습니다(2026-08-20). 넉넉히 잡습니다.
+   실제 동작과는 무관한 테스트 편의값입니다. */
+const 앞으로 = (ms) => Date.now() + 60000 + (ms || 0);
 const 거래 = (over) => Object.assign(
-  { side: "long", pnl: -100, reason: "수동청산", closeTime: Date.now() + 10 }, over || {});
+  { side: "long", pnl: -100, reason: "수동청산", closeTime: 앞으로() }, over || {});
 
 (async function run() {
   console.log("\n거래 이벤트 채팅");
@@ -129,9 +134,8 @@ const 거래 = (over) => Object.assign(
   }
   {
     /* 한꺼번에 쏟아지면 도배 방지 — 그리고 그 거래를 다시 시도하지 않아야 합니다. */
-    const now = Date.now();
-    const 많음 = [];
-    for (let i = 0; i < 9; i++) 많음.push(거래({ closeTime: now + 100 + i }));
+        const 많음 = [];
+    for (let i = 0; i < 9; i++) 많음.push(거래({ closeTime: 앞으로(100) + i }));
     const { sent, bus } = boot({});
     bus.emit("trading:persisted", { closedTrades: 많음 });
     await sleep(60);
@@ -160,10 +164,9 @@ const 거래 = (over) => Object.assign(
     /* 마지막 방어선 — 청산 시각이 달라도 문장이 똑같으면 막습니다.
        2026-08-19 같은 문장이 두 줄씩 찍히는 것을 보고 넣었습니다. */
     const { sent, bus } = boot({});
-    const now = Date.now();
-    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 200 })] });
+        bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: 앞으로(200) })] });
     await sleep(60);
-    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 300 })] });
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: 앞으로(300) })] });
     await sleep(60);
     ok("같은 문장은 짧은 시간 안에 두 번 보내지 않는다", sent.length === 1,
       sent.map((s) => s.message).join(" / "));
@@ -171,10 +174,9 @@ const 거래 = (over) => Object.assign(
   {
     /* 다만 내용이 다르면 당연히 둘 다 보내야 합니다. */
     const { sent, bus } = boot({});
-    const now = Date.now();
-    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 200, pnl: -100 })] });
+        bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: 앞으로(200), pnl: -100 })] });
     await sleep(60);
-    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 300, pnl: -200 })] });
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: 앞으로(300), pnl: -200 })] });
     await sleep(60);
     ok("금액이 다르면 둘 다 보낸다", sent.length === 2,
       sent.map((s) => s.message).join(" / "));
