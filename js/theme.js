@@ -59,8 +59,16 @@ App.Theme = (function () {
     set(current() === DARK ? LIGHT : DARK);
   }
 
-  // 저장값이 없으면 운영체제 설정을 따릅니다.
+  /* 지금은 다크 하나로만 운영합니다.
+     밝은 모드의 색 정의는 style.css 에 그대로 남아 있고, 전환 버튼만
+     화면에서 감춰뒀습니다(마크업·코드는 보존). 밝은 모드를 새 디자인에
+     맞게 다시 만들면 이 함수와 버튼 숨김만 되돌리면 됩니다.
+     저장값이 light 여도 무시합니다 — 예전에 밝은 모드를 켜뒀던 사람이
+     새 디자인이 적용되지 않은 화면을 보게 되기 때문입니다. */
+  const DARK_ONLY = true;
+
   function initialTheme() {
+    if (DARK_ONLY) return DARK;
     const s = saved();
     if (s === DARK || s === LIGHT) return s;
     try {

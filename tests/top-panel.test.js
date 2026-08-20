@@ -1473,12 +1473,16 @@ section("[5] 기존 기능 보존");
       "1300px 블록에 가려 적용되지 않는 죽은 규칙이 남아 있음");
   });
 
-  t("디자인 시스템: 과도한 둥근 모서리·그림자가 없음", () => {
+  t("디자인 시스템: 모서리·그림자가 절제돼 있음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-    // 금융 플랫폼 느낌 — radius는 0~3px, 50%(원형)만 예외
+    /* 2026-08-19 방향 변경.
+       예전 기준은 "모서리 3px 이하". 각진 금융 화면을 목표로 잡은 값이었는데,
+       레퍼런스(개미톡) 화면을 실측하니 카드 모서리가 10px 이었습니다.
+       그래서 상한을 12px 로 올립니다. 다만 알약 형태(999px)나 과하게
+       둥근 카드는 여전히 막습니다 — 그러면 금융 화면이 아니라 앱처럼 보입니다. */
     const radii = (css.match(/border-radius:([\d.]+)px/g) || []).map((v) => parseFloat(v.split(":")[1]));
-    const tooRound = radii.filter((v) => v > 3);
-    eq(tooRound.length, 0, "3px를 넘는 모서리가 남아 있음: " + tooRound.slice(0, 5).join(","));
+    const tooRound = radii.filter((v) => v > 12);
+    eq(tooRound.length, 0, "12px를 넘는 모서리가 남아 있음: " + tooRound.slice(0, 5).join(","));
     ok(!/border-radius:999px/.test(css), "알약 형태 버튼은 쓰지 않음");
 
     // 그림자는 떠 있는 요소(모달/드롭다운)와 상태 점만, 그것도 얇게
@@ -1488,6 +1492,33 @@ section("[5] 기존 기능 보존");
       const max = Math.max(...blur, 0);
       ok(max <= 10, "그림자가 너무 큼: " + sh.trim());
     });
+  });
+
+  t("다크 팔레트가 레퍼런스 실측값을 쓴다", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const dark = css.slice(css.indexOf('html[data-theme="dark"]{'));
+    /* 캡처에서 픽셀로 뽑은 값입니다. 임의로 바꾸면 레퍼런스와 어긋납니다. */
+    [["--bg:#0A0F1C", "페이지 배경"], ["--surface:#101727", "카드"],
+     ["--surface2:#0D1422", "카드 안쪽 타일"], ["--border:#1D273B", "테두리"],
+     ["--text:#E7ECF5", "본문 글자"], ["--text-faint:#838DA4", "보조 글자"],
+     ["--green:#26C281", "상승"], ["--red:#F0506E", "하락"],
+     ["--gold:#F0B429", "포인트"]].forEach(([v, label]) => {
+      ok(dark.indexOf(v) !== -1, label + " 색이 실측값과 다름: " + v);
+    });
+    /* 브리프에 있던 보라는 쓰지 않기로 했습니다 — 레퍼런스 화면에 보라가
+       한 픽셀도 없고, 골드가 그 자리를 맡고 있습니다. */
+    ok(!/#6C63FF/i.test(css), "쓰지 않기로 한 보라(#6C63FF)가 들어옴");
+    ok(/--card-radius:10px/.test(dark), "카드 모서리는 레퍼런스 실측 10px");
+  });
+
+  t("지금은 다크 하나로만 운영한다(밝은 모드는 보존)", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    const theme = fs.readFileSync(path.join(REPO, "js", "theme.js"), "utf8");
+    ok(/DARK_ONLY = true/.test(theme), "다크 고정이 풀림");
+    ok(/#header-theme-btn\{display:none;\}/.test(css), "전환 버튼이 다시 보임");
+    /* 지우지 않고 감춰둡니다 — 밝은 모드를 새로 만들 때 되살립니다. */
+    ok(/function toggle/.test(theme) || /LIGHT/.test(theme), "밝은 모드 코드가 지워짐");
+    ok(/--bg:#F/i.test(css) || /--surface:#FFFFFF/.test(css), "밝은 모드 색 정의가 지워짐");
   });
 
   t("마이페이지도 다른 페이지와 같은 표 형태", () => {
