@@ -110,7 +110,13 @@ App.AdminChatTools = (function () {
     if (/does not exist|schema cache|PGRST202/i.test(m)) {
       return "서버 준비가 안 됐습니다 — supabase/schema-admin-chat.sql 을 먼저 실행해주세요.";
     }
-    return "실패했습니다. 잠시 후 다시 시도해주세요.";
+    if (/permission denied/i.test(m)) {
+      return "서버가 권한을 거부했습니다 — 채팅 표의 삭제 권한 문제입니다. (" + m + ")";
+    }
+    /* 모르는 오류는 감추지 않고 그대로 보여줍니다.
+       '실패했습니다' 만 띄우면 원인을 찾을 방법이 없습니다
+       (2026-08-20 채팅 초기화가 이 메시지만 남기고 막혔습니다). */
+    return "실패했습니다: " + (m || "알 수 없는 오류") + (err && err.code ? " [" + err.code + "]" : "");
   }
 
   async function 잠금전환() {

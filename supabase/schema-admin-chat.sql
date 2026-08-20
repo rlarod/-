@@ -101,10 +101,10 @@ begin
   end if;
 
   -- 몇 개를 지웠는지 돌려줍니다. 화면에서 "1,234개를 지웠습니다" 로 씁니다.
-  with gone as (
-    delete from public.chat_messages returning 1
-  )
-  select count(*) into removed from gone;
+  -- 예전에는 with ... returning 방식을 썼는데, 삭제는 되면서도 실패로
+  -- 처리되는 경우가 있어 가장 단순한 방법으로 바꿨습니다(2026-08-20).
+  delete from public.chat_messages;
+  get diagnostics removed = row_count;
 
   return coalesce(removed, 0);
 end;
