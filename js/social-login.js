@@ -50,14 +50,14 @@ App.SocialLogin = (function () {
     {
       id: "kakao",              // Supabase 기본 지원
       key: "kakao",
-      label: "카카오로 시작하기",   /* 마우스를 올렸을 때·읽어주는 프로그램용 */
-      short: "카카오",              /* 박스 안에 보이는 글자 */
+      label: "카카오로 계속하기",
+      short: "카카오",
       cls: "kakao-login-btn",
     },
     {
       id: "custom:naver",       // Supabase 대시보드에 직접 등록한 이름과 같아야 함
       key: "naver",
-      label: "네이버로 시작하기",
+      label: "네이버로 계속하기",
       short: "네이버",
       cls: "naver-login-btn",
     },
@@ -170,8 +170,8 @@ App.SocialLogin = (function () {
   }
 
   function buttonHtml() {
-    /* 정사각형 박스 두 개를 나란히 놓습니다. 가로로 긴 막대로 쌓으면
-       바로 위 로그인 버튼과 형태가 같아 셋이 한 덩어리로 읽힙니다. */
+    /* 가로로 넓은 막대 두 개. 작게 줄이면 눈에 안 띄어서, 폭을 다 쓰고
+       높이도 넉넉히 잡습니다(사용자 요청). */
     var html = '<div class="social-login-or"><span>또는</span></div>' +
       '<div class="social-login-row">';
     PROVIDERS.forEach(function (p) {
@@ -180,7 +180,7 @@ App.SocialLogin = (function () {
         'data-provider="' + p.id + '" id="social-login-' + p.key + '" ' +
         'title="' + p.label + '" aria-label="' + p.label + '">' +
         '<span class="social-login-icon" aria-hidden="true">' + iconSvg(p.key) + "</span>" +
-        "<span>" + p.short + "</span>" +
+        "<span>" + p.label + "</span>" +
         "</button>";
     });
     html += "</div>" +
