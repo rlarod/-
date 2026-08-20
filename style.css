@@ -1947,8 +1947,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    고정 px으로 두면 넓은 모니터에서 상대적으로 작아 보입니다(2870px에서 7.70%).
    폭에 비례하되, 로그인 상태 내 정보가 들어가는 최소 221px과
    지나치게 커지지 않도록 최대 340px 사이로 제한합니다.
-   최소값은 탭 줄(63px) + 내 정보 내용(174px) + 테두리가 들어가는 245px입니다. */
-:root{ --top-box-h:clamp(245px, 11.27vw, 340px); }
+   최소값은 로그아웃 상태(로그인 폼)를 기준으로 잡습니다.
+   예전에는 245px 이었는데, 그건 "로그인한 상태"의 내 정보(174px)만 보고 정한
+   값이라 로그인 폼(입력 2칸 + 로그인 + 카카오 + 네이버 + 회원가입 줄)이
+   들어가지 않았습니다. 그래서 글자와 버튼을 계속 줄여야 했고 화면이
+   답답해졌습니다. 폼이 편하게 들어가는 300px 을 최소로 잡습니다.
+   세 박스가 같은 변수를 쓰므로 윗줄 정렬은 그대로 유지됩니다. */
+:root{ --top-box-h:clamp(320px, 11.27vw, 340px); }
 @media (min-width:1800px){
   .notice-board-wrap > .notice-box,
   .page-right > .user-panel-box{height:var(--top-box-h);}
@@ -3207,35 +3212,101 @@ html[data-theme="dark"] .menu-bar-inner::after{
 }
 .social-nick-cancel:hover{text-decoration:underline;}
 
-/* ===== 넓은 화면에서 로그인 폼이 내 정보 박스에 담기게 =====
-   1800px 이상에서는 공지·게시판·내 정보 박스 높이를 245px 로 맞춥니다
-   (--top-box-h). 그 높이는 "로그인한 상태"의 내 정보(174px) 기준이라
-   로그아웃 상태의 로그인 폼(436px)은 처음부터 들어가지 않았고,
-   박스 안에서 세로 스크롤이 생겼습니다.
-   박스 높이는 세 개가 같이 움직여야 해서 못 건드리므로, 폼 쪽을 줄입니다.
-   지우는 건 없고 겹치는 안내 문구만 숨깁니다(마크업은 그대로). */
+/* ===== 넓은 화면 로그인 폼 =====
+   1800px 이상에서 내 정보 박스는 --top-box-h(300px 이상)로 고정됩니다.
+   그 안에 로그인 폼이 편하게 들어가도록 간격과 크기를 정리합니다.
+   예전에는 박스가 245px 이라 글자·버튼을 계속 줄여야 했고, 그 결과
+   입력칸이 32px 까지 내려가 잘 안 보였습니다. 이제 줄이지 않습니다.
+   높이 예산(실측 기준): 입력 40x2 + 로그인 44 + 카카오 44 + 네이버 44
+   + 회원가입 18 = 230, 간격 6x8 = 48, 위아래 여백 20 → 298 */
 @media (min-width:1800px){
-  .page-right > .user-panel-box .user-panel-guest{gap:2px;padding:4px 14px;}
-  /* "닉네임과 비밀번호로 시작하세요" — 바로 아래 입력칸이 같은 말을 합니다 */
-  .page-right > .user-panel-box .up-login-sub{display:none;}
+  .page-right > .user-panel-box .user-panel-guest{gap:8px;padding:10px 16px;}
+  /* 제목 '로그인' 은 바로 아래 로그인 버튼과 같은 말이라 뺍니다.
+     대신 그 자리를 입력칸과 버튼 크기에 씁니다. */
   .page-right > .user-panel-box .up-login-title{display:none;}
-  /* 제목 '로그인' 은 로그인 버튼과 겹치는 말이라 좁은 자리에서는 뺍니다.
-     간편 로그인 버튼이 둘로 늘면서 자리가 부족해졌습니다. */
-  .page-right > .user-panel-box .up-login-input{height:32px;}
-  /* 오류 문구 자리 — 오류가 없을 때는 자리를 차지하지 않게 */
-  .page-right > .user-panel-box .up-login-err:empty{display:none;}
-  .page-right > .user-panel-box .up-login-submit{height:32px;}
-  /* "또는" 구분선 — 버튼 색이 확연히 달라서 없어도 구분됩니다 */
+  .page-right > .user-panel-box .up-login-sub{display:none;}
+  .page-right > .user-panel-box .up-login-input{height:40px;font-size:15px;}
+  /* "또는" 구분선 — 노랑·초록 버튼이 확연히 달라 없어도 구분됩니다.
+     좁은 자리에서는 줄 하나가 아깝습니다. */
   .page-right > .user-panel-box .social-login-or{display:none;}
-  .page-right > .user-panel-box .social-login-btn{height:32px;font-size:13px;margin-bottom:3px;}
+  /* 오류 문구 자리는 오류가 있을 때만 차지합니다. */
+  .page-right > .user-panel-box .up-login-err:empty{display:none;}
   .page-right > .user-panel-box .social-login-err:empty{display:none;}
-  /* 오류 문구가 뜨면 그만큼 자리가 더 필요합니다.
-     그때는 "로그인" 제목을 접어서 자리를 내줍니다(오류가 사라지면 되돌아옴). */
-  .page-right > .user-panel-box .user-panel-guest:has(.up-login-err:not(:empty)) .up-login-title,
-  .page-right > .user-panel-box .user-panel-guest:has(.social-login-err:not(:empty)) .up-login-title{
-    display:none;
+  /* 오류가 뜨면 그만큼 자리가 필요하므로 간격만 좁힙니다(크기는 유지). */
+  .page-right > .user-panel-box .user-panel-guest:has(.up-login-err:not(:empty)),
+  .page-right > .user-panel-box .user-panel-guest:has(.social-login-err:not(:empty)){
+    gap:3px;
   }
 }
+
+/* ===== 간편 로그인 (카카오·네이버) =====
+   버튼 색은 각 회사의 지정 색입니다. 브랜드 가이드라 임의로 바꾸지 않습니다.
+     카카오 #FEE500 / 글자 #191600
+     네이버 #03C75A / 글자 흰색 */
+.social-login-wrap{width:100%;}
+.social-login-or{
+  display:flex;align-items:center;gap:8px;
+  margin:2px 0 10px;color:var(--text-faint);font-size:12px;
+}
+.social-login-or::before,.social-login-or::after{
+  content:"";flex:1;height:1px;background:var(--border-soft);
+}
+.social-login-btn{
+  width:100%;height:44px;margin-bottom:6px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  border:none;border-radius:3px;cursor:pointer;
+  font-family:inherit;font-size:15px;font-weight:700;
+}
+.social-login-btn:last-of-type{margin-bottom:0;}
+.social-login-btn:hover{filter:brightness(0.96);}
+.social-login-btn:active{filter:brightness(0.92);}
+.kakao-login-btn{background:#FEE500;color:#191600;}
+.naver-login-btn{background:#03C75A;color:#fff;}
+.social-login-icon{display:flex;align-items:center;}
+.social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
+.social-login-err:not(:empty){min-height:18px;}
+
+/* ===== 간편 로그인 신규 회원 닉네임 설정 =====
+   auth.js 가 세션을 확인하기 전에 떠야 해서 화면 전체를 덮습니다.
+   여기서 닉네임을 못 받으면 auth.js 가 곧바로 로그아웃시킵니다. */
+.social-nick-gate{
+  position:fixed;inset:0;z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(0,0,0,0.55);
+}
+.social-nick-card{
+  width:100%;max-width:340px;box-sizing:border-box;
+  padding:24px 22px;border-radius:3px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.social-nick-title{font-size:19px;font-weight:700;color:var(--text);text-align:center;}
+.social-nick-sub{font-size:13px;color:var(--text-faint);text-align:center;margin:4px 0 16px;}
+.social-nick-input{
+  width:100%;height:44px;padding:0 12px;box-sizing:border-box;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface2);color:var(--text);
+  font-family:inherit;font-size:16px;text-align:center;
+}
+.social-nick-input:focus{outline:none;border-color:var(--tl-blue);}
+.social-nick-rule{
+  margin-top:8px;font-size:12px;line-height:1.5;
+  color:var(--text-faint);text-align:center;
+}
+.social-nick-err{min-height:18px;margin-top:6px;color:var(--red);font-size:13px;text-align:center;}
+.social-nick-submit{
+  width:100%;height:44px;margin-top:6px;
+  border:none;border-radius:3px;cursor:pointer;
+  background:var(--tl-blue);color:#fff;
+  font-family:inherit;font-size:16px;font-weight:700;
+}
+.social-nick-submit:disabled{opacity:0.6;cursor:default;}
+.social-nick-cancel{
+  width:100%;height:36px;margin-top:8px;
+  border:none;background:none;cursor:pointer;
+  color:var(--text-faint);font-family:inherit;font-size:13px;
+}
+.social-nick-cancel:hover{text-decoration:underline;}
+
 
 /* ===== 시스템 메시지(청산·익절·손절)는 가운데 정렬 =====
    사람이 친 채팅은 왼쪽 정렬 그대로 두고, 시스템이 알리는 문장만
@@ -3249,3 +3320,51 @@ html[data-theme="dark"] .menu-bar-inner::after{
   text-align:center;
 }
 .page-right .chat-msg-event .chat-msg-text{text-align:center;}
+
+/* ===== 로그인 폼 다듬기 =====
+   문제 — 입력칸이 배경과 거의 같은 색이라 "여기에 쓰면 된다" 는 신호가
+   약했습니다. 테두리도 흐리고, 안내 글자도 흐려서 빈 칸이 눈에 안 띄었습니다.
+   새 색을 만들지 않고 기존 변수만 쓰되, 대비를 올립니다(다크모드 자동 대응). */
+.up-login-input{
+  border-width:1px;
+  border-color:var(--border);
+  transition:border-color 0.12s ease, background 0.12s ease;
+}
+.up-login-input::placeholder{color:var(--text-faint);opacity:1;}
+.up-login-input:hover{border-color:var(--text-faint);}
+.up-login-input:focus{
+  border-color:var(--gold);
+  background:var(--surface);
+}
+/* 키보드로 이동할 때도 어디에 있는지 보이게 */
+.social-login-btn:focus-visible,
+.up-login-submit:focus-visible,
+.up-login-input:focus-visible{
+  outline:2px solid var(--gold);outline-offset:2px;
+}
+/* 간편 로그인 버튼 — 글자를 조금 키우고 아이콘과의 간격을 넓혀
+   버튼 안이 비어 보이지 않게 합니다. */
+.social-login-btn{gap:8px;letter-spacing:-0.01em;}
+.social-login-btn:active{transform:translateY(1px);}
+@media (prefers-reduced-motion:reduce){
+  .up-login-input{transition:none;}
+  .social-login-btn:active{transform:none;}
+}
+
+/* 로그인 버튼 — 우리 서비스의 기본 동작이라 브랜드 색(--tl-blue)으로 채웁니다.
+   회색이면 아래 카카오·네이버 버튼보다 약해 보여서, 정작 우리 로그인이
+   부차적인 선택처럼 읽혔습니다. 색으로 순서를 잡아줍니다.
+   파랑(우리) → 노랑(카카오) → 초록(네이버) */
+.up-login-submit{
+  background:var(--tl-blue);
+  border:none;
+  color:#fff;
+  font-weight:700;
+  border-radius:3px;
+  cursor:pointer;
+}
+.up-login-submit:hover{filter:brightness(1.06);}
+.up-login-submit:active{transform:translateY(1px);}
+@media (prefers-reduced-motion:reduce){
+  .up-login-submit:active{transform:none;}
+}

@@ -360,36 +360,47 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("카카오 지정 색을 쓴다", css.includes("#FEE500"));
 
     /* 넓은 화면 스크롤 재발 방지.
-       1800px 이상에서는 공지·게시판·내 정보 박스 높이가 245px 로 묶여
-       있습니다(--top-box-h). 로그인 폼이 그 안에 안 들어가면 박스 안에서
-       세로 스크롤이 생깁니다. 2026-08-19 실측: 폼 436px vs 담을 공간 243px.
-       폼을 늘리는 수정을 할 때 이 압축 규칙을 지우면 다시 스크롤이 생깁니다. */
-    const wide = css.slice(css.indexOf("로그인 폼이 내 정보 박스에 담기게"));
-    ok("1800px 이상 전용 압축 규칙이 있다", wide.indexOf("@media (min-width:1800px)") !== -1);
-    ok("압축은 넓은 화면에만 건다(좁은 화면·모바일은 원래대로)",
+       1800px 이상에서는 공지·게시판·내 정보 박스 높이가 --top-box-h 로
+       묶여 있습니다. 로그인 폼이 그 안에 안 들어가면 박스 안에서 세로
+       스크롤이 생깁니다.
+       2026-08-19 실측: 폼 436px vs 담을 공간 243px → 계속 줄이다 보니
+       입력칸이 32px 까지 내려가 잘 안 보였습니다. 그래서 박스 최소 높이를
+       320px 로 올려 폼이 편하게 들어가게 했습니다(정렬은 세 박스가 같은
+       변수를 쓰므로 그대로 유지). 다시 줄이는 방향으로 되돌아가지
+       않도록 못박아 둡니다. */
+    /* 넓은 화면 전용 규칙 블록만 떼어내 검사합니다. */
+    const wide = css.slice(css.indexOf("넓은 화면 로그인 폼"));
+    const minH = (() => {
+      const m = css.match(/--top-box-h:clamp\((\d+)px/);
+      return m ? parseInt(m[1], 10) : null;
+    })();
+    ok("박스 최소 높이가 로그인 폼을 담을 만큼 크다", minH >= 320, minH + "px");
+    ok("1800px 이상 전용 규칙이 있다", wide.indexOf("@media (min-width:1800px)") !== -1);
+    ok("규칙은 넓은 화면에만 건다(좁은 화면·모바일은 원래대로)",
       /@media \(min-width:1800px\)\{[^]*\.user-panel-guest\{gap:/.test(wide));
     ok("겹치는 안내 문구는 숨기기만 한다(마크업 보존)",
-      wide.includes(".up-login-sub{display:none;}") && !css.includes("up-login-sub 삭제"));
+      wide.includes(".up-login-sub{display:none;}"));
     ok("오류 문구 자리는 오류가 있을 때만 차지한다",
       wide.includes(".up-login-err:empty{display:none;}"));
-    ok("오류가 뜨면 제목을 접어 자리를 낸다",
+    ok("오류가 뜨면 간격을 좁혀 자리를 낸다(크기는 유지)",
       wide.includes(":has(.up-login-err:not(:empty))"));
 
-    /* 실측으로 확인한 높이 예산 — 합계가 243px 을 넘으면 스크롤이 돌아옵니다. */
     const grab = (re) => { const m = wide.match(re); return m ? parseInt(m[1], 10) : null; };
-    const PROVIDER_COUNT = (SRC.match(/id: "/g) || []).length;
-    const gap = grab(/\.user-panel-guest\{gap:(\d+)px/);
-    const padV = grab(/\.user-panel-guest\{gap:\d+px;padding:(\d+)px/);
     const inputH = grab(/\.up-login-input\{height:(\d+)px/);
-    const submitH = grab(/\.up-login-submit\{height:(\d+)px/);
-    const socialH = grab(/\.social-login-btn\{height:(\d+)px/);
-    ok("입력칸·버튼 높이가 압축값으로 잡혀 있다",
-      inputH && submitH && socialH && inputH <= 36 && submitH <= 38 && socialH <= 38,
-      "입력 " + inputH + " 로그인 " + submitH + " 간편로그인 " + socialH);
-    /* 간편 로그인 버튼이 둘(카카오·네이버)이라 그만큼 자리를 더 씁니다. */
-    const 예산 = inputH * 2 + submitH + socialH * PROVIDER_COUNT + 18 /*회원가입 줄*/ +
-      gap * 6 + padV * 2;
-    ok("높이 예산이 담을 공간(243px) 안에 든다", 예산 <= 243, "계산 " + 예산 + "px");
+    ok("입력칸을 알아볼 수 있는 크기로 둔다", inputH && inputH >= 38,
+      "너무 낮으면 '여기 쓰면 된다' 는 신호가 약해집니다: " + inputH);
+
+    /* 입력칸이 배경에 묻히지 않게 하는 장치들 */
+    ok("입력칸에 마우스를 올리면 테두리가 진해진다", /\.up-login-input:hover\{border-color/.test(css));
+    ok("입력칸을 누르면 강조된다", /\.up-login-input:focus\{[^}]*border-color:var\(--gold\)/.test(css));
+    ok("안내 글자를 흐리게만 두지 않는다", /\.up-login-input::placeholder\{[^}]*opacity:1/.test(css));
+    ok("키보드로 이동할 때도 위치가 보인다", /:focus-visible\{[\s\S]{0,60}outline:2px solid/.test(css));
+    ok("움직임을 줄인 설정을 존중한다", /prefers-reduced-motion/.test(css));
+
+    /* 색으로 순서를 잡습니다: 파랑(우리) → 노랑(카카오) → 초록(네이버) */
+    ok("로그인 버튼이 우리 브랜드 색이다",
+      /\.up-login-submit\{[^}]*background:var\(--tl-blue\)/.test(css),
+      "회색이면 카카오·네이버보다 약해 보여 우리 로그인이 부차적으로 읽힙니다");
   }
 
   console.log("통과 " + pass + " / 실패 " + fail);
