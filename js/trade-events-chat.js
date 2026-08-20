@@ -19,7 +19,55 @@ window.App = window.App || {};
 App.TradeEventsChat = (function () {
   "use strict";
 
-  let lastSeenClosedCount = 0;
+  /* ── 이미 알린 거래를 기억합니다 ────────────────────────────────────────
+   * 예전에는 "지금까지 본 거래 건수" 하나만 세었고, 그 숫자가 페이지를 열
+   * 때마다 0 으로 시작했습니다. 그래서 새로고침하면 예전 거래가 전부
+   * '새 거래' 로 보여 같은 알림이 다시 나갔습니다
+   * (실제로 같은 손절 알림이 채팅에 세 번 찍혔습니다).
+   *
+   * 건수 대신 청산 시각(closeTime)을 기억합니다. 시각은 거래마다 다르고
+   * 브라우저를 닫아도 남으므로, 한 번 알린 거래는 다시 알리지 않습니다. */
+  var SEEN_KEY = "chat-event-seen";
+  var SEEN_MAX = 200;          // 너무 쌓이지 않게 최근 것만 남깁니다
+  var 시작시각 = Date.now();
+
+  let seen = null;             // Set<number>
+
+  function loadSeen() {
+    if (seen) return seen;
+    seen = new Set();
+    try {
+      var saved = App.Storage ? App.Storage.load(SEEN_KEY) : null;
+      if (saved && Array.isArray(saved.times)) saved.times.forEach((t) => seen.add(t));
+    } catch (e) {
+      /* 못 읽으면 빈 상태로 시작합니다 */
+    }
+    return seen;
+  }
+
+  function markSeen(times) {
+    var s = loadSeen();
+    times.forEach((t) => s.add(t));
+    if (!App.Storage) return;
+    var arr = Array.from(s).sort((a, b) => b - a).slice(0, SEEN_MAX);
+    seen = new Set(arr);
+    try {
+      App.Storage.save(SEEN_KEY, { times: arr });
+    } catch (e) {
+      /* 저장 실패해도 이번 세션에서는 중복이 막힙니다 */
+    }
+  }
+
+  function 알린적있나(trade) {
+    if (!trade || typeof trade.closeTime !== "number") return true; // 시각이 없으면 판단 불가 — 조용히 넘어갑니다
+    return loadSeen().has(trade.closeTime);
+  }
+
+  /* 페이지를 열기 전에 이미 끝난 거래는 알리지 않습니다.
+     처음 방문한 브라우저라 기록이 비어 있어도, 지난 거래가 쏟아지지 않게 합니다. */
+  function 이번접속거래인가(trade) {
+    return trade && typeof trade.closeTime === "number" && trade.closeTime >= 시작시각;
+  }
 
   function sb() {
     return App.SupabaseClient ? App.SupabaseClient.get() : null;
@@ -36,12 +84,24 @@ App.TradeEventsChat = (function () {
 
   async function onTradingPersisted(snapshot) {
     const list = snapshot.closedTrades || [];
-    if (list.length <= lastSeenClosedCount) {
-      lastSeenClosedCount = list.length; // 줄어든 경우(예: 다른 탭 초기화) 기준 재조정
+    if (!list.length) return;
+
+    /* 알릴 대상 = 이번 접속 중에 끝났고 + 아직 안 알린 거래.
+       예전에는 "건수가 늘었나" 로 판단했는데, 그 숫자가 새로고침마다
+       0 으로 초기화돼 지난 거래를 다시 알렸습니다. */
+    const 새거래 = list.filter((t) => 이번접속거래인가(t) && !알린적있나(t));
+
+    if (!새거래.length) {
+      /* 알릴 게 없어도 지난 거래는 '이미 본 것' 으로 표시해 둡니다.
+         그래야 다음에 또 훑지 않습니다. */
+      const 지난것 = list
+        .filter((t) => typeof t.closeTime === "number" && !이번접속거래인가(t))
+        .map((t) => t.closeTime);
+      if (지난것.length) markSeen(지난것);
       return;
     }
-    let newCount = list.length - lastSeenClosedCount;
-    lastSeenClosedCount = list.length;
+
+    let newCount = 새거래.length;
 
     /* 한 번에 여러 건이 쏟아지는 건 정상이 아닙니다.
        기록이 잠깐 0건으로 보였다가 되돌아오면(복원 중 등) 전부
@@ -55,10 +115,11 @@ App.TradeEventsChat = (function () {
         "[trade-events-chat.js] 한꺼번에 " + newCount +
         "건이 새로 잡혀 알림을 건너뜁니다(도배 방지). 거래 기록은 그대로입니다."
       );
+      /* 건너뛴 거래도 '본 것' 으로 표시합니다. 안 그러면 저장될 때마다
+         같은 판단을 반복하며 매번 경고만 찍습니다. */
+      markSeen(새거래.map((t) => t.closeTime));
       return;
     }
-
-    const newTrades = list.slice(0, newCount); // 앞쪽이 최신
 
     const client = sb();
     if (!client) return;
@@ -67,8 +128,13 @@ App.TradeEventsChat = (function () {
     const nickname = App.Auth ? App.Auth.getNickname() : null;
     if (!nickname) return;
 
+    /* 보내기 전에 먼저 '본 것' 으로 표시합니다.
+       전송에는 시간이 걸리는데, 그 사이 저장이 또 일어나면 같은 거래를
+       한 번 더 보내게 됩니다. 표시를 먼저 해두면 그 겹침이 막힙니다. */
+    markSeen(새거래.map((t) => t.closeTime));
+
     // 오래된 것부터 순서대로(여러 개가 한꺼번에 청산됐을 때 시간 순서 유지)
-    const ordered = newTrades.slice().reverse();
+    const ordered = 새거래.slice().reverse();
     for (const t of ordered) {
       const message = buildMessage(nickname, t);
       /* 채팅 도배 방지 트리거가 1.5초 간격을 강제합니다. 거래 이벤트는
@@ -105,18 +171,15 @@ App.TradeEventsChat = (function () {
     }
   }
 
-  // 손익 금액을 원화로. 1억 이상은 "1.23억", 1만 이상은 "1,234만".
+  /* 손익 금액을 원화로. 축약하지 않고 전체 자리수로 적습니다.
+     "3,000만원" 처럼 줄이면 실제 금액이 얼마인지 한눈에 안 들어옵니다.
+     "30,000,000원" 이 사람이 읽기에 더 정확합니다(사용자 요청). */
   function formatKrwSigned(usd) {
     const rate = App.Config && App.Config.USD_KRW ? App.Config.USD_KRW : 0;
     if (!rate) return (usd >= 0 ? "+" : "") + usd.toFixed(2) + " USDT";
     const won = Math.round(usd * rate);
     const sign = won > 0 ? "+" : won < 0 ? "-" : "";
-    const abs = Math.abs(won);
-    let body;
-    if (abs >= 100000000) body = (abs / 100000000).toFixed(2) + "억";
-    else if (abs >= 10000) body = Math.round(abs / 10000).toLocaleString("ko-KR") + "만";
-    else body = abs.toLocaleString("ko-KR");
-    return sign + body + "원";
+    return sign + Math.abs(won).toLocaleString("ko-KR") + "원";
   }
 
   function buildMessage(nickname, t) {

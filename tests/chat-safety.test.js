@@ -92,7 +92,13 @@ console.log("\n채팅 안전장치");
   ok("한꺼번에 여러 건이면 알림을 건너뛴다", /MAX_BURST = 5/.test(eventJs) && /newCount > MAX_BURST/.test(eventJs));
   ok("건너뛴 이유를 콘솔에 남긴다", /도배 방지/.test(eventJs));
   ok("거래 기록 자체는 건드리지 않는다", /거래 기록은 그대로입니다/.test(eventJs));
-  ok("기준은 항상 최신으로 맞춘다", /lastSeenClosedCount = list\.length;/.test(eventJs));
+  /* 예전에는 "지금까지 본 거래 건수" 하나로 판단했는데, 그 숫자가
+     새로고침마다 0 으로 초기화돼 지난 거래를 다시 알렸습니다
+     (같은 손절 알림이 채팅에 세 번 찍혔습니다).
+     이제는 청산 시각을 기억해서 판단합니다 — 자세한 검사는
+     tests/trade-events-chat.test.js 에 있습니다. */
+  ok("건수 세기 방식으로 되돌아가지 않았다", !/lastSeenClosedCount/.test(eventJs));
+  ok("알린 거래를 브라우저에 기억해 둔다", /chat-event-seen/.test(eventJs) && /markSeen/.test(eventJs));
 }
 
 /* ---------- 권한 ---------- */

@@ -35,11 +35,9 @@ App.ChatEventStyle = (function () {
     if (!rate) return null;
     const won = Math.round(parseFloat(m[2].replace(/,/g, "")) * rate);
     const sign = m[1] === "-" ? "-" : m[1] === "+" ? "+" : "";
-    let body;
-    if (won >= 100000000) body = (won / 100000000).toFixed(2) + "억";
-    else if (won >= 10000) body = Math.round(won / 10000).toLocaleString("ko-KR") + "만";
-    else body = won.toLocaleString("ko-KR");
-    return sign + body + "원";
+    /* 축약하지 않고 전체 자리수로 — 새로 보내는 메시지(trade-events-chat.js)와
+       같은 형식이어야 예전 것과 새 것이 나란히 있을 때 어색하지 않습니다. */
+    return sign + Math.abs(won).toLocaleString("ko-KR") + "원";
   }
 
   function decorate(row) {

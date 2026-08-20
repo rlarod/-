@@ -3234,3 +3234,16 @@ html[data-theme="dark"] .menu-bar-inner::after{
     display:none;
   }
 }
+
+/* ===== 시스템 메시지(청산·익절·손절)는 가운데 정렬 =====
+   사람이 친 채팅은 왼쪽 정렬 그대로 두고, 시스템이 알리는 문장만
+   가운데로 모읍니다. 둘이 한눈에 구분됩니다(사용자 요청).
+   왼쪽 세로선은 정렬과 어긋나 보여서 시스템 메시지에서는 뺍니다. */
+.chat-msg-event{text-align:center;}
+.chat-msg-event .chat-msg-text{text-align:center;}
+.page-right .chat-msg-event{
+  border-left:none;
+  padding:2px 8px;
+  text-align:center;
+}
+.page-right .chat-msg-event .chat-msg-text{text-align:center;}
