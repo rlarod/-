@@ -31,11 +31,12 @@ App.TradeEventsChat = (function () {
   var SEEN_MAX = 200;          // 너무 쌓이지 않게 최근 것만 남깁니다
   var 시작시각 = Date.now();
 
-  let seen = null;             // Set<number>
-
+  /* 저장소를 매번 새로 읽습니다.
+     예전에는 한 번 읽고 메모리에 들고 있었는데, 그러면 창을 두 개 띄웠을 때
+     한쪽이 "이미 알림" 으로 표시한 걸 다른 쪽이 못 봐서 같은 알림이 두 번
+     나갔습니다. 읽기는 값싸므로 매번 확인하는 편이 안전합니다. */
   function loadSeen() {
-    if (seen) return seen;
-    seen = new Set();
+    var seen = new Set();
     try {
       var saved = App.Storage ? App.Storage.load(SEEN_KEY) : null;
       if (saved && Array.isArray(saved.times)) saved.times.forEach((t) => seen.add(t));
@@ -50,11 +51,43 @@ App.TradeEventsChat = (function () {
     times.forEach((t) => s.add(t));
     if (!App.Storage) return;
     var arr = Array.from(s).sort((a, b) => b - a).slice(0, SEEN_MAX);
-    seen = new Set(arr);
     try {
       App.Storage.save(SEEN_KEY, { times: arr });
     } catch (e) {
       /* 저장 실패해도 이번 세션에서는 중복이 막힙니다 */
+    }
+  }
+
+  /* 마지막 방어선 — 같은 문장을 짧은 시간 안에 두 번 보내지 않습니다.
+     위의 '청산 시각' 검사를 어떤 이유로든 빠져나온 경우에도(창 두 개,
+     거래가 두 번 기록된 경우 등) 화면에 같은 줄이 겹쳐 보이는 것만은
+     막습니다. 사람이 진짜로 같은 문장을 두 번 만들 일은 없습니다 —
+     금액과 방향까지 똑같아야 하기 때문입니다. */
+  var RECENT_KEY = "chat-event-recent";
+  var RECENT_MS = 90000;   // 1분 30초
+
+  function 최근에보냈나(message) {
+    try {
+      var saved = App.Storage ? App.Storage.load(RECENT_KEY) : null;
+      var list = saved && Array.isArray(saved.list) ? saved.list : [];
+      var now = Date.now();
+      return list.some((r) => r.m === message && now - r.t < RECENT_MS);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function 보냈다고표시(message) {
+    try {
+      var saved = App.Storage ? App.Storage.load(RECENT_KEY) : null;
+      var list = saved && Array.isArray(saved.list) ? saved.list : [];
+      var now = Date.now();
+      list = list.filter((r) => now - r.t < RECENT_MS);
+      list.push({ m: message, t: now });
+      if (list.length > 30) list = list.slice(-30);
+      if (App.Storage) App.Storage.save(RECENT_KEY, { list: list });
+    } catch (e) {
+      /* 저장 실패해도 위의 청산 시각 검사가 남아 있습니다 */
     }
   }
 
@@ -137,6 +170,11 @@ App.TradeEventsChat = (function () {
     const ordered = 새거래.slice().reverse();
     for (const t of ordered) {
       const message = buildMessage(nickname, t);
+      if (최근에보냈나(message)) {
+        console.warn("[trade-events-chat.js] 같은 알림을 방금 보냈습니다 — 건너뜁니다:", message);
+        continue;
+      }
+      보냈다고표시(message);
       /* 채팅 도배 방지 트리거가 1.5초 간격을 강제합니다. 거래 이벤트는
          supabase/schema-chat-event-exempt.sql 로 예외 처리했지만,
          그 SQL 을 아직 안 돌린 서버에서는 여전히 막힙니다.

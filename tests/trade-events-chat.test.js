@@ -141,6 +141,45 @@ const 거래 = (over) => Object.assign(
     ok("건너뛴 거래를 매번 다시 판단하지 않는다", sent.length === 0);
   }
 
+  {
+    /* 창을 두 개 띄운 경우 재현 — 저장소는 공유하고 모듈만 따로 올립니다.
+       예전에는 저장소를 한 번만 읽고 메모리에 들고 있어서, 한쪽이 표시한
+       걸 다른 쪽이 못 보고 같은 알림을 또 보냈습니다. */
+    const store = {};
+    const t = 거래();
+    const 창1 = boot({ store });
+    const 창2 = boot({ store });
+    창1.bus.emit("trading:persisted", { closedTrades: [t] });
+    await sleep(60);
+    창2.bus.emit("trading:persisted", { closedTrades: [t] });
+    await sleep(60);
+    ok("창을 두 개 띄워도 알림은 한 번만", 창1.sent.length + 창2.sent.length === 1,
+      "창1 " + 창1.sent.length + "건 / 창2 " + 창2.sent.length + "건");
+  }
+  {
+    /* 마지막 방어선 — 청산 시각이 달라도 문장이 똑같으면 막습니다.
+       2026-08-19 같은 문장이 두 줄씩 찍히는 것을 보고 넣었습니다. */
+    const { sent, bus } = boot({});
+    const now = Date.now();
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 200 })] });
+    await sleep(60);
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 300 })] });
+    await sleep(60);
+    ok("같은 문장은 짧은 시간 안에 두 번 보내지 않는다", sent.length === 1,
+      sent.map((s) => s.message).join(" / "));
+  }
+  {
+    /* 다만 내용이 다르면 당연히 둘 다 보내야 합니다. */
+    const { sent, bus } = boot({});
+    const now = Date.now();
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 200, pnl: -100 })] });
+    await sleep(60);
+    bus.emit("trading:persisted", { closedTrades: [거래({ closeTime: now + 300, pnl: -200 })] });
+    await sleep(60);
+    ok("금액이 다르면 둘 다 보낸다", sent.length === 2,
+      sent.map((s) => s.message).join(" / "));
+  }
+
   /* ---------- 금액 표기 ---------- */
   {
     const { sent, bus } = boot({});
