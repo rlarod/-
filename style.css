@@ -3504,3 +3504,39 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
   height:28px;min-height:28px;line-height:28px;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
 }
+
+/* ===== 관리자 채팅 도구 =====
+   시즌 초기화 버튼 아래에 붙습니다. 되돌릴 수 없는 동작(초기화)은
+   빨강, 껐다 켤 수 있는 동작(얼리기)은 중립색으로 성격을 구분합니다. */
+.admin-chat-tools{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.admin-tool-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.admin-tool-btn{
+  flex:0 0 auto;min-width:150px;padding:10px 14px;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--surface2);color:var(--text);
+  font-family:var(--sans);font-weight:700;font-size:16px;cursor:pointer;transition:.12s;
+}
+.admin-tool-btn:hover{border-color:var(--gold);}
+.admin-tool-btn:disabled{opacity:.6;cursor:default;}
+/* 지금 얼어 있는 상태 — 켜져 있다는 걸 색으로 알려줍니다 */
+.admin-tool-btn.admin-tool-on{
+  background:var(--gold-soft);border-color:var(--gold);color:var(--gold);
+}
+/* 되돌릴 수 없는 동작 */
+.admin-tool-btn.admin-tool-danger{
+  background:var(--red-soft);border-color:var(--red);color:var(--red);
+}
+.admin-tool-btn.admin-tool-danger:hover{background:var(--red);color:#fff;}
+.admin-tool-desc{color:var(--text-faint);font-size:14px;}
+.admin-tool-msg{min-height:20px;font-size:14px;color:var(--text-faint);}
+.admin-tool-msg-ok{color:var(--green);}
+.admin-tool-msg-err{color:var(--red);}
+
+/* 채팅 잠금 안내 — 입력칸 바로 위에 한 줄.
+   입력칸의 안내 글자를 바꾸면 js/chat.js 가 되돌려놓기 때문에
+   따로 만든 자리에 적습니다. */
+.chat-locked-notice{
+  padding:8px 10px;margin-bottom:6px;
+  background:var(--gold-soft);border:1px solid var(--gold);border-radius:6px;
+  color:var(--gold);font-size:14px;font-weight:700;text-align:center;
+}

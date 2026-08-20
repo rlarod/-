@@ -1,0 +1,120 @@
+/* tests/admin-chat-tools.test.js
+ * 관리자용 채팅 얼리기 / 초기화.
+ *
+ * 이 파일이 지키는 것
+ *   1) 서버가 막는다 — 화면만 잠그면 개발자 도구로 우회됩니다
+ *   2) 관리자만 할 수 있다
+ *   3) 거래 알림(청산·익절·손절)은 얼려도 계속 올라간다
+ *   4) 게시판 댓글은 같이 잠기지 않는다 (클래스 이름이 겹칩니다)
+ *   5) 되돌릴 수 없는 초기화는 확인을 받는다
+ *   6) 수정 금지 파일(admin.js / chat.js)을 건드리지 않는다
+ */
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const REPO = path.join(__dirname, "..");
+let pass = 0, fail = 0;
+function ok(name, cond, detail) {
+  if (cond) { pass++; console.log("  \u001b[32m✓\u001b[0m " + name); }
+  else { fail++; console.log("  \u001b[31m✗\u001b[0m " + name + (detail ? " — " + detail : "")); }
+}
+
+const SRC = fs.readFileSync(path.join(REPO, "js", "admin-chat-tools.js"), "utf8");
+const SQL = fs.readFileSync(path.join(REPO, "supabase", "schema-admin-chat.sql"), "utf8");
+const CSS = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+const HTML = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+
+console.log("\n관리자 채팅 도구");
+
+/* ---------- 서버가 실제로 막는가 ---------- */
+{
+  ok("잠금 상태를 담아둘 자리가 있다", /create table if not exists public\.app_settings/.test(SQL));
+  ok("잠금 상태는 누구나 읽을 수 있다(화면이 알아야 함)",
+    /app_settings_read[\s\S]{0,120}for select using \(true\)/.test(SQL));
+  ok("잠금 상태를 직접 고치는 길은 막아뒀다",
+    !/for (insert|update)[\s\S]{0,80}app_settings/i.test(SQL),
+    "관리자 함수로만 바꿔야 합니다");
+
+  /* 핵심 — 채팅 입력 검사 트리거가 잠금을 확인해야 합니다.
+     화면에서만 막으면 개발자 도구로 요청을 직접 보내면 그대로 들어갑니다. */
+  const trigger = SQL.slice(SQL.indexOf("function public.check_chat_message"));
+  ok("서버 트리거가 잠금을 확인한다", /is_chat_locked\(\)/.test(trigger));
+  ok("잠겼으면 서버가 거절한다", /raise exception 'chat_locked'/.test(trigger));
+  ok("트리거가 채팅 표에 붙어 있다",
+    /create trigger trg_check_chat_message[\s\S]{0,120}before insert on public\.chat_messages/.test(SQL));
+
+  ok("도배 방지 검사가 그대로 남아 있다", /rate_limited/.test(trigger));
+  ok("금지어 검사가 그대로 남아 있다", /profanity_detected/.test(trigger));
+}
+
+/* ---------- 관리자만 ---------- */
+{
+  const lock = SQL.slice(SQL.indexOf("function public.set_chat_locked"));
+  const clear = SQL.slice(SQL.indexOf("function public.clear_chat_messages"));
+  ok("잠금 전환은 관리자만", /am_i_admin\(\)[\s\S]{0,80}raise exception 'not_admin'/.test(lock));
+  ok("채팅 초기화는 관리자만", /am_i_admin\(\)[\s\S]{0,80}raise exception 'not_admin'/.test(clear));
+  ok("초기화는 지운 개수를 돌려준다", /returns integer/.test(clear) && /delete from public\.chat_messages/.test(clear));
+}
+
+/* ---------- 얼려도 청산 기록은 남는다 ---------- */
+{
+  const trigger = SQL.slice(SQL.indexOf("function public.check_chat_message"));
+  const eventIdx = trigger.indexOf("if is_event then");
+  const lockIdx = trigger.indexOf("is_chat_locked()");
+  ok("거래 이벤트는 잠금 검사보다 먼저 통과시킨다", eventIdx !== -1 && eventIdx < lockIdx,
+    "얼렸다고 청산 기록까지 막히면 그 시간대 기록이 통째로 비어버립니다");
+  ok("관리자는 잠긴 상태에서도 쓸 수 있다", /is_chat_locked\(\) and not public\.am_i_admin\(\)/.test(trigger),
+    "공지를 남겨야 합니다");
+}
+
+/* ---------- 화면 ---------- */
+{
+  ok("index.html 에 연결돼 있다", /js\/admin-chat-tools\.js/.test(HTML));
+  ok("얼리기 버튼이 있다", /admin-chat-lock-btn/.test(SRC));
+  ok("초기화 버튼이 있다", /admin-chat-clear-btn/.test(SRC));
+  ok("되돌릴 수 없는 동작은 확인을 받는다",
+    /confirm\([\s\S]{0,80}되돌릴 수 없습니다/.test(SRC));
+  ok("초기화 버튼은 위험한 색", /admin-tool-danger/.test(SRC) && /\.admin-tool-btn\.admin-tool-danger\{[^}]*var\(--red\)/.test(CSS));
+  ok("얼린 상태는 색으로 보인다", /admin-tool-on/.test(SRC) && /\.admin-tool-btn\.admin-tool-on\{/.test(CSS));
+
+  /* 게시판 댓글 입력칸이 같은 클래스를 씁니다(2026-08-20 실측으로 발견).
+     클래스로 고르면 채팅을 얼릴 때 댓글까지 잠깁니다. */
+  ok("채팅 입력칸을 id 로 고른다", /el\("chat-input"\)/.test(SRC));
+  ok("클래스만으로 입력칸을 고르지 않는다",
+    !/querySelectorAll\("\.chat-input"\)/.test(SRC),
+    "게시판 댓글칸(#board-comment-input)도 .chat-input 을 씁니다");
+  ok("댓글 입력칸은 여전히 같은 클래스", /id="board-comment-input" class="chat-input"/.test(HTML),
+    "마크업은 그대로 두고 고르는 방법만 바꿉니다");
+
+  /* 안내 문구를 placeholder 에 쓰면 chat.js 가 되돌려놓습니다. */
+  ok("잠금 안내를 따로 만든 줄에 적는다", /chat-locked-notice/.test(SRC) && /\.chat-locked-notice\{/.test(CSS));
+  ok("입력칸 안내 글자를 건드리지 않는다", !/\.placeholder = "채팅방이 잠겼습니다"/.test(SRC));
+
+  /* 감시가 무한히 돌면 화면이 멈춥니다(2026-08-20 실측). */
+  ok("감시가 무한 반복하지 않게 막았다", /풀려있음/.test(SRC) && /if \(!풀려있음\) return;/.test(SRC));
+}
+
+/* ---------- 서버 준비가 안 됐을 때 ---------- */
+{
+  ok("SQL 을 아직 안 돌렸으면 그렇게 알려준다",
+    /schema-admin-chat\.sql 을 먼저 실행/.test(SRC));
+  ok("권한 없음도 사람 말로 알려준다", /관리자만 할 수 있습니다/.test(SRC));
+  ok("영어 오류를 그대로 보여주지 않는다", /서버오류설명/.test(SRC));
+}
+
+/* ---------- 수정 금지 파일 ---------- */
+{
+  const md5 = (f) => crypto.createHash("md5")
+    .update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
+  ok("admin.js 를 건드리지 않았다", md5("admin.js") === "424e4c63ec1cd24681c4f27f60aee2fa", md5("admin.js"));
+  ok("chat.js 를 건드리지 않았다", md5("chat.js") === "a93dfaa7f82ce72a914b270acb3650bb", md5("chat.js"));
+  ok("기존 시즌 초기화 버튼은 그대로", /id="admin-reset-btn"/.test(HTML));
+}
+
+console.log("통과 " + pass + " / 실패 " + fail);
+if (fail) { console.log("실패 있음 ❌"); process.exit(1); }
+console.log("전체 통과 ✅");
+process.exit(0);
