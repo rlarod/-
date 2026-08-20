@@ -101,9 +101,15 @@ begin
   end if;
 
   -- 몇 개를 지웠는지 돌려줍니다. 화면에서 "1,234개를 지웠습니다" 로 씁니다.
-  -- 예전에는 with ... returning 방식을 썼는데, 삭제는 되면서도 실패로
-  -- 처리되는 경우가 있어 가장 단순한 방법으로 바꿨습니다(2026-08-20).
-  delete from public.chat_messages;
+  --
+  -- where 절이 반드시 있어야 합니다.
+  -- Supabase 에는 "WHERE 없는 DELETE 는 거부" 하는 안전장치(safeupdate)가
+  -- 켜져 있습니다. 실수로 표 하나를 통째로 날리는 사고를 막는 장치인데,
+  -- 여기서는 일부러 전부 지우는 것이라 그 장치에 걸렸습니다
+  -- (2026-08-20 실제 오류: DELETE requires a WHERE clause [21000]).
+  -- 그래서 "id 가 있는 모든 줄" 이라는 조건을 명시적으로 붙입니다.
+  -- 조건이 있으나 없으나 지워지는 대상은 같습니다.
+  delete from public.chat_messages where id is not null;
   get diagnostics removed = row_count;
 
   return coalesce(removed, 0);

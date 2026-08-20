@@ -57,6 +57,12 @@ console.log("\n관리자 채팅 도구");
   ok("잠금 전환은 관리자만", /am_i_admin\(\)[\s\S]{0,80}raise exception 'not_admin'/.test(lock));
   ok("채팅 초기화는 관리자만", /am_i_admin\(\)[\s\S]{0,80}raise exception 'not_admin'/.test(clear));
   ok("초기화는 지운 개수를 돌려준다", /returns integer/.test(clear) && /delete from public\.chat_messages/.test(clear));
+  /* Supabase 에 "WHERE 없는 DELETE 는 거부" 하는 안전장치가 켜져 있습니다.
+     조건 없이 지우면 21000 오류로 막힙니다(2026-08-20 실제로 막혔습니다).
+     id 는 primary key 라 반드시 값이 있으므로 지우는 대상은 같습니다. */
+  ok("삭제에 where 절이 있다(안전장치 우회)",
+    /delete from public\.chat_messages where id is not null/.test(clear),
+    "조건 없는 DELETE 는 Supabase 가 거부합니다");
 }
 
 /* ---------- 얼려도 청산 기록은 남는다 ---------- */
