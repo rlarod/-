@@ -50,13 +50,15 @@ App.SocialLogin = (function () {
     {
       id: "kakao",              // Supabase 기본 지원
       key: "kakao",
-      label: "카카오로 3초 만에 시작하기",
+      label: "카카오로 시작하기",   /* 마우스를 올렸을 때·읽어주는 프로그램용 */
+      short: "카카오",              /* 박스 안에 보이는 글자 */
       cls: "kakao-login-btn",
     },
     {
       id: "custom:naver",       // Supabase 대시보드에 직접 등록한 이름과 같아야 함
       key: "naver",
       label: "네이버로 시작하기",
+      short: "네이버",
       cls: "naver-login-btn",
     },
   ];
@@ -159,25 +161,30 @@ App.SocialLogin = (function () {
 
   function iconSvg(key) {
     if (key === "kakao") {
-      return '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" ' +
+      return '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" ' +
         'd="M12 3C6.99 3 2.93 6.2 2.93 10.15c0 2.52 1.66 4.73 4.17 6L6.05 20.3c-.08.29.23.52.48.36l4.9-3.23c.19.01.38.02.57.02 5.01 0 9.07-3.2 9.07-7.15S17.01 3 12 3z"/></svg>';
     }
     /* 네이버 심볼 — 지정 형태(대문자 N)를 그대로 씁니다. */
-    return '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" ' +
+    return '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" ' +
       'd="M14.2 12.4L9.5 5.5H5v13h4.8v-6.9l4.7 6.9H19v-13h-4.8v6.9z"/></svg>';
   }
 
   function buttonHtml() {
-    var html = '<div class="social-login-or"><span>또는</span></div>';
+    /* 정사각형 박스 두 개를 나란히 놓습니다. 가로로 긴 막대로 쌓으면
+       바로 위 로그인 버튼과 형태가 같아 셋이 한 덩어리로 읽힙니다. */
+    var html = '<div class="social-login-or"><span>또는</span></div>' +
+      '<div class="social-login-row">';
     PROVIDERS.forEach(function (p) {
       html +=
         '<button type="button" class="social-login-btn ' + p.cls + '" ' +
-        'data-provider="' + p.id + '" id="social-login-' + p.key + '">' +
+        'data-provider="' + p.id + '" id="social-login-' + p.key + '" ' +
+        'title="' + p.label + '" aria-label="' + p.label + '">' +
         '<span class="social-login-icon" aria-hidden="true">' + iconSvg(p.key) + "</span>" +
-        "<span>" + p.label + "</span>" +
+        "<span>" + p.short + "</span>" +
         "</button>";
     });
-    html += '<div class="social-login-err" id="social-login-err"></div>';
+    html += "</div>" +
+      '<div class="social-login-err" id="social-login-err"></div>';
     return html;
   }
 

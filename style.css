@@ -3163,6 +3163,9 @@ html[data-theme="dark"] .menu-bar-inner::after{
 }
 
 /* ===== 간편 로그인 (카카오·네이버) =====
+   가로로 긴 막대 두 개를 쌓으면 로그인 버튼과 형태가 같아 셋이 한 덩어리로
+   읽히고, 세로 자리도 많이 씁니다. 정사각형 박스 두 개를 나란히 두면
+   "로그인 버튼 하나 + 다른 방법 두 개" 라는 구조가 형태만으로 드러납니다.
    버튼 색은 각 회사의 지정 색입니다. 브랜드 가이드라 임의로 바꾸지 않습니다.
      카카오 #FEE500 / 글자 #191600
      네이버 #03C75A / 글자 흰색 */
@@ -3174,19 +3177,21 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .social-login-or::before,.social-login-or::after{
   content:"";flex:1;height:1px;background:var(--border-soft);
 }
+/* 두 박스를 가운데 나란히 */
+.social-login-row{display:flex;gap:10px;justify-content:center;}
 .social-login-btn{
-  width:100%;height:44px;margin-bottom:6px;
-  display:flex;align-items:center;justify-content:center;gap:7px;
+  flex:0 0 auto;
+  width:76px;height:76px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   border:none;border-radius:3px;cursor:pointer;
-  font-family:inherit;font-size:15px;font-weight:700;
+  font-family:inherit;font-size:12px;font-weight:700;letter-spacing:-0.01em;
 }
-.social-login-btn:last-of-type{margin-bottom:0;}
 .social-login-btn:hover{filter:brightness(0.96);}
-.social-login-btn:active{filter:brightness(0.92);}
+.social-login-btn:active{transform:translateY(1px);}
 .kakao-login-btn{background:#FEE500;color:#191600;}
 .naver-login-btn{background:#03C75A;color:#fff;}
 .social-login-icon{display:flex;align-items:center;}
-.social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
+.social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;text-align:center;}
 .social-login-err:not(:empty){min-height:18px;}
 
 /* ===== 간편 로그인 신규 회원 닉네임 설정 =====
@@ -3256,33 +3261,6 @@ html[data-theme="dark"] .menu-bar-inner::after{
     gap:3px;
   }
 }
-
-/* ===== 간편 로그인 (카카오·네이버) =====
-   버튼 색은 각 회사의 지정 색입니다. 브랜드 가이드라 임의로 바꾸지 않습니다.
-     카카오 #FEE500 / 글자 #191600
-     네이버 #03C75A / 글자 흰색 */
-.social-login-wrap{width:100%;}
-.social-login-or{
-  display:flex;align-items:center;gap:8px;
-  margin:2px 0 10px;color:var(--text-faint);font-size:12px;
-}
-.social-login-or::before,.social-login-or::after{
-  content:"";flex:1;height:1px;background:var(--border-soft);
-}
-.social-login-btn{
-  width:100%;height:44px;margin-bottom:6px;
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  border:none;border-radius:3px;cursor:pointer;
-  font-family:inherit;font-size:15px;font-weight:700;
-}
-.social-login-btn:last-of-type{margin-bottom:0;}
-.social-login-btn:hover{filter:brightness(0.96);}
-.social-login-btn:active{filter:brightness(0.92);}
-.kakao-login-btn{background:#FEE500;color:#191600;}
-.naver-login-btn{background:#03C75A;color:#fff;}
-.social-login-icon{display:flex;align-items:center;}
-.social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;}
-.social-login-err:not(:empty){min-height:18px;}
 
 /* ===== 간편 로그인 신규 회원 닉네임 설정 =====
    auth.js 가 세션을 확인하기 전에 떠야 해서 화면 전체를 덮습니다.
@@ -3419,7 +3397,7 @@ html[data-theme="dark"] .chat-input{
 html[data-theme="dark"] .up-login-submit,
 html[data-theme="dark"] .social-login-btn,
 html[data-theme="dark"] .chat-send-btn{
-  border-radius:6px;
+  border-radius:8px;
 }
 
 /* 메뉴 바 — 밝은 파랑(#0F4C82)은 딥 네이비 배경에서 혼자 튑니다.

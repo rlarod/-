@@ -358,6 +358,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("카카오 버튼 폭을 100% 로 잡았다(로그인 버튼과 단차 방지)",
       /\.social-login-wrap\{[^}]*width:100%/.test(css));
     ok("카카오 지정 색을 쓴다", css.includes("#FEE500"));
+    ok("네이버 지정 색을 쓴다", css.includes("#03C75A"));
+
+    /* 정사각형 박스 두 개를 나란히 — 가로로 긴 막대로 쌓으면 바로 위
+       로그인 버튼과 형태가 같아 셋이 한 덩어리로 읽힙니다(사용자 요청). */
+    const btn = css.match(/\n\.social-login-btn\{([^}]*)\}/);
+    ok(!!btn, "간편 로그인 버튼 규칙을 찾지 못함");
+    const w = btn && btn[1].match(/width:(\d+)px/);
+    const h = btn && btn[1].match(/height:(\d+)px/);
+    ok(w && h && w[1] === h[1], "정사각형이 아님: " + (w && w[1]) + "x" + (h && h[1]));
+    ok(btn && !/width:100%/.test(btn[1]), "가로로 긴 막대로 되돌아감");
+    ok(/\.social-login-row\{[^}]*display:flex/.test(css), "두 박스를 나란히 놓는 줄이 없음");
+    ok(SRC.includes('class="social-login-row"'), "버튼을 감싸는 줄이 만들어지지 않음");
+    /* 박스가 작아 글자를 줄였으니, 무슨 버튼인지는 다른 방법으로 알려야 합니다. */
+    ok(SRC.includes("aria-label=") && SRC.includes("title="),
+      "작은 박스에는 전체 이름을 title·aria-label 로 남겨야 합니다");
 
     /* 넓은 화면 스크롤 재발 방지.
        1800px 이상에서는 공지·게시판·내 정보 박스 높이가 --top-box-h 로
