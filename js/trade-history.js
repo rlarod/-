@@ -59,6 +59,46 @@ App.TradeHistory = (function () {
     return (n >= 0 ? "+" : "") + Number(n).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
   }
 
+  /* ── 손익에서 진입 수수료를 빼서 보여줍니다 ─────────────────────────
+   * js/trading.js 는 청산할 때 이렇게 기록합니다.
+   *     pnl = 총손익 - 청산수수료      (진입 수수료는 안 뺌)
+   *     fee = 진입수수료 + 청산수수료   (왕복 전체)
+   * 그래서 표에서 "손익 +587, 수수료 646" 처럼 서로 안 맞아 보입니다.
+   * 실제로 지갑에서는 진입 수수료가 진입할 때 이미 빠져나갔으므로
+   * 잔고는 맞습니다. 표시만 실제보다 이익이 커 보입니다.
+   *
+   * 실측(2026-08-20) — 100배 수동청산 3건
+   *     화면 +587 / 실제 +264   (수수료 646 의 절반만큼 차이)
+   *     화면 +37,849 / 실제 +34,129
+   *     화면 +54,977 / 실제 +39,334
+   *
+   * js/realized-pnl-fix.js 가 누적 실현손익은 이미 바로잡았는데 표는
+   * 그대로였습니다. 그래서 표의 합계와 누적값이 서로 달랐습니다.
+   * 여기서 표도 같은 기준으로 맞춥니다.
+   *
+   * 강제청산은 원래 진입 수수료만 fee 에 들어가고 손익은 증거금 전액
+   * 손실이라 따로 뺄 것이 없습니다.
+   * ------------------------------------------------------------------ */
+  function 진입수수료(t) {
+    var fee = Number(t.fee);
+    if (!isFinite(fee) || fee <= 0) return 0;
+    if (t.close_reason === "강제청산") return 0; // 이미 손익에 반영돼 있음
+    var taker =
+      App.Trading && App.Trading.getSnapshot && App.Trading.getSnapshot().feeRate
+        ? App.Trading.getSnapshot().feeRate.taker
+        : 0.0005;
+    var 청산수수료 = Number(t.quantity) * Number(t.exit_price) * taker;
+    if (!isFinite(청산수수료) || 청산수수료 < 0) return 0;
+    var 진입 = fee - 청산수수료;
+    /* 계산이 어긋나면(옛 기록 등) 손대지 않습니다 — 틀린 값으로 바꾸는 것보다
+       원래 값을 보여주는 편이 낫습니다. */
+    return 진입 > 0 && 진입 < fee ? 진입 : 0;
+  }
+
+  function 실제손익(t) {
+    return Number(t.pnl) - 진입수수료(t);
+  }
+
   function renderRows(rows) {
     if (!dom.body) return;
     if (!rows || rows.length === 0) {
@@ -67,7 +107,9 @@ App.TradeHistory = (function () {
     }
     dom.body.innerHTML = rows
       .map((t) => {
-        const pnlClass = Number(t.pnl) >= 0 ? "pnl-positive" : "pnl-negative";
+        const 손익 = 실제손익(t);
+        const roe = Number(t.margin) > 0 ? (손익 / Number(t.margin)) * 100 : Number(t.roe);
+        const pnlClass = 손익 >= 0 ? "pnl-positive" : "pnl-negative";
         const reasonClass = t.close_reason === "강제청산" ? "reason-forced" : "";
         // return_rate는 이 컬럼 추가 이전 거래엔 없을 수 있어서(null) "-"로 안전 처리
         const returnRateClass = typeof t.return_rate === "number" ? (t.return_rate >= 0 ? "pnl-positive" : "pnl-negative") : "";
@@ -81,9 +123,9 @@ App.TradeHistory = (function () {
           "<td>" + App.Utils.formatQty(t.quantity) + "</td>" +
           "<td>" + t.leverage + "x</td>" +
           "<td>" + App.Utils.formatCurrency(t.margin) + "</td>" +
-          '<td class="' + pnlClass + '">' + App.Utils.formatCurrencySigned(t.pnl) + "</td>" +
+          '<td class="' + pnlClass + '">' + App.Utils.formatCurrencySigned(손익) + "</td>" +
           '<td class="' + returnRateClass + '">' + returnRateText + "</td>" +
-          '<td class="' + pnlClass + '">' + fmtSignedPercent(t.roe) + "</td>" +
+          '<td class="' + pnlClass + '">' + fmtSignedPercent(roe) + "</td>" +
           "<td>" + App.Utils.formatCurrency(t.fee) + "</td>" +
           '<td><span class="badge-reason ' + reasonClass + '">' + (t.close_reason || "-") + "</span></td>" +
           "</tr>"
@@ -134,5 +176,6 @@ App.TradeHistory = (function () {
     loadAndRender();
   }
 
-  return { init };
+  /* 검산·테스트용으로 열어둡니다. 화면 동작에는 쓰지 않습니다. */
+  return { init, renderRows, 실제손익, 진입수수료 };
 })();
