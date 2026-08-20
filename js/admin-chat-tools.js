@@ -27,6 +27,9 @@ App.AdminChatTools = (function () {
 
   var 잠김 = false;
   var 준비됨 = false;
+  var 마지막초기화 = null;   // 채팅이 마지막으로 비워진 시각
+  var 첫확인 = true;
+  var 채널 = null;
 
   function sb() {
     return App.SupabaseClient && typeof App.SupabaseClient.get === "function"
@@ -86,9 +89,53 @@ App.AdminChatTools = (function () {
 
   /* ---------------- 서버 ---------------- */
 
+  /* 관리자가 채팅을 비우면 다른 사람 화면도 비웁니다.
+     js/chat.js 는 새 글(INSERT)만 실시간으로 받고 삭제는 받지 않아서,
+     그냥 두면 다른 회원들은 새로고침할 때까지 지워진 채팅을 계속 봅니다
+     (2026-08-20 사용자 지적). 그래서 '언제 비웠는지' 를 서버에 남기고,
+     그 값이 바뀌면 각 화면이 목록을 비웁니다. */
+  function 채팅목록비우기() {
+    var box = el("chat-messages");
+    if (!box) return;
+    box.innerHTML = "";
+    var d = document.createElement("div");
+    d.className = "chat-empty";
+    d.textContent = "아직 대화가 없습니다. 첫 메시지를 남겨보세요!";
+    box.appendChild(d);
+  }
+
+  async function 초기화시각읽기(client) {
+    try {
+      var res = await client
+        .from("app_settings")
+        .select("value")
+        .eq("key", "chat_cleared_at")
+        .maybeSingle();
+      if (res && res.error) throw res.error;
+      var at = res && res.data && res.data.value ? res.data.value.at : null;
+      if (at === null || at === undefined) return;
+
+      /* 처음 켰을 때는 기준만 잡습니다. 안 그러면 페이지를 열 때마다
+         예전에 비운 기록 때문에 화면이 한 번씩 지워집니다. */
+      if (첫확인) {
+        마지막초기화 = at;
+        첫확인 = false;
+        return;
+      }
+      if (마지막초기화 !== null && at !== 마지막초기화) {
+        마지막초기화 = at;
+        채팅목록비우기();
+      }
+      마지막초기화 = at;
+    } catch (e) {
+      /* 아직 SQL 을 안 돌린 서버에서는 조용히 넘어갑니다 */
+    }
+  }
+
   async function 상태읽기() {
     var client = sb();
     if (!client) return;
+    await 초기화시각읽기(client);
     try {
       var res = await client.rpc("is_chat_locked");
       if (res && res.error) throw res.error;
@@ -158,6 +205,7 @@ App.AdminChatTools = (function () {
       var res = await client.rpc("clear_chat_messages");
       if (res && res.error) throw res.error;
       var n = typeof res.data === "number" ? res.data : 0;
+      채팅목록비우기(); /* 내 화면부터 즉시 */
       알림(n.toLocaleString("ko-KR") + "개의 채팅을 지웠습니다.", "ok");
     } catch (e) {
       console.warn("[admin-chat-tools.js] 채팅 초기화 실패:", e);
@@ -260,9 +308,33 @@ App.AdminChatTools = (function () {
     }
     상태읽기();
     감시시작();
+    실시간구독();
     /* 다른 관리자가 잠갔을 수도 있으니 가끔 다시 확인합니다.
        채팅은 실시간이라 잠금만 늦게 반영되면 어색합니다. */
     setInterval(상태읽기, 30000);
+  }
+
+  /* 설정이 바뀌면 곧바로 받아옵니다(잠금·초기화 둘 다).
+     30초 주기 확인만으로는 "지웠는데 한참 그대로" 로 보입니다. */
+  function 실시간구독() {
+    var client = sb();
+    if (!client || typeof client.channel !== "function") return;
+    try {
+      if (채널 && typeof client.removeChannel === "function") client.removeChannel(채널);
+      채널 = client
+        .channel("app_settings_live_" + Date.now())
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "app_settings" },
+          function () {
+            상태읽기();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      /* 실시간이 막힌 환경에서는 아래 30초 주기 확인이 대신합니다 */
+      console.warn("[admin-chat-tools.js] 설정 실시간 구독 실패(30초 주기로 대체):", e);
+    }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
@@ -271,6 +343,7 @@ App.AdminChatTools = (function () {
   return {
     init: init,
     상태읽기: 상태읽기,
+    채팅목록비우기: 채팅목록비우기,
     잠금화면반영: 잠금화면반영,
     isLocked: function () {
       return 잠김;

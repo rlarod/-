@@ -112,6 +112,19 @@ begin
   delete from public.chat_messages where id is not null;
   get diagnostics removed = row_count;
 
+  -- 지웠다는 사실을 남깁니다.
+  -- 이게 없으면 다른 회원 화면은 새로고침할 때까지 옛 채팅이 그대로 보입니다.
+  -- 채팅은 INSERT 만 실시간으로 전달되기 때문입니다(js/chat.js).
+  -- 이 줄이 바뀌는 것을 각 화면이 지켜보다가 목록을 비웁니다.
+  insert into public.app_settings (key, value, updated_at, updated_by)
+  values ('chat_cleared_at',
+          jsonb_build_object('at', extract(epoch from now())),
+          now(), auth.uid())
+  on conflict (key) do update
+    set value = excluded.value,
+        updated_at = now(),
+        updated_by = excluded.updated_by;
+
   return coalesce(removed, 0);
 end;
 $$;
@@ -176,6 +189,20 @@ drop trigger if exists trg_check_chat_message on public.chat_messages;
 create trigger trg_check_chat_message
   before insert on public.chat_messages
   for each row execute function public.check_chat_message();
+
+
+-- ---------------- 6) 설정 변경을 실시간으로 알리기 ----------------
+-- app_settings 가 바뀌면 모든 화면이 즉시 알 수 있게 합니다.
+-- (채팅 잠금/풀기, 채팅 초기화가 바로 반영됩니다.)
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.app_settings;
+  exception
+    when duplicate_object then null;   -- 이미 등록돼 있으면 넘어갑니다
+    when undefined_object then null;   -- publication 이 없는 환경도 그냥 넘어갑니다
+  end;
+end $$;
 
 
 -- ---------------- 확인 ----------------

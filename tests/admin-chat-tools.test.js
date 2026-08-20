@@ -103,6 +103,28 @@ console.log("\n관리자 채팅 도구");
   ok("감시가 무한 반복하지 않게 막았다", /풀려있음/.test(SRC) && /if \(!풀려있음\) return;/.test(SRC));
 }
 
+/* ---------- 지운 걸 다른 회원도 바로 안다 ---------- */
+{
+  /* js/chat.js 는 새 글(INSERT)만 실시간으로 받고 삭제는 받지 않습니다.
+     그냥 두면 관리자가 지워도 다른 회원은 새로고침할 때까지 옛 채팅을
+     계속 봅니다(2026-08-20 사용자 지적). */
+  const clear = SQL.slice(SQL.indexOf("function public.clear_chat_messages"));
+  ok("지웠다는 사실을 서버에 남긴다", /chat_cleared_at/.test(clear));
+  ok("설정 변경이 실시간으로 전달되게 등록한다",
+    /alter publication supabase_realtime add table public\.app_settings/.test(SQL));
+  ok("publication 이 없는 환경에서도 SQL 이 멈추지 않는다",
+    /when undefined_object then null/.test(SQL));
+
+  ok("화면이 목록을 비우는 기능이 있다", /채팅목록비우기/.test(SRC));
+  ok("설정 변경을 실시간으로 구독한다", /postgres_changes[\s\S]{0,120}app_settings/.test(SRC));
+  ok("실시간이 막히면 주기 확인으로 대체한다", /setInterval\(상태읽기/.test(SRC));
+
+  /* 페이지를 열 때마다 예전 기록 때문에 화면이 지워지면 안 됩니다. */
+  ok("처음 켤 때는 기준만 잡고 지우지 않는다", /첫확인/.test(SRC) && /첫확인 = false/.test(SRC));
+  ok("값이 바뀐 경우에만 비운다", /at !== 마지막초기화/.test(SRC));
+  ok("지운 본인 화면도 즉시 비운다", /채팅목록비우기\(\); \/\* 내 화면부터 즉시 \*\//.test(SRC));
+}
+
 /* ---------- 서버 준비가 안 됐을 때 ---------- */
 {
   ok("SQL 을 아직 안 돌렸으면 그렇게 알려준다",
