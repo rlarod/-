@@ -64,8 +64,13 @@ App.CyclePnl = (function () {
         cycle_no: res.data.cycle_no || 1,
         initial_balance: base,
         realized_pnl: pnl,
-        /* 랭킹 뷰와 완전히 같은 식입니다. 한쪽만 바꾸면 두 화면이 어긋납니다. */
-        roe: base > 0 ? (pnl / base) * 100 : 0,
+        /* 랭킹 뷰와 완전히 같은 식입니다. 한쪽만 바꾸면 두 화면이 어긋납니다.
+           손실은 0% 로 끊습니다 — 원금을 다 잃고 무료 충전으로 또 잃으면
+           손실이 끝없이 커져 -17,147% 같은 숫자가 나옵니다(실제로 그랬습니다).
+           랭킹은 "얼마나 벌었나" 를 보는 표이므로 기준자본 아래는 세지
+           않습니다. 실제 손익은 아래 realized_pnl 에 그대로 남아 있고,
+           거래내역에는 진짜 숫자가 나옵니다. */
+        roe: base > 0 ? (Math.max(0, pnl) / base) * 100 : 0,
       };
       return 상태;
     } catch (e) {
