@@ -29,9 +29,22 @@
 <!-- MARKET WAR 병사 모델(GLB) 로딩용 — 최신 Three.js는 이 애드온들을 ES모듈로만 배포해서
      최소한의 브릿지 스크립트로 전역(window)에 노출시킵니다. 페이지의 다른 부분은
      여전히 일반 <script> 태그 방식 그대로입니다. -->
+<!-- [TL-003] 애드온 안의 `from "three"` 가 어디를 가리킬지 알려줍니다.
+     importmap 은 첫 모듈 스크립트보다 반드시 앞에 있어야 합니다.
+     three.module.js 가 아니라 js/three-global-shim.js 를 가리킵니다 —
+     이미 위에서 로드한 전역 THREE 를 그대로 다시 내보내는 파일이라
+     three 가 두 벌 로드되지 않습니다(자세한 이유는 그 파일 머리말 참조). -->
+<script type="importmap">
+{ "imports": { "three": "./js/three-global-shim.js" } }
+</script>
 <script type="module">
   import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
-  import { SkeletonUtils } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js";
+  /* SkeletonUtils.js 는 `SkeletonUtils` 라는 이름을 내보내지 않습니다.
+     r160 기준 내보내는 것은 retarget / retargetClip / clone 셋뿐이라,
+     `import { SkeletonUtils }` 는 importmap 을 넣어도 SyntaxError 로 실패하고
+     이 모듈 전체가 죽어 window.GLTFLoader 까지 안 만들어집니다.
+     네임스페이스로 통째로 받아야 market-war.js 의 SkeletonUtils.clone() 이 됩니다. */
+  import * as SkeletonUtils from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js";
   window.GLTFLoader = GLTFLoader;
   window.SkeletonUtils = SkeletonUtils;
   window.dispatchEvent(new Event("three-addons-ready"));
@@ -145,6 +158,28 @@
      그래서 배너도 화면 끝까지 가지 않고 주문창 오른쪽 끝에서 멈춥니다. -->
 <div class="page-shell">
   <div class="page-left">
+<!-- ⚡ 실시간 체결 알림 띠 — 예전에는 오른쪽 채팅 칸(23%) 안에 대화와 섞여
+     있었습니다. 1440 실측 기준 채팅 13줄 중 10줄이 이 알림이었고, 그것 때문에
+     차트가 42%까지 좁아져 있었습니다. 알림만 얇은 가로 띠로 빼서 항상 보이게
+     하고, 대화는 접이식으로 돌립니다(js/chat-split.js).
+     내용은 #chat-messages 의 .chat-msg-event 를 복제한 것이라
+     js/chat.js 는 한 글자도 건드리지 않습니다. -->
+<div class="trade-ticker" id="trade-ticker" role="status" aria-label="실시간 체결 알림">
+  <span class="tt-badge">⚡ 실시간</span>
+  <div class="tt-viewport">
+    <div class="tt-track" id="trade-ticker-track"></div>
+    <span class="tt-empty" id="trade-ticker-empty">체결 알림을 기다리는 중…</span>
+  </div>
+  <!-- 💬 대화 열기 — 채팅을 접었을 때만 보입니다(html[data-chat="off"]).
+       채팅을 지운 것이 아니라 접어둔 것이라, 누르면 예전 그대로 오른쪽 칸에
+       대화가 돌아옵니다. 띠 안에 두는 이유: 화면에 떠 있는 버튼으로 두면
+       스크롤 위치에 따라 주문 버튼(매수/매도) 위를 덮을 수 있습니다. -->
+  <button type="button" id="chat-fab" class="chat-fab" aria-controls="chat-panel" aria-expanded="false" aria-label="실시간 채팅 열기">
+    <span class="chat-fab-icon">💬</span>
+    <span class="chat-fab-label">대화</span>
+    <span class="chat-fab-badge" id="chat-fab-badge" hidden></span>
+  </button>
+</div>
 <div class="notice-board-wrap">
   <!-- [박스1 34.4%] 공지사항 | 최신게시물 -->
   <div class="notice-box">
@@ -930,7 +965,11 @@
     <aside class="side-chat-panel" id="right-chat-panel" aria-label="실시간 채팅">
       <div class="page-chat-col">
         <div class="panel page-chat-panel" id="chat-panel">
-          <div class="field-label"><span>💬 실시간 채팅</span></div>
+          <div class="field-label">
+            <span>💬 실시간 채팅</span>
+            <!-- 접이식 — 대화만 열고 닫습니다. ⚡ 알림은 위쪽 띠로 항상 보입니다. -->
+            <button type="button" id="chat-toggle-btn" class="chat-toggle-btn" aria-controls="chat-panel" aria-expanded="false">열기 ▸</button>
+          </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="chat-input-row">
             <input type="text" id="chat-input" class="chat-input" maxlength="200" placeholder="메시지를 입력하세요..." autocomplete="off">
@@ -1047,6 +1086,9 @@
 <script src="js/tl-balance-sync.js"></script>
 <script src="js/ad-slots.js"></script>
 <script src="js/chat-event-style.js"></script>
+<!-- 채팅 분리 — ⚡ 알림은 위쪽 가로 띠로, 💬 대화는 접이식으로.
+     chat.js 가 그린 DOM 을 관찰만 합니다(chat.js 무수정). -->
+<script src="js/chat-split.js"></script>
 <script src="js/daily-recharge.js"></script>
 <script src="js/position-table-extra.js"></script>
 <script src="js/limit-close.js"></script>

@@ -408,10 +408,15 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
 .main-grid{
   /* 폰트를 20% 키우면서 호가창/주문창이 좁아 글자가 넘쳤습니다.
      차트가 여전히 주 영역이되(56%) 우측 두 칼럼에 충분한 폭을 줍니다. */
-  /* 레퍼런스 실측(콘텐츠 686px 기준: 차트 291 / 호가 115 / 주문 110 / 채팅 158)
-     = 차트 42.4% · 호가 16.8% · 주문 16.0% · 채팅 23.0%.
-     채팅을 뺀 나머지(77%) 안에서의 비율로 환산하면 55.6 : 22.0 : 21.0 입니다. */
-  display:grid;grid-template-columns:556fr 220fr 210fr;gap:4px;
+  /* ── 2026-08-21 갱신: 레퍼런스를 개미톡 → 바이낸스 선물로 바꿉니다 ──
+     예전 값(콘텐츠 686px 기준 차트 291 / 호가 115 / 주문 110 / 채팅 158
+     = 42.4 / 16.8 / 16.0 / 23.0)은 "오른쪽에 채팅 칸이 23% 있는" 구성이었고,
+     그 결과 1920 실측 차트가 42.4% 밖에 안 됐습니다.
+     알림을 가로 띠로 빼고 대화를 접이식으로 돌려 채팅 칸을 없앴으므로,
+     바이낸스 선물 데스크톱 1440 실측값
+       차트 62.7% · 호가 16.7% · 주문 20.9%  (docs/디자인-구조조사.md 2회차)
+     를 그대로 씁니다. 합이 100.3 이라 fr 로 그대로 적습니다. */
+  display:grid;grid-template-columns:627fr 167fr 209fr;gap:4px;
   margin-top:5px;
   /* 행 높이는 반드시 "확정값"이어야 합니다.
      js/chart.js가 autoSize:true(ResizeObserver로 컨테이너에 맞춰 리사이즈)라서,
@@ -3658,3 +3663,122 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
  *   완전히 되살리려면 index.html 의 js/interval-guard.js <script> 줄도
  *   같이 지우세요. */
 .interval-btn[data-interval="1s"],.interval-btn[data-interval="5s"],.interval-btn[data-interval="15s"]{display:none !important;}
+
+
+/* =========================================================================
+ * 채팅 분리 (2026-08-21) — ⚡ 알림 띠 + 💬 대화 접이식
+ * =========================================================================
+ * 무엇을 왜 바꿨나
+ *   1440 실측 기준 채팅 13줄 중 10줄이 "누가 익절/손절했다"는 자동 알림이고
+ *   실제 대화는 3줄이었습니다. 그 알림 하나 때문에 오른쪽 세로 칸 23%를 통째로
+ *   쓰고 있었고, 그만큼 차트가 좁았습니다(1920 실측 차트 42.4%).
+ *
+ *   ⚡ 알림 → 화면 맨 위 얇은 가로 띠(44px)로 흐르게. 항상 보입니다.
+ *   💬 대화 → 접이식. 기본은 접힘, 오른쪽 아래 💬 버튼으로 열고 닫습니다.
+ *
+ * 아무것도 지우지 않았습니다. 채팅 패널 마크업과 id(#chat-messages 등)는
+ * 그대로 있고, 접었을 때 CSS 로만 숨깁니다. js/chat.js 무수정.
+ *
+ * ★ 되돌리는 방법 — 이 블록 전체를 지우고, .main-grid 의
+ *   grid-template-columns 를 556fr 220fr 210fr 로 되돌리고,
+ *   index.html 에서 #trade-ticker / #chat-fab / #chat-toggle-btn 마크업과
+ *   js/chat-split.js <script> 줄을 지우면 원상복구됩니다.
+ * ========================================================================= */
+
+/* ---- ⚡ 실시간 체결 알림 띠 ---- */
+.trade-ticker{
+  display:flex;align-items:center;gap:10px;
+  height:44px;min-height:44px;margin:6px 0 0;padding:0 10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;position:relative;box-shadow:var(--card-glow,none);
+}
+.trade-ticker .tt-badge{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;
+  font-size:14px;font-weight:700;line-height:1;letter-spacing:-0.02em;
+  color:var(--gold);background:var(--gold-soft);
+  border-radius:8px;padding:6px 9px;white-space:nowrap;
+}
+.trade-ticker .tt-viewport{
+  position:relative;flex:1 1 auto;min-width:0;height:100%;overflow:hidden;
+  display:flex;align-items:center;
+}
+.trade-ticker .tt-track{display:flex;flex:0 0 auto;width:max-content;will-change:transform;}
+.trade-ticker .tt-half{display:flex;flex:0 0 auto;}
+.trade-ticker .tt-item{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+  padding:0 22px;font-size:15px;line-height:1.2;font-weight:600;
+  color:var(--text-dim);white-space:nowrap;
+}
+.trade-ticker .tt-item + .tt-item{border-left:1px solid var(--border-soft);}
+.trade-ticker .tt-mark{font-size:12px;line-height:1;}
+.trade-ticker .tt-profit{color:var(--green);}
+.trade-ticker .tt-loss,
+.trade-ticker .tt-liq{color:var(--red);}
+.trade-ticker .tt-empty{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--text-faint);white-space:nowrap;pointer-events:none;
+}
+/* 같은 목록을 두 벌 이어 붙이고 -50%까지 움직여 끊김 없이 흐릅니다 */
+@keyframes tt-scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+.trade-ticker:hover .tt-track{animation-play-state:paused;} /* 읽으려고 마우스를 올리면 멈춤 */
+@media (prefers-reduced-motion: reduce){
+  .trade-ticker .tt-track{animation:none !important;}
+  .trade-ticker .tt-viewport{overflow-x:auto;}
+}
+@media (max-width:700px){
+  .trade-ticker{height:40px;min-height:40px;gap:7px;padding:0 7px;margin-top:5px;}
+  .trade-ticker .tt-badge{font-size:12px;padding:5px 7px;}
+  .trade-ticker .tt-item{font-size:13.5px;padding:0 14px;}
+  .trade-ticker .tt-empty{font-size:12.5px;left:8px;}
+}
+
+/* 알림 줄은 이제 띠가 책임집니다 — 채팅 목록에서는 화면에서만 숨깁니다.
+   data-tt 는 js/chat-split.js 가 띠를 실제로 만든 뒤에만 켭니다.
+   (스크립트가 실패하면 알림이 채팅에 그대로 남아 조용히 사라지지 않습니다) */
+html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
+
+/* ---- 💬 대화 접이식 ---- */
+.chat-toggle-btn{
+  margin-left:auto;flex:0 0 auto;
+  font:inherit;font-size:13px;font-weight:700;line-height:1;
+  color:inherit;background:rgba(255,255,255,0.14);
+  border:0;border-radius:8px;padding:6px 10px;cursor:pointer;
+}
+.chat-toggle-btn:hover{background:rgba(255,255,255,0.26);}
+/* 헤더 띠(.page-right .page-chat-panel > .field-label)는 이미 위에서
+   display:flex;align-items:center 이라 규칙을 새로 만들지 않습니다
+   (같은 선택자를 두 벌 만들면 tests/css-duplicate.test.js 가 잡습니다).
+   버튼은 margin-left:auto 로 오른쪽 끝에 붙습니다. */
+
+/* 접었을 때 — 채팅 패널을 화면에서만 감추고, 우측 칼럼이 차지하던 23%를
+   거래 화면에 돌려줍니다(1920 차트 42.4% -> 62.7%). 마크업은 그대로입니다. */
+html[data-chat="off"] .page-right .side-chat-panel{display:none;}
+html[data-chat="off"] .page-shell{grid-template-columns:minmax(0,1fr);}
+html[data-chat="off"] .page-right{margin-top:6px;gap:6px;}
+
+/* 열었을 때 — 예전 모습 그대로 */
+html[data-chat="on"] .chat-fab{display:none;}
+
+/* ---- 열기 버튼(접었을 때만) — 알림 띠 오른쪽 끝에 붙습니다 ----
+   화면에 떠 있는(fixed) 버튼으로 두면 스크롤 위치에 따라 주문창 오른쪽 아래
+   버튼(지정가/시장가·매수/매도) 위를 덮습니다. 실제로 1440 캡처에서 겹쳤습니다.
+   그래서 띠 안에 넣어 아무것도 가리지 않게 했습니다. */
+.chat-fab{
+  display:none;flex:0 0 auto;align-items:center;gap:6px;
+  font:inherit;font-size:13.5px;font-weight:700;line-height:1;
+  color:#0A0F1C;background:var(--gold);
+  border:0;border-radius:8px;padding:8px 11px;cursor:pointer;white-space:nowrap;
+}
+html[data-chat="off"] .chat-fab{display:inline-flex;}
+.chat-fab:hover{filter:brightness(1.08);}
+.chat-fab .chat-fab-icon{font-size:14px;line-height:1;}
+.chat-fab .chat-fab-badge{
+  min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--red);color:#fff;font-size:11px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.chat-fab .chat-fab-badge[hidden]{display:none;}
+@media (max-width:700px){
+  .chat-fab{padding:7px 9px;font-size:12px;gap:4px;}
+  .chat-fab .chat-fab-label{display:none;}
+}
