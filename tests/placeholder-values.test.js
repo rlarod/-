@@ -148,15 +148,27 @@ console.log("\n  [두 벌] 같은 비율 계산이 서로 어긋나지 않는가
  * ========================================================================= */
 console.log("\n  [어디에 보이는가]");
 {
-  const OPB = fs.readFileSync(path.join(REPO, "js", "order-pressure-bar.js"), "utf8");
-  ok("주문창 비율 바가 market-war 의 값을 그대로 쓴다",
-    /App\.MarketWar\.getBuySellRatio\(\)/.test(OPB));
-  ok("그 값을 퍼센트 글자로 회원에게 보여준다",
-    /"매수 " \+ buyPct \+ "%"/.test(OPB) && /"매도 " \+ sellPct \+ "%"/.test(OPB),
-    "이 줄이 있는 한, 대체값 50 은 회원에게 '측정값'으로 보입니다");
+  const OPB_RAW = fs.readFileSync(path.join(REPO, "js", "order-pressure-bar.js"), "utf8");
+  /* 주석에는 옛 코드 이야기가 남아 있으므로 코드만 봅니다. */
+  const OPB = OPB_RAW
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/^(\s*)\/\/.*$/gm, "$1");
+
+  /* 2026-08-21 TL-005 로 고쳐진 부분입니다. 되돌아가면 여기서 걸립니다. */
+  ok("주문창 압력 바가 '데이터 없음'을 지어내지 않는다(null 로 돌려준다)",
+    /if \(total <= 0\) return null;/.test(OPB),
+    "여기서 50 을 돌려주면 '모름'이 다시 '반반'이 됩니다");
+  ok("데이터가 없으면 퍼센트 대신 '—' 를 보여준다",
+    /"매수 —"/.test(OPB) && /"매도 —"/.test(OPB),
+    "숫자를 지어내면 회원이 그걸 측정값으로 믿습니다");
+  ok("전쟁터 연출값(getBuySellRatio)에 더는 기대지 않는다",
+    !/App\.MarketWar\.getBuySellRatio\(\)/.test(OPB),
+    "강도는 둘 다 상한 100 에 붙어 늘 50:50 이라 압력 바에 못 씁니다");
+  ok("실제 체결(테이커 매수/매도)량으로 직접 센다",
+    /isBuy:\s*!p\.isBuyerMaker/.test(OPB) && /App\.Bus\.on\("trade:tick", onTradeTick\)/.test(OPB));
 
   const MW = fs.readFileSync(path.join(REPO, "js", "market-war.js"), "utf8");
-  ok("전쟁터 힘 게이지도 같은 값을 폭(width)으로 그린다",
+  ok("전쟁터 힘 게이지는 여전히 강도 기반이다(연출값 — 그대로 둔 것이 맞음)",
     /buyEl\.style\.width = buyPct \+ "%"/.test(MW));
 
   /* 강도는 체결(trade:tick)로만 채워집니다 — 체결이 0건이면 영구히 50:50. */
@@ -191,12 +203,26 @@ console.log("\n  [돌연변이] 버그를 다시 넣으면 정말 실패하는�
       v.length === 1 && 예외키.indexOf(v[0].파일 + "|" + v[0].값) < 0);
   }
 
-  /* (다) 화면에 그리는 줄을 몰래 바꾼다 */
+  /* (다) 주문창 압력 바를 TL-005 이전으로 되돌린다 */
   {
     const OPB = fs.readFileSync(path.join(REPO, "js", "order-pressure-bar.js"), "utf8");
-    const 망친 = OPB.replace(/App\.MarketWar\.getBuySellRatio\(\)/g, "{ buyPct: 50, sellPct: 50 }");
-    ok("→ 값을 상수로 갈아끼우면 '실제 값을 쓴다' 검사가 실패한다",
-      !/App\.MarketWar\.getBuySellRatio\(\)/.test(망친));
+
+    const 되돌림1 = OPB.replace("if (total <= 0) return null;",
+      "if (total <= 0) return { buyPct: 50, sellPct: 50 };");
+    ok("→ 되돌림 사본이 실제로 만들어졌다", 되돌림1 !== OPB);
+    ok("→ 데이터 없음을 50:50 으로 되돌리면 '지어내지 않는다' 검사가 실패한다",
+      !/if \(total <= 0\) return null;/.test(되돌림1));
+
+    const 되돌림2 = OPB.replace(/"매수 —"/g, '"매수 50%"').replace(/"매도 —"/g, '"매도 50%"');
+    ok("→ '—' 를 숫자로 바꾸면 '지어내지 않는다' 검사가 실패한다",
+      !/"매수 —"/.test(되돌림2) && !/"매도 —"/.test(되돌림2));
+
+    const 되돌림3 = OPB.replace("const r = computeRatio();",
+      "const r = App.MarketWar.getBuySellRatio();");
+    ok("→ 전쟁터 연출값으로 되돌리면 '기대지 않는다' 검사가 실패한다",
+      /App\.MarketWar\.getBuySellRatio\(\)/.test(
+        되돌림3.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+      ));
   }
 }
 

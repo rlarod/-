@@ -1079,6 +1079,10 @@
 <script src="js/orderbook-mark-price.js"></script>
 <script src="js/order-info-panel.js"></script>
 <script src="js/orderbook-click-order.js"></script>
+<!-- TL-004/TL-005 근본 수정 — 체결(@trade)은 /market 경로에 없어 한 건도 오지
+     않습니다. websocket.js·config.js 무수정으로, 호가창과 같은 방식으로 체결
+     스트림만 따로 받아 'trade:tick' 을 방송합니다. 이 한 줄을 지우면 원복됩니다. -->
+<script src="js/trade-stream-fix.js"></script>
 <script src="js/trades.js"></script>
 <script src="js/orderbook-tabs.js"></script>
 <script src="js/market-war.js"></script>

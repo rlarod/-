@@ -290,23 +290,43 @@ console.log("\n  [받는 쪽] js/websocket.js");
  * ========================================================================= */
 console.log("\n  [전체 스캔] js/ 안의 모든 접속 주소");
 {
+  /* 주소를 문자열 하나로 다 적는 파일도 있고(orderbook.js), 조각을 이어 붙이는
+     파일도 있습니다(trade-stream-fix.js: 경로 + 심볼 + "@aggTrade").
+     그래서 "그 파일에 나오는 경로"와 "그 파일에 나오는 @스트림 이름"을 모두
+     짝지어 봅니다. 조각내서 숨겨도 잡힙니다. */
+  function 파일검사(src, 파일명) {
+    const s = src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+                 .replace(/^(\s*)\/\/.*$/gm, "$1");
+    const 경로들 = [...new Set((s.match(/wss?:\/\/[^"'`\s]*fstream\.binance\.com\/(public|market|private)\//g) || [])
+      .map((u) => /\/(public|market|private)\/$/.exec(u)[1]))];
+    if (!경로들.length) return { 경로들: [], 스트림들: [], 위반: [] };
+    const 스트림들 = [...new Set((s.match(/"@[A-Za-z][\w]*"|'@[A-Za-z][\w]*'/g) || [])
+      .map((q) => 종류(q.slice(1, -1))).filter((k) => k && 스트림_경로[k]))];
+    const 위반 = [];
+    for (const p of 경로들) for (const k of 스트림들) {
+      if (스트림_경로[k] !== p) 위반.push(파일명 + " " + p + ":" + k);
+    }
+    return { 경로들, 스트림들, 위반 };
+  }
+
   const 위반들 = [];
-  const 주소들 = [];
   for (const f of fs.readdirSync(path.join(REPO, "js"))) {
     if (!f.endsWith(".js")) continue;
-    const s = fs.readFileSync(path.join(REPO, "js", f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    /* 문자열로 박아 놓은 주소만 봅니다(config.js 처럼 조립하는 것은 3)에서 실행해 검사). */
-    const re = /wss?:\/\/[^"'`\s]*fstream\.binance\.com\/(?:public|market|private)\/ws\/[^"'`\s+]*@[^"'`\s+]*/g;
-    let m;
-    while ((m = re.exec(s))) {
-      주소들.push(f + " → " + m[0]);
-      경로위반(m[0]).forEach((v) => 위반들.push(f + " " + v));
-    }
+    const r = 파일검사(fs.readFileSync(path.join(REPO, "js", f), "utf8"), "js/" + f);
+    if (!r.경로들.length) continue;
+    console.log("    js/" + f + " → 경로 [" + r.경로들.join(",") + "] · 스트림 [" + (r.스트림들.join(",") || "없음") + "]");
+    위반들.push(...r.위반);
   }
-  주소들.forEach((a) => console.log("    " + a));
   const 예외이름 = 알려진예외.map((e) => e.무엇);
   const 새위반 = 위반들.filter((v) => !예외이름.some((n) => v.indexOf(n) >= 0));
-  ok("문자열로 박아 둔 주소 중 경로가 틀린 것이 없다", 새위반.length === 0, 새위반.join(", "));
+  ok("js/ 안에서 주소를 만드는 곳의 경로가 전부 맞다", 새위반.length === 0, 새위반.join(", "));
+
+  /* 이 스캔이 실제로 잡는지 — 조각내서 적은 형태를 망가뜨려 봅니다 */
+  const 정상사본 = 'var 경로 = "wss://fstream.binance.com/market/ws/";\nvar S = "@aggTrade";';
+  const 망친사본 = 'var 경로 = "wss://fstream.binance.com/market/ws/";\nvar S = "@trade";';
+  ok("→ 조각내어 적은 정상 주소는 통과시킨다", 파일검사(정상사본, "t").위반.length === 0);
+  ok("→ 조각내어 적어도 /market + @trade 는 잡는다",
+    파일검사(망친사본, "t").위반.join() === "t market:@trade");
 }
 
 /* =========================================================================
