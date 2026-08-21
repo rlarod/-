@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(agent-browser --version)",
+      "Bash(agent-browser set viewport *)",
+      "Bash(agent-browser open http://localhost:3000*)",
+      "Bash(agent-browser open https://sigma-lovat-81.vercel.app*)",
+      "Bash(agent-browser open https://www.binance.com*)",
+      "Bash(agent-browser wait *)",
+      "Bash(agent-browser screenshot *)",
+      "Bash(agent-browser eval *)",
+      "Bash(agent-browser console*)",
+      "Bash(agent-browser snapshot*)",
+      "Bash(agent-browser find *)",
+      "Bash(agent-browser click *)",
+      "Bash(agent-browser scroll *)",
+      "Bash(agent-browser scrollintoview *)",
+      "Bash(agent-browser hover *)",
+      "Bash(agent-browser read*)",
+      "Bash(npm test)",
+      "Bash(npm run dev)",
+      "Bash(curl -s -o /dev/null -w *)",
+      "Bash(paste *)",
+      "mcp__scheduled-tasks__list_scheduled_tasks",
+      "mcp__Claude_Browser__read_console_messages",
+      "mcp__Claude_Browser__read_page",
+      "mcp__Claude_Browser__read_network_requests",
+      "mcp__Claude_Browser__get_page_text",
+      "mcp__Claude_Browser__find",
+      "mcp__Claude_Browser__preview_logs",
+      "mcp__Claude_Browser__preview_list",
+      "mcp__Claude_Browser__tabs_context"
+    ]
+  }
+}
