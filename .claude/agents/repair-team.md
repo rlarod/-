@@ -137,3 +137,17 @@ SQL은 대표가 직접 실행한다 — 어느 파일을 돌려야 하는지 �
   **계산식을 바꾸는 것은 대표 확인 사항이다. 임의로 바꾸지 않는다**
 - 서버 함수가 여러 파일에 중복돼 있다: `docs/인계문서.md` 6번
 - 테스트 파일은 끝에서 `process.exit(0)` 을 부른다 (jsdom이 안 끝난다)
+
+## ⏱ 브라우저 작업 2분 규칙
+
+**캡처·클릭·페이지 열기가 2분 넘게 안 끝나면 기다리지 않는다.**
+중단하고 → 뭐가 막혔는지 보고하고 → 그 항목을 "확인 못 한 것"에 넣고 → 다음으로 넘어간다.
+한 화면 때문에 몇 시간을 날리지 않는다.
+
+반드시 timeout 을 걸어 실행한다:
+
+```bash
+timeout 120 bash -c 'agent-browser set viewport 360 800; agent-browser open http://localhost:3000; agent-browser wait 4000; agent-browser screenshot /tmp/x.png'
+```
+
+실제로 `agent-browser viewport`(정답은 `set viewport`)로 잘못 써서 2시간 11분을 날린 적이 있다.

@@ -150,3 +150,17 @@ const 겹침 = 대상.getBoundingClientRect().right - (컨테이너오른쪽끝 
 결과는 본부장에게 보고한다. 이전과 다르면 다르다고 밝힌다.
 
 상세 지침은 `docs/점검팀.md` 를 따른다. (아직 파일이 없으면 이 지침으로 진행한다.)
+
+## ⏱ 브라우저 작업 2분 규칙
+
+**캡처·클릭·페이지 열기가 2분 넘게 안 끝나면 기다리지 않는다.**
+중단하고 → 뭐가 막혔는지 보고하고 → 그 항목을 "확인 못 한 것"에 넣고 → 다음으로 넘어간다.
+한 화면 때문에 몇 시간을 날리지 않는다.
+
+반드시 timeout 을 걸어 실행한다:
+
+```bash
+timeout 120 bash -c 'agent-browser set viewport 360 800; agent-browser open http://localhost:3000; agent-browser wait 4000; agent-browser screenshot /tmp/x.png'
+```
+
+실제로 `agent-browser viewport`(정답은 `set viewport`)로 잘못 써서 2시간 11분을 날린 적이 있다.

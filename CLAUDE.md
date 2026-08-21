@@ -295,6 +295,39 @@ git config core.autocrlf false && git rm --cached -r . -q && git reset --hard
 1. 페이지가 옆으로 밀리는가 (`scrollWidth` vs `clientWidth`)
 2. **각 컨테이너가 내용을 숨기고 있는가** (컨테이너별 `scrollWidth` 확인)
 
+### ⏱ 브라우저 작업 2분 규칙 (2026-08-21 대표 지시)
+
+**브라우저 작업(캡처·클릭·페이지 열기)이 2분 넘게 안 끝나면 기다리지 않습니다.**
+
+```
+1. 중단한다
+2. 뭐가 막혔는지 확인하고 보고한다
+3. 그 항목을 "확인 못 한 것"에 넣는다
+4. 다음으로 넘어간다
+```
+
+**한 화면 때문에 몇 시간을 날리지 않습니다.**
+
+실제로 이런 일이 있었습니다 — `agent-browser viewport`(정답은 `set viewport`)로
+잘못 써서 오류가 났는데, 그 뒤 명령이 브라우저를 붙잡은 채 **2시간 11분** 동안
+끝나지 않았습니다. 출력은 12:02 이후 한 글자도 안 늘었습니다.
+
+**막으려면 `timeout` 을 걸어 실행합니다.**
+
+```bash
+timeout 120 bash -c 'agent-browser set viewport 360 800; agent-browser open http://localhost:3000; agent-browser wait 4000; agent-browser screenshot /tmp/x.png'
+```
+
+배경으로 돌린 작업은 **출력 파일의 수정 시각**으로 살아있는지 확인합니다.
+몇 분째 안 늘어나면 멈춘 것입니다.
+
+```bash
+stat -c '%y' <출력파일>
+```
+
+막혔을 때 확인할 것: ① `localhost:3000` 이 살아있나(`curl`) ②
+`agent-browser --version` 이 응답하나 ③ 브라우저에 대화상자가 떠서 막고 있나
+
 ### 브라우저 캡처는 agent-browser 로 합니다
 
 앱 내장 브라우저는 화면에 표시되지 않으면 캡처가 안 되고,
