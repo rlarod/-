@@ -93,7 +93,11 @@ App.OrderInfoPanel = (function () {
     dom.accBalanceHolding.textContent = plain(snapshot.balance, 4);
     dom.accAvailable.textContent = plain(snapshot.balance, 4);
     if (dom.accFeeRate && snapshot.feeRate) {
-      dom.accFeeRate.textContent = (snapshot.feeRate.maker * 100).toFixed(2) + "% / " + (snapshot.feeRate.taker * 100).toFixed(3) + "%";
+      /* 메이커/테이커 자릿수를 4자리로 통일합니다(0.0200% / 0.0500%).
+         전에는 메이커만 2자리, 테이커만 3자리라 같은 줄에서 자릿수가 어긋나
+         회원이 서로 다른 정밀도의 값으로 오해할 수 있었습니다.
+         바이낸스 USDⓈ-M 수수료 표기와 같은 4자리로 맞춥니다. */
+      dom.accFeeRate.textContent = (snapshot.feeRate.maker * 100).toFixed(4) + "% / " + (snapshot.feeRate.taker * 100).toFixed(4) + "%";
     }
   }
 
