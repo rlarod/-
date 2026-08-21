@@ -3638,3 +3638,23 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
   .stats-bar > .stat-block{padding-right:6px;}
   .tl-stats-hint-layer::after{width:12px;}
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * TL-004 임시 가림 (2026-08-21) — 차트 간격 1초·5초·15초 버튼
+ * ─────────────────────────────────────────────────────────────────────────
+ * 왜 가리나: 이 세 간격에서는 price:update 신호가 0회가 되어
+ * 강제청산·손절(SL)·익절(TP)·지정가 체결·손익 갱신이 전부 조용히 멈춥니다.
+ * 오류가 안 뜨기 때문에 회원은 고장인 줄 모릅니다. (docs/백로그.md TL-004)
+ *
+ * 기능과 마크업은 그대로 둡니다. js/chart.js(수정 금지)가 만든 버튼을
+ * 화면에서만 감춥니다. 근본 수정이 끝나면 되살립니다.
+ *
+ * ⚠️ .interval-btn 클래스는 통화 전환(USDT/KRW, data-currency)과
+ *    주문 유형(지정가/시장가, data-order-type)에도 쓰입니다.
+ *    그래서 반드시 [data-interval="..."] 로만 겨냥합니다.
+ *
+ * ★ 되살리는 방법: 바로 아래 규칙 "한 줄"만 지우면 버튼이 다시 보입니다.
+ *   단, js/interval-guard.js 가 살아 있으면 눌러도 1분으로 되돌아갑니다.
+ *   완전히 되살리려면 index.html 의 js/interval-guard.js <script> 줄도
+ *   같이 지우세요. */
+.interval-btn[data-interval="1s"],.interval-btn[data-interval="5s"],.interval-btn[data-interval="15s"]{display:none !important;}

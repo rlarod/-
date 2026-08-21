@@ -1063,6 +1063,10 @@
 <script src="js/board-paging.js"></script>
 <script src="js/ticker-board.js"></script>
 <script src="js/config.js"></script>
+<!-- TL-004 임시 방어 — 1초·5초·15초 간격은 시세 신호가 끊겨 강제청산·손절이
+     멈춥니다. 버튼은 style.css 가 가리고, 이 파일이 다른 경로로 그 간격이
+     선택되는 것을 막습니다. 근본 수정이 끝나면 이 한 줄을 지우세요. -->
+<script src="js/interval-guard.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/websocket.js"></script>
