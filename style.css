@@ -3732,6 +3732,15 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
   .trade-ticker .tt-empty{font-size:12.5px;left:8px;}
 }
 
+/* 거래 3열 구간(1051px 이상)에서 호가/최근체결 칼럼이 좁아졌습니다
+   (1440 실측 316px -> 236px). 그대로 두면 최근 체결의 "시간" 칸이 13px 잘립니다.
+   기준 글자(.ob-row 18.5px)는 그대로 두고 — tests/chart-font.test.js 가
+   그 값을 차트 축 크기의 기준으로 읽습니다 — 3열 구간에서만 한 단계 줄입니다.
+   참고: 바이낸스 선물 호가창 실측은 12px 입니다. 15.5px 은 그보다 훨씬 큽니다. */
+@media (min-width:1301px){
+  .main-grid .ob-row{font-size:15.5px;}
+}
+
 /* 알림 줄은 이제 띠가 책임집니다 — 채팅 목록에서는 화면에서만 숨깁니다.
    data-tt 는 js/chat-split.js 가 띠를 실제로 만든 뒤에만 켭니다.
    (스크립트가 실패하면 알림이 채팅에 그대로 남아 조용히 사라지지 않습니다) */
