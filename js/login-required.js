@@ -36,6 +36,12 @@ App.LoginRequired = (function () {
     { id: "board-write-submit-btn", label: "글 등록" },
     { id: "board-delete-btn", label: "글 삭제" },
     { id: "daily-recharge-btn", label: "무료 충전" },
+    /* 2026-08-24 — 마이페이지 "계정 관리". 비회원에게 로그아웃·회원탈퇴가
+       그대로 보이고 눌리던 것을 다른 버튼들과 같은 방식으로 막습니다.
+       회원에게는 isLoggedIn() 이 true 라 예전과 똑같이 동작합니다.
+       화면에서 감추는 것은 style.css 의 .mh-box:has(...) 한 줄입니다. */
+    { id: "mh-logout", label: "로그아웃" },
+    { id: "mh-delete-account", label: "회원탈퇴" },
   ];
 
   /* 서버가 어차피 막지만, 화면에서도 먼저 안내하는 편이 친절합니다. */

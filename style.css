@@ -2412,6 +2412,20 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
        display:flex;justify-content:flex-end;gap:5px;width:auto; */
   display:grid;grid-template-columns:1fr 1fr;gap:5px;width:100%;
   padding:9px 12px 3px;
+  /* 2026-08-24 (3차) 폭 상한 — 본부장 지시.
+     1440 에서는 내 정보 칸이 화면 전폭 줄(1422px)이라 반반 그리드가 그대로
+     늘어나 버튼 하나가 696.5 x 35.5px = 24,726px2 의 금색 슬래브가 됐습니다.
+     예전에 대표가 지적했던 금색 바(21,403px2)보다도 큽니다.
+     상한 750px 은 태블릿(768)에서 이 줄이 실제로 갖는 폭과 같은 값이라,
+     768 이하는 한 픽셀도 달라지지 않고 1440 만 잡힙니다.
+       360 342 / 375 357 / 390 372 / 768 750 / 1920 435.9  <- 전부 750 이하
+       1440 1422 -> 750
+     반반 비율(1fr 1fr)은 그대로라 두 버튼 폭 차이는 계속 0 입니다.
+     margin-right:auto — 남는 자리는 오른쪽에 둡니다(왼쪽 정렬).
+     오른쪽 끝에 몰린 것이 대표가 지적했던 원래 문제였습니다.
+     되돌리려면 아래 두 줄만 지우면 됩니다. */
+  max-width:750px;
+  margin-right:auto;
 }
 /* 통화 버튼이 다른 규칙(#EEEEEE 배경 등)에 덮이지 않도록 같은 강도로 지정합니다. */
 .page-right .up-currency button{
@@ -3893,7 +3907,14 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
      모바일에서만 뺍니다. (한 규칙에 모아 씁니다 — 같은 선택자를 두 벌 쓰면
      tests/css-duplicate 검사가 잡습니다.) */
   .page-left > .app{order:1;padding-top:0;}
-  .page-left > .notice-board-wrap{order:2;}
+  /* [디자인 ②] 공지/커뮤니티 두 박스를 폰에서는 한 줄에 하나씩 세로로 쌓습니다.
+     .page-left .notice-board-wrap 이 1889행에서 2칸 그리드로 고정돼 있어서
+     360 에서 박스 하나가 167px 밖에 안 됐고, 제목 줄은 141px 이라
+     [공지] 태그(46.7px)를 빼면 본문이 6글자쯤에서 잘렸습니다.
+       360 141 -> 316 / 375 148.5 -> 331 / 390 156 -> 346 (제목 줄 폭)
+     같은 선택자를 두 벌 쓰지 않으려고 order 규칙에 한 줄만 더합니다.
+     되돌리려면 grid-template-columns 줄만 지우면 2칸으로 돌아갑니다. */
+  .page-left > .notice-board-wrap{order:2;grid-template-columns:minmax(0,1fr);}
   .page-left > #top-ad-banner{order:3;}
 
   #page-exchange{display:flex;flex-direction:column;}
@@ -4143,3 +4164,82 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 }
 /* 데스크톱에서는 배지 자체가 없는 것과 같습니다(마크업은 남습니다) */
 .tl-sheet-side{display:none;}
+
+/* =========================================================================
+ * [디자인 배정 2026-08-24] ② 공지 제목 · ③ 댓글 계급장 · ④ 게시판 목록 · ⑤ 계정 관리
+ * =========================================================================
+ * 전부 "보이는 것"만 다룹니다. 마크업·기능은 하나도 바뀌지 않았습니다.
+ * 항목별로 따로 되돌릴 수 있게 블록을 나눠 뒀습니다.
+ * ========================================================================= */
+
+/* ---- ② 폰에서 공지 제목이 6글자쯤에서 잘리던 것 ------------------------
+   실측(수정 전, 비로그인 localhost)
+     제목 줄 폭   360 141px / 375 148.5px / 390 156px
+     제목 실제 폭 408~465px  ->  [공지] 태그 46.7px 를 빼면 본문 6글자쯤
+     탭 줄        250px 필요 / 167px 만 보임 -> "최신게시물" 이 "초…" 로 잘림
+   글자를 … 로 잘라 없애지 않고, 폰에서만 두 줄로 흘려 전부 읽히게 합니다.
+   박스를 세로로 쌓는 부분은 위쪽 @media (max-width:700px) 안의
+   .page-left > .notice-board-wrap 규칙에 있습니다.
+   되돌리려면 아래 @media 블록을 통째로 지우면 됩니다. */
+@media (max-width:700px){
+  /* 한 줄 고정(white-space:nowrap)을 풀어 두 줄로 흐르게 합니다.
+     👍 추천수는 flex:0 0 auto 라 그대로 오른쪽 끝에 붙습니다 —
+     제목이 두 줄이 되면 윗줄에 맞춰 정렬되도록 align-items 를 위로. */
+  .notice-board-list li{white-space:normal;align-items:flex-start;}
+  .notice-line{white-space:normal;overflow:visible;text-overflow:clip;}
+  /* 탭 줄 — 폰에서만 글자·좌우 여백을 줄여 탭 이름이 통째로 보이게 합니다.
+     18px/10px 이면 인기글 줄이 383px 필요해 342px 안에 안 들어갑니다. */
+  .notice-tab-btn{font-size:15px;padding:9px 7px;}
+}
+
+/* ---- ③ 게시판 댓글마다 계급장이 2개씩 붙던 것 --------------------------
+   원인(찾았습니다): js/rank-badge-attach.js 의 attachChat() 이
+   .chat-msg-nick 을 화면 전체에서 고릅니다. 게시판 댓글의 닉네임도 같은
+   .chat-msg-nick 클래스라 채팅용 계급장(rank-badge-chat, 69x20)이 먼저 붙고,
+   이어서 attachBoard() 가 커뮤니티용(rank-badge-community, 76x22)을 또 붙입니다.
+   서로 다른 표시(data-rank-badge-done / data-rank-board-done)를 쓰기 때문에
+   상대가 붙인 것을 못 알아봅니다. 실측: 댓글 4개 / 계급장 8개, 그림 파일 동일.
+   게시판에는 커뮤니티 규격(22px)이 맞으므로 채팅용 쪽을 화면에서만 뺍니다.
+   마크업은 그대로 남습니다(js 는 한 글자도 안 고쳤습니다).
+   :has 로 "바로 뒤에 커뮤니티 계급장이 있을 때만" 숨기므로, 어떤 이유로
+   커뮤니티 계급장이 안 붙은 댓글에서는 채팅용이 그대로 보입니다(계급장 0개 방지).
+   되돌리려면 아래 한 줄을 지우면 두 개 다 다시 보입니다. */
+.board-comment-meta img.rank-badge-chat:has(+ img.rank-badge-community){display:none;}
+
+/* ---- ④ 360 에서 게시판 목록 머리글이 붙고 작성일이 잘리던 것 -----------
+   실측(수정 전, 360) 표 333px 필요 / 324px
+     칸      필요 / 실제
+     번호     36 / 25.9
+     작성일   49 / 35.6   -> "8/14" 가 "8…"
+     조회     37 / 29.2
+     추천     37 / 29.2
+   머리글(th)에는 overflow 가 없어 넘친 글자가 옆 칸으로 흘러
+   "번호제목 … 글쓴이 작성일조회추천" 처럼 붙어 보였습니다.
+   폰(520px 이하)에서만 조회·추천 두 칸을 접고 나머지 네 칸을 넓힙니다.
+   ⚠ 마크업(js/board-gallery-style.js 의 th/td)은 그대로입니다.
+     되살리려면 아래 .bg-view/.bg-like 의 display:none 한 줄만 지우면
+     즉시 여섯 칸으로 돌아갑니다(비율은 그때 다시 잡아야 합니다).
+   되돌리려면 아래 @media 블록을 통째로 지우면 됩니다. */
+@media (max-width:520px){
+  /* 좌우 안쪽 여백 8px -> 4px, 머리글 글자 16px -> 14px.
+     "번호"(약 28px)가 38.9px 칸 안에 들어갑니다. */
+  .board-gallery th{padding:9px 4px;font-size:14px;}
+  .board-gallery td{padding:8px 4px;}
+  .board-gallery .bg-no{width:12%;}      /* 360 에서 38.9px (필요 36) */
+  .board-gallery .bg-title{width:48%;}   /* 155.5px — 수정 전과 같은 폭 유지 */
+  .board-gallery .bg-author{width:19%;}  /* 61.6px (필요 52) */
+  .board-gallery .bg-date{width:21%;}    /* 68.0px (필요 49) — "8/14" 온전히 */
+  /* 이 두 줄만 지우면 조회·추천이 다시 보입니다 */
+  .board-gallery .bg-view,
+  .board-gallery .bg-like{display:none;}
+}
+
+/* ---- ⑤ 비회원인데 마이페이지에 로그아웃·회원탈퇴가 보이던 것 -----------
+   js/login-required.js 가 비회원일 때 붙여 주는 .login-required 클래스를
+   그대로 씁니다(새 방식을 만들지 않았습니다). 그 클래스가 붙어 있는 동안만
+   "계정 관리" 칸 전체(제목 + 버튼 2개 + 경고문)를 화면에서 뺍니다.
+   로그인하면 클래스가 떨어져 곧바로 다시 보입니다.
+   마크업은 그대로이고, 되돌리려면 아래 한 줄을 지우면 됩니다.
+   (버튼을 login-required 대상에 넣는 등록은 js/login-required.js 의
+    GUARDED_BUTTONS 배열에 두 줄로 있습니다.) */
+.mh-box:has(> .mh-actions > #mh-logout.login-required){display:none;}
