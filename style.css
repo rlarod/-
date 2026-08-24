@@ -2395,21 +2395,33 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    실측(1920) 전: 화면 전폭 435.9 × 49.1px 의 금색 바. 그 아래 손익·지갑
    숫자는 18.5px. 화면에서 제일 큰 것이 통화 전환 탭이라 위계가 뒤집혀
    있었습니다. 중요한 것은 숫자입니다.
-   후: 오른쪽 끝에 붙는 작은 칩 두 개(각 ≈62 × 33px, 13.5px).
+   후(1차): 오른쪽 끝에 붙는 작은 칩 두 개(각 ≈62 × 33px, 13.5px).
+   후(2차, 아래 규칙): 폭만 반반으로 넓힌 2칸 그리드. 글자·높이는 1차 그대로.
    항목은 하나도 빼지 않았습니다 — USDT / 원화 둘 다 그대로 있고 동작도 같습니다.
-   되돌리려면 아래 두 규칙을 예전 값
-     .up-currency{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+
+   ※ 아래 값(위계가 뒤집혔던 원래 값)으로는 되돌리지 마십시오 —
      .up-currency button{font-size:clamp(15px,0.66vw,23px);padding:clamp(10px,0.55vw,18px) 2px;}
-   으로 되돌리면 됩니다. */
+     이 값이면 통화 탭이 화면에서 제일 큰 요소가 되어 손익·지갑 숫자를 누릅니다. */
 .page-right .up-currency{
-  display:flex;justify-content:flex-end;gap:5px;width:auto;
+  /* 2026-08-24 (2차) 대표 지시: "원화 USDT 한쪽에 몰리게 하지말고 칸 반반 나눠서 쓰게해"
+     오른쪽 끝에 몰린 칩 두 개 -> 한 줄을 정확히 반씩 나눠 쓰는 2칸 그리드.
+     폭만 반반으로 넓히고 글자(13.5px)와 위아래 여백(10px)은 그대로 둡니다 —
+     그 아래 손익/지갑 숫자(24px, 1800px 이상에서 22px)보다 커지면
+     위계가 다시 뒤집히기 때문입니다.
+     되돌리려면 아래 display 줄을 예전 값으로 바꾸면 칩 모양으로 돌아갑니다.
+       display:flex;justify-content:flex-end;gap:5px;width:auto; */
+  display:grid;grid-template-columns:1fr 1fr;gap:5px;width:100%;
   padding:9px 12px 3px;
 }
 /* 통화 버튼이 다른 규칙(#EEEEEE 배경 등)에 덮이지 않도록 같은 강도로 지정합니다. */
 .page-right .up-currency button{
   background:var(--surface2);color:var(--text-dim);
   font-size:13.5px;font-weight:700;line-height:1;
-  padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
+  /* 폭이 반반이라 좌우 여백은 자리를 잡을 필요가 없습니다. 세로 10px 은 그대로 —
+     버튼 높이(35.5px)를 바꾸지 않기 위해서입니다.
+     되돌리려면 padding:10px 14px; 로, 아래 두 줄은 지우면 됩니다. */
+  padding:10px 6px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
+  text-align:center;white-space:nowrap;
 }
 /* 밝은 배경(금색)에는 어두운 글자 — 확정 팔레트 규칙.
    예전 값은 color:#fff 라 금색 위 흰 글씨였습니다(대비 부족). */
