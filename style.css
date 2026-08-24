@@ -3893,3 +3893,36 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
   #page-exchange > .event-banner{order:5;}
   #page-exchange > #ticker-board-panel{order:6;}
 }
+
+/* =========================================================================
+ * [모바일 2단계] 차트를 호가창·최근체결과 같은 탭 자리로 (2026-08-24)
+ * =========================================================================
+ * 390px 실측(수정 전): 차트 칼럼 상단 449px/높이 605px, 호가창 칼럼 상단
+ * 1057px/높이 545px — 세로 1,153px 을 둘이 따로 씁니다. 문서 총 높이 4,776px.
+ * 폰에서만 [차트][호가창][최근체결] 한 자리로 모읍니다(바이낸스 모바일과 같은 구성).
+ *
+ * 짝이 되는 코드: js/chart-tab-mobile.js (.main-grid 에 data-mtab 을 붙입니다)
+ * 768/1440/1920 은 건드리지 않습니다 — 아래 규칙은 전부 max-width:700px 안입니다.
+ * 되돌리려면 index.html 의 <script src="js/chart-tab-mobile.js"> 한 줄과
+ * 이 블록을 지우면 됩니다. 마크업은 하나도 안 바뀌었습니다.
+ * ========================================================================= */
+/* "차트" 탭 버튼은 폰에서만 보입니다(데스크톱은 차트가 자기 칼럼에 그대로 있음) */
+.ob-tab-btn-chart{display:none;}
+
+@media (max-width:700px){
+  .ob-tab-btn-chart{display:inline-block;}
+  /* 탭 3개가 360px 한 줄에 들어가게 — 글자는 그대로 읽히는 크기를 유지합니다 */
+  .main-grid .ob-tab-btn{padding:9px 11px;}
+  /* 탭 막대는 호가창 칼럼 맨 위에 있습니다. 폰에서는 그 막대가 차트보다
+     위로 와야 하므로 "보이는 자리"만 order 로 바꿉니다. DOM 순서는 그대로입니다
+     (js/orderbook-tabs.js·js/trades.js 가 기대하는 형제 관계 유지). */
+  .main-grid > .orderbook-column{order:1;}
+  .main-grid > .chart-column{order:2;}
+  .main-grid > .side-column{order:3;}
+  /* 선택된 탭만 보입니다 — 지우는 것 없이 display 로만 다룹니다 */
+  .main-grid[data-mtab="chart"] #orderbook-tabs-content{display:none;}
+  .main-grid[data-mtab="orderbook"] > .chart-column,
+  .main-grid[data-mtab="trades"] > .chart-column{display:none;}
+  /* 차트 탭일 때는 탭 막대 바로 아래에 차트가 붙습니다 */
+  .main-grid[data-mtab="chart"] .orderbook-tabs-wrap{margin-bottom:0;}
+}

@@ -377,7 +377,8 @@
       <div class="orderbook-tabs-wrap">
         <div class="orderbook-tabs" id="orderbook-tabs">
           <button class="ob-tab-btn active" data-tab="orderbook">호가창</button>
-          <button class="ob-tab-btn" data-tab="trades">최근거래</button>
+          <!-- 라벨만 "최근거래"->"최근체결" (2026-08-24, 모바일 2단계 탭 이름 지정 + 패널 제목 "최근 체결 (BTCUSDT)"과 일치). data-tab 값은 그대로라 동작은 동일합니다. -->
+          <button class="ob-tab-btn" data-tab="trades">최근체결</button>
         </div>
         <div id="orderbook-tabs-content">
           <div class="panel orderbook-panel" id="orderbook-panel">
@@ -1187,5 +1188,7 @@
 <script src="js/order-panel-amitalk.js"></script>
 <!-- 시세 바: 마크가격·펀딩비가 화면 밖으로 밀려 안 보이던 문제 (chart.js 무수정) -->
 <script src="js/stats-bar-priority.js"></script>
+<!-- [모바일 2단계] 폰에서 차트를 호가창·최근체결과 같은 탭 자리로 (chart.js·orderbook-tabs.js 무수정) -->
+<script src="js/chart-tab-mobile.js"></script>
 </body>
 </html>
