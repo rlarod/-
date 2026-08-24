@@ -29,6 +29,16 @@ function boot(file, extra) {
   return sb;
 }
 
+/* 주석(--)으로 "봉인" 된 SQL 원문을 되살려 봅니다.
+   2026-08-24 supabase/schema-tl-hotdeal.sql 의 TL 계산 함수 3개(tl_earned /
+   tl_balance / tl_balance_info)는 주석 처리됐습니다. 정본은 schema-tl-realtime.sql 입니다.
+   원문은 한 글자도 지우지 않고 그대로 남겨 두었기 때문에 "-- " 만 떼면
+   옛 원문이 그대로 나옵니다. 아래 [옛] 검사는 실행되는 문장이 아니라 그 기록을 봅니다.
+   봉인 자체(정말 실행되지 않는지)는 tests/tl-hotdeal-seal.test.js 가 지킵니다. */
+function unseal(text) {
+  return text.split("\n").map((l) => (l === "--" ? "" : l.replace(/^-- /, ""))).join("\n");
+}
+
 const gateSrc = fs.readFileSync(path.join(REPO, "js", "leverage-gate.js"), "utf8");
 const modalSrc = fs.readFileSync(path.join(REPO, "js", "leverage-modal.js"), "utf8");
 const guestSrc = fs.readFileSync(path.join(REPO, "js", "guest-access.js"), "utf8");
@@ -127,8 +137,10 @@ console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정�
 
      ok 이름 앞의 "[옛]" 은 "이건 옛 공식 기록이다" 라는 표시입니다. */
 
-  /* (가) 옛 공식 — schema-tl-hotdeal.sql 에 적힌 그대로인지 (기록 보존) */
-  const tlSql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
+  /* (가) 옛 공식 — schema-tl-hotdeal.sql 에 "주석으로 봉인된 원문" 그대로인지 (기록 보존)
+     2026-08-24 봉인 이후로는 실행되는 문장이 아니라 보존된 기록을 읽습니다. */
+  const tlRaw = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
+  const tlSql = unseal(tlRaw);
   const earned = tlSql.slice(tlSql.indexOf("function public.tl_earned"));
   const perTrade = Number((earned.match(/\)\s*,\s*0\)\s*\*\s*(\d+)/) || [])[1]);
   const perPct = Number((earned.match(/\)\s*\*\s*(\d+)\s*\n?\s*\+ coalesce/) || [])[1]);
@@ -164,13 +176,26 @@ console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정�
   ok("TL 화폐 공식은 건드리지 않았다", !/create or replace function public\.tl_earned/.test(rankSql));
 
   /* (나) 옛 파일은 기록으로 보존합니다 — 고치지도 지우지도 않았는지 확인합니다. */
-  const sql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
-  const code = sql.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+  const code = tlSql;   /* 주석으로 봉인된 옛 원문(기록) */
+  const 실행본문 = tlRaw.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
   ok("[옛] 서버도 청산 건수 x " + perTrade, new RegExp("from public\\.trades t where t\\.user_id = p_uid\\), 0\\) \\* " + perTrade).test(code));
   ok("[옛] 서버도 수익률 x " + perPct, new RegExp("where ta\\.user_id = p_uid\\), 0\\)\\) \\* " + perPct).test(code));
   ok("[옛] 서버도 손실은 0으로 막는다", /greatest\(0,/.test(code));
   ok("[옛] 서버는 저장된 실현손익을 쓴다(새로고침 후에도 유지)", /ta\.realized_pnl/.test(code));
   ok("[옛] 서버 잔액은 획득 - 사용", /public\.tl_earned\(p_uid\)[\s\S]{0,120}sum\(amount\)/.test(code));
+
+  /* 2026-08-24 봉인 — 위 원문은 "기록" 일 뿐, 실행되면 안 됩니다.
+     이 파일은 상점 기능이 같이 들어 있어 앞으로도 Run 할 일이 있습니다.
+     막아두지 않으면 상점을 손보려고 다시 실행하는 순간 TL 이 조용히 옛 공식으로
+     되돌아갑니다 — 오류도 안 나고 화면도 멀쩡해서 아무도 모릅니다. */
+  ok("[봉인] 실행되는 본문에 옛 tl_earned() 정의가 없다",
+     !/create\s+or\s+replace\s+function\s+public\.tl_earned/.test(실행본문));
+  ok("[봉인] 실행되는 본문에 옛 tl_balance() 정의가 없다",
+     !/create\s+or\s+replace\s+function\s+public\.tl_balance\s*\(/.test(실행본문));
+  ok("[봉인] 실행되는 본문에 옛 tl_balance_info() 정의가 없다",
+     !/create\s+or\s+replace\s+function\s+public\.tl_balance_info/.test(실행본문));
+  ok("[봉인] 상점(구매 함수)은 그대로 살아 있다",
+     /create or replace function public\.purchase_tl_product/.test(실행본문));
 
   /* ===================================================================
      (다) 정본은 schema-tl-realtime.sql 이다

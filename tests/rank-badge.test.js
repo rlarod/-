@@ -117,11 +117,62 @@ console.log("\n계급장");
   ok("서버 함수가 없으면 조용히 넘어간다", /loadFailed = true/.test(attach));
   ok("실패해도 계속 재시도하지 않는다", /if \(loading \|\| loadFailed\) return/.test(attach));
 
+  /* =====================================================================
+   * 계급 점수 SQL — 옛 판과 정본
+   * ---------------------------------------------------------------------
+   * rank_points_all() 은 두 파일에 서로 다르게 정의돼 있습니다.
+   *
+   *   [옛] supabase/schema-rank-badges.sql
+   *        점수 = public.tl_earned(p.id)   (= TL 화폐 공식)
+   *        2026-08-19 이전 판입니다. 지금은 정본이 아닙니다.
+   *
+   *   [정본] supabase/schema-rank-1000.sql
+   *        점수 = public.rank_points(p.id)
+   *             = 1000 × log2(지갑 자산 / 초기자금) + 운영자 가감점
+   *        계급은 TL 과 완전히 분리됐습니다. tl_earned() 를 쓰지 않습니다.
+   *
+   * 아래 [옛] 검사는 "옛 파일이 그때 그대로 남아 있다" 는 기록 확인일 뿐입니다.
+   * 이것을 보고 계급을 다시 TL 에 묶으면 안 됩니다 — 그래서 이름에 [옛] 을 붙였고,
+   * 바로 아래 [정본] 검사가 "정본이 옛 판을 덮는다" 를 함께 지킵니다.
+   * ===================================================================== */
   const sqlBadge = fs.readFileSync(path.join(REPO, "supabase", "schema-rank-badges.sql"), "utf8");
   const sqlCode = sqlBadge.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
-  ok("SQL: 점수를 기존 tl_earned() 로 계산(새 공식 안 만듦)", /public\.tl_earned\(p\.id\)/.test(sqlCode));
-  ok("SQL: 테이블을 만들거나 지우지 않는다", !/create table|drop table|truncate/i.test(sqlCode));
-  ok("SQL: 조회 수를 제한한다(과부하 방지)", /limit greatest/.test(sqlCode));
+  ok("[옛] schema-rank-badges.sql 은 점수를 tl_earned() 로 계산한다 (2026-08-19 이전 판 · 기록)",
+     /public\.tl_earned\(p\.id\)/.test(sqlCode));
+  ok("[옛] SQL: 테이블을 만들거나 지우지 않는다", !/create table|drop table|truncate/i.test(sqlCode));
+  ok("[옛] SQL: 조회 수를 제한한다(과부하 방지)", /limit greatest/.test(sqlCode));
+  ok("[옛] 옛 파일을 지우지 않았다(기록으로 남긴다)",
+     fs.existsSync(path.join(REPO, "supabase", "schema-rank-badges.sql")));
+
+  /* ---------- 정본: schema-rank-1000.sql ---------- */
+  const 정본경로 = path.join(REPO, "supabase", "schema-rank-1000.sql");
+  ok("[정본] schema-rank-1000.sql 이 있다", fs.existsSync(정본경로));
+
+  const 정본 = fs.existsSync(정본경로) ? fs.readFileSync(정본경로, "utf8") : "";
+  const 정본코드 = 정본.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+
+  ok("[정본] rank_points_all() 을 다시 정의해 옛 판을 덮는다",
+     /create or replace function public\.rank_points_all\(/.test(정본코드));
+
+  /* 정본의 rank_points_all() 본문만 잘라서 봅니다 — 여기에 tl_earned 가
+     하나라도 있으면 계급이 다시 TL 에 묶인 것입니다. */
+  const 시작 = 정본코드.indexOf("function public.rank_points_all(");
+  const 정본본문 = 시작 >= 0 ? 정본코드.slice(시작, 시작 + 800) : "";
+  ok("[정본] rank_points_all() 구간을 찾았다", 정본본문.length > 100, String(정본본문.length));
+  ok("[정본] 계급 점수에 tl_earned() 를 쓰지 않는다 (TL 과 분리)",
+     !/tl_earned/.test(정본본문));
+  ok("[정본] 계급 점수는 rank_points() 로 계산한다",
+     /public\.rank_points\(p\.id\)/.test(정본본문));
+
+  /* 정본 rank_points() 는 지갑 자산 배율입니다 — TL 화폐가 아닙니다. */
+  ok("[정본] rank_points() 가 자산 배율(log2 · 2배당 1000점)로 계산한다",
+     /log\(2, public\.rank_assets\(p_uid\) \/ ta\.initial_balance\) \* 1000/.test(정본코드));
+  ok("[정본] 어떤 함수에도 tl_earned() 가 안 들어간다",
+     !/tl_earned/.test(정본코드));
+  ok("[정본] 옛 판을 덮는다는 사실이 파일에 적혀 있다",
+     /schema-rank-badges\.sql/.test(정본));
+  ok("[정본] 비회원도 랭킹표 계급을 볼 수 있게 권한을 준다",
+     /grant execute on function public\.rank_points_all to anon/.test(정본코드));
 }
 
 /* ---------- 크기 규격 ---------- */

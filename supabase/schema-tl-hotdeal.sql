@@ -1,3 +1,38 @@
+-- #########################################################################
+-- ##                                                                     ##
+-- ##   ⚠ 이 파일의 TL 계산 함수 3개는 대체됐습니다                       ##
+-- ##                                                                     ##
+-- ##   정본은  supabase/schema-tl-realtime.sql  입니다.                  ##
+-- ##                                                                     ##
+-- ##   이 파일을 실행해도 TL 계산식은 바뀌지 않습니다.                   ##
+-- ##   (상점 부분만 적용됩니다 — 그 부분은 그대로 살아 있습니다)         ##
+-- ##                                                                     ##
+-- ##   TL 계산식을 바꾸려면 schema-tl-realtime.sql 을 실행하세요.        ##
+-- ##                                                                     ##
+-- #########################################################################
+--
+--   ▸ 무엇이 막혀 있나 (주석 처리 · 원문은 아래에 그대로 보존)
+--       public.tl_earned(uuid)        획득 TL
+--       public.tl_balance(uuid)       보유 TL
+--       public.tl_balance_info()      화면 표시용
+--       + 위 tl_balance_info 에 대한 grant execute
+--
+--   ▸ 무엇이 그대로 살아 있나 (이 파일을 Run 하면 이것들이 적용됩니다)
+--       tl_products / tl_purchases / tl_transactions  테이블 · 인덱스 · RLS
+--       purchase_tl_product()  구매 함수 + grant
+--       기본 상품 등록(insert into public.tl_products ... on conflict do nothing)
+--       profiles.rank_points 컬럼 보장
+--
+--   ▸ 처음 세팅하는 서버라면 실행 순서
+--       1) 이 파일 (상점)
+--       2) supabase/schema-tl-realtime.sql (TL 계산 함수 3개 — 정본)
+--       purchase_tl_product() 는 tl_balance() 를 부르므로 2)가 반드시 필요합니다.
+--
+--   ▸ 이 봉인은 tests/tl-hotdeal-seal.test.js 가 지킵니다.
+--     주석을 하나라도 지우면 npm test 가 실패합니다.
+-- =========================================================================
+
+
 -- =========================================================================
 -- TL 핫딜 — 상품 / 구매내역 / TL 거래내역
 -- =========================================================================
@@ -118,67 +153,92 @@ create policy "tl_transactions_select_own" on public.tl_transactions
   for select using (auth.uid() = user_id);
 
 
--- ---------------- 4) 획득 TL (= 계급 점수) ----------------
--- js/rank.js 의 calculatePoints() 와 같은 공식입니다.
---   청산 거래 1건당 10점 + 실현 수익률 1%당 20점(손실은 0으로) + 수동 가감점
--- 배점을 바꿀 일이 생기면 rank.js 와 이 함수를 같이 고쳐야 합니다.
-create or replace function public.tl_earned(p_uid uuid)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    coalesce((select count(*) from public.trades t where t.user_id = p_uid), 0) * 10
-    + greatest(0, coalesce((
-        select case when ta.initial_balance > 0
-                    then (ta.realized_pnl / ta.initial_balance) * 100
-                    else 0 end
-        from public.trading_accounts ta where ta.user_id = p_uid), 0)) * 20
-    + coalesce((select pr.rank_points from public.profiles pr where pr.id = p_uid), 0);
-$$;
-
--- ---------------- 5) 보유 TL = 획득 - 사용 ----------------
-create or replace function public.tl_balance(p_uid uuid)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select public.tl_earned(p_uid)
-       + coalesce((select sum(amount) from public.tl_transactions x where x.user_id = p_uid), 0);
-$$;
-
--- 화면 표시용 — 획득/사용/보유를 한 번에 돌려줍니다.
-create or replace function public.tl_balance_info()
-returns json
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
-declare
-  uid uuid := auth.uid();
-  earned numeric;
-  spent numeric;
-begin
-  if uid is null then
-    return json_build_object('logged_in', false, 'earned', 0, 'spent', 0, 'balance', 0);
-  end if;
-  earned := public.tl_earned(uid);
-  spent := coalesce((select -sum(amount) from public.tl_transactions x
-                     where x.user_id = uid and x.amount < 0), 0);
-  return json_build_object(
-    'logged_in', true,
-    'earned', earned,
-    'spent', spent,
-    'balance', earned - spent);
-end;
-$$;
-
-grant execute on function public.tl_balance_info to authenticated;
+-- =========================================================================
+-- ⛔ [봉인] TL 계산 함수 3개 — 여기서는 만들지 않습니다 (2026-08-24)
+-- =========================================================================
+--   tl_earned() / tl_balance() / tl_balance_info()
+--
+--   아래는 옛 원문 그대로입니다. 전부 주석이라 실행되지 않습니다.
+--   정본은 supabase/schema-tl-realtime.sql 입니다.
+--   TL 계산식을 바꾸려면 그 파일을 실행하세요. 이 파일이 아닙니다.
+--
+--   ▸ 왜 막았나
+--       이 원문은 옛 공식입니다 — 거래횟수 × 10 + 수익률% × 20 + rank_points.
+--       0.001 BTC 를 1,000번 사고팔면 실력과 무관하게 10,000 TL 이 생깁니다.
+--       2026-08-24 대표 지시로 실시간 지급(schema-tl-realtime.sql)으로 바뀌었습니다.
+--       그런데 이 파일은 상점 기능이 같이 들어 있어 앞으로도 실행할 일이 있습니다.
+--       막아 두지 않으면, 상점을 손보려고 이 파일을 다시 Run 하는 순간
+--       TL 계산식이 조용히 옛 공식으로 되돌아갑니다. 오류도 안 나고 화면도
+--       멀쩡해서 아무도 모릅니다. 그래서 이 세 개만 주석으로 막았습니다.
+--
+--   ▸ 봉인 시작 — 여기부터 아래 [봉인 끝] 까지 전부 주석(기록)입니다.
+-- -------------------------------------------------------------------------
+-- -- ---------------- 4) 획득 TL (= 계급 점수) ----------------
+-- -- js/rank.js 의 calculatePoints() 와 같은 공식입니다.
+-- --   청산 거래 1건당 10점 + 실현 수익률 1%당 20점(손실은 0으로) + 수동 가감점
+-- -- 배점을 바꿀 일이 생기면 rank.js 와 이 함수를 같이 고쳐야 합니다.
+-- create or replace function public.tl_earned(p_uid uuid)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+--   select
+--     coalesce((select count(*) from public.trades t where t.user_id = p_uid), 0) * 10
+--     + greatest(0, coalesce((
+--         select case when ta.initial_balance > 0
+--                     then (ta.realized_pnl / ta.initial_balance) * 100
+--                     else 0 end
+--         from public.trading_accounts ta where ta.user_id = p_uid), 0)) * 20
+--     + coalesce((select pr.rank_points from public.profiles pr where pr.id = p_uid), 0);
+-- $$;
+--
+-- -- ---------------- 5) 보유 TL = 획득 - 사용 ----------------
+-- create or replace function public.tl_balance(p_uid uuid)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+--   select public.tl_earned(p_uid)
+--        + coalesce((select sum(amount) from public.tl_transactions x where x.user_id = p_uid), 0);
+-- $$;
+--
+-- -- 화면 표시용 — 획득/사용/보유를 한 번에 돌려줍니다.
+-- create or replace function public.tl_balance_info()
+-- returns json
+-- language plpgsql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+-- declare
+--   uid uuid := auth.uid();
+--   earned numeric;
+--   spent numeric;
+-- begin
+--   if uid is null then
+--     return json_build_object('logged_in', false, 'earned', 0, 'spent', 0, 'balance', 0);
+--   end if;
+--   earned := public.tl_earned(uid);
+--   spent := coalesce((select -sum(amount) from public.tl_transactions x
+--                      where x.user_id = uid and x.amount < 0), 0);
+--   return json_build_object(
+--     'logged_in', true,
+--     'earned', earned,
+--     'spent', spent,
+--     'balance', earned - spent);
+-- end;
+-- $$;
+--
+-- grant execute on function public.tl_balance_info to authenticated;
+-- -------------------------------------------------------------------------
+-- ⛔ [봉인 끝] 위 세 함수는 여기서 만들어지지 않습니다.
+--   정본: supabase/schema-tl-realtime.sql
+--   이 주석을 지우면 tests/tl-hotdeal-seal.test.js 가 실패합니다.
+-- =========================================================================
 
 
 -- ---------------- 6) 구매 (하나의 트랜잭션) ----------------
