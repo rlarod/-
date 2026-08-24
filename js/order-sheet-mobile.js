@@ -111,10 +111,33 @@ App.OrderSheetMobile = (function () {
     head.className = HEAD_CLASS;
     head.innerHTML =
       '<span class="tl-sheet-title">주문</span>' +
+      /* 어느 쪽으로 열었는지 알려주는 배지. 글자는 아래 setSideBadge() 가
+         채웁니다(라벨일 뿐, 어떤 값도 계산하지 않습니다). */
+      '<span class="tl-sheet-side"></span>' +
       '<button type="button" class="tl-sheet-close" aria-label="주문창 닫기">✕</button>';
     col.insertBefore(head, col.firstChild);
     head.querySelector(".tl-sheet-close").addEventListener("click", function () { close(); });
     return head;
+  }
+
+  /* 시트 머리말 배지 — "지금 어느 쪽으로 열었는지"를 시트를 열자마자
+     보이게 합니다. 확인 버튼(#btn-long/#btn-short)에 붙는 외곽선만으로는
+     그 버튼이 화면 밖에 있을 때 아무 신호가 없었습니다.
+     라벨만 바꿉니다 — 주문 로직·값과는 무관합니다. */
+  function setSideBadge(side) {
+    var head = document.querySelector("." + HEAD_CLASS);
+    var badge = head ? head.querySelector(".tl-sheet-side") : null;
+    if (!badge) return;
+    if (side === "long") {
+      badge.setAttribute("data-side", "long");
+      badge.textContent = "매수 / 롱";
+    } else if (side === "short") {
+      badge.setAttribute("data-side", "short");
+      badge.textContent = "매도 / 숏";
+    } else {
+      badge.removeAttribute("data-side");
+      badge.textContent = "";
+    }
   }
 
   /* ---------- 열기 / 닫기 ---------- */
@@ -133,6 +156,7 @@ App.OrderSheetMobile = (function () {
       if (side === "long" || side === "short") panel.setAttribute("data-tl-side", side);
       else panel.removeAttribute("data-tl-side");
     }
+    setSideBadge(side);
     col.scrollTop = 0;
   }
 
@@ -142,6 +166,7 @@ App.OrderSheetMobile = (function () {
     document.documentElement.classList.remove("tl-sheet-lock");
     var panel = orderPanel();
     if (panel) panel.removeAttribute("data-tl-side");
+    setSideBadge(null);
     /* 배경 스크롤을 잠그는 동안 위치가 밀리는 브라우저가 있어 되돌립니다 */
     window.scrollTo(0, savedScrollY);
   }
@@ -162,6 +187,7 @@ App.OrderSheetMobile = (function () {
       document.documentElement.classList.remove("tl-sheet-lock");
       var p0 = orderPanel();
       if (p0) p0.removeAttribute("data-tl-side");
+      setSideBadge(null);
       return;
     }
     ensureHead();

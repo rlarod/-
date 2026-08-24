@@ -4049,3 +4049,85 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
     outline:2px solid rgba(231,236,245,0.65);outline-offset:-2px;
   }
 }
+
+/* =========================================================================
+ * [모바일 3단계-보완] 폰에서 주문 확인 버튼이 화면 밖에 있던 것 (2026-08-24)
+ * =========================================================================
+ * ── 무엇이 문제였나 (실측, 시트를 연 직후 scrollTop=0) ─────────────────
+ *   시트 내용은 1,233px 인데 시트가 가질 수 있는 높이는 100vh-56px 뿐이라
+ *   (667 → 610 / 800 → 743) 처음부터 다 못 들어갑니다. 그래서 확인 버튼
+ *   (#btn-long / #btn-short, 높이 46px)이 **화면 높이와 무관하게 항상
+ *   top:778px** 에 있었습니다.
+ *
+ *     기기            버튼 top   화면 높이   46px 중 보이는 양
+ *     360x800          778        800        22px (절반 잘림)
+ *     375x667          778        667         0px (전혀 안 보임)
+ *     390x844          778        844        46px
+ *
+ *   375x667(아이폰 SE·8)에서는 회원이 폰으로 주문을 아예 못 넣습니다.
+ *   게다가 매수로 열든 매도로 열든 시트가 똑같아 보였습니다 —
+ *   어느 쪽인지 알려주는 표시(data-tl-side 외곽선)가 붙는 대상이
+ *   바로 이 화면 밖 버튼이었기 때문입니다.
+ *
+ * ── 어떻게 고쳤나 ─────────────────────────────────────────────────────
+ *   1) 확인 버튼 줄(.order-buttons)만 position:sticky 로 시트 바닥에
+ *      붙였습니다. **DOM 은 그대로**입니다 — 버튼을 옮기지 않았고,
+ *      id(btn-long / btn-short)도 그대로라 js/ui.js 의 주문 로직이
+ *      한 글자도 안 바뀝니다. 스크롤은 나머지 내용만 흐릅니다.
+ *   2) 시트 머리말에 어느 쪽으로 열었는지 배지를 답니다
+ *      (js/order-sheet-mobile.js 가 .tl-sheet-side 의 글자만 채웁니다).
+ *
+ *   색은 확정 팔레트 + 기존 주문 버튼 색 그대로입니다
+ *   (--ami-btn-green #1EA95A / --ami-btn-red #D93B4A, 글자는 어두운 #0A0F1C).
+ *   그림자는 안 씁니다 — 위쪽 1px 테두리 + 흰색 3% inset 만.
+ *
+ * ── 되돌리는 방법 ─────────────────────────────────────────────────────
+ *   이 블록(=[모바일 3단계-보완])만 지우면 됩니다. 지우면 확인 버튼이
+ *   다시 시트 안에서 같이 스크롤되는 예전 상태로 돌아갑니다.
+ * ========================================================================= */
+@media (max-width:700px){
+  /* ---- 확인 버튼을 시트 바닥에 고정 ---- */
+  body[data-tl-order-sheet="open"] .main-grid .side-column .amitalk-order .order-buttons{
+    position:sticky;bottom:0;z-index:3;
+    /* 시트 좌우 padding(8px) 만큼 바깥으로 빼서 바닥에 꽉 차게 놓습니다 */
+    margin:8px -8px 0;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    background:var(--bg);
+    border-top:1px solid var(--border);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);  /* 그림자 아님 — 얇은 선 */
+  }
+  /* 고정된 버튼 줄이 마지막 내용을 덮지 않도록 그만큼 자리를 비웁니다 */
+  body[data-tl-order-sheet="open"] .main-grid .side-column .amitalk-order .ami-promo{
+    margin-bottom:8px;
+  }
+  /* 누른 쪽을 더 또렷하게 — 반대쪽도 그대로 눌립니다(기능 변화 없음) */
+  body[data-tl-order-sheet="open"] .amitalk-order[data-tl-side="long"] .order-btn.long,
+  body[data-tl-order-sheet="open"] .amitalk-order[data-tl-side="short"] .order-btn.short{
+    outline:2px solid rgba(231,236,245,0.85);outline-offset:-2px;
+  }
+
+  /* ---- 시트 머리말의 방향 배지 ----
+     머리말은 justify-content:space-between 이라 가운데 항목인 배지가 한가운데로
+     떠 버립니다. 머리말 규칙을 다시 쓰면 **같은 선택자가 두 벌**이 되므로
+     (테스트가 잡습니다) 배지 쪽에 margin-right:auto 만 줘서 남는 자리를
+     배지 오른쪽이 다 먹게 합니다 — 제목·배지는 왼쪽, ✕ 는 오른쪽 끝. */
+  body[data-tl-order-sheet="open"] .tl-sheet-side{
+    margin-right:auto;
+    display:inline-block;margin-left:8px;padding:4px 10px;
+    border-radius:10px;                      /* 카드 모서리 10px */
+    font-family:var(--sans);font-size:16px;font-weight:700;
+    color:#0A0F1C;                           /* 밝은 배경에는 어두운 글자 */
+  }
+  /* ⚠ --ami-btn-* 는 .amitalk-order 안에서만 정의된 변수입니다. 배지는 시트
+     머리말(주문 패널 바깥)에 있어 그 변수를 못 받습니다 — 그래서 값이 비면
+     배경이 투명해지고 어두운 글자가 어두운 배경에 묻힙니다(실제로 겪었습니다).
+     아래처럼 확인 버튼과 **같은 색값**을 대체값으로 함께 적습니다. */
+  .tl-sheet-side[data-side="long"]{background:var(--ami-btn-green,#1EA95A);}
+  .tl-sheet-side[data-side="short"]{background:var(--ami-btn-red,#D93B4A);}
+  /* 호가 행을 눌러 연 경우처럼 방향이 없을 때는 배지를 감춥니다.
+     위 규칙(특정도 0,2,1)보다 낮으면 안 먹으므로 같은 앞머리를 붙입니다. */
+  body[data-tl-order-sheet="open"] .tl-sheet-side:not([data-side]),
+  body[data-tl-order-sheet="open"] .tl-sheet-side[data-side=""]{display:none;}
+}
+/* 데스크톱에서는 배지 자체가 없는 것과 같습니다(마크업은 남습니다) */
+.tl-sheet-side{display:none;}
