@@ -225,14 +225,20 @@ console.log("\n[돌연변이] 위험한 문장을 넣으면 정말 실패하는�
      !(mutated.indexOf(a) < mutated.search(/delete from public\.profiles\b/)));
 }
 {
-  /* 저장소에 이미 있는 위험한 파일이 이 검사에 실제로 걸리는지 확인합니다.
-     (그 파일 자체는 손대지 않습니다 - 검사가 진짜인지 보는 용도입니다) */
+  /* cleanup-test-data.sql 에 있던 "전원 삭제" 문장이 이 검사에 실제로
+     걸리는지 확인합니다 — 검사가 진짜인지 보는 용도입니다. */
+  const historic = "delete from auth.users where id is not null";
+  ok("전원 삭제 문장은 이 검사에 걸린다(검사가 진짜다)", isFakeWhere(historic));
+
+  /* 그 파일은 2026-08-24 에 삭제문을 주석으로 막아 실행되지 않게 했습니다.
+     (파일은 기록으로 남겨 두었습니다. 자세한 검사는
+      tests/sql-mass-delete-guard.test.js 가 합니다) */
   const legacy = path.join(REPO, "supabase", "cleanup-test-data.sql");
   if (fs.existsSync(legacy)) {
-    const st = strip(fs.readFileSync(legacy, "utf8")).split(";")
-      .map((s) => s.trim()).filter(Boolean).filter((s) => /^delete\s+from/i.test(s));
-    ok("기존 cleanup-test-data.sql 은 이 검사에 걸린다(검사가 진짜다)",
-       st.filter(isFakeWhere).length > 0);
+    const legacyBody = strip(fs.readFileSync(legacy, "utf8"));
+    ok("cleanup-test-data.sql 에 실행되는 DELETE 가 없다(봉인돼 있다)",
+       !/delete\s+from/i.test(legacyBody),
+       (legacyBody.match(/delete\s+from[^\n;]*/i) || [""])[0]);
   } else {
     ok("기존 cleanup-test-data.sql 이 없다(검사 생략)", true);
   }
