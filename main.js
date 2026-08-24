@@ -63,7 +63,7 @@
    * 모든 구독자가 준비된 상태에서 첫 tick부터 놓치지 않고 반영됩니다.
    * ------------------------------------------------ */
   function boot() {
-    const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "Trading", "OrderInfoPanel", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
+    const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "TradesFit", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "Trading", "OrderInfoPanel", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
       ⚡ 알림 띠를 없애고 알림을 다시 채팅에 보이게 했습니다.
       되살리려면 이 주석을 풀고 index.html 의 <script src="js/chat-split.js"> 도 푸세요. */
       "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI", "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS"];

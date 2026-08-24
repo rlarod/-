@@ -3834,3 +3834,19 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
  * ========================================================================= */
 #recent-trades-list{scrollbar-width:none;-ms-overflow-style:none;}
 #recent-trades-list::-webkit-scrollbar{display:none;}
+
+/* =========================================================================
+ * 최근 체결 — 칸에 들어가는 만큼만 보이기 (2026-08-24, 대표 지시)
+ * =========================================================================
+ * "칸에 닿으면 자동으로 없어지게" — 넘치는 오래된 줄에 js/trades-fit.js 가
+ * data-rt-clipped 속성을 붙이고, 여기서 감춥니다. (class 가 아니라 속성인 이유:
+ * js/trades.js 의 render() 가 체결마다 행의 className 을 통째로 덮어씁니다.) 넘침이 없어지므로 스크롤도,
+ * 스크롤 막대도 애초에 생기지 않습니다(위 3835행 막대 감춤은 안전판으로 유지).
+ *
+ * 감추는 것은 "화면"뿐입니다 — 행 DOM 도, js/trades.js 의 30건 배열도
+ * 그대로 있습니다. 속성만 떼면 즉시 다시 보입니다.
+ *
+ * 되돌리는 방법: index.html 의 <script src="js/trades-fit.js"> 한 줄과
+ * main.js 의 "TradesFit" 한 단어를 지우면 30줄 전부 다시 보입니다.
+ * ========================================================================= */
+#recent-trades-list .ob-row[data-rt-clipped]{display:none;}
