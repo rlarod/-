@@ -3629,6 +3629,36 @@ html[data-theme="dark"] .header-notice-tag{
   color:#fff;
 }
 
+/* ---- ⑥ 빨강이 손익 아닌 곳에 남아 있던 세 자리 (2026-08-24) ------------
+   확정 팔레트: "빨강은 손익 표시에만". 아래 세 곳은 손익과 무관한데
+   빨강(#F0506E)이라 화면이 경고투성이로 읽혔습니다. 하는 일이 서로 달라
+   같은 색으로 묶지 않고 위계에 맞춰 나눴습니다.
+
+     자리                    바꾸기 전            바꾼 뒤              대비(#101727 위)
+     .notice-rank            #F0506E 5.18:1      #9BA5B8 (보조 밝은) 7.21:1
+     .notice-comment-count   #F0506E 5.18:1      #838DA4 (보조)      5.38:1
+     .board-page-btn.active  #F0506E 5.18:1      #0A0F1C on #F0B429  10.26:1
+
+   제목(#E7ECF5 15.09:1) > 인기글 순위(7.21:1) > 댓글 수(5.38:1) 로
+   위계가 잡힙니다. 셋 다 대비가 전보다 낮아지지 않았습니다.
+   되돌리려면 아래 세 규칙을 지우면 원래 빨강으로 돌아갑니다. */
+
+/* 인기글 "N위" — 순위 표시지 손실이 아닙니다. 곁다리 정보라 보조색으로. */
+html[data-theme="dark"] .notice-rank{color:var(--text-dim);}
+
+/* 제목 옆 댓글 수 — 가장 곁다리라 한 단계 더 낮은 보조색으로. */
+html[data-theme="dark"] .notice-comment-count{color:var(--text-faint);}
+
+/* 커뮤니티 현재 페이지 번호 — "지금 여기"라 강조가 필요합니다.
+   선택된 탭(.notice-tab-btn.active)이 이미 골드라 같은 언어로 맞춥니다.
+   골드 배경에는 어두운 글자를 씁니다(흰 글자는 1.86:1 로 안 읽힙니다). */
+html[data-theme="dark"] .board-page-btn.active{
+  color:#0A0F1C;
+  background:var(--gold);
+  border-color:var(--gold);
+  text-decoration:none;
+}
+
 /* 심볼 배지 — 금색 배경에 흰 글자라 읽기 어려웠습니다(실측).
    밝은 배경에는 어두운 글자를 씁니다. 카카오 버튼과 같은 원칙입니다. */
 html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
@@ -4181,15 +4211,47 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
    박스를 세로로 쌓는 부분은 위쪽 @media (max-width:700px) 안의
    .page-left > .notice-board-wrap 규칙에 있습니다.
    되돌리려면 아래 @media 블록을 통째로 지우면 됩니다. */
-@media (max-width:700px){
+/* 2026-08-24 보강 — 768(태블릿)에서도 같은 잘림이 남아 있었습니다.
+   "폰만" 이 아니라 "잘리는 폭 전부" 로 넓혔습니다. 실측(수정 전, 비로그인):
+     폭     제목 필요/보임   숨은 양   탭 필요/보임   가려진 탭
+     360    (두 줄로 흐름)   0        342/342        0
+     768    465 / 345       120px    383/371        분석게시판 12px
+     1024   (한 줄에 들어감) 0        499/499        0
+     1200   0               0        587/587        0
+     1440   0               0        707/707        0
+     1920   0               0        721/721        0
+   제목이 잘리는 구간은 공지/커뮤니티가 2칸 그리드인 701~1007px 입니다
+   (칸 폭 = (창폭-22)/2, 안쪽여백 28px 을 빼고 465px 이 들어가려면 창 1008px).
+   여유 8px 짜리 아슬아슬한 통과를 남기지 않으려고 1023px 까지 덮습니다.
+   탭 줄이 넘치는 구간은 701~791px 이라(칸 385px 필요) 800 미만만 좁힙니다. */
+@media (max-width:1023px){
   /* 한 줄 고정(white-space:nowrap)을 풀어 두 줄로 흐르게 합니다.
+     white-space:normal 은 "넘칠 때만" 접히므로, 짧은 제목은 그대로 한 줄입니다.
      👍 추천수는 flex:0 0 auto 라 그대로 오른쪽 끝에 붙습니다 —
      제목이 두 줄이 되면 윗줄에 맞춰 정렬되도록 align-items 를 위로. */
   .notice-board-list li{white-space:normal;align-items:flex-start;}
   .notice-line{white-space:normal;overflow:visible;text-overflow:clip;}
+}
+
+@media (max-width:700px){
   /* 탭 줄 — 폰에서만 글자·좌우 여백을 줄여 탭 이름이 통째로 보이게 합니다.
      18px/10px 이면 인기글 줄이 383px 필요해 342px 안에 안 들어갑니다. */
   .notice-tab-btn{font-size:15px;padding:9px 7px;}
+}
+
+/* 701~767 — 여기가 오히려 폰보다 좁습니다. 두 칸 그리드라 칸 하나가
+   (701-22)/2 = 338px 이라서, 360 폰의 한 칸(342px)보다 작습니다.
+   글자를 더 줄이는 대신 폰과 똑같이 한 줄에 한 박스씩 쌓습니다.
+   그러면 칸이 681px 이 되어 탭도 제목도 원래 크기로 다 들어갑니다.
+   되돌리려면 이 블록을 지우면 이 구간만 두 칸으로 돌아갑니다. */
+@media (min-width:701px) and (max-width:767px){
+  .page-left > .notice-board-wrap{grid-template-columns:minmax(0,1fr);}
+}
+
+/* 768~799 — 두 칸이지만 칸이 371~385px 이라 탭 좌우 여백만 10px -> 7px.
+   글자 크기는 18px 그대로입니다. 인기글 탭 줄 383px -> 365px (칸 371px). */
+@media (min-width:768px) and (max-width:799px){
+  .notice-tab-btn{padding-left:7px;padding-right:7px;}
 }
 
 /* ---- ③ 게시판 댓글마다 계급장이 2개씩 붙던 것 --------------------------
@@ -4232,6 +4294,48 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
   /* 이 두 줄만 지우면 조회·추천이 다시 보입니다 */
   .board-gallery .bg-view,
   .board-gallery .bg-like{display:none;}
+}
+
+/* ---- ⑦ 커뮤니티 글 목록에 계급장 붙이기 (2026-08-24) ------------------
+   계급장이 댓글·채팅·랭킹에는 붙는데 글 목록에만 없어서, 누가 쓴 글인지
+   한눈에 안 보였습니다(디시인사이드 고정닉 아이콘 자리).
+   붙이는 쪽은 js/rank-badge-attach.js 의 attachBoardList() 입니다.
+
+   계급장 그림은 계급마다 비율이 달라 폭이 제각각입니다(이등병 107x31 이
+   가장 넓고, 병장급은 정사각형에 가깝습니다). 높이만 정하고 폭은 auto 라
+     높이 22px -> 최대 76px / 높이 18px -> 최대 62px
+   입니다. 글 목록 글쓴이 칸은 표 폭의 15% 라 22px 은 넘칩니다.
+   그래서 글 목록에서만 18px 로 씁니다(댓글·채팅은 그대로 22px/20px).
+
+   ⚠ 표가 넘치지는 않습니다 — .board-gallery 는 table-layout:fixed 이고
+     td 에 overflow:hidden 이 걸려 있어 칸 폭이 고정입니다. 대신 좁은 화면에서는
+     계급장이 닉네임을 밀어내 닉네임이 잘립니다. 그래서 폰(700px 이하)에서는
+     계급장만 화면에서 뺍니다. 마크업(<img>)은 그대로 있습니다.
+     되살리려면 아래 @media 안의 display:none 한 줄만 지우면 됩니다.
+   블록 전체를 지우면 계급장이 기본 22px 로 보입니다(칸을 넘겨 닉네임이 잘립니다). */
+/* ⚠ 이 칸에 display:flex 를 걸면 안 됩니다 — <td> 가 표 칸에서 빠져나와
+   table-layout:fixed 의 15% 폭을 잃고 11~31px 로 쪼그라듭니다(실측했습니다).
+   랭킹표(.leaderboard-nick-cell)는 fixed 표가 아니라 flex 가 먹혔지만
+   여기서는 안 됩니다. 계급장은 inline-block + vertical-align:middle 로만 붙입니다. */
+#board-list-body td.board-list-nick-cell img.rank-badge{
+  height:18px;margin-right:5px;vertical-align:middle;
+}
+
+@media (max-width:700px){
+  /* 폰에서는 글쓴이 칸이 61.6px 뿐이라 계급장(최대 62px)이 들어가면
+     닉네임이 통째로 밀려 나갑니다. 화면에서만 뺍니다(마크업 보존). */
+  #board-list-body td.board-list-nick-cell img.rank-badge{display:none;}
+}
+
+/* 701~900 (태블릿) — 계급장을 18px 그대로 두면 768 에서 글쓴이 칸이
+   109px 인데 113px 이 필요해 닉네임 끝 4px 이 잘렸습니다(실측).
+   계급장을 15px(최대 폭 52px)로 줄이고 글쓴이 칸을 15% -> 18% 로 넓힙니다.
+   제목 칸에서 3% 를 가져옵니다(제목은 원래 … 로 줄이는 칸입니다).
+   768 기준: 필요 102px / 칸 132px — 30px 여유. */
+@media (min-width:701px) and (max-width:900px){
+  #board-list-body td.board-list-nick-cell img.rank-badge{height:15px;margin-right:4px;}
+  .board-gallery .bg-author{width:18%;}
+  .board-gallery .bg-title{width:45%;}
 }
 
 /* ---- ⑤ 비회원인데 마이페이지에 로그아웃·회원탈퇴가 보이던 것 -----------

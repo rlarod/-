@@ -19,6 +19,7 @@ App.RankBadgeAttach = (function () {
   "use strict";
 
   var MARK = "data-rank-badge-done";
+  var MARK_LIST = "data-rank-list-done";   /* 글 목록 전용 표시 — 댓글용과 섞이지 않게 */
 
   var rankByNick = null;   // { 닉네임: 계급객체 }
   var loading = false;
@@ -127,17 +128,53 @@ App.RankBadgeAttach = (function () {
     });
   }
 
+  /* ---------------- 커뮤니티 글 목록 ----------------
+     글 목록은 <table> 이고 글쓴이 칸에는 클래스가 없습니다(.chat-msg-nick 이
+     아닙니다). 그래서 attachChat() 이 이 칸을 잡지 못하고, 댓글에서 났던
+     "계급장 2개" 는 여기서 일어나지 않습니다(붙인 뒤 개수를 셌습니다).
+
+     ⚠ js/board-gallery-style.js 가 각 행을 row.innerHTML 로 다시 조립합니다.
+        그래서 표시(MARK)를 <tr> 이 아니라 글쓴이 <td> 에 남깁니다 —
+        칸이 통째로 새로 만들어지면 표시도 같이 사라져서, 아래 MutationObserver
+        (subtree:true)가 다시 붙여 줍니다. <tr> 에 표시하면 계급장만 지워지고
+        표시는 남아 영영 안 붙습니다. */
+  function attachBoardList() {
+    if (!ready()) return;
+    var body = document.getElementById("board-list-body");
+    if (!body) return;
+    body.querySelectorAll("tr").forEach(function (tr) {
+      if (tr.classList.contains("empty")) return;
+      /* 갤러리형으로 바뀐 뒤에는 .bg-author, 바뀌기 전에는 두 번째 칸입니다. */
+      var cell = tr.querySelector(".bg-author");
+      if (!cell) {
+        var tds = tr.querySelectorAll("td");
+        if (tds.length < 2) return;
+        cell = tds[1];
+      }
+      if (cell.getAttribute(MARK_LIST)) return;
+      if (cell.querySelector(".rank-badge")) { cell.setAttribute(MARK_LIST, "1"); return; }
+      var rank = rankOf(cell.textContent);
+      if (!rank) return;   // 모르면 아무것도 붙이지 않습니다(잘못된 계급장 방지)
+      var img = App.RankBadge.el(rank, "community", rank.rank_name);
+      if (!img) return;
+      cell.classList.add("board-list-nick-cell");
+      cell.insertBefore(img, cell.firstChild);
+      cell.setAttribute(MARK_LIST, "1");
+    });
+  }
+
   function run() {
     try { attachLeaderboard(); } catch (e) { console.warn("[rank-badge-attach.js] 랭킹표 실패:", e); }
     try { attachChat(); } catch (e) { console.warn("[rank-badge-attach.js] 채팅 실패:", e); }
     try { attachBoard(); } catch (e) { console.warn("[rank-badge-attach.js] 커뮤니티 실패:", e); }
+    try { attachBoardList(); } catch (e) { console.warn("[rank-badge-attach.js] 글 목록 실패:", e); }
   }
 
   function init() {
     loadRanks();
     run();
     /* 목록이 다시 그려질 때마다 따라 붙입니다. */
-    var targets = ["leaderboard-body", "chat-messages", "board-comments-list"];
+    var targets = ["leaderboard-body", "chat-messages", "board-comments-list", "board-list-body"];
     targets.forEach(function (id) {
       var node = document.getElementById(id);
       if (!node || typeof MutationObserver === "undefined") return;
@@ -155,6 +192,7 @@ App.RankBadgeAttach = (function () {
   return {
     init: init, run: run, loadRanks: loadRanks, rankOf: rankOf,
     attachLeaderboard: attachLeaderboard, attachChat: attachChat, attachBoard: attachBoard,
+    attachBoardList: attachBoardList,
     _setMap: function (m) { rankByNick = m; },
   };
 })();
