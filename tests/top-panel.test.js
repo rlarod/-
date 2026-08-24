@@ -211,21 +211,24 @@ section("[2] 계급 시스템 — 19단계");
     for (let i = 1; i < table.length; i++) ok(table[i].min_points > table[i - 1].min_points, table[i].rank_name + " 기준점수 오류");
   });
 
+  /* 2026-08-24 대표 결정으로 승급 점수가 전부 바뀌었습니다.
+     대장 = 지갑 1000억원 = 초기자금의 약 667배 = 9381점. */
   t("점수 → 계급 변환", () => {
     eq(App.Rank.getRankName(0), "이병");
-    eq(App.Rank.getRankName(29), "이병");
-    eq(App.Rank.getRankName(30), "일병");
-    eq(App.Rank.getRankName(120), "병장");
-    eq(App.Rank.getRankName(520), "준위");
-    eq(App.Rank.getRankName(2070), "대장");
+    eq(App.Rank.getRankName(377), "이병");
+    eq(App.Rank.getRankName(378), "일병");
+    eq(App.Rank.getRankName(1138), "병장");
+    eq(App.Rank.getRankName(3322), "준위");
+    eq(App.Rank.getRankName(9380), "중장");
+    eq(App.Rank.getRankName(9381), "대장");
     eq(App.Rank.getRankName(999999), "대장");
   });
 
   t("다음 계급까지 남은 점수 안내", () => {
     const r = App.Rank.calculateRank(0);
     eq(r.next_rank_name, "일병");
-    eq(r.points_to_next, 30);
-    eq(App.Rank.calculateRank(2070).next_rank_name, null);
+    eq(r.points_to_next, 378);
+    eq(App.Rank.calculateRank(9381).next_rank_name, null);
   });
 
   t("계층(병/부사관/준사관/위관/영관/장성)이 4/4/1/3/3/4로 구분", () => {
@@ -254,7 +257,7 @@ section("[2] 계급 시스템 — 19단계");
   });
 
   t("계급 표시는 공통 함수 하나로", () => {
-    const html = App.Rank.renderNameWithRank("홍길동", App.Rank.calculateRank(120));
+    const html = App.Rank.renderNameWithRank("홍길동", App.Rank.calculateRank(1138));
     ok(/병장/.test(html) && /홍길동/.test(html) && /<svg /.test(html));
   });
 }
@@ -265,7 +268,9 @@ section("[3] 계급 점수 — 실제 거래 기록 기반");
   function tradeN(App, n) {
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     for (let i = 0; i < n; i++) {
-      App.Trading.openPosition("long", 2000, null, null);
+      /* 증거금 20,000 x 10배 = 20만 규모, +2% 청산 => 1건당 약 +3,800.
+         2026-08-24 승급 기준 상향(일병 = 1.3배 = 378점) 전에는 2,000 이었습니다. */
+      App.Trading.openPosition("long", 20000, null, null);
       App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61200, time: Date.now() });
       App.Trading.closePosition("수동청산");
       App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
@@ -334,7 +339,7 @@ section("[3] 계급 점수 — 실제 거래 기록 기반");
   t("거래를 쌓으면 계급이 올라감", () => {
     const { App } = boot();
     const low = App.Rank.getUserRank().rank_level;
-    tradeN(App, 8);
+    tradeN(App, 10);
     const high = App.Rank.getUserRank().rank_level;
     ok(high > low, "계급이 올라야 함 (" + low + " -> " + high + ")");
   });
@@ -544,8 +549,8 @@ section("[4] 사용자 정보 패널");
     const { doc, App } = boot({ nickname: "홍길동" });
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
     ok(/이병/.test(doc.getElementById("user-panel-body").textContent));
-    for (let i = 0; i < 6; i++) {
-      App.Trading.openPosition("long", 2000, null, null);
+    for (let i = 0; i < 10; i++) {
+      App.Trading.openPosition("long", 20000, null, null);
       App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 61200, time: Date.now() });
       App.Trading.closePosition("수동청산");
       App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 60000, time: Date.now() });
