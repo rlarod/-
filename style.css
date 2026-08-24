@@ -408,15 +408,18 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
 .main-grid{
   /* 폰트를 20% 키우면서 호가창/주문창이 좁아 글자가 넘쳤습니다.
      차트가 여전히 주 영역이되(56%) 우측 두 칼럼에 충분한 폭을 줍니다. */
-  /* ── 2026-08-21 갱신: 레퍼런스를 개미톡 → 바이낸스 선물로 바꿉니다 ──
-     예전 값(콘텐츠 686px 기준 차트 291 / 호가 115 / 주문 110 / 채팅 158
-     = 42.4 / 16.8 / 16.0 / 23.0)은 "오른쪽에 채팅 칸이 23% 있는" 구성이었고,
-     그 결과 1920 실측 차트가 42.4% 밖에 안 됐습니다.
-     알림을 가로 띠로 빼고 대화를 접이식으로 돌려 채팅 칸을 없앴으므로,
-     바이낸스 선물 데스크톱 1440 실측값
-       차트 62.7% · 호가 16.7% · 주문 20.9%  (docs/디자인-구조조사.md 2회차)
-     를 그대로 씁니다. 합이 100.3 이라 fr 로 그대로 적습니다. */
-  display:grid;grid-template-columns:627fr 167fr 209fr;gap:4px;
+  /* ── 2026-08-24 원복 (대표 결정 "B안") ────────────────────────────
+     2026-08-21 에 채팅 칸을 없앤다는 전제로 바이낸스 실측값
+       627fr 167fr 209fr (= 화면 대비 62.7 / 16.7 / 20.9)
+     로 바꿨습니다. 그런데 알림이 채팅에서 사라지는 문제로 채팅을 되살렸고,
+     채팅 칸 23%가 항상 자리를 차지하게 됐습니다.
+     그 상태에서 627/167/209 를 그대로 두면 호가창 칼럼이 1920 에서
+     240px 까지 좁아집니다(최근체결 세 칸이 겨우 들어가는 폭).
+     그래서 "채팅 칸이 있는" 원래 값으로 되돌립니다.
+       개미톡 실측(콘텐츠 686px 기준) 차트 291 / 호가 115 / 주문 110 / 채팅 158
+       = 화면 대비 42.4 / 16.8 / 16.0 / 23.0
+     차트가 좁아지는 것은 대표가 알고 고른 대가입니다. */
+  display:grid;grid-template-columns:556fr 220fr 210fr;gap:4px;
   margin-top:5px;
   /* 행 높이는 반드시 "확정값"이어야 합니다.
      js/chart.js가 autoSize:true(ResizeObserver로 컨테이너에 맞춰 리사이즈)라서,
@@ -708,6 +711,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .ob-asks,.ob-bids{display:flex;flex-direction:column;}
 
 .ob-row{
+  /* 2026-08-24 — 글자가 위아래로 겹치던 것을 고칩니다.
+     최근체결 목록(#recent-trades-list)은 세로 flex 이고 높이가 정해져 있어서,
+     30줄이 들어오면 flex 가 각 행을 15.8px 까지 줄여 버렸습니다(1440 실측).
+     그런데 글자가 차지하는 줄높이는 20.9px 이라 5.1px 이 행 밖으로 넘쳐
+     위아래 행과 겹쳤습니다. 행이 줄어들지 못하게 막으면 각 행이 제 높이를
+     갖고, 목록은 컨테이너 안에서 세로로 스크롤됩니다(30줄 그대로 유지).
+     되돌리려면 flex:0 0 auto 한 줄만 지우면 됩니다. */
+  flex:0 0 auto;
   position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
   padding:5px 4px;font-family:var(--mono);font-size:18.5px;line-height:1.35;overflow:hidden;border-radius:3px;
   cursor:pointer;
@@ -1514,8 +1525,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;align-items:center;
 }
 .up-value{
+  /* 2026-08-24 — 손익·지갑·수익률·보유 TL 이 화면에서 제일 중요한 숫자인데
+     통화 전환 바보다 작았습니다. 18.5px -> 24px.
+     되돌리려면 font-size 를 18.5px 로 되돌리면 됩니다. */
   padding:9px 12px;text-align:right;
-  font-family:var(--sans);font-size:18.5px;font-weight:600;color:var(--text);
+  font-family:var(--sans);font-size:24px;font-weight:700;color:var(--text);
   font-variant-numeric:tabular-nums lining-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
   display:flex;align-items:center;justify-content:flex-end;
@@ -1523,6 +1537,22 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .up-grid > :nth-child(-n+4){border-bottom:1px solid var(--border-soft);}
 .up-grid > :nth-child(2){border-right:1px solid var(--border-soft);}
 .up-grid > :nth-child(6){border-right:1px solid var(--border-soft);}
+
+/* 폰(600px 이하) — 2×2 로 두면 값 칸이 너무 좁아 숫자가 잘립니다.
+   ── 수정 전 실측(360px, 항목 4개 중 2개가 잘림) ────────────────────────
+     값 칸 안쪽 폭 80.6px  /  "98,765.4321" 실제 글자 폭 110.3px
+     → 29.7px 이 모자라 text-overflow:ellipsis 로 "98,765.43…" 처럼 잘렸습니다.
+     "+1,234.5678" 도 같은 값으로 잘렸습니다(손익·지갑 두 칸).
+   ── 고친 방법 ───────────────────────────────────────────────────────
+     한 줄에 [라벨 | 값] 하나씩, 네 줄로 세웁니다. 항목은 그대로 4개입니다.
+     값 칸 안쪽 폭이 80.6px -> 약 250px 이 되어 24px 로 키워도 남습니다.
+   되돌리려면 이 @media 블록만 지우면 2×2 로 돌아갑니다. */
+@media (max-width:600px){
+  .up-grid{grid-template-columns:auto minmax(0,1fr);}
+  .up-grid > :nth-child(-n+6){border-bottom:1px solid var(--border-soft);}
+  .up-grid > :nth-child(2){border-right:none;}
+  .up-grid > :nth-child(6){border-right:none;}
+}
 
 /* 하단 링크 줄 */
 /* 07단계 — 레퍼런스 하단 메뉴는 한 줄(높이 50px 환산)입니다.
@@ -1877,6 +1907,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .page-shell{grid-template-columns:minmax(0,1fr);gap:0;}
   .page-right{gap:6px;margin-top:6px;}
   .page-right .side-chat-panel > .page-chat-col{position:static;height:auto;max-height:none;}
+  /* 2026-08-24 — 채팅이 항상 열리면서 이 구간(1799px 이하)에서도 늘 보입니다.
+     대화가 없을 때 대화 칸이 16px 로 눌려 있었습니다(360 실측). 칼럼 높이가
+     auto 라 flex:1 이 나눠 가질 자리가 없어서였습니다. 최소 높이를 줍니다.
+     되돌리려면 이 한 규칙만 지우면 됩니다. */
+  .page-right .side-chat-panel .chat-messages{min-height:140px;max-height:46vh;}
 }
 
 /* 채팅이 우측 칼럼으로 빠졌으므로, 거래 영역은 왼쪽 폭을 전부 씁니다.
@@ -2011,8 +2046,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   /* 글자도 박스와 같이 폭에 비례 — 고정 px이면 넓은 화면에서 작아 보입니다 */
   .page-right .up-nick{font-size:clamp(18px, 0.72vw, 26px);}
   .page-right .up-rank-name{font-size:clamp(15px, 0.6vw, 21px);}
-  .page-right .up-value{font-size:clamp(18.5px, 0.75vw, 26px);}
-  .page-right .up-label{font-size:clamp(15px, 0.6vw, 21px);}
+  /* 이 구간은 내 정보 박스가 우측 칼럼(1920 실측 435.9px)이라 값 칸이 좁습니다.
+     "98,765.4321" 실측 폭 기준으로 22px 이 들어가는 한계라, 좌우 안쪽 여백을
+     12px -> 8px 로 줄여 자리를 만들고 22px 로 키웠습니다(18.5 -> 22). */
+  .page-right .up-value{font-size:clamp(22px, 0.75vw, 26px);padding:9px 8px;}
+  .page-right .up-label{font-size:clamp(15px, 0.6vw, 21px);padding:9px 8px;}
   .page-right .up-nav button{font-size:clamp(13.5px, 0.55vw, 19px);}
 }
 
@@ -2353,16 +2391,29 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   .position-close-cell{display:flex;gap:3px;justify-content:flex-end;}
 }
 
-/* 통화 줄은 두 칸으로 꽉 채웁니다. 위쪽 .up-currency 규칙이 다른 곳에서
-   덮여 폭이 줄어드는 일이 없도록 여기서 한 번 더 지정합니다. */
-.page-right .up-currency{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+/* 통화 전환 줄 — 2026-08-24 대표 지적: "USDT 노란 칸이 제일 크다".
+   실측(1920) 전: 화면 전폭 435.9 × 49.1px 의 금색 바. 그 아래 손익·지갑
+   숫자는 18.5px. 화면에서 제일 큰 것이 통화 전환 탭이라 위계가 뒤집혀
+   있었습니다. 중요한 것은 숫자입니다.
+   후: 오른쪽 끝에 붙는 작은 칩 두 개(각 ≈62 × 33px, 13.5px).
+   항목은 하나도 빼지 않았습니다 — USDT / 원화 둘 다 그대로 있고 동작도 같습니다.
+   되돌리려면 아래 두 규칙을 예전 값
+     .up-currency{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+     .up-currency button{font-size:clamp(15px,0.66vw,23px);padding:clamp(10px,0.55vw,18px) 2px;}
+   으로 되돌리면 됩니다. */
+.page-right .up-currency{
+  display:flex;justify-content:flex-end;gap:5px;width:auto;
+  padding:9px 12px 3px;
+}
 /* 통화 버튼이 다른 규칙(#EEEEEE 배경 등)에 덮이지 않도록 같은 강도로 지정합니다. */
 .page-right .up-currency button{
-  background:var(--surface);color:var(--text-dim);
-  font-size:clamp(15px, 0.66vw, 23px);font-weight:700;
-  padding:clamp(10px, 0.55vw, 18px) 2px;
+  background:var(--surface2);color:var(--text-dim);
+  font-size:13.5px;font-weight:700;line-height:1;
+  padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
 }
-.page-right .up-currency button.active{background:var(--gold);color:#fff;}
+/* 밝은 배경(금색)에는 어두운 글자 — 확정 팔레트 규칙.
+   예전 값은 color:#fff 라 금색 위 흰 글씨였습니다(대비 부족). */
+.page-right .up-currency button.active{background:var(--gold);color:#0A0F1C;border-color:var(--gold);}
 .page-right .up-currency button:hover:not(.active){background:var(--surface2);}
 
 /* =========================================================================
@@ -2496,7 +2547,10 @@ html[data-theme="dark"] .amitalk-order select{background:var(--surface2);color:v
   font-size:clamp(16px, 0.72vw, 25px);font-weight:700;color:var(--text-dim);
   padding:clamp(11px, 0.6vw, 20px) 2px;
 }
-.page-right .up-currency button{font-size:clamp(16px, 0.72vw, 25px);}
+/* 2026-08-24 — 위 규칙(13.5px 칩)을 덮지 않도록 같은 값으로 맞춥니다.
+   이 줄은 "내 정보 안의 전환 버튼 글자 확대" 묶음에 있던 것으로,
+   통화 전환이 화면 전폭 바였을 때의 값(최대 25px)이었습니다. */
+.page-right .up-currency button{font-size:13.5px;}
 
 /* 남아 있던 밝은 배경 2곳 — 비율 칩과 TP/SL 토글 */
 html[data-theme="dark"] .chip,
@@ -2957,14 +3011,16 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   background:rgba(0,0,0,0.5);
 }
 .lev-modal-card{
-  width:100%;max-width:420px;max-height:calc(100vh - 32px);overflow-y:auto;
+  /* 2026-08-24 — 글자를 키우면서 버튼 11개(1x~100x)가 한 줄에 덜 접히도록
+     420px -> 460px. 되돌리려면 420px 로. */
+  width:100%;max-width:460px;max-height:calc(100vh - 32px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--border);border-radius:3px;
   box-shadow:0 3px 8px rgba(0,0,0,0.35);
 }
 .lev-modal-head{
   display:flex;align-items:center;justify-content:space-between;
   padding:14px 18px;border-bottom:1px solid var(--border);
-  font-size:19px;font-weight:700;color:var(--text);
+  font-size:21px;font-weight:700;color:var(--text);
 }
 .lev-modal-x{
   border:0;background:transparent;color:var(--text-faint);
@@ -2972,47 +3028,52 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 .lev-modal-x:hover{color:var(--text);}
 .lev-modal-body{padding:18px;}
-.lev-modal-label{font-size:15px;color:var(--text-faint);margin-bottom:8px;}
+.lev-modal-label{font-size:17px;color:var(--text-faint);margin-bottom:8px;}
 .lev-modal-value{
   display:flex;align-items:baseline;justify-content:center;gap:4px;
   padding:14px 0 18px;
 }
 .lev-modal-value b{font-size:44px;font-weight:700;color:var(--gold);line-height:1;}
-.lev-modal-value span{font-size:22px;color:var(--text-faint);}
+.lev-modal-value span{font-size:26px;color:var(--text-faint);}
 .lev-modal-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .lev-preset{
-  flex:1 0 auto;min-width:56px;padding:9px 6px;
+  /* 2026-08-24 대표 지적: "버튼들(1x~100x)과 설명 글씨가 작다".
+     전: 글자 15px · 높이 약 35px.  후: 글자 18px · 높이 44px(손가락 기준 최소치).
+     되돌리려면 min-width:56px;padding:9px 6px;font-size:15px 로. */
+  flex:1 0 auto;min-width:62px;min-height:44px;padding:11px 8px;
   border:1px solid var(--border);border-radius:3px;
-  background:var(--surface);color:var(--text);font-family:inherit;font-size:15px;cursor:pointer;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:18px;cursor:pointer;
 }
 .lev-preset:hover{background:var(--surface2);}
-.lev-preset.active{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:700;}
+.lev-preset.active{background:var(--gold);border-color:var(--gold);color:#0A0F1C;font-weight:700;}
 .lev-modal-range{width:100%;display:block;}
 .lev-modal-scale{
   display:flex;justify-content:space-between;
-  font-size:13px;color:var(--text-faint);margin-top:4px;
+  font-size:15px;color:var(--text-faint);margin-top:6px;
 }
 .lev-modal-note{
   margin:14px 0 0;padding:10px 12px;border-radius:3px;
-  background:var(--surface2);color:var(--text-faint);font-size:14px;line-height:1.5;
+  background:var(--surface2);color:var(--text-faint);font-size:15.5px;line-height:1.55;
 }
 .lev-modal-foot{
   display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);
 }
 .lev-modal-btn{
-  flex:1;height:44px;border:1px solid var(--border);border-radius:3px;
+  flex:1;height:50px;border:1px solid var(--border);border-radius:3px;
   background:var(--surface);color:var(--text);
-  font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
+  font-family:inherit;font-size:18px;font-weight:700;cursor:pointer;
 }
 .lev-modal-btn:hover{background:var(--surface2);}
-.lev-modal-ok{background:var(--gold);border-color:var(--gold);color:#fff;}
+/* 금색 배경에는 어두운 글자 — 확정 팔레트 규칙(예전 값 color:#fff) */
+.lev-modal-ok{background:var(--gold);border-color:var(--gold);color:#0A0F1C;}
 .lev-modal-ok:hover{filter:brightness(1.06);background:var(--gold);}
 
 /* 모바일에서 화면 밖으로 잘리지 않게 */
 @media (max-width:520px){
   .lev-modal-card{max-width:none;}
   .lev-modal-value b{font-size:36px;}
-  .lev-preset{min-width:48px;font-size:14px;}
+  /* 폰에서도 손가락 기준 44px 은 지킵니다(글자만 한 단계 줄임) */
+  .lev-preset{min-width:54px;font-size:16.5px;padding:11px 5px;}
 }
 
 /* 비회원에게 잠긴 버튼 — 눌러도 로그인 안내가 뜹니다.
@@ -3437,24 +3498,29 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
   text-align:left;
 }
 .lev-modal-warn-main{
-  margin:0 0 6px;
+  /* 2026-08-24 대표 지적: "돈에 직결되는 내용인데 작다".
+     15px -> 18px. 안내(note) 15.5px 보다 확실히 큽니다.
+     되돌리려면 font-size:15px 로. */
+  margin:0 0 8px;
   color:#FF8A9B;
-  font-size:15px;
+  font-size:18px;
   font-weight:700;
   line-height:1.45;
 }
 /* 20배 이상은 한 단계 더 세게 — 이때부터 1%대에서 청산됩니다 */
 .lev-modal-warn-main.lev-modal-warn-high{
-  font-size:16px;
+  font-size:19.5px;
   color:#FF6A80;
 }
 .lev-modal-warn-sub{
-  margin:2px 0 0;
+  margin:4px 0 0;
   color:var(--text-faint);
-  font-size:13px;
-  line-height:1.5;
+  font-size:15px;
+  line-height:1.55;
 }
-.lev-modal-note{font-size:13px;color:var(--text-faint);margin-top:10px;}
+/* 2026-08-24 — 13px -> 15.5px. 위쪽 .lev-modal-note 와 같은 값으로 맞춥니다
+   (두 벌이라 뒤엣것이 이깁니다 — tests/css-duplicate-rules.test.js 기준선에 등록됨). */
+.lev-modal-note{font-size:15.5px;color:var(--text-faint);margin-top:10px;}
 
 /* ===== 채팅 안내 줄 — 자리를 항상 같게 =====
    글자가 들어올 때마다 높이가 14px ↔ 28px 로 오갔습니다(실측).
@@ -3666,90 +3732,80 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 
 
 /* =========================================================================
- * 채팅 분리 (2026-08-21) — ⚡ 알림 띠 + 💬 대화 접이식
+ * 채팅 원복 (2026-08-24 대표 결정 "B안") — ⚡ 알림 띠를 없애고 채팅만 남깁니다
  * =========================================================================
- * 무엇을 왜 바꿨나
- *   1440 실측 기준 채팅 13줄 중 10줄이 "누가 익절/손절했다"는 자동 알림이고
- *   실제 대화는 3줄이었습니다. 그 알림 하나 때문에 오른쪽 세로 칸 23%를 통째로
- *   쓰고 있었고, 그만큼 차트가 좁았습니다(1920 실측 차트 42.4%).
+ * ── 무슨 일이 있었나 ─────────────────────────────────────────────────
+ * 2026-08-21 에 "알림은 위쪽 가로 띠, 채팅에는 대화만" 으로 나눴습니다.
+ * 그때 채팅 목록의 알림 줄을 아래 한 줄로 숨겼습니다.
  *
- *   ⚡ 알림 → 화면 맨 위 얇은 가로 띠(44px)로 흐르게. 항상 보입니다.
- *   💬 대화 → 접이식. 기본은 접힘, 오른쪽 아래 💬 버튼으로 열고 닫습니다.
+ *     html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
  *
- * 아무것도 지우지 않았습니다. 채팅 패널 마크업과 id(#chat-messages 등)는
- * 그대로 있고, 접었을 때 CSS 로만 숨깁니다. js/chat.js 무수정.
+ * 그런데 대표가 실제로 익절을 했는데 채팅에 안 떴습니다.
+ * 실측(1440): 채팅 안에 알림 2개가 있는데 화면에 보이는 건 0개.
+ * 우리 설계는 "띠에서 보면 된다" 였지만 대표는 채팅에서 보길 기대했습니다.
  *
- * ★ 되돌리는 방법 — 이 블록 전체를 지우고, .main-grid 의
- *   grid-template-columns 를 556fr 220fr 210fr 로 되돌리고,
- *   index.html 에서 #trade-ticker / #chat-fab / #chat-toggle-btn 마크업과
- *   js/chat-split.js <script> 줄을 지우면 원상복구됩니다.
+ * ── 대표 결정 ────────────────────────────────────────────────────────
+ * "비 ㄱㄱ" (= B안). 띠를 없애고 채팅만 남깁니다. 금요일 이전 동작으로 복귀.
+ *
+ * ── 무엇을 지웠나 ────────────────────────────────────────────────────
+ *   · html[data-tt="1"] ... {display:none}  ← 이것이 핵심. 알림이 다시 보입니다
+ *   · .trade-ticker / .tt-* 규칙 전부 (⚡ 띠)
+ *   · .chat-fab 규칙 전부 (💬 대화 버튼)
+ *   · html[data-chat="off"] / html[data-chat="on"] 접힘 상태 규칙
+ *   · index.html 의 #trade-ticker 마크업 → 주석으로 보존(지우지 않음)
+ *   · index.html 의 js/chat-split.js <script> 줄 → 주석으로 보존
+ *   · main.js 의 부팅 목록에서 "ChatSplit" → 주석으로 보존
+ *   js/chat-split.js 파일 자체는 남겨 두었습니다(연결만 끊음).
+ *
+ * ── 되살리는 방법 ────────────────────────────────────────────────────
+ *   git show 9b8d0ce:style.css      (띠 CSS 원문)
+ *   git show 17c250e:style.css      (접이식까지 있던 마지막 상태)
+ *   index.html / main.js 의 주석 두 곳을 풀면 띠가 다시 돕니다.
+ *
+ * ── 결과 ─────────────────────────────────────────────────────────────
+ *   채팅   항상 열려 있고 익절/손절 알림이 다시 보임 (금요일 이전과 같음)
+ *   ⚡ 띠   없음        💬 버튼  없음
+ *   차트   1920 에서 61.7% -> 43.4% (채팅 칸 23%가 항상 자리를 차지)
+ *          대표가 알고 고른 대가입니다.
  * ========================================================================= */
 
-/* ---- ⚡ 실시간 체결 알림 띠 ---- */
-.trade-ticker{
-  display:flex;align-items:center;gap:10px;
-  height:44px;min-height:44px;margin:6px 0 0;padding:0 10px;
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  overflow:hidden;position:relative;box-shadow:var(--card-glow,none);
-}
-.trade-ticker .tt-badge{
-  flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;
-  font-size:14px;font-weight:700;line-height:1;letter-spacing:-0.02em;
-  color:var(--gold);background:var(--gold-soft);
-  border-radius:8px;padding:6px 9px;white-space:nowrap;
-}
-.trade-ticker .tt-viewport{
-  position:relative;flex:1 1 auto;min-width:0;height:100%;overflow:hidden;
-  display:flex;align-items:center;
-}
-.trade-ticker .tt-track{display:flex;flex:0 0 auto;width:max-content;will-change:transform;}
-.trade-ticker .tt-half{display:flex;flex:0 0 auto;}
-.trade-ticker .tt-item{
-  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
-  padding:0 22px;font-size:15px;line-height:1.2;font-weight:600;
-  color:var(--text-dim);white-space:nowrap;
-}
-.trade-ticker .tt-item + .tt-item{border-left:1px solid var(--border-soft);}
-.trade-ticker .tt-mark{font-size:12px;line-height:1;}
-.trade-ticker .tt-profit{color:var(--green);}
-.trade-ticker .tt-loss,
-.trade-ticker .tt-liq{color:var(--red);}
-.trade-ticker .tt-empty{
-  position:absolute;left:12px;top:50%;transform:translateY(-50%);
-  font-size:14px;color:var(--text-faint);white-space:nowrap;pointer-events:none;
-}
-/* 같은 목록을 두 벌 이어 붙이고 -50%까지 움직여 끊김 없이 흐릅니다 */
-@keyframes tt-scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-.trade-ticker:hover .tt-track{animation-play-state:paused;} /* 읽으려고 마우스를 올리면 멈춤 */
-@media (prefers-reduced-motion: reduce){
-  .trade-ticker .tt-track{animation:none !important;}
-  .trade-ticker .tt-viewport{overflow-x:auto;}
-}
-@media (max-width:700px){
-  .trade-ticker{height:40px;min-height:40px;gap:7px;padding:0 7px;margin-top:5px;}
-  .trade-ticker .tt-badge{font-size:12px;padding:5px 7px;}
-  .trade-ticker .tt-item{font-size:13.5px;padding:0 14px;}
-  .trade-ticker .tt-empty{font-size:12.5px;left:8px;}
-}
+/* 거래 3열 구간(1301px 이상) — 최근체결 / 호가 글자 크기
+   ─────────────────────────────────────────────────────────────────────
+   2026-08-24 대표 지시: "더 크게 더 잘 보이게".
 
-/* 거래 3열 구간(1051px 이상)에서 호가/최근체결 칼럼이 좁아졌습니다
-   (1440 실측 316px -> 236px). 그대로 두면 최근 체결의 "시간" 칸이 13px 잘립니다.
-   기준 글자(.ob-row 18.5px)는 그대로 두고 — tests/chart-font.test.js 가
-   그 값을 차트 축 크기의 기준으로 읽습니다 — 3열 구간에서만 한 단계 줄입니다.
-   참고: 바이낸스 선물 호가창 실측은 12px 입니다. 15.5px 은 그보다 훨씬 큽니다. */
+   ① 세로 겹침을 먼저 고쳤습니다 (진짜 원인)
+      주말에 이 자리를 15.5px 로 줄이면서 줄높이는 안 줄였습니다. 그래서
+      1440 실측 기준 줄높이 20.9px > 행높이 15.8px 이 되어 글자가 행 밖으로
+      5.1px 씩 넘쳐 위아래 행과 겹쳤습니다.
+      행이 눌린 이유는 .ob-row 의 flex:0 0 auto 주석 참고(목록이 세로 flex).
+
+   ② 그다음 글자를 키웠습니다 15.5px -> 20px (+29%)
+      채팅을 되살리면서 호가/최근체결 칼럼이 236px -> 313.9px(1440) 로
+      넓어져 자리가 생겼습니다.
+      실측으로 확인한 한계 — 3열이 가장 좁아지는 1301px 에서 잽니다.
+        칼럼 282.9px · 20px → 들어감(6자리 가격 "123,456.78" + 수량 "12.345" 도 OK)
+        칼럼 282.9px · 21px → 10.6px 넘침
+      그래서 20px 로 정했습니다. 1440(313.9px) / 1920(320.2px) 은 더 넉넉합니다.
+
+   ③ 칸 사이 여백 8px
+      여백이 0 이면 수량과 시간이 "0.05010:00:03" 처럼 한 덩어리로 붙습니다
+      (수정 전 캡처에서 확인). 세 칸이 각각 읽히도록 띄웠습니다.
+
+   기준 글자(.ob-row 18.5px)는 그대로 둡니다 — tests/chart-font.test.js 가
+   그 값을 차트 축 크기의 기준으로 읽습니다.
+   되돌리려면 아래 한 줄을 {font-size:15.5px;} 로 되돌리면 됩니다. */
 @media (min-width:1301px){
-  .main-grid .ob-row{font-size:15.5px;}
+  /* 칼럼 좌우 여백 16px -> 10px — 글자에 12px 을 더 줍니다
+     (박스 안쪽 여백일 뿐이라 보이는 정보는 그대로입니다) */
+  .main-grid .orderbook-panel{padding:14px 10px;}
+  .main-grid .ob-row{font-size:20px;line-height:1.2;letter-spacing:-0.01em;padding:5px 2px;column-gap:8px;}
 }
 
-/* 알림 줄은 이제 띠가 책임집니다 — 채팅 목록에서는 화면에서만 숨깁니다.
-   data-tt 는 js/chat-split.js 가 띠를 실제로 만든 뒤에만 켭니다.
-   (스크립트가 실패하면 알림이 채팅에 그대로 남아 조용히 사라지지 않습니다) */
-html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
-
-/* ---- 💬 대화 접이식 ---- */
+/* ---- 💬 대화 접기 버튼 — 화면에서만 숨김(마크업 보존) ----
+   2026-08-24 대표 지시 "항상 열려있는걸로 하자".
+   index.html 의 #chat-toggle-btn 은 그대로 두고 여기서만 내립니다.
+   되살리려면 display:none 한 줄을 지우세요. */
 .chat-toggle-btn{
-  /* 항상 열림(2026-08-24 대표 지시) — 접기 버튼은 화면에서만 숨깁니다.
-     마크업은 index.html 에 그대로 있습니다. 되살리려면 이 display:none 만 지우세요. */
   display:none;
   margin-left:auto;flex:0 0 auto;
   font:inherit;font-size:13px;font-weight:700;line-height:1;
@@ -3757,57 +3813,3 @@ html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
   border:0;border-radius:8px;padding:6px 10px;cursor:pointer;
 }
 .chat-toggle-btn:hover{background:rgba(255,255,255,0.26);}
-/* 헤더 띠(.page-right .page-chat-panel > .field-label)는 이미 위에서
-   display:flex;align-items:center 이라 규칙을 새로 만들지 않습니다
-   (같은 선택자를 두 벌 만들면 tests/css-duplicate.test.js 가 잡습니다).
-   버튼은 margin-left:auto 로 오른쪽 끝에 붙습니다. */
-
-/* ★ 2026-08-24 대표 지시 — "그냥 채팅 열고 닫고 지워버리자. 항상 열려있는걸로 하자."
-   접었다 폈다 하는 상태를 없앴습니다. 채팅 칼럼은 항상 보입니다.
-
-   ── 이 결정의 대가(대표가 알고 고른 것) ──────────────────────────────
-   채팅 칸 23%가 항상 자리를 잡으므로 1920 에서 차트가 61.7% -> 47.0% 로
-   돌아갑니다(실측). 1799px 이하는 원래 채팅이 아래로 쌓이는 1단이라
-   변화가 없습니다(1440 / 768 / 390 / 375 / 360 동일).
-
-   ── 무엇을 지웠나 ────────────────────────────────────────────────────
-   · html[data-chat="off"] 접힘 상태 규칙 3줄 (여기 있던 것)
-   · html[data-chat="on"] .chat-fab 숨김 1줄
-     (.chat-fab 기본값이 이미 display:none 이라 이 줄이 없어도 버튼은 안 보입니다)
-   · js/chat-split.js 의 localStorage("tl.chat.open") 저장·복원과 클릭 리스너
-   마크업(#chat-fab / #chat-toggle-btn)은 지우지 않고 CSS 로만 숨깁니다(원칙 1-2).
-
-   ── 되살리는 방법 ────────────────────────────────────────────────────
-   (1) 아래 주석 안의 세 줄을 다시 살리고
-   (2) .chat-toggle-btn 의 display:none 한 줄을 지우고
-   (3) js/chat-split.js 의 "항상 열림" 블록을 예전 readStored/setOpen 으로 되돌립니다.
-
-   html[data-chat="off"] .page-right .side-chat-panel{display:none;}
-   html[data-chat="off"] .page-shell{grid-template-columns:minmax(0,1fr);}
-   html[data-chat="off"] .page-right{margin-top:6px;gap:6px;}
-   html[data-chat="on"] .chat-fab{display:none;}
-*/
-
-/* ---- 열기 버튼(접었을 때만) — 알림 띠 오른쪽 끝에 붙습니다 ----
-   화면에 떠 있는(fixed) 버튼으로 두면 스크롤 위치에 따라 주문창 오른쪽 아래
-   버튼(지정가/시장가·매수/매도) 위를 덮습니다. 실제로 1440 캡처에서 겹쳤습니다.
-   그래서 띠 안에 넣어 아무것도 가리지 않게 했습니다. */
-.chat-fab{
-  display:none;flex:0 0 auto;align-items:center;gap:6px;
-  font:inherit;font-size:13.5px;font-weight:700;line-height:1;
-  color:#0A0F1C;background:var(--gold);
-  border:0;border-radius:8px;padding:8px 11px;cursor:pointer;white-space:nowrap;
-}
-html[data-chat="off"] .chat-fab{display:inline-flex;}
-.chat-fab:hover{filter:brightness(1.08);}
-.chat-fab .chat-fab-icon{font-size:14px;line-height:1;}
-.chat-fab .chat-fab-badge{
-  min-width:18px;height:18px;padding:0 5px;border-radius:9px;
-  background:var(--red);color:#fff;font-size:11px;font-weight:700;
-  display:inline-flex;align-items:center;justify-content:center;
-}
-.chat-fab .chat-fab-badge[hidden]{display:none;}
-@media (max-width:700px){
-  .chat-fab{padding:7px 9px;font-size:12px;gap:4px;}
-  .chat-fab .chat-fab-label{display:none;}
-}

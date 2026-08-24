@@ -1087,74 +1087,103 @@ section("[5] 기존 기능 보존");
   });
 
   /* ─────────────────────────────────────────────────────────────────────
-   * 2026-08-21 — 레퍼런스 숫자를 바꿨습니다. 왜 바꿨는지 근거를 남깁니다.
+   * 2026-08-24 — 레퍼런스 숫자를 "채팅 칸이 있는" 원래 값으로 되돌립니다.
    * ─────────────────────────────────────────────────────────────────────
-   * 옛 값: 차트 42.4 / 호가 16.8 / 주문 16.0 / 채팅 23.0
-   *   출처는 개미톡 캡처(콘텐츠 686px 기준 291/115/110/158)였고,
-   *   "오른쪽에 채팅 세로 칸이 23% 항상 있다"는 전제가 깔려 있었습니다.
-   *   실제 1920 실측도 정확히 42.4 / 16.8 / 16.0 이었습니다(2026-08-21 측정).
+   * 대표 결정("B안"): ⚡ 알림 띠를 없애고 알림을 다시 채팅에서 봅니다.
+   *   → 채팅 세로 칸 23%가 항상 자리를 차지합니다.
    *
-   * 왜 바꾸나: 그 채팅 칸 13줄 중 10줄이 "누가 익절/손절했다"는 자동 알림이었고
-   *   실제 대화는 3줄이었습니다(1440 실측). 알림 하나 때문에 화면의 23%를 쓰고
-   *   차트가 42%로 눌려 있었습니다. 알림을 얇은 가로 띠(44px)로 빼고 대화를
-   *   접이식으로 돌려 채팅 세로 칸을 없앴으므로, 이제 거래 3열이 화면 폭을
-   *   전부 씁니다 -> 3열 비율이 곧 화면 대비 비율입니다.
+   * 2026-08-21 에 넣었던 62.7 / 16.7 / 20.9 (바이낸스 선물 실측)은
+   *   "채팅 칸을 없앤다"는 전제로만 맞는 숫자였습니다. 전제가 사라졌습니다.
+   *   그 값을 그대로 두면 호가창 칼럼이 1920 에서 240px 까지 좁아집니다
+   *   (최근체결 가격·수량·시간 세 칸이 겨우 들어가는 폭 — 실측).
    *
-   * 새 값의 출처: 바이낸스 선물(BTCUSDT) 데스크톱 1440 실측
-   *   차트 62.7% / 호가 16.7% / 주문 20.9%
-   *   (docs/디자인-구조조사.md 2회차 "칼럼 비율" — 우리 56.0/22.2/21.2 와 대조)
+   * 되돌린 값(개미톡 실측, 콘텐츠 686px 기준):
+   *   차트 291 / 호가 115 / 주문 110 / 채팅 158
+   *   = 화면 대비 42.4 / 16.8 / 16.0 / 23.0
+   *   fr 로는 556 / 220 / 210 (거래영역 77% 안에서의 몫 56.4 / 22.3 / 21.3)
+   *
+   * 차트가 61.7% → 43.4% 로 좁아지는 것은 대표가 알고 고른 대가입니다.
    * ───────────────────────────────────────────────────────────────────── */
-  t("3칼럼 비율: 차트 62.7 / 호가 16.7 / 주문 20.9 (바이낸스 선물 1440 실측)", () => {
+  t("4칼럼 비율: 차트 42.4 / 호가 16.8 / 주문 16.0 / 채팅 23.0 (레퍼런스 실측)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const em = css.match(/\n\.exchange-main\{[\s\S]*?\}/)[0];
-    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(em), "채팅 트랙 선언은 유지(접었다 펴는 기준값)");
+    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(em), "채팅은 콘텐츠의 23%");
+    const shell = css.match(/\n\.page-shell\{[\s\S]*?\}/)[0];
+    ok(/grid-template-columns:minmax\(0,1fr\) 23%/.test(shell), "셸도 [거래영역 | 23%] 2단이어야 함");
+
     const mg = css.match(/\.main-grid\{[\s\S]*?\}/)[0];
     const cols = mg.match(/grid-template-columns:(\d+)fr (\d+)fr (\d+)fr/);
     ok(cols, "거래 3열 비율 선언 필요");
     const [c, o, s2] = [+cols[1], +cols[2], +cols[3]];
     const sum = c + o + s2;
-    // 채팅 칸이 사라졌으므로 3열 합이 곧 화면 폭 100% 입니다.
-    const pct = (v) => (v / sum) * 100;
+    /* 채팅을 뺀 77% 안에서의 비율 → 전체 대비로 환산해 검사 */
+    const pct = (v) => (v / sum) * 77;
     const near = (a, b, tol) => Math.abs(a - b) <= tol;
-    ok(near(pct(c), 62.7, 1.5), "차트 비율이 레퍼런스에서 벗어남: " + pct(c).toFixed(1));
-    ok(near(pct(o), 16.7, 1.5), "호가창 비율이 레퍼런스에서 벗어남: " + pct(o).toFixed(1));
-    ok(near(pct(s2), 20.9, 1.5), "주문창 비율이 레퍼런스에서 벗어남: " + pct(s2).toFixed(1));
+    ok(near(pct(c), 42.4, 1.5), "차트 비율이 레퍼런스에서 벗어남: " + pct(c).toFixed(1));
+    ok(near(pct(o), 16.8, 1.5), "호가창 비율이 레퍼런스에서 벗어남: " + pct(o).toFixed(1));
+    ok(near(pct(s2), 16.0, 1.5), "주문창 비율이 레퍼런스에서 벗어남: " + pct(s2).toFixed(1));
     ok(c > o && c > s2, "차트가 가장 넓어야 함");
   });
 
-  t("채팅 분리: ⚡ 알림 띠 + 💬 대화 접이식 (마크업은 하나도 안 지움)", () => {
+  /* ─────────────────────────────────────────────────────────────────────
+   * ★ 이 검사가 가장 중요합니다 — 익절/손절 알림이 채팅에서 사라지지 않는가
+   * ─────────────────────────────────────────────────────────────────────
+   * 2026-08-21 에 "알림은 위쪽 가로 띠, 채팅에는 대화만" 으로 나누면서
+   * style.css 에 이 한 줄을 넣었습니다.
+   *
+   *     html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
+   *
+   * 그 결과 대표가 실제로 익절을 했는데 채팅에 안 떴습니다.
+   * 실측(1440): 채팅 안에 알림 2개 · 화면에 보이는 것 0개.
+   * 오류도 안 나고 화면도 멀쩡한 "조용한 고장" 이었습니다.
+   *
+   * 대표 결정("B안"): 띠를 없애고 알림을 다시 채팅에서 봅니다.
+   * 다시는 같은 방식으로 알림을 숨기지 못하게 기계로 막습니다.
+   * ───────────────────────────────────────────────────────────────────── */
+  t("★ 알림(.chat-msg-event)을 채팅에서 숨기지 않는다", () => {
+    const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+    /* 주석에는 사고 경위로 남아 있으므로 주석을 걷어낸 실제 규칙만 봅니다 */
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const 숨김 = rules
+      .split("}")
+      .filter((r) => /\.chat-msg-event/.test(r) && /display\s*:\s*none/.test(r))
+      .map((r) => r.trim().slice(0, 90));
+    ok(숨김.length === 0, "알림 줄을 숨기는 규칙이 있음: " + 숨김.join(" / "));
+    ok(!/data-tt/.test(rules), "data-tt 게이트가 남아 있으면 안 됨");
+  });
+
+  t("채팅 원복(B안): ⚡ 띠 · 💬 버튼 없음 · 마크업은 하나도 안 지움", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+    const main = fs.readFileSync(path.join(REPO, "main.js"), "utf8");
 
-    // 띠가 존재하고, 거래 화면 위쪽(공지 박스보다 앞)에 있어야 함
-    const ttIdx = html.indexOf('id="trade-ticker"');
-    ok(ttIdx > -1, "⚡ 알림 띠가 필요함");
-    ok(ttIdx < html.indexOf('class="notice-board-wrap"'), "알림 띠는 화면 맨 위 가로 띠여야 함");
-    ok(/id="trade-ticker-track"/.test(html), "알림이 흐를 트랙 필요");
-
-    // 얇아야 함 — 40~50px
-    const tt = css.match(/\.trade-ticker\{[^}]*\}/)[0];
-    const h = parseInt(tt.match(/height:(\d+)px/)[1], 10);
-    ok(h >= 40 && h <= 50, "알림 띠가 얇은 가로 띠가 아님: " + h);
-
-    // 대화는 지운 게 아니라 접은 것 — chat.js 가 쓰는 id 가 전부 남아 있어야 함
+    /* chat.js 가 쓰는 id 는 전부 살아 있어야 함 */
     ["chat-messages", "chat-input", "chat-send-btn", "chat-err", "chat-panel"].forEach((id) => {
       ok(html.indexOf('id="' + id + '"') > -1, id + " 가 사라짐");
     });
-    ok(/id="chat-toggle-btn"/.test(html) && /id="chat-fab"/.test(html), "열고 닫는 버튼이 둘 다 필요");
-    ok(/html\[data-chat="off"\] \.page-right \.side-chat-panel\{display:none;\}/.test(css),
-      "접을 때는 CSS 로만 숨겨야 함(마크업 보존)");
-    ok(/html\[data-chat="off"\] \.chat-fab\{display:inline-flex;\}/.test(css), "접었을 때 열기 버튼이 보여야 함");
 
-    // 알림을 채팅 목록에서 숨기는 것은 띠가 실제로 만들어진 뒤에만
-    // (스크립트가 실패했는데 알림까지 사라지면 조용한 고장이 됩니다)
-    ok(/html\[data-tt="1"\] #chat-messages \.chat-msg-event\{display:none;\}/.test(css),
-      "알림 숨김은 data-tt 게이트가 있어야 함");
-    const js = fs.readFileSync(path.join(REPO, "js/chat-split.js"), "utf8");
-    ok(/setAttribute\("data-tt", "1"\)/.test(js), "띠를 만든 뒤에만 data-tt 를 켜야 함");
-    ok(/js\/chat-split\.js/.test(html), "chat-split.js 를 불러와야 함");
-    const main = fs.readFileSync(path.join(REPO, "main.js"), "utf8");
-    ok(/"ChatSplit"/.test(main), "ChatSplit 를 부팅 목록에 등록해야 함");
+    /* 채팅 칼럼은 항상 보임 — 접힘 상태가 아예 없어야 함 */
+    ok(!/^html\[data-chat=/m.test(css), "접힘 상태(html[data-chat=...]) 규칙이 남아 있으면 안 됨");
+    ok(!/\.side-chat-panel\{display:none/.test(css), "채팅 칼럼을 숨기면 안 됨");
+
+    /* ⚡ 띠는 화면에서 내려갔지만 마크업은 보존(주석) */
+    ok(html.indexOf('id="trade-ticker"') > -1, "띠 마크업은 지우지 말고 남겨야 함(되살릴 수 있게)");
+    const 띠앞 = html.slice(0, html.indexOf('id="trade-ticker"'));
+    ok(/<!--(?![\s\S]*-->[\s\S]*$)/.test(띠앞) || 띠앞.lastIndexOf("<!--") > 띠앞.lastIndexOf("-->"),
+      "띠 마크업은 주석 안에 있어야 함(화면에 그리면 안 됨)");
+    ok(!/^\.trade-ticker\{/m.test(css), ".trade-ticker CSS 규칙은 지워야 함");
+    ok(!/^\.chat-fab\{/m.test(css), ".chat-fab CSS 규칙은 지워야 함");
+
+    /* 💬 접기 버튼은 마크업만 남기고 CSS 로 숨김 */
+    ok(/id="chat-toggle-btn"/.test(html), "접기 버튼 마크업은 남겨야 함");
+    ok(/\.chat-toggle-btn\{[\s\S]*?display:none;/.test(css), "접기 버튼은 CSS 로만 숨겨야 함");
+
+    /* chat-split.js — 파일은 남기고 연결만 끊음 */
+    ok(fs.existsSync(path.join(REPO, "js/chat-split.js")), "파일을 지우면 안 됨(연결만 끊기)");
+    const 실린것 = html.replace(/<!--[\s\S]*?-->/g, "");
+    ok(!/js\/chat-split\.js/.test(실린것), "chat-split.js 를 실제로 불러오면 안 됨");
+    const 부팅 = main.replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(!/"ChatSplit"/.test(부팅), "부팅 목록에서 ChatSplit 를 빼야 함");
   });
 
   t("레이아웃: 차트가 주 영역이고 호가/주문창도 충분한 폭", () => {

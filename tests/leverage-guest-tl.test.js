@@ -85,9 +85,22 @@ console.log("\n① 최대 레버리지");
 
   const cssSrc = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   ok("경고가 눈에 띄는 색을 쓴다", /\.lev-modal-warn-main\{[^}]*color:#FF8A9B/.test(cssSrc));
-  ok("경고 글자가 안내 문구보다 크다",
-    /\.lev-modal-warn-main\{[^}]*font-size:15px/.test(cssSrc) &&
-    /\.lev-modal-note\{font-size:13px/.test(cssSrc));
+  /* 2026-08-24 — 값을 고정 숫자로 박아 두니 "더 크게" 요청이 올 때마다
+     테스트가 막았습니다. 뜻(경고 > 안내)은 그대로 두고 값은 읽어서 비교합니다.
+     대표 지적: "경고 문구는 돈에 직결되는 내용인데 작다". 15px -> 18px 로 키웠습니다. */
+  const px = (re, label) => {
+    const m = cssSrc.match(re);
+    ok(label + " 크기를 읽어왔다", !!m, String(m));
+    return m ? parseFloat(m[1]) : 0;
+  };
+  const 경고 = px(/\.lev-modal-warn-main\{[^}]*font-size:([\d.]+)px/, "경고 문구");
+  const 경고높음 = px(/\.lev-modal-warn-main\.lev-modal-warn-high\{[^}]*font-size:([\d.]+)px/, "20배 이상 경고");
+  const 안내 = px(/\n\.lev-modal-note\{font-size:([\d.]+)px/, "안내 문구");
+  ok("경고 글자가 안내 문구보다 크다", 경고 > 안내, 경고 + " vs " + 안내);
+  ok("배율이 높을 때 경고가 한 단계 더 크다", 경고높음 > 경고, 경고높음 + " vs " + 경고);
+  /* 돈에 직결되는 문구라 하한을 둡니다 — 폰에서도 읽혀야 합니다 */
+  ok("경고 글자가 17px 이상이다", 경고 >= 17, String(경고));
+  ok("안내 글자도 14px 이상이다", 안내 >= 14, String(안내));
 }
 
 console.log("\n② TL 지급 공식");

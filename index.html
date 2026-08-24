@@ -161,30 +161,43 @@
      그래서 배너도 화면 끝까지 가지 않고 주문창 오른쪽 끝에서 멈춥니다. -->
 <div class="page-shell">
   <div class="page-left">
-<!-- ⚡ 실시간 체결 알림 띠 — 예전에는 오른쪽 채팅 칸(23%) 안에 대화와 섞여
+<!-- ⚡ 실시간 체결 알림 띠 — 2026-08-24 대표 결정("B안")으로 화면에서 내렸습니다.
+     왜: 띠로 옮기면서 채팅 목록의 알림을 CSS 로 숨겼는데, 대표가 실제로 익절을
+         했을 때 채팅에 안 떴습니다(1440 실측 — 알림 2개 중 보이는 것 0개).
+         알림은 다시 채팅에서 봅니다. 띠는 없앱니다.
+     지우지 않고 아래에 그대로 보관합니다(원칙 1-2).
+     되살리는 방법:
+       (1) 이 바깥 주석을 풀고, 안쪽의 [[ ]] 를 원래 주석 기호로 되돌리고
+       (2) 맨 아래 js/chat-split.js <script> 주석을 풀고
+       (3) main.js 부팅 목록의 "ChatSplit" 주석을 풀고
+       (4) git show 9b8d0ce:style.css 에서 .trade-ticker / .tt-* 규칙을 되살립니다.
+     안에 있던 #chat-fab(💬 대화 버튼)도 함께 보관됩니다.
+
+[[ ⚡ 실시간 체결 알림 띠 — 예전에는 오른쪽 채팅 칸(23%) 안에 대화와 섞여
      있었습니다. 1440 실측 기준 채팅 13줄 중 10줄이 이 알림이었고, 그것 때문에
      차트가 42%까지 좁아져 있었습니다. 알림만 얇은 가로 띠로 빼서 항상 보이게
      하고, 대화는 오른쪽 채팅 칼럼에 그대로 둡니다(js/chat-split.js).
      2026-08-24 대표 지시로 채팅은 접지 않고 항상 열려 있습니다.
      내용은 #chat-messages 의 .chat-msg-event 를 복제한 것이라
-     js/chat.js 는 한 글자도 건드리지 않습니다. -->
+     js/chat.js 는 한 글자도 건드리지 않습니다. ]]
 <div class="trade-ticker" id="trade-ticker" role="status" aria-label="실시간 체결 알림">
   <span class="tt-badge">⚡ 실시간</span>
   <div class="tt-viewport">
     <div class="tt-track" id="trade-ticker-track"></div>
     <span class="tt-empty" id="trade-ticker-empty">체결 알림을 기다리는 중…</span>
   </div>
-  <!-- 💬 대화 열기 버튼 — 2026-08-24 대표 지시로 "채팅 항상 열림"이 되면서
+  [[ 💬 대화 열기 버튼 — 2026-08-24 대표 지시로 "채팅 항상 열림"이 되면서
        화면에서 내렸습니다. 지우지 않고 남겨 둡니다(원칙 1-2: 기능 삭제 금지).
        숨기는 곳은 style.css 의 .chat-fab{display:none} 한 줄뿐이고,
        js/chat-split.js 가 hidden 속성도 함께 걸어 줍니다.
-       되살리려면 그 한 줄과 html[data-chat="off"] 주석 블록을 되돌리면 됩니다. -->
+       되살리려면 그 한 줄과 html[data-chat="off"] 주석 블록을 되돌리면 됩니다. ]]
   <button type="button" id="chat-fab" class="chat-fab" aria-controls="chat-panel" aria-expanded="false" aria-label="실시간 채팅 열기">
     <span class="chat-fab-icon">💬</span>
     <span class="chat-fab-label">대화</span>
     <span class="chat-fab-badge" id="chat-fab-badge" hidden></span>
   </button>
 </div>
+-->
 <div class="notice-board-wrap">
   <!-- [박스1 34.4%] 공지사항 | 최신게시물 -->
   <div class="notice-box">
@@ -1096,7 +1109,11 @@
 <script src="js/chat-event-style.js"></script>
 <!-- 채팅 분리 — ⚡ 알림은 위쪽 가로 띠로, 💬 대화는 접이식으로.
      chat.js 가 그린 DOM 을 관찰만 합니다(chat.js 무수정). -->
+<!-- js/chat-split.js — 2026-08-24 대표 결정("B안")으로 연결을 끊었습니다.
+     파일은 지우지 않았습니다. 하는 일(⚡ 띠 만들기 + 알림 숨기기)이 없어졌습니다.
+     되살리려면 이 주석을 풀고 main.js 의 "ChatSplit" 주석도 함께 푸세요.
 <script src="js/chat-split.js"></script>
+-->
 <script src="js/daily-recharge.js"></script>
 <script src="js/position-table-extra.js"></script>
 <script src="js/limit-close.js"></script>
