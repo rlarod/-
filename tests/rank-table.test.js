@@ -5,12 +5,20 @@
  *   대장 = 지갑 1000억원 = 초기자금 10만 USDT(약 1.5억원)의 약 667배
  *   점수 = 1000 x log2(자산 / 초기자금)  ->  667배 = 9381점
  *
+ * 계급용 자산 = 지갑 잔액 + 포지션 증거금 + 미체결 증거금 − 충전받은 총액
+ *   2026-08-24 대표 결정 — "계급은 무조건 지갑에 있는 돈으로 평가하는거임"
+ *   펀딩비는 지갑에 들어 있으므로 자동으로 포함됩니다.
+ *
  * 이 테스트가 막는 것
  *   1) 대장 임계값이 667배(9381점)가 아니게 되면
  *   2) 계급이 19개가 아니게 되면
  *   3) min_points 가 오름차순이 아니게 되면
- *   4) 화면(js/rank.js)과 서버 SQL 의 임계값이 서로 달라지면  <- 제일 중요
+ *   4) 화면(js/rank.js)과 서버 SQL 의 임계값·자산 항목이 서로 달라지면 <- 제일 중요
  *   5) 충전받은 돈을 안 빼는 상태로 되돌아가면
+ *   6) 펀딩비가 계급에서 빠지는 옛 방식으로 되돌아가면  <- 2026-08-24 추가
+ *      (화면 realizedPnl / 서버 initial_balance + realized_pnl,
+ *       그리고 rank_recharged_total 을 '역산' 으로 되돌리는 경우까지)
+ *   7) 이 SQL 이 회원 지갑·손익을 소급해서 고치게 되면
  *
  * 4번이 왜 중요한가: 화면 계급과 랭킹표 계급이 서로 다르게 나오면
  * 회원은 어느 쪽이 맞는지 알 수 없습니다(조용한 고장).
@@ -232,15 +240,74 @@ section("[4] 무료 충전으로 계급을 살 수 없다");
 }
 
 /* ===================================================================== */
-section("[5] 계산 코드가 충전분을 빼고 있는가 (되돌아감 방지)");
+section("[4-2] 펀딩비는 계급에 포함된다 (2026-08-24 대표 결정)");
+{
+  /* 대표 결정 — "계급은 무조건 지갑에 있는 돈으로 평가하는거임"
+   *
+   * 펀딩비는 정산될 때마다 지갑(balance)에 바로 더해지고 빠집니다.
+   * 그런데 realizedPnl(청산한 거래의 손익 합계)에는 안 들어갑니다.
+   * 그래서 계급을 realizedPnl 로 매기면 펀딩비가 통째로 빠집니다.
+   *
+   * 실측 예 — 김갱 계정에서 지갑과 옛 공식의 차이가 11,231 USDT 였습니다.
+   * 이 절의 검사들은 그 옛 방식으로 되돌아가면 전부 실패합니다. */
+  Rank.setRechargedTotal(0);
+
+  const 거래로번돈 = 50000;
+  const 펀딩비 = 11231;
+
+  // 지갑에는 거래 손익과 펀딩비가 같이 들어 있습니다.
+  const 펀딩받은사람 = { balance: INITIAL + 거래로번돈 + 펀딩비, usedMargin: 0, realizedPnl: 거래로번돈 };
+  // 같은 거래를 했지만 펀딩비가 0인 사람.
+  const 펀딩없는사람 = { balance: INITIAL + 거래로번돈, usedMargin: 0, realizedPnl: 거래로번돈 };
+
+  const p1 = Rank.calculatePoints(펀딩받은사람);
+  const p2 = Rank.calculatePoints(펀딩없는사람);
+
+  ok("펀딩비를 받은 만큼 계급 점수가 더 높다", p1 > p2, p1.toFixed(2) + " vs " + p2.toFixed(2));
+
+  /* 지갑 기준이면 점수는 정확히 1000 x log2(지갑/초기자금) 이어야 합니다.
+     옛 방식(초기자금 + 확정손익)이면 펀딩비 몫만큼 낮게 나옵니다. */
+  const 지갑기준 = Math.log2((INITIAL + 거래로번돈 + 펀딩비) / INITIAL) * 1000;
+  const 옛방식 = Math.log2((INITIAL + 거래로번돈) / INITIAL) * 1000;
+  ok("점수가 지갑 기준값과 일치", Math.abs(p1 - 지갑기준) < 0.01, p1.toFixed(2) + " (기대 " + 지갑기준.toFixed(2) + ")");
+  ok("옛 방식(초기자금+확정손익) 값이 아니다", Math.abs(p1 - 옛방식) > 1, p1.toFixed(2) + " vs 옛방식 " + 옛방식.toFixed(2));
+
+  /* 펀딩비를 내기만 한 사람은 지갑이 줄었으므로 점수도 낮아야 합니다. */
+  const 펀딩낸사람 = { balance: INITIAL + 거래로번돈 - 펀딩비, usedMargin: 0, realizedPnl: 거래로번돈 };
+  ok("펀딩비를 낸 사람은 점수가 더 낮다", Rank.calculatePoints(펀딩낸사람) < p2,
+    Rank.calculatePoints(펀딩낸사람).toFixed(2) + " vs " + p2.toFixed(2));
+
+  /* 실서버 실측 재현 — 김갱 계정 지갑 164,352 (충전 이력 없음). */
+  const 김갱 = Rank.calculatePoints({ balance: 164352, usedMargin: 0, realizedPnl: 53121 });
+  ok("지갑 164,352 는 716점대", Math.round(김갱) === 717, String(Math.round(김갱)));
+  ok("지갑 164,352 는 일병", Rank.getRankName(김갱) === "일병", Rank.getRankName(김갱));
+
+  /* 충전분은 여전히 빠집니다 — '지갑으로 평가' 와 충돌하지 않습니다. */
+  Rank.setRechargedTotal(100000);
+  const 충전받고펀딩도받은사람 = Rank.calculatePoints({ balance: INITIAL + 100000 + 펀딩비, usedMargin: 0, realizedPnl: 0 });
+  const 펀딩만받은사람 = (function () { Rank.setRechargedTotal(0); const v = Rank.calculatePoints({ balance: INITIAL + 펀딩비, usedMargin: 0, realizedPnl: 0 }); Rank.setRechargedTotal(100000); return v; })();
+  ok("충전분은 빠지고 펀딩비는 남는다",
+    Math.abs(충전받고펀딩도받은사람 - 펀딩만받은사람) < 0.01,
+    충전받고펀딩도받은사람.toFixed(2) + " vs " + 펀딩만받은사람.toFixed(2));
+
+  Rank.setRechargedTotal(0);
+}
+
+/* ===================================================================== */
+section("[5] 계산 코드가 지갑 기준인가 + 충전분을 빼는가 (되돌아감 방지)");
 {
   const assetsFn = rankSrc.slice(rankSrc.indexOf("function getRankAssets"), rankSrc.indexOf("  // 자산 -> 점수"));
+  ok("getRankAssets 가 지갑 잔고(balance)를 쓴다", /snapshot\.balance/.test(assetsFn));
+  ok("getRankAssets 가 묶인 증거금(usedMargin)을 더한다", /snapshot\.usedMargin/.test(assetsFn) && /balance \+ used/.test(assetsFn));
   ok("getRankAssets 가 충전 총액을 뺀다", /-\s*rechargedTotal/.test(assetsFn), assetsFn.slice(0, 0) || "빼는 식이 없음");
-  ok("서버에서 충전 총액을 받아온다", /rpc\(\s*["']rank_recharged_total["']\s*\)/.test(rankSrc));
+  /* ★ 펀딩비 보호 — realizedPnl 로 되돌리면 펀딩비가 빠집니다. */
+  ok("getRankAssets 가 realizedPnl 을 쓰지 않는다 (펀딩비가 빠짐)", !/realizedPnl/i.test(assetsFn), "realizedPnl 발견");
   ok("미실현 손익은 여전히 안 쓴다", !/unrealizedPnl/.test(assetsFn) && !/\bequity\b/.test(assetsFn));
   ok("원금 아래에서 0으로 막는 처리 유지", /Math\.max\(0, fromAssets\)/.test(rankSrc));
   ok("공식(2배당 1000점)은 그대로", /POINTS_PER_DOUBLING = 1000/.test(rankSrc) && /Math\.log2\(ratio\) \* POINTS_PER_DOUBLING/.test(rankSrc));
+  ok("서버에서 충전 총액을 받아온다", /rpc\(\s*["']rank_recharged_total["']\s*\)/.test(rankSrc));
   ok("근거 주석이 남아 있다(대장 = 1000억원)", /1000억원/.test(rankSrc) && /667배/.test(rankSrc));
+  ok("지갑 기준 결정의 근거 주석이 남아 있다", /지갑에 있는 돈/.test(rankSrc) && /펀딩비/.test(rankSrc));
   ok("낡은 예시(4.2배 -> 대장)가 안 남아 있다", !/4\.2배 → 2070점/.test(rankSrc) && !/2070/.test(rankSrc));
 }
 
@@ -276,19 +343,66 @@ section("[6] 화면과 서버 SQL 의 임계값이 같은가 (제일 중요)");
   ok("서버도 2배당 1000점(log2)", /log\(2,/.test(main) && /\* 1000/.test(main));
   ok("서버도 원금 아래에서 0으로 막는다", /greatest\(0,/.test(main));
   ok("서버도 미실현 손익을 안 쓴다", !/unrealized/i.test(main));
-  ok("서버 계급 점수는 지갑이 아니라 초기자금+확정손익", /ta\.initial_balance \+ ta\.realized_pnl/.test(main));
   ok("랭킹표(rank_points_all)도 같은 점수를 쓴다", /rank_points_all[\s\S]{0,600}public\.rank_points\(p\.id\)/.test(main));
   ok("중복 정의를 덮어쓰는 형태(create or replace)", (main.match(/create or replace function/g) || []).length >= 3);
-  ok("화면이 빼는 금액을 알려주는 함수가 있다", /function public\.rank_recharged_total\(\)/.test(main));
-  ok("그 함수는 음수를 0으로 막는다", /rank_recharged_total[\s\S]{0,400}greatest\(0,/.test(main));
   ok("TL 화폐 공식은 안 건드린다", !/create or replace function public\.tl_earned/.test(main));
+  ok("근거가 주석으로 남아 있다", /1000억원/.test(main) && /2026-08-24/.test(main));
+
+  /* ---- 서버 계급용 자산이 '지갑' 기준인가 (2026-08-24 대표 결정) ---- */
+  const rankAssetsFn = main.slice(main.indexOf("function public.rank_assets"), main.indexOf("grant execute on function public.rank_assets"));
+  ok("서버에 rank_assets() 가 있다", rankAssetsFn.length > 50, String(rankAssetsFn.length));
+  ok("서버 자산 = 지갑 잔액(ta.balance)", /ta\.balance/.test(rankAssetsFn));
+  ok("서버 자산 + 포지션 증거금(positions.margin)", /public\.positions[\s\S]{0,200}/.test(rankAssetsFn) && /ps\.margin/.test(rankAssetsFn));
+  ok("서버 자산 + 미체결 주문 증거금(orders.margin, OPEN)", /o\.margin/.test(rankAssetsFn) && /status\s*=\s*'OPEN'/.test(rankAssetsFn));
+  ok("서버 자산 − 충전받은 총액(recharge_total)", /-\s*coalesce\(ta\.recharge_total/.test(rankAssetsFn));
+  /* ★ 펀딩비 보호 — realized_pnl 로 되돌리면 펀딩비가 빠집니다. */
+  ok("서버 자산이 realized_pnl 을 쓰지 않는다 (펀딩비가 빠짐)", !/realized_pnl/.test(rankAssetsFn), "realized_pnl 발견");
+  ok("rank_points() 가 rank_assets() 를 쓴다", /function public\.rank_points\(p_uid[\s\S]{0,800}public\.rank_assets\(p_uid\)/.test(main));
+  ok("옛 공식(초기자금+확정손익)이 점수 계산에 안 남아 있다",
+    !/then\s+log\(2,\s*\(ta\.initial_balance \+ ta\.realized_pnl\)/.test(main), "옛 공식 발견");
+
+  /* ---- 화면 ↔ 서버 3자 대조: 같은 네 항을 쓰는가 ---- */
+  const jsAssetsFn = rankSrc.slice(rankSrc.indexOf("function getRankAssets"), rankSrc.indexOf("  // 자산 -> 점수"));
+  const 항목 = [
+    ["지갑 잔액", /snapshot\.balance/.test(jsAssetsFn), /ta\.balance/.test(rankAssetsFn)],
+    ["묶인 증거금", /snapshot\.usedMargin/.test(jsAssetsFn), /ps\.margin/.test(rankAssetsFn) && /o\.margin/.test(rankAssetsFn)],
+    ["충전분 빼기", /-\s*rechargedTotal/.test(jsAssetsFn), /-\s*coalesce\(ta\.recharge_total/.test(rankAssetsFn)],
+    ["확정손익 안 씀", !/realizedPnl/i.test(jsAssetsFn), !/realized_pnl/.test(rankAssetsFn)],
+    ["미실현 안 씀", !/unrealized/i.test(jsAssetsFn), !/unrealized/i.test(rankAssetsFn)],
+  ];
+  const 불일치 = 항목.filter((r) => !r[1] || !r[2]).map((r) => r[0] + "(화면 " + r[1] + " / 서버 " + r[2] + ")");
+  ok("화면과 서버가 같은 자산 항목을 쓴다", 불일치.length === 0, 불일치.join(", "));
+
+  /* ---- 충전 총액이 '기록' 인가 '역산' 인가 ---- */
+  const rechargedFn = main.slice(main.indexOf("function public.rank_recharged_total"), main.indexOf("grant execute on function public.rank_recharged_total"));
+  ok("화면이 빼는 금액을 알려주는 함수가 있다", /function public\.rank_recharged_total\(\)/.test(main));
+  ok("그 함수는 기록된 누계(recharge_total)를 돌려준다", /ta\.recharge_total/.test(rechargedFn));
+  /* ★ 펀딩비 보호 — 역산으로 되돌리면 펀딩비를 충전으로 오해해서 빼버립니다. */
+  ok("그 함수가 초기자금·확정손익으로 역산하지 않는다",
+    !/realized_pnl/.test(rechargedFn) && !/initial_balance/.test(rechargedFn), "역산 공식 발견");
+  ok("그 함수는 음수를 0으로 막는다", /greatest\(0,/.test(rechargedFn));
+  ok("충전할 때 누계를 기록한다(claim_daily_recharge)",
+    /claim_daily_recharge[\s\S]{0,3000}recharge_total\s*=\s*coalesce\(recharge_total, 0\) \+ AMOUNT/.test(main));
+
+  /* ---- 회원 데이터 보호 ---- */
   /* 주석에 "DELETE 가 하나도 없습니다" 같은 설명이 있으므로 주석을 뺀 뒤 봅니다. */
   const mainCode = main.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
   ok("회원 데이터를 지우거나 되돌리지 않는다",
     !/\bdelete\s+from\b/i.test(mainCode) && !/\btruncate\b/i.test(mainCode) && !/\bdrop\s+table\b/i.test(mainCode));
-  ok("회원 지갑·손익을 고치는 update 가 없다",
-    !/update\s+public\.(trading_accounts|profiles|positions|orders|trades)/i.test(mainCode), "update 발견");
-  ok("근거가 주석으로 남아 있다", /1000억원/.test(main) && /2026-08-24/.test(main));
+
+  /* 함수 본문($fn$...$fn$) 안의 update 는 평소 동작(충전)이므로 빼고 봅니다.
+     남는 것은 이 파일을 실행할 때 회원 데이터를 소급해서 바꾸는 문장입니다. */
+  const 본문제외 = mainCode.replace(/\$fn\$[\s\S]*?\$fn\$/g, " (함수본문) ");
+  const 소급update = 본문제외.match(/update\s+public\.[a-z_]+[\s\S]*?;/gi) || [];
+  ok("이 파일을 실행할 때 도는 UPDATE 는 1개뿐(충전분 메우기)", 소급update.length === 1, String(소급update.length));
+  const u = 소급update[0] || "";
+  ok("그 UPDATE 는 recharge_total 칸만 바꾼다",
+    /set\s+recharge_total\s*=/.test(u) && !/\bbalance\s*=/i.test(u) && !/\brealized_pnl\s*=/i.test(u) && !/\binitial_balance\s*=/i.test(u),
+    u.slice(0, 80).replace(/\s+/g, " "));
+  ok("그 UPDATE 는 WHERE 가 있다(전체 갱신 아님)", /\swhere\s/i.test(u));
+  ok("충전 이력이 없는 계정은 건드리지 않는다", /last_recharge_at is not null/.test(u));
+  ok("회원 지갑·손익·초기자금을 고치는 문장이 없다",
+    !/update[\s\S]{0,400}set[\s\S]{0,200}\b(balance|realized_pnl|initial_balance)\s*=/i.test(본문제외), "발견");
 }
 
 /* ===================================================================== */
