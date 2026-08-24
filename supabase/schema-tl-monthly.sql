@@ -1,3 +1,34 @@
+-- #########################################################################
+-- ##                                                                     ##
+-- ##   ⛔ 이 파일은 대체됐습니다 — 실행해도 아무 일이 없습니다 ⛔        ##
+-- ##                                                                     ##
+-- ##   ➜  supabase/schema-tl-realtime.sql  을 여세요.                    ##
+-- ##                                                                     ##
+-- #########################################################################
+--
+--   ▸ 왜 대체됐나
+--       2026-08-24 대표 지시 — "TL 은 거래할 때마다 실시간으로 주자".
+--       이 파일은 "달이 끝나면 한 달치를 몰아서 주는" 방식이었습니다.
+--       공식(성과 300 × log2 · 참여 날짜수 × 5, 상한 150)은 그대로이고,
+--       주는 시점만 "거래할 때마다" 로 바뀌었습니다.
+--
+--   ▸ 이 파일은 실행된 적이 없습니다
+--       대표님이 이 파일을 돌리기 전에 방식이 바뀌었습니다.
+--       그래서 지울 이유도 없고, 되살릴 이유도 없습니다. 기록으로만 남깁니다.
+--
+--   ▸ 어떻게 막았나
+--       아래 원문 전체를 주석(--)으로 막아 두었습니다.
+--       실수로 열어서 Run 을 눌러도 실행되는 문장이 하나도 없습니다.
+--       주석을 지우지 않는 한 아무 일도 일어나지 않습니다.
+--
+--   ▸ 실수로 이 파일을 돌리면 어떻게 되나
+--       아무 일도 안 일어납니다. 결과창도 비어 있습니다.
+--       (막기 전이라면 tl_earned() 가 월 정산 방식으로 되돌아가
+--        실시간 지급과 어긋났을 것입니다. 그래서 막았습니다.)
+--
+--   ▸ 아래는 원문 그대로입니다 — 고치지 마세요. 기록입니다.
+-- =========================================================================
+
 -- =========================================================================
 -- TL 을 "월 정산 + 저장" 방식으로 바꿉니다  (2026-08-24)
 -- =========================================================================
@@ -102,75 +133,75 @@
 --     '⚠' 가 나오면 이 파일을 실행하지 마시고 schema-rank-1000.sql 을 먼저 돌리세요.
 --     계급표(rank_points_all)가 아직 tl_earned() 를 쓰고 있으면,
 --     TL 을 바꾸는 순간 모든 회원의 계급이 같이 무너집니다.
-select case
-         when pg_get_functiondef(f.oid) like '%tl_earned%'
-           then '⚠ 멈춤 — 계급표가 아직 tl_earned 를 씁니다. schema-rank-1000.sql 을 먼저 실행하세요'
-         else '✅ 계급은 TL 과 분리돼 있습니다 — 진행해도 됩니다'
-       end as 선행조건_확인
-from pg_proc f
-join pg_namespace ns on ns.oid = f.pronamespace
-where ns.nspname = 'public' and f.proname = 'rank_points_all';
+-- select case
+--          when pg_get_functiondef(f.oid) like '%tl_earned%'
+--            then '⚠ 멈춤 — 계급표가 아직 tl_earned 를 씁니다. schema-rank-1000.sql 을 먼저 실행하세요'
+--          else '✅ 계급은 TL 과 분리돼 있습니다 — 진행해도 됩니다'
+--        end as 선행조건_확인
+-- from pg_proc f
+-- join pg_namespace ns on ns.oid = f.pronamespace
+-- where ns.nspname = 'public' and f.proname = 'rank_points_all';
 
 
 -- (1) 회원별 TL 비교
-select
-  p.nickname                                              as 닉네임,
-  round(옛.획득)                                          as 지금_획득TL,
-  round(새.획득)                                          as 바뀐뒤_획득TL,
-  round(새.획득 - 옛.획득)                                as 차액,
-  round(greatest(0, 옛.획득 - 새.획득))                   as 보정지급,
-  round(사용.합계)                                        as 사용TL,
-  round(옛.획득 - 사용.합계)                              as 지금_보유TL,
-  round(greatest(새.획득, 옛.획득) - 사용.합계)           as 최종_보유TL
-from public.profiles p
+-- select
+--   p.nickname                                              as 닉네임,
+--   round(옛.획득)                                          as 지금_획득TL,
+--   round(새.획득)                                          as 바뀐뒤_획득TL,
+--   round(새.획득 - 옛.획득)                                as 차액,
+--   round(greatest(0, 옛.획득 - 새.획득))                   as 보정지급,
+--   round(사용.합계)                                        as 사용TL,
+--   round(옛.획득 - 사용.합계)                              as 지금_보유TL,
+--   round(greatest(새.획득, 옛.획득) - 사용.합계)           as 최종_보유TL
+-- from public.profiles p
 
 -- (가) 지금 방식: 거래횟수 × 10 + max(0, 수익률%) × 20 + 계급점수
-cross join lateral (
-  select
-      coalesce((select count(*) from public.trades t where t.user_id = p.id), 0) * 10
-    + greatest(0, coalesce((
-        select case when ta.initial_balance > 0
-                    then (ta.realized_pnl / ta.initial_balance) * 100
-                    else 0 end
-        from public.trading_accounts ta where ta.user_id = p.id), 0)) * 20
-    + coalesce(p.rank_points, 0)                          as 획득
-) as 옛
+-- cross join lateral (
+--   select
+--       coalesce((select count(*) from public.trades t where t.user_id = p.id), 0) * 10
+--     + greatest(0, coalesce((
+--         select case when ta.initial_balance > 0
+--                     then (ta.realized_pnl / ta.initial_balance) * 100
+--                     else 0 end
+--         from public.trading_accounts ta where ta.user_id = p.id), 0)) * 20
+--     + coalesce(p.rank_points, 0)                          as 획득
+-- ) as 옛
 
 -- (나) 새 방식: 달마다 (성과 + 참여) 를 더한 값 + 이미 받은 별도 지급/환불(양수 기록)
-cross join lateral (
-  select
-      coalesce((
-        select sum(
-                 floor(round(300 * log(2, (1 + greatest(0, 월.순수익) / 10000000)::numeric), 6))
-                 + least(150, 월.거래날짜수 * 5))
-        from (
-          select
-            date_trunc('month', t.created_at at time zone 'Asia/Seoul')     as 달,
-            sum(
-              t.pnl
-              - case
-                  when coalesce(t.close_reason, '') = '강제청산'
-                    then coalesce(t.fee, 0)
-                  else greatest(0, coalesce(t.fee, 0)
-                                   - coalesce(t.quantity, 0) * coalesce(t.exit_price, 0) * 0.0005)
-                end
-            )                                                               as 순수익,
-            count(distinct (t.created_at at time zone 'Asia/Seoul')::date)  as 거래날짜수
-          from public.trades t
-          where t.user_id = p.id
-          group by date_trunc('month', t.created_at at time zone 'Asia/Seoul')
-        ) as 월), 0)
-    + coalesce((select sum(x.amount) from public.tl_transactions x
-                 where x.user_id = p.id and x.amount > 0), 0)     as 획득
-) as 새
+-- cross join lateral (
+--   select
+--       coalesce((
+--         select sum(
+--                  floor(round(300 * log(2, (1 + greatest(0, 월.순수익) / 10000000)::numeric), 6))
+--                  + least(150, 월.거래날짜수 * 5))
+--         from (
+--           select
+--             date_trunc('month', t.created_at at time zone 'Asia/Seoul')     as 달,
+--             sum(
+--               t.pnl
+--               - case
+--                   when coalesce(t.close_reason, '') = '강제청산'
+--                     then coalesce(t.fee, 0)
+--                   else greatest(0, coalesce(t.fee, 0)
+--                                    - coalesce(t.quantity, 0) * coalesce(t.exit_price, 0) * 0.0005)
+--                 end
+--             )                                                               as 순수익,
+--             count(distinct (t.created_at at time zone 'Asia/Seoul')::date)  as 거래날짜수
+--           from public.trades t
+--           where t.user_id = p.id
+--           group by date_trunc('month', t.created_at at time zone 'Asia/Seoul')
+--         ) as 월), 0)
+--     + coalesce((select sum(x.amount) from public.tl_transactions x
+--                  where x.user_id = p.id and x.amount > 0), 0)     as 획득
+-- ) as 새
 
 -- (다) 이미 쓴 TL (음수 기록의 절대값)
-cross join lateral (
-  select coalesce((select -sum(x.amount) from public.tl_transactions x
-                    where x.user_id = p.id and x.amount < 0), 0)  as 합계
-) as 사용
+-- cross join lateral (
+--   select coalesce((select -sum(x.amount) from public.tl_transactions x
+--                     where x.user_id = p.id and x.amount < 0), 0)  as 합계
+-- ) as 사용
 
-order by 차액 asc;
+-- order by 차액 asc;
 
 
 -- =========================================================================
@@ -179,53 +210,53 @@ order by 차액 asc;
 -- 새 표를 만들지 않습니다. 이미 있는 tl_transactions 를 그대로 씁니다.
 
 -- (가) 어느 달의 정산인지 적어 둘 칸. 기존 기록은 비어 있어도(null) 됩니다.
-alter table public.tl_transactions
-  add column if not exists period date;
+-- alter table public.tl_transactions
+--   add column if not exists period date;
 
-comment on column public.tl_transactions.period is
-  '월 정산(type=monthly)이 어느 달 몫인지. 한국시간(Asia/Seoul) 기준 그 달 1일. 다른 타입은 null.';
+-- comment on column public.tl_transactions.period is
+--   '월 정산(type=monthly)이 어느 달 몫인지. 한국시간(Asia/Seoul) 기준 그 달 1일. 다른 타입은 null.';
 
 -- (나) 타입에 'monthly'(월 정산)와 'migration'(전환 보정 지급)을 더합니다.
 --     기존 'spend' / 'refund' / 'grant' 는 그대로 둡니다.
 --     제약 이름이 다를 수 있어 type 칸에 걸린 검사 제약을 찾아 바꿉니다.
-do $do$
-declare
-  c record;
-begin
-  for c in
-    select con.conname
-    from pg_constraint con
-    join pg_class cl on cl.oid = con.conrelid
-    join pg_namespace ns on ns.oid = cl.relnamespace
-    where ns.nspname = 'public'
-      and cl.relname = 'tl_transactions'
-      and con.contype = 'c'
-      and pg_get_constraintdef(con.oid) ilike '%spend%'
-  loop
-    execute format('alter table public.tl_transactions drop constraint %I', c.conname);
-  end loop;
+-- do $do$
+-- declare
+--   c record;
+-- begin
+--   for c in
+--     select con.conname
+--     from pg_constraint con
+--     join pg_class cl on cl.oid = con.conrelid
+--     join pg_namespace ns on ns.oid = cl.relnamespace
+--     where ns.nspname = 'public'
+--       and cl.relname = 'tl_transactions'
+--       and con.contype = 'c'
+--       and pg_get_constraintdef(con.oid) ilike '%spend%'
+--   loop
+--     execute format('alter table public.tl_transactions drop constraint %I', c.conname);
+--   end loop;
 
-  execute $sql$
-    alter table public.tl_transactions
-      add constraint tl_transactions_type_check
-      check (type in ('spend','refund','grant','monthly','migration'))
-  $sql$;
-end
-$do$;
+--   execute $sql$
+--     alter table public.tl_transactions
+--       add constraint tl_transactions_type_check
+--       check (type in ('spend','refund','grant','monthly','migration'))
+--   $sql$;
+-- end
+-- $do$;
 
 -- (다) 같은 달을 두 번 정산해도 두 번 지급되지 않게 막습니다(서버에서 막기).
 --     회원 1명 + 달 1개 = 월 정산 기록 1줄까지만 들어갑니다.
-create unique index if not exists uq_tl_tx_monthly_once
-  on public.tl_transactions (user_id, period)
-  where type = 'monthly';
+-- create unique index if not exists uq_tl_tx_monthly_once
+--   on public.tl_transactions (user_id, period)
+--   where type = 'monthly';
 
 -- (라) 전환 보정 지급은 회원당 평생 1번만 들어갑니다.
-create unique index if not exists uq_tl_tx_migration_once
-  on public.tl_transactions (user_id)
-  where type = 'migration';
+-- create unique index if not exists uq_tl_tx_migration_once
+--   on public.tl_transactions (user_id)
+--   where type = 'migration';
 
-create index if not exists idx_tl_tx_type_period
-  on public.tl_transactions (type, period);
+-- create index if not exists idx_tl_tx_type_period
+--   on public.tl_transactions (type, period);
 
 
 -- =========================================================================
@@ -235,43 +266,43 @@ create index if not exists idx_tl_tx_type_period
 -- (가) 그 달 순수익 = Σ(pnl) − Σ(진입수수료)
 --     맨 위 주석 "그달순수익을 무엇으로 보나" 참고. js/realized-pnl-fix.js 와 같은 식입니다.
 --     ※ 달 경계는 한국시간(Asia/Seoul) 기준입니다. 맨 위 "달의 경계는 한국시간" 참고.
-create or replace function public.tl_month_profit(p_uid uuid, p_month date)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $fn$
-  select coalesce(sum(
-      t.pnl
-      - case
-          when coalesce(t.close_reason, '') = '강제청산'
-            then coalesce(t.fee, 0)                       -- 강제청산은 fee 에 진입수수료만 들어감
-          else greatest(0, coalesce(t.fee, 0)
-                           - coalesce(t.quantity, 0) * coalesce(t.exit_price, 0) * 0.0005)
-        end
-    ), 0)
-  from public.trades t
-  where t.user_id = p_uid
-    and date_trunc('month', t.created_at at time zone 'Asia/Seoul')
-        = date_trunc('month', p_month::timestamp);
-$fn$;
+-- create or replace function public.tl_month_profit(p_uid uuid, p_month date)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+--   select coalesce(sum(
+--       t.pnl
+--       - case
+--           when coalesce(t.close_reason, '') = '강제청산'
+--             then coalesce(t.fee, 0)                       -- 강제청산은 fee 에 진입수수료만 들어감
+--           else greatest(0, coalesce(t.fee, 0)
+--                            - coalesce(t.quantity, 0) * coalesce(t.exit_price, 0) * 0.0005)
+--         end
+--     ), 0)
+--   from public.trades t
+--   where t.user_id = p_uid
+--     and date_trunc('month', t.created_at at time zone 'Asia/Seoul')
+--         = date_trunc('month', p_month::timestamp);
+-- $fn$;
 
 -- (나) 그 달에 거래가 "있었던 날짜 수". 거래 건수가 아닙니다.
 --     하루에 몇 번을 하든 그 날은 1로 셉니다.
-create or replace function public.tl_month_days(p_uid uuid, p_month date)
-returns integer
-language sql
-stable
-security definer
-set search_path = public
-as $fn$
-  select coalesce(count(distinct (t.created_at at time zone 'Asia/Seoul')::date), 0)::integer
-  from public.trades t
-  where t.user_id = p_uid
-    and date_trunc('month', t.created_at at time zone 'Asia/Seoul')
-        = date_trunc('month', p_month::timestamp);
-$fn$;
+-- create or replace function public.tl_month_days(p_uid uuid, p_month date)
+-- returns integer
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+--   select coalesce(count(distinct (t.created_at at time zone 'Asia/Seoul')::date), 0)::integer
+--   from public.trades t
+--   where t.user_id = p_uid
+--     and date_trunc('month', t.created_at at time zone 'Asia/Seoul')
+--         = date_trunc('month', p_month::timestamp);
+-- $fn$;
 
 -- (다) 그달TL = 성과 + 참여
 --     성과 = floor(300 × log2(1 + max(0, 순수익) / 10,000,000))   손실이면 0
@@ -280,22 +311,22 @@ $fn$;
 --       log(2, 2) 가 0.9999999999999999 로 나오면 floor 가 300 대신 299 를 냅니다.
 --       소수점 6자리에서 한 번 반올림한 뒤 내림하면 1,000만 = 300 처럼
 --       딱 떨어지는 구간이 어긋나지 않습니다.
-create or replace function public.tl_month_amount(p_uid uuid, p_month date)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $fn$
-  select
-      floor(round(300 * log(2, (1 + greatest(0, public.tl_month_profit(p_uid, p_month))
-                                    / 10000000)::numeric), 6))
-    + least(150, public.tl_month_days(p_uid, p_month) * 5);
-$fn$;
+-- create or replace function public.tl_month_amount(p_uid uuid, p_month date)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+--   select
+--       floor(round(300 * log(2, (1 + greatest(0, public.tl_month_profit(p_uid, p_month))
+--                                     / 10000000)::numeric), 6))
+--     + least(150, public.tl_month_days(p_uid, p_month) * 5);
+-- $fn$;
 
-grant execute on function public.tl_month_profit to authenticated;
-grant execute on function public.tl_month_days to authenticated;
-grant execute on function public.tl_month_amount to authenticated;
+-- grant execute on function public.tl_month_profit to authenticated;
+-- grant execute on function public.tl_month_days to authenticated;
+-- grant execute on function public.tl_month_amount to authenticated;
 
 
 -- =========================================================================
@@ -306,73 +337,73 @@ grant execute on function public.tl_month_amount to authenticated;
 -- 계급 점수(rank_points)도 더 이상 TL 에 섞이지 않습니다.
 
 -- (가) 획득 TL = 지금까지 지급된 기록(양수)의 합
-create or replace function public.tl_earned(p_uid uuid)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $fn$
-  select coalesce((select sum(x.amount) from public.tl_transactions x
-                    where x.user_id = p_uid and x.amount > 0), 0);
-$fn$;
+-- create or replace function public.tl_earned(p_uid uuid)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+--   select coalesce((select sum(x.amount) from public.tl_transactions x
+--                     where x.user_id = p_uid and x.amount > 0), 0);
+-- $fn$;
 
 -- (나) 보유 TL = 획득 − 사용
-create or replace function public.tl_balance(p_uid uuid)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $fn$
-  select public.tl_earned(p_uid)
-       - coalesce((select -sum(x.amount) from public.tl_transactions x
-                    where x.user_id = p_uid and x.amount < 0), 0);
-$fn$;
+-- create or replace function public.tl_balance(p_uid uuid)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+--   select public.tl_earned(p_uid)
+--        - coalesce((select -sum(x.amount) from public.tl_transactions x
+--                     where x.user_id = p_uid and x.amount < 0), 0);
+-- $fn$;
 
 -- (다) 화면 표시용 — json 키(logged_in / earned / spent / granted / balance)는
 --     예전과 똑같습니다. js/tl-hotdeal.js · js/tl-market.js · js/tl-balance-sync.js
 --     는 고치지 않아도 됩니다.
 --     'granted' 만 뜻을 좁혔습니다 — 월 정산을 뺀 "별도 지급/환불" 입니다.
 --     그러지 않으면 화면에 "획득 1,000 · 지급 1,000" 처럼 같은 숫자가 두 번 보입니다.
-create or replace function public.tl_balance_info()
-returns json
-language plpgsql
-stable
-security definer
-set search_path = public
-as $fn$
-declare
-  uid uuid := auth.uid();
-  earned numeric;
-  spent numeric;
-  granted numeric;
-begin
-  if uid is null then
-    return json_build_object(
-      'logged_in', false, 'earned', 0, 'spent', 0, 'granted', 0, 'balance', 0);
-  end if;
+-- create or replace function public.tl_balance_info()
+-- returns json
+-- language plpgsql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $fn$
+-- declare
+--   uid uuid := auth.uid();
+--   earned numeric;
+--   spent numeric;
+--   granted numeric;
+-- begin
+--   if uid is null then
+--     return json_build_object(
+--       'logged_in', false, 'earned', 0, 'spent', 0, 'granted', 0, 'balance', 0);
+--   end if;
 
-  earned := public.tl_earned(uid);
+--   earned := public.tl_earned(uid);
 
-  spent := coalesce((select -sum(x.amount) from public.tl_transactions x
-                     where x.user_id = uid and x.amount < 0), 0);
+--   spent := coalesce((select -sum(x.amount) from public.tl_transactions x
+--                      where x.user_id = uid and x.amount < 0), 0);
 
-  granted := coalesce((select sum(x.amount) from public.tl_transactions x
-                       where x.user_id = uid and x.amount > 0
-                         and x.type <> 'monthly'), 0);
+--   granted := coalesce((select sum(x.amount) from public.tl_transactions x
+--                        where x.user_id = uid and x.amount > 0
+--                          and x.type <> 'monthly'), 0);
 
-  return json_build_object(
-    'logged_in', true,
-    'earned', earned,
-    'spent', spent,
-    'granted', granted,
+--   return json_build_object(
+--     'logged_in', true,
+--     'earned', earned,
+--     'spent', spent,
+--     'granted', granted,
     -- 잔액은 반드시 tl_balance() 와 같아야 합니다. 구매 가능 여부도 그 함수로 봅니다.
-    'balance', public.tl_balance(uid));
-end;
-$fn$;
+--     'balance', public.tl_balance(uid));
+-- end;
+-- $fn$;
 
-grant execute on function public.tl_balance_info to authenticated;
+-- grant execute on function public.tl_balance_info to authenticated;
 
 
 -- =========================================================================
@@ -380,118 +411,118 @@ grant execute on function public.tl_balance_info to authenticated;
 -- =========================================================================
 -- 한 달 몫을 계산해 tl_transactions 에 'monthly' 기록으로 남깁니다.
 -- 같은 달을 두 번 불러도 두 번 지급되지 않습니다(존재 확인 + 유니크 인덱스).
-create or replace function public.tl_settle_month(p_month date)
-returns json
-language plpgsql
-security definer
-set search_path = public
-as $fn$
-declare
-  m date;
-  r record;
-  amt numeric;
-  bal numeric;
-  n integer := 0;
-  skipped integer := 0;
-  total numeric := 0;
-begin
-  if not public.am_i_admin() then
-    raise exception 'not_admin';
-  end if;
-  if p_month is null then
-    raise exception 'month_required';
-  end if;
+-- create or replace function public.tl_settle_month(p_month date)
+-- returns json
+-- language plpgsql
+-- security definer
+-- set search_path = public
+-- as $fn$
+-- declare
+--   m date;
+--   r record;
+--   amt numeric;
+--   bal numeric;
+--   n integer := 0;
+--   skipped integer := 0;
+--   total numeric := 0;
+-- begin
+--   if not public.am_i_admin() then
+--     raise exception 'not_admin';
+--   end if;
+--   if p_month is null then
+--     raise exception 'month_required';
+--   end if;
 
   -- p_month 는 날짜(date)라 시간대가 없습니다. 그대로 그 달 1일로 맞춥니다.
   -- 이 값이 period 칸에 들어갑니다. 위 계산 함수도 같은 기준(한국시간 달)이라
   -- 중복 정산 방지 인덱스가 엉뚱한 달을 막는 일이 없습니다.
-  m := date_trunc('month', p_month::timestamp)::date;
+--   m := date_trunc('month', p_month::timestamp)::date;
 
   -- 아직 안 끝난 이번 달은 정산하지 않습니다.
   -- 중간에 잠가버리면 남은 날의 성과가 영영 안 들어가기 때문입니다.
   -- "이번 달" 도 한국시간 기준입니다. 한국시간 9월 1일 새벽에
   -- 8월 정산을 돌릴 수 있어야 합니다(세계표준시로는 아직 8월 31일).
-  if m >= date_trunc('month', now() at time zone 'Asia/Seoul')::date then
-    raise exception 'month_not_finished';
-  end if;
+--   if m >= date_trunc('month', now() at time zone 'Asia/Seoul')::date then
+--     raise exception 'month_not_finished';
+--   end if;
 
-  for r in select pr.id as uid from public.profiles pr
-  loop
+--   for r in select pr.id as uid from public.profiles pr
+--   loop
     -- 이미 정산된 달이면 건너뜁니다(중복 지급 방지 1차).
-    if exists (select 1 from public.tl_transactions x
-                where x.user_id = r.uid and x.type = 'monthly' and x.period = m) then
-      skipped := skipped + 1;
-      continue;
-    end if;
+--     if exists (select 1 from public.tl_transactions x
+--                 where x.user_id = r.uid and x.type = 'monthly' and x.period = m) then
+--       skipped := skipped + 1;
+--       continue;
+--     end if;
 
-    amt := public.tl_month_amount(r.uid, m);
-    if amt is null or amt <= 0 then
-      continue;                                   -- 거래가 없던 달은 기록을 남기지 않습니다
-    end if;
+--     amt := public.tl_month_amount(r.uid, m);
+--     if amt is null or amt <= 0 then
+--       continue;                                   -- 거래가 없던 달은 기록을 남기지 않습니다
+--     end if;
 
-    bal := public.tl_balance(r.uid) + amt;
+--     bal := public.tl_balance(r.uid) + amt;
 
     -- 중복 지급 방지 2차 — 유니크 인덱스(uq_tl_tx_monthly_once)가 막습니다.
-    insert into public.tl_transactions
-      (user_id, type, amount, balance_after, description, period)
-    values
-      (r.uid, 'monthly', amt, bal,
-       to_char(m, 'YYYY년 MM월') || ' 월간 정산', m)
-    on conflict do nothing;
+--     insert into public.tl_transactions
+--       (user_id, type, amount, balance_after, description, period)
+--     values
+--       (r.uid, 'monthly', amt, bal,
+--        to_char(m, 'YYYY년 MM월') || ' 월간 정산', m)
+--     on conflict do nothing;
 
-    n := n + 1;
-    total := total + amt;
-  end loop;
+--     n := n + 1;
+--     total := total + amt;
+--   end loop;
 
-  return json_build_object(
-    'ok', true, 'month', m, 'paid_members', n, 'skipped', skipped, 'total_tl', total);
-end;
-$fn$;
+--   return json_build_object(
+--     'ok', true, 'month', m, 'paid_members', n, 'skipped', skipped, 'total_tl', total);
+-- end;
+-- $fn$;
 
-grant execute on function public.tl_settle_month to authenticated;
+-- grant execute on function public.tl_settle_month to authenticated;
 
 
 -- 지난 달까지 아직 정산 안 된 달을 전부 정산합니다(거래가 있었던 달만).
-create or replace function public.tl_settle_all_past()
-returns json
-language plpgsql
-security definer
-set search_path = public
-as $fn$
-declare
-  mrow record;
-  one json;
-  months integer := 0;
-  total numeric := 0;
-begin
-  if not public.am_i_admin() then
-    raise exception 'not_admin';
-  end if;
+-- create or replace function public.tl_settle_all_past()
+-- returns json
+-- language plpgsql
+-- security definer
+-- set search_path = public
+-- as $fn$
+-- declare
+--   mrow record;
+--   one json;
+--   months integer := 0;
+--   total numeric := 0;
+-- begin
+--   if not public.am_i_admin() then
+--     raise exception 'not_admin';
+--   end if;
 
-  for mrow in
-    select distinct date_trunc('month', t.created_at at time zone 'Asia/Seoul')::date as m
-    from public.trades t
-    where date_trunc('month', t.created_at at time zone 'Asia/Seoul')
-        < date_trunc('month', now() at time zone 'Asia/Seoul')
-    order by 1
-  loop
-    one := public.tl_settle_month(mrow.m);
-    months := months + 1;
-    total := total + coalesce((one ->> 'total_tl')::numeric, 0);
-  end loop;
+--   for mrow in
+--     select distinct date_trunc('month', t.created_at at time zone 'Asia/Seoul')::date as m
+--     from public.trades t
+--     where date_trunc('month', t.created_at at time zone 'Asia/Seoul')
+--         < date_trunc('month', now() at time zone 'Asia/Seoul')
+--     order by 1
+--   loop
+--     one := public.tl_settle_month(mrow.m);
+--     months := months + 1;
+--     total := total + coalesce((one ->> 'total_tl')::numeric, 0);
+--   end loop;
 
-  return json_build_object('ok', true, 'months', months, 'total_tl', total);
-end;
-$fn$;
+--   return json_build_object('ok', true, 'months', months, 'total_tl', total);
+-- end;
+-- $fn$;
 
-grant execute on function public.tl_settle_all_past to authenticated;
+-- grant execute on function public.tl_settle_all_past to authenticated;
 
 
 -- =========================================================================
 -- 6절) 실행 — 지난 달까지 전부 정산
 -- =========================================================================
 -- 관리자 계정으로 SQL Editor 에 로그인한 상태여야 합니다(am_i_admin).
-select public.tl_settle_all_past() as 월정산_결과;
+-- select public.tl_settle_all_past() as 월정산_결과;
 
 
 -- =========================================================================
@@ -513,71 +544,71 @@ select public.tl_settle_all_past() as 월정산_결과;
 --   새 보유 = (기존 기록 합계) + 월정산합계 + 보정액
 --   두 값이 같아지려면 보정액 = 옛공식 − 월정산합계 입니다.
 --   기존에 받은 별도 지급(grant/refund)은 양쪽에 똑같이 들어 있어 상쇄됩니다.
-create or replace function public.tl_migrate_legacy()
-returns json
-language plpgsql
-security definer
-set search_path = public
-as $fn$
-declare
-  r record;
-  legacy numeric;
-  monthly_sum numeric;
-  diff numeric;
-  bal numeric;
-  n integer := 0;
-  total numeric := 0;
-begin
-  if not public.am_i_admin() then
-    raise exception 'not_admin';
-  end if;
+-- create or replace function public.tl_migrate_legacy()
+-- returns json
+-- language plpgsql
+-- security definer
+-- set search_path = public
+-- as $fn$
+-- declare
+--   r record;
+--   legacy numeric;
+--   monthly_sum numeric;
+--   diff numeric;
+--   bal numeric;
+--   n integer := 0;
+--   total numeric := 0;
+-- begin
+--   if not public.am_i_admin() then
+--     raise exception 'not_admin';
+--   end if;
 
-  for r in select pr.id as uid from public.profiles pr
-  loop
+--   for r in select pr.id as uid from public.profiles pr
+--   loop
     -- 이미 보정받았으면 건너뜁니다(두 번 지급 방지).
-    if exists (select 1 from public.tl_transactions x
-                where x.user_id = r.uid and x.type = 'migration') then
-      continue;
-    end if;
+--     if exists (select 1 from public.tl_transactions x
+--                 where x.user_id = r.uid and x.type = 'migration') then
+--       continue;
+--     end if;
 
     -- 옛 방식 획득 TL — schema-tl-hotdeal.sql 의 예전 tl_earned() 와 같은 식입니다.
-    legacy :=
-        coalesce((select count(*) from public.trades t where t.user_id = r.uid), 0) * 10
-      + greatest(0, coalesce((
-          select case when ta.initial_balance > 0
-                      then (ta.realized_pnl / ta.initial_balance) * 100
-                      else 0 end
-          from public.trading_accounts ta where ta.user_id = r.uid), 0)) * 20
-      + coalesce((select pr2.rank_points from public.profiles pr2 where pr2.id = r.uid), 0);
+--     legacy :=
+--         coalesce((select count(*) from public.trades t where t.user_id = r.uid), 0) * 10
+--       + greatest(0, coalesce((
+--           select case when ta.initial_balance > 0
+--                       then (ta.realized_pnl / ta.initial_balance) * 100
+--                       else 0 end
+--           from public.trading_accounts ta where ta.user_id = r.uid), 0)) * 20
+--       + coalesce((select pr2.rank_points from public.profiles pr2 where pr2.id = r.uid), 0);
 
-    monthly_sum := coalesce((select sum(x.amount) from public.tl_transactions x
-                              where x.user_id = r.uid and x.type = 'monthly'), 0);
+--     monthly_sum := coalesce((select sum(x.amount) from public.tl_transactions x
+--                               where x.user_id = r.uid and x.type = 'monthly'), 0);
 
-    diff := legacy - monthly_sum;
-    if diff is null or diff <= 0 then
-      continue;                                   -- 줄지 않는 회원은 아무것도 안 합니다
-    end if;
+--     diff := legacy - monthly_sum;
+--     if diff is null or diff <= 0 then
+--       continue;                                   -- 줄지 않는 회원은 아무것도 안 합니다
+--     end if;
 
-    bal := public.tl_balance(r.uid) + diff;
+--     bal := public.tl_balance(r.uid) + diff;
 
-    insert into public.tl_transactions
-      (user_id, type, amount, balance_after, description)
-    values
-      (r.uid, 'migration', diff, bal, 'TL 계산방식 변경 보정 지급(1회)')
-    on conflict do nothing;
+--     insert into public.tl_transactions
+--       (user_id, type, amount, balance_after, description)
+--     values
+--       (r.uid, 'migration', diff, bal, 'TL 계산방식 변경 보정 지급(1회)')
+--     on conflict do nothing;
 
-    n := n + 1;
-    total := total + diff;
-  end loop;
+--     n := n + 1;
+--     total := total + diff;
+--   end loop;
 
-  return json_build_object('ok', true, 'members', n, 'total_tl', total);
-end;
-$fn$;
+--   return json_build_object('ok', true, 'members', n, 'total_tl', total);
+-- end;
+-- $fn$;
 
-grant execute on function public.tl_migrate_legacy to authenticated;
+-- grant execute on function public.tl_migrate_legacy to authenticated;
 
 -- 실행
-select public.tl_migrate_legacy() as 보정지급_결과;
+-- select public.tl_migrate_legacy() as 보정지급_결과;
 
 
 -- =========================================================================
@@ -585,51 +616,51 @@ select public.tl_migrate_legacy() as 보정지급_결과;
 -- =========================================================================
 
 -- (가) 계급이 TL 과 분리돼 있는지. '⚠' 가 나오면 schema-rank-1000.sql 을 먼저 실행하세요.
-select case
-         when pg_get_functiondef(p.oid) like '%tl_earned%'
-           then '⚠ rank_points_all 이 아직 tl_earned 를 씁니다 — schema-rank-1000.sql 을 먼저 실행하세요'
-         else '✅ 계급은 TL 과 분리돼 있습니다'
-       end as 계급_분리_확인
-from pg_proc p
-join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public' and p.proname = 'rank_points_all';
+-- select case
+--          when pg_get_functiondef(p.oid) like '%tl_earned%'
+--            then '⚠ rank_points_all 이 아직 tl_earned 를 씁니다 — schema-rank-1000.sql 을 먼저 실행하세요'
+--          else '✅ 계급은 TL 과 분리돼 있습니다'
+--        end as 계급_분리_확인
+-- from pg_proc p
+-- join pg_namespace n on n.oid = p.pronamespace
+-- where n.nspname = 'public' and p.proname = 'rank_points_all';
 
 -- (나) 회원별 TL — 월 정산 / 보정 / 사용 / 보유
-select
-  p.nickname                                                            as 닉네임,
-  round(coalesce(sum(x.amount) filter (where x.type = 'monthly'), 0))   as 월정산TL,
-  round(coalesce(sum(x.amount) filter (where x.type = 'migration'), 0)) as 보정TL,
-  round(coalesce(sum(x.amount) filter (where x.amount > 0
-                                         and x.type not in ('monthly','migration')), 0))
-                                                                        as 별도지급TL,
-  round(coalesce(-sum(x.amount) filter (where x.amount < 0), 0))        as 사용TL,
-  round(public.tl_balance(p.id))                                        as 보유TL
-from public.profiles p
-left join public.tl_transactions x on x.user_id = p.id
-group by p.id, p.nickname
-order by 보유TL desc;
+-- select
+--   p.nickname                                                            as 닉네임,
+--   round(coalesce(sum(x.amount) filter (where x.type = 'monthly'), 0))   as 월정산TL,
+--   round(coalesce(sum(x.amount) filter (where x.type = 'migration'), 0)) as 보정TL,
+--   round(coalesce(sum(x.amount) filter (where x.amount > 0
+--                                          and x.type not in ('monthly','migration')), 0))
+--                                                                         as 별도지급TL,
+--   round(coalesce(-sum(x.amount) filter (where x.amount < 0), 0))        as 사용TL,
+--   round(public.tl_balance(p.id))                                        as 보유TL
+-- from public.profiles p
+-- left join public.tl_transactions x on x.user_id = p.id
+-- group by p.id, p.nickname
+-- order by 보유TL desc;
 
 -- (다) 달별 정산 내역 — 한 달에 얼마가 나갔는지
-select
-  x.period                       as 정산달,
-  count(*)                       as 지급회원수,
-  round(sum(x.amount))           as 지급TL합계,
-  round(max(x.amount))           as 최고지급TL,
-  round(sum(x.amount)) * 10      as 대략_원화환산
-from public.tl_transactions x
-where x.type = 'monthly'
-group by x.period
-order by x.period desc;
+-- select
+--   x.period                       as 정산달,
+--   count(*)                       as 지급회원수,
+--   round(sum(x.amount))           as 지급TL합계,
+--   round(max(x.amount))           as 최고지급TL,
+--   round(sum(x.amount)) * 10      as 대략_원화환산
+-- from public.tl_transactions x
+-- where x.type = 'monthly'
+-- group by x.period
+-- order by x.period desc;
 
 -- (라) 중복 지급이 없는지 — 결과가 0줄이어야 정상입니다.
-select x.user_id, x.period, count(*) as 줄수
-from public.tl_transactions x
-where x.type = 'monthly'
-group by x.user_id, x.period
-having count(*) > 1;
+-- select x.user_id, x.period, count(*) as 줄수
+-- from public.tl_transactions x
+-- where x.type = 'monthly'
+-- group by x.user_id, x.period
+-- having count(*) > 1;
 
 -- (마) 성과 구간이 표와 맞는지 (회원 데이터와 무관한 순수 계산 확인)
-select v.순수익,
-       floor(round(300 * log(2, (1 + greatest(0, v.순수익) / 10000000)::numeric), 6)) as 성과TL
-from (values (0::numeric), (10000000), (30000000), (70000000), (100000000), (1000000000))
-     as v(순수익);
+-- select v.순수익,
+--        floor(round(300 * log(2, (1 + greatest(0, v.순수익) / 10000000)::numeric), 6)) as 성과TL
+-- from (values (0::numeric), (10000000), (30000000), (70000000), (100000000), (1000000000))
+--      as v(순수익);

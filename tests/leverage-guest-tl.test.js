@@ -108,11 +108,15 @@ console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정�
   /* ⚠ 이 구간이 검사하는 "거래횟수 x 10 + 수익률% x 20 + rank_points" 는
      supabase/schema-tl-hotdeal.sql 의 옛 공식입니다. 정본이 아닙니다.
 
-     정본 = supabase/schema-tl-monthly.sql  (2026-08-24)
-         그달TL = floor(300 x log2(1 + max(0, 그달순수익) / 1000만))
-                  + min(150, 그 달에 거래가 있었던 날짜수 x 5)
+     정본 = supabase/schema-tl-realtime.sql  (2026-08-24, 대표 지시로 실시간 지급)
+         받아야할총TL = floor(300 x log2(1 + max(0, 누적순수익) / 1000만))
+                        + min(150, 거래가 있었던 날짜수 x 5)
+         이번지급    = max(0, 받아야할총TL - 이미받은총TL)
+         거래가 저장될 때마다(after insert 트리거) 그 자리에서 지급합니다.
          tl_earned() 는 더 이상 계산하지 않고,
          tl_transactions 에 남은 지급 기록만 더합니다.
+         옛 supabase/schema-tl-monthly.sql(월 정산)은 봉인됐습니다
+         — tests/tl-monthly.test.js 가 봉인을 지킵니다.
 
      왜 옛 검사를 그냥 지우지 않나
        schema-tl-hotdeal.sql 은 상점·구매 기능이 같이 들어 있어 계속 쓰이는 파일이고,
@@ -169,11 +173,11 @@ console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정�
   ok("[옛] 서버 잔액은 획득 - 사용", /public\.tl_earned\(p_uid\)[\s\S]{0,120}sum\(amount\)/.test(code));
 
   /* ===================================================================
-     (다) 정본은 schema-tl-monthly.sql 이다
+     (다) 정본은 schema-tl-realtime.sql 이다
      이 검사가 있어야 옛 공식이 조용히 되살아나지 않습니다.
      =================================================================== */
-  const 정본경로 = path.join(REPO, "supabase", "schema-tl-monthly.sql");
-  ok("정본 파일(schema-tl-monthly.sql)이 있다", fs.existsSync(정본경로));
+  const 정본경로 = path.join(REPO, "supabase", "schema-tl-realtime.sql");
+  ok("정본 파일(schema-tl-realtime.sql)이 있다", fs.existsSync(정본경로));
 
   const 정본 = fs.existsSync(정본경로) ? fs.readFileSync(정본경로, "utf8") : "";
   const 정본코드 = 정본.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
@@ -193,24 +197,26 @@ console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정�
 
   /* 정본에는 새 공식이 실제로 들어 있어야 합니다. */
   ok("정본에 새 성과 공식(300 x log2, 기준 1000만)이 있다",
-     /300 \* log\(2, \(1 \+ greatest\(0, public\.tl_month_profit/.test(정본코드));
+     /300 \* log\(2, \(1 \+ greatest\(0, public\.tl_total_profit/.test(정본코드));
   ok("정본에 새 참여 공식(거래날짜수 x 5, 상한 150)이 있다",
-     /least\(150, public\.tl_month_days\(p_uid, p_month\) \* 5\)/.test(정본코드));
+     /least\(150, public\.tl_total_days\(p_uid\) \* 5\)/.test(정본코드));
 
   /* 옛 파일을 지우지 않았다는 것도 같이 지킵니다 — 기록으로 남길 값어치가 있습니다. */
   ok("옛 파일(schema-tl-hotdeal.sql)을 지우지 않았다",
      fs.existsSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql")));
   ok("정본이 무엇을 대체했는지 옛 파일 이름을 적어 뒀다",
      /schema-tl-hotdeal\.sql/.test(정본));
-  ok("옛 공식이 왜 문제였는지도 정본에 적혀 있다(무한 구멍)",
-     /무한 구멍/.test(정본));
+  ok("익절·손절 반복으로 못 긁는다고 정본에 적혀 있다",
+     /무한히 적립/.test(정본));
+  ok("정본이 옛 월 정산 파일을 대체했다고 적어 뒀다",
+     /schema-tl-monthly.sql/.test(정본));
 
   /* 두 공식이 정말 다른 값을 낸다는 것을 숫자로 확인합니다. */
-  const 새달TL = (순수익, 날짜수) =>
+  const 새TL = (순수익, 날짜수) =>
     Math.floor(300 * Math.log2(1 + Math.max(0, 순수익) / 10000000)) + Math.min(150, 날짜수 * 5);
   ok("옛 공식은 1,000번 긁으면 " + 1000 * perTrade + " TL", 1000 * perTrade === 10000);
-  ok("새 공식은 하루에 1,000번을 해도 5 TL(수익 0)", 새달TL(0, 1) === 5, String(새달TL(0, 1)));
-  ok("두 공식은 같은 값을 내지 않는다(정말 대체됐다)", 1000 * perTrade !== 새달TL(0, 1));
+  ok("새 공식은 하루에 1,000번을 해도 5 TL(수익 0)", 새TL(0, 1) === 5, String(새TL(0, 1)));
+  ok("두 공식은 같은 값을 내지 않는다(정말 대체됐다)", 1000 * perTrade !== 새TL(0, 1));
 }
 
 console.log("\n③ 비회원 접근");
