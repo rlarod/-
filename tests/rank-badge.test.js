@@ -134,13 +134,23 @@ console.log("\n계급장");
    * 아래 [옛] 검사는 "옛 파일이 그때 그대로 남아 있다" 는 기록 확인일 뿐입니다.
    * 이것을 보고 계급을 다시 TL 에 묶으면 안 됩니다 — 그래서 이름에 [옛] 을 붙였고,
    * 바로 아래 [정본] 검사가 "정본이 옛 판을 덮는다" 를 함께 지킵니다.
+   *
+   * 2026-08-24 — 옛 판은 주석으로 봉인됐습니다(실수로 Run 해도 계급이
+   * 되돌아가지 않게). 그래서 [옛] 기록 확인은 "실행되는 본문(sqlCode)" 이
+   * 아니라 "봉인된 원문(sqlKept)" 에서 봅니다. 봉인 자체는
+   * tests/rank-formula-seal.test.js 가 지킵니다.
    * ===================================================================== */
   const sqlBadge = fs.readFileSync(path.join(REPO, "supabase", "schema-rank-badges.sql"), "utf8");
   const sqlCode = sqlBadge.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+  /* "-- " 만 떼어 봉인된 원문을 되살립니다(기록 확인용 · 파일은 안 고칩니다) */
+  const sqlKept = sqlBadge.split("\n")
+    .map((l) => (l === "--" ? "" : l.replace(/^-- /, ""))).join("\n");
   ok("[옛] schema-rank-badges.sql 은 점수를 tl_earned() 로 계산한다 (2026-08-19 이전 판 · 기록)",
-     /public\.tl_earned\(p\.id\)/.test(sqlCode));
+     /public\.tl_earned\(p\.id\)/.test(sqlKept));
   ok("[옛] SQL: 테이블을 만들거나 지우지 않는다", !/create table|drop table|truncate/i.test(sqlCode));
-  ok("[옛] SQL: 조회 수를 제한한다(과부하 방지)", /limit greatest/.test(sqlCode));
+  ok("[옛] SQL: 조회 수를 제한한다(과부하 방지)", /limit greatest/.test(sqlKept));
+  ok("[옛] 옛 판은 봉인돼 실행되지 않는다 (실수로 Run 해도 계급이 안 되돌아간다)",
+     !/create\s+or\s+replace\s+function\s+public\.rank_points_all/.test(sqlCode));
   ok("[옛] 옛 파일을 지우지 않았다(기록으로 남긴다)",
      fs.existsSync(path.join(REPO, "supabase", "schema-rank-badges.sql")));
 

@@ -1,3 +1,46 @@
+-- #########################################################################
+-- ##                                                                     ##
+-- ##   ⚠ 이 파일의 rank_points_all() 은 대체됐습니다                    ##
+-- ##                                                                     ##
+-- ##   정본은  supabase/schema-rank-1000.sql  입니다.                    ##
+-- ##                                                                     ##
+-- ##   이 파일을 Run 해도 계급은 바뀌지 않습니다.                        ##
+-- ##   (맨 아래 "확인" 은 읽기만 합니다 — 그것만 살아 있습니다)          ##
+-- ##                                                                     ##
+-- #########################################################################
+--
+--   ▸ 왜 막았나 — 실행 순서에 기대면 언젠가 깨집니다
+--       이 파일과 schema-rank-1000.sql 은 같은 rank_points_all() 을
+--       만듭니다. 정본을 먼저 돌린 뒤 이 파일을 나중에 돌리면
+--       랭킹표의 계급이 TL 화폐 기준으로 되돌아갑니다.
+--       내 화면의 계급과 랭킹표의 계급이 서로 다르게 나오는데,
+--       오류는 안 나서 아무도 모릅니다.
+--       supabase/ 에 파일이 45개가 넘습니다. "순서를 지켜라" 는 언젠가
+--       깨집니다. 그래서 순서와 상관없이 안전하도록 막았습니다.
+--
+--   ▸ 무엇이 막혀 있나 (주석 처리 · 원문은 아래에 그대로 보존)
+--       public.rank_points_all(int)   tl_earned() 로 점수를 매기던 옛 판
+--       + 위 함수에 대한 grant execute 1줄
+--
+--   ▸ 무엇이 그대로 살아 있나 (이 파일을 Run 하면 이것만 실행됩니다)
+--       맨 아래 "확인" select — 읽기 전용입니다.
+--       닉네임과 계급 점수가 나오는지 눈으로 보는 용도입니다.
+--       아무것도 바꾸지 않습니다. 언제 몇 번을 돌려도 안전합니다.
+--
+--   ▸ 실수로 이 파일을 Run 하면 어떻게 되나
+--       닉네임과 점수 목록만 나옵니다. 바뀌는 것은 하나도 없습니다.
+--
+--   ▸ 이 파일이 해결했던 문제는 지금 어떻게 되었나
+--       정본(schema-rank-1000.sql)이 같은 rank_points_all() 을 만듭니다.
+--       남의 계급장은 그대로 보입니다. 점수 기준만 지갑으로 바뀌었습니다.
+--
+--   ▸ 이 봉인은 tests/rank-formula-seal.test.js 가 지킵니다.
+--     주석을 하나라도 지우면 npm test 가 실패합니다.
+--
+--   ▸ 아래는 원문 그대로입니다 — 고치지 마세요. 기록입니다.
+-- =========================================================================
+
+
 -- =========================================================================
 -- 계급장 표시용 — 닉네임별 계급 점수
 -- =========================================================================
@@ -19,20 +62,37 @@
 -- 여러 번 실행해도 안전합니다.
 -- =========================================================================
 
-create or replace function public.rank_points_all(limit_count integer default 500)
-returns table (nickname text, rank_points numeric)
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select p.nickname, public.tl_earned(p.id) as rank_points
-  from public.profiles p
-  order by public.tl_earned(p.id) desc
-  limit greatest(1, least(coalesce(limit_count, 500), 2000));
-$$;
-
-grant execute on function public.rank_points_all to authenticated;
+-- =========================================================================
+-- ⛔ [봉인] rank_points_all() — 여기서는 만들지 않습니다 (2026-08-24)
+-- =========================================================================
+--   정본은 supabase/schema-rank-1000.sql 입니다.
+--   계급을 바꾸려면 그 파일을 실행하세요. 이 파일이 아닙니다.
+--
+--   아래 판은 계급 점수를 tl_earned() — 즉 TL 화폐 공식 — 로 매깁니다.
+--   계급은 2026-08-19 에 TL 과 완전히 분리됐고, 2026-08-24 대표 결정으로
+--   "지갑에 있는 돈" 기준이 됐습니다.
+--
+--   ▸ 봉인 시작 — 여기부터 아래 [봉인 끝] 까지 전부 주석(기록)입니다.
+-- -------------------------------------------------------------------------
+-- create or replace function public.rank_points_all(limit_count integer default 500)
+-- returns table (nickname text, rank_points numeric)
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+--   select p.nickname, public.tl_earned(p.id) as rank_points
+--   from public.profiles p
+--   order by public.tl_earned(p.id) desc
+--   limit greatest(1, least(coalesce(limit_count, 500), 2000));
+-- $$;
+--
+-- grant execute on function public.rank_points_all to authenticated;
+-- -------------------------------------------------------------------------
+-- ⛔ [봉인 끝] 위 함수는 여기서 만들어지지 않습니다.
+--   정본: supabase/schema-rank-1000.sql
+--   이 주석을 지우면 tests/rank-formula-seal.test.js 가 실패합니다.
+-- =========================================================================
 
 
 -- ---------------- 확인 ----------------

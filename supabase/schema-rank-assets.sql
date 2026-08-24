@@ -1,3 +1,48 @@
+-- #########################################################################
+-- ##                                                                     ##
+-- ##   ⚠ 이 파일의 계급 계산식은 대체됐습니다                          ##
+-- ##                                                                     ##
+-- ##   정본은  supabase/schema-rank-1000.sql  입니다.                    ##
+-- ##                                                                     ##
+-- ##   이 파일을 Run 해도 계급은 바뀌지 않습니다.                        ##
+-- ##   (실행되는 문장이 하나도 없습니다 — 전부 주석입니다)               ##
+-- ##                                                                     ##
+-- #########################################################################
+--
+--   ▸ 왜 막았나 — 실행 순서에 기대면 언젠가 깨집니다
+--       이 파일과 schema-rank-1000.sql 은 같은 rank_points() 와
+--       rank_points_all() 을 만듭니다. 정본을 먼저 돌린 뒤 이 파일을
+--       나중에 돌리면 모든 회원의 계급이 옛 기준으로 되돌아갑니다.
+--       오류도 안 나고 화면도 멀쩡해서 아무도 모릅니다.
+--       supabase/ 에 파일이 45개가 넘습니다. "순서를 지켜라" 는 언젠가
+--       깨집니다. 그래서 순서와 상관없이 안전하도록 이 파일을 막는
+--       쪽이 확실합니다.
+--
+--   ▸ 무엇이 막혀 있나 (주석 처리 · 원문은 아래에 그대로 보존)
+--       public.rank_points(p_uid)       계급 점수 — 옛 공식
+--                                       (초기자금 + 확정손익 · 펀딩비 빠짐)
+--       public.rank_points_all(int)     랭킹표에 쓰는 계급 점수 목록
+--       + 위 두 함수에 대한 grant execute 4줄
+--
+--   ▸ 무엇이 그대로 살아 있나
+--       없습니다. 이 파일에는 위 두 함수밖에 없었습니다.
+--       맨 아래 "확인용" 은 원래부터 전부 주석이었습니다.
+--
+--   ▸ 실수로 이 파일을 Run 하면 어떻게 되나
+--       아무 일도 일어나지 않습니다. 바뀌는 것이 하나도 없습니다.
+--
+--   ▸ 이 파일이 해결했던 문제는 지금 어떻게 되었나
+--       정본(schema-rank-1000.sql)이 같은 일을 더 정확하게 합니다.
+--       계급용 자산을 지갑 잔액 + 묶인 증거금 − 충전받은 돈 으로 봅니다.
+--       펀딩비가 계급에 반영되고, 무료 충전으로 계급을 사는 구멍도 막혔습니다.
+--
+--   ▸ 이 봉인은 tests/rank-formula-seal.test.js 가 지킵니다.
+--     주석을 하나라도 지우면 npm test 가 실패합니다.
+--
+--   ▸ 아래는 원문 그대로입니다 — 고치지 마세요. 기록입니다.
+-- =========================================================================
+
+
 -- =========================================================================
 -- schema-rank-assets.sql — 계급 점수를 "지금 가진 자산" 기준으로
 -- =========================================================================
@@ -25,52 +70,69 @@
 -- =========================================================================
 
 -- ---------------- 1) 계급 점수 = 자산 배율 ----------------
-create or replace function public.rank_points(p_uid uuid)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    greatest(0, coalesce((
-      select case
-        -- 자산 = 지갑 잔고 + 확정 손익. 포지션에 묶인 증거금은 잃은 돈이
-        -- 아니므로 자산에 그대로 포함됩니다(= 초기자금 + 실현손익).
-        -- 미실현 손익은 넣지 않습니다. 확정되지 않은 숫자를 넣으면
-        -- 가격이 출렁일 때마다 계급이 오르내립니다.
-        when ta.initial_balance > 0
-             and (ta.initial_balance + ta.realized_pnl) > 0
-        then log(2, (ta.initial_balance + ta.realized_pnl) / ta.initial_balance) * 1000
-        else 0
-      end
-      from public.trading_accounts ta
-      where ta.user_id = p_uid
-    ), 0))
-    -- 운영자 가감점은 그대로 더합니다(기존과 동일)
-    + coalesce((select pr.rank_points from public.profiles pr where pr.id = p_uid), 0);
-$$;
-
-grant execute on function public.rank_points to authenticated;
-grant execute on function public.rank_points to anon;
-
--- ---------------- 2) 랭킹표도 새 점수를 쓰게 ----------------
--- 예전에는 tl_earned(= TL 화폐)로 순위를 매겼습니다.
-create or replace function public.rank_points_all(limit_count int default 500)
-returns table (nickname text, rank_points numeric)
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select p.nickname, public.rank_points(p.id) as rank_points
-  from public.profiles p
-  order by public.rank_points(p.id) desc
-  limit greatest(1, least(coalesce(limit_count, 500), 2000));
-$$;
-
-grant execute on function public.rank_points_all to authenticated;
-grant execute on function public.rank_points_all to anon;
+-- =========================================================================
+-- ⛔ [봉인] rank_points() · rank_points_all() — 여기서는 만들지 않습니다 (2026-08-24)
+-- =========================================================================
+--   정본은 supabase/schema-rank-1000.sql 입니다.
+--   계급을 바꾸려면 그 파일을 실행하세요. 이 파일이 아닙니다.
+--
+--   아래 공식은 계급용 자산을 (초기자금 + 확정손익) 으로 봅니다.
+--   거기에는 펀딩비가 들어 있지 않아서, 2026-08-24 대표 결정
+--   ("계급은 무조건 지갑에 있는 돈으로 평가한다") 과 어긋납니다.
+--
+--   ▸ 봉인 시작 — 여기부터 아래 [봉인 끝] 까지 전부 주석(기록)입니다.
+-- -------------------------------------------------------------------------
+-- create or replace function public.rank_points(p_uid uuid)
+-- returns numeric
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+--   select
+--     greatest(0, coalesce((
+--       select case
+--         -- 자산 = 지갑 잔고 + 확정 손익. 포지션에 묶인 증거금은 잃은 돈이
+--         -- 아니므로 자산에 그대로 포함됩니다(= 초기자금 + 실현손익).
+--         -- 미실현 손익은 넣지 않습니다. 확정되지 않은 숫자를 넣으면
+--         -- 가격이 출렁일 때마다 계급이 오르내립니다.
+--         when ta.initial_balance > 0
+--              and (ta.initial_balance + ta.realized_pnl) > 0
+--         then log(2, (ta.initial_balance + ta.realized_pnl) / ta.initial_balance) * 1000
+--         else 0
+--       end
+--       from public.trading_accounts ta
+--       where ta.user_id = p_uid
+--     ), 0))
+--     -- 운영자 가감점은 그대로 더합니다(기존과 동일)
+--     + coalesce((select pr.rank_points from public.profiles pr where pr.id = p_uid), 0);
+-- $$;
+--
+-- grant execute on function public.rank_points to authenticated;
+-- grant execute on function public.rank_points to anon;
+--
+-- -- ---------------- 2) 랭킹표도 새 점수를 쓰게 ----------------
+-- -- 예전에는 tl_earned(= TL 화폐)로 순위를 매겼습니다.
+-- create or replace function public.rank_points_all(limit_count int default 500)
+-- returns table (nickname text, rank_points numeric)
+-- language sql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+--   select p.nickname, public.rank_points(p.id) as rank_points
+--   from public.profiles p
+--   order by public.rank_points(p.id) desc
+--   limit greatest(1, least(coalesce(limit_count, 500), 2000));
+-- $$;
+--
+-- grant execute on function public.rank_points_all to authenticated;
+-- grant execute on function public.rank_points_all to anon;
+-- -------------------------------------------------------------------------
+-- ⛔ [봉인 끝] 위 두 함수는 여기서 만들어지지 않습니다.
+--   정본: supabase/schema-rank-1000.sql
+--   이 주석을 지우면 tests/rank-formula-seal.test.js 가 실패합니다.
+-- =========================================================================
 
 -- ---------------- 3) 확인용 ----------------
 -- 실행한 뒤 아래를 돌려보면 상위 20명의 자산과 새 점수를 볼 수 있습니다.
