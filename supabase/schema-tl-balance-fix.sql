@@ -1,3 +1,49 @@
+-- #########################################################################
+-- ##                                                                     ##
+-- ##   ⚠ 이 파일의 tl_balance_info() 는 대체됐습니다                     ##
+-- ##                                                                     ##
+-- ##   정본은  supabase/schema-tl-realtime.sql  입니다.                  ##
+-- ##                                                                     ##
+-- ##   이 파일을 실행해도 TL 잔액 표시는 바뀌지 않습니다.                ##
+-- ##   (맨 아래 "확인" 은 읽기만 합니다 — 그것만 살아 있습니다)          ##
+-- ##                                                                     ##
+-- #########################################################################
+--
+--   ▸ 왜 막았나 — 실행 순서에 기대면 언젠가 깨집니다
+--       이 파일과 schema-tl-realtime.sql 은 같은 tl_balance_info() 를 만듭니다.
+--       schema-tl-realtime.sql 을 먼저 돌린 뒤 이 파일을 나중에 돌리면
+--       화면의 "지급" 숫자가 옛 방식(양수 전부 합계)으로 되돌아갑니다.
+--       그러면 마이페이지에 "획득 1,000 · 지급 1,000" 처럼 같은 숫자가
+--       두 번 보입니다. 오류도 안 나고 화면도 멀쩡해서 아무도 모릅니다.
+--       파일이 45개나 되는 폴더에서 순서를 지키라고 하는 것보다,
+--       순서와 상관없이 안전하도록 이 파일을 막는 쪽이 확실합니다.
+--
+--   ▸ 무엇이 막혀 있나 (주석 처리 · 원문은 아래에 그대로 보존)
+--       public.tl_balance_info()                       화면 표시용
+--       + 위 tl_balance_info 에 대한 grant execute
+--
+--   ▸ 무엇이 그대로 살아 있나 (이 파일을 Run 하면 이것만 실행됩니다)
+--       맨 아래 "확인" select — 읽기 전용입니다.
+--       구매 판정 잔액과 화면 표시 잔액이 같은지 눈으로 보는 용도입니다.
+--       아무것도 바꾸지 않습니다. 언제 몇 번을 돌려도 안전합니다.
+--
+--   ▸ 실수로 이 파일을 Run 하면 어떻게 되나
+--       숫자 세 개(구매판정_잔액 / 화면표시_잔액 / 일치)만 나옵니다.
+--       바뀌는 것은 하나도 없습니다.
+--
+--   ▸ 이 파일이 해결했던 문제는 지금 어떻게 되었나
+--       정본(schema-tl-realtime.sql)이 같은 문제를 이미 해결해 두었습니다.
+--       화면 잔액도 구매 판정과 똑같이 tl_balance() 를 씁니다.
+--       거기에 더해 'granted' 에서 성과·참여 지급(realtime · monthly)을 빼서
+--       "획득"과 "지급"이 같은 숫자로 두 번 보이지 않게 했습니다.
+--
+--   ▸ 이 봉인은 tests/tl-balance-fix-seal.test.js 가 지킵니다.
+--     주석을 하나라도 지우면 npm test 가 실패합니다.
+--
+--   ▸ 아래는 원문 그대로입니다 — 고치지 마세요. 기록입니다.
+-- =========================================================================
+
+
 -- =========================================================================
 -- TL 잔액 계산 불일치 수정
 -- =========================================================================
@@ -27,44 +73,59 @@
 -- 여러 번 실행해도 안전합니다.
 -- =========================================================================
 
-create or replace function public.tl_balance_info()
-returns json
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
-declare
-  uid uuid := auth.uid();
-  earned numeric;
-  spent numeric;
-  granted numeric;
-begin
-  if uid is null then
-    return json_build_object(
-      'logged_in', false, 'earned', 0, 'spent', 0, 'granted', 0, 'balance', 0);
-  end if;
+-- =========================================================================
+-- ⛔ [봉인] tl_balance_info() — 여기서는 만들지 않습니다 (2026-08-24)
+-- =========================================================================
+--   정본은 supabase/schema-tl-realtime.sql 입니다.
+--   TL 잔액 표시를 바꾸려면 그 파일을 실행하세요. 이 파일이 아닙니다.
+--
+--   ▸ 봉인 시작 — 여기부터 아래 [봉인 끝] 까지 전부 주석(기록)입니다.
+-- -------------------------------------------------------------------------
+--
+-- create or replace function public.tl_balance_info()
+-- returns json
+-- language plpgsql
+-- stable
+-- security definer
+-- set search_path = public
+-- as $$
+-- declare
+--   uid uuid := auth.uid();
+--   earned numeric;
+--   spent numeric;
+--   granted numeric;
+-- begin
+--   if uid is null then
+--     return json_build_object(
+--       'logged_in', false, 'earned', 0, 'spent', 0, 'granted', 0, 'balance', 0);
+--   end if;
+--
+--   earned := public.tl_earned(uid);
+--
+--   -- 사용(음수)과 지급/환불(양수)을 각각 보여줍니다.
+--   spent := coalesce((select -sum(amount) from public.tl_transactions x
+--                      where x.user_id = uid and x.amount < 0), 0);
+--   granted := coalesce((select sum(amount) from public.tl_transactions x
+--                        where x.user_id = uid and x.amount > 0), 0);
+--
+--   return json_build_object(
+--     'logged_in', true,
+--     'earned', earned,
+--     'spent', spent,
+--     'granted', granted,
+--     -- 잔액은 반드시 tl_balance() 와 같은 값이어야 합니다.
+--     -- 구매 가능 여부를 판정하는 것도 tl_balance() 이기 때문입니다.
+--     'balance', public.tl_balance(uid));
+-- end;
+-- $$;
+--
+-- grant execute on function public.tl_balance_info to authenticated;
+-- -------------------------------------------------------------------------
+-- ⛔ [봉인 끝] 위 함수는 여기서 만들어지지 않습니다.
+--   정본: supabase/schema-tl-realtime.sql
+--   이 주석을 지우면 tests/tl-balance-fix-seal.test.js 가 실패합니다.
+-- =========================================================================
 
-  earned := public.tl_earned(uid);
-
-  -- 사용(음수)과 지급/환불(양수)을 각각 보여줍니다.
-  spent := coalesce((select -sum(amount) from public.tl_transactions x
-                     where x.user_id = uid and x.amount < 0), 0);
-  granted := coalesce((select sum(amount) from public.tl_transactions x
-                       where x.user_id = uid and x.amount > 0), 0);
-
-  return json_build_object(
-    'logged_in', true,
-    'earned', earned,
-    'spent', spent,
-    'granted', granted,
-    -- 잔액은 반드시 tl_balance() 와 같은 값이어야 합니다.
-    -- 구매 가능 여부를 판정하는 것도 tl_balance() 이기 때문입니다.
-    'balance', public.tl_balance(uid));
-end;
-$$;
-
-grant execute on function public.tl_balance_info to authenticated;
 
 
 -- ---------------- 확인 ----------------

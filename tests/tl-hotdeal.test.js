@@ -277,12 +277,23 @@ console.log("\n  구조·보안·디자인");
   /* 2026-08-18: tl_balance() 는 모든 거래를 더하는데 tl_balance_info() 는
      음수만 빼서, 환불·지급이 생기면 화면 잔액과 실제 잔액이 어긋났습니다
      (획득 10,000 / -5,300 / +1,000 / +2,000 -> 실제 7,700 vs 화면 4,700).
-     tl_balance_info() 가 tl_balance() 를 그대로 쓰도록 고쳤습니다. */
+     tl_balance_info() 가 tl_balance() 를 그대로 쓰도록 고쳤습니다.
+
+     2026-08-24: 그 고침이 schema-tl-balance-fix.sql 에서
+     schema-tl-realtime.sql(정본)로 옮겨졌습니다.
+     두 파일이 같은 함수를 만들어서, 실행 순서에 따라 결과가 달라졌기 때문입니다
+     (realtime 뒤에 balance-fix 를 돌리면 '지급' 이 옛 방식으로 되돌아감).
+     그래서 balance-fix 쪽 정의는 주석으로 봉인했고, 아래 검사도 정본을 봅니다.
+     봉인 자체는 tests/tl-balance-fix-seal.test.js 가 지킵니다. */
   {
+    const 정본 = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-realtime.sql"), "utf8");
+    const 정본코드 = 정본.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+    ok("화면 잔액이 구매 판정 잔액과 같은 함수를 쓴다(정본)", /'balance', public\.tl_balance\(uid\)/.test(정본코드));
+    ok("지급(양수)도 따로 집계한다(정본)", /granted/.test(정본코드) && /x\.amount > 0/.test(정본코드));
+
     const fix = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-balance-fix.sql"), "utf8");
     const fixCode = fix.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
-    ok("화면 잔액이 구매 판정 잔액과 같은 함수를 쓴다", /'balance', public\.tl_balance\(uid\)/.test(fixCode));
-    ok("지급(양수)도 따로 집계한다", /granted/.test(fixCode) && /x\.amount > 0/.test(fixCode));
+    ok("옛 파일은 봉인돼 함수를 만들지 않는다", !/create\s+or\s+replace\s+function/i.test(fixCode));
     ok("테이블은 건드리지 않는다", !/create table|drop table|truncate/i.test(fixCode));
     ok("화면이 지급 표시를 지원한다", /지급 " \+ tl\(b\.granted\)/.test(js));
   }
