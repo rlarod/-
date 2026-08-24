@@ -164,7 +164,8 @@
 <!-- ⚡ 실시간 체결 알림 띠 — 예전에는 오른쪽 채팅 칸(23%) 안에 대화와 섞여
      있었습니다. 1440 실측 기준 채팅 13줄 중 10줄이 이 알림이었고, 그것 때문에
      차트가 42%까지 좁아져 있었습니다. 알림만 얇은 가로 띠로 빼서 항상 보이게
-     하고, 대화는 접이식으로 돌립니다(js/chat-split.js).
+     하고, 대화는 오른쪽 채팅 칼럼에 그대로 둡니다(js/chat-split.js).
+     2026-08-24 대표 지시로 채팅은 접지 않고 항상 열려 있습니다.
      내용은 #chat-messages 의 .chat-msg-event 를 복제한 것이라
      js/chat.js 는 한 글자도 건드리지 않습니다. -->
 <div class="trade-ticker" id="trade-ticker" role="status" aria-label="실시간 체결 알림">
@@ -173,10 +174,11 @@
     <div class="tt-track" id="trade-ticker-track"></div>
     <span class="tt-empty" id="trade-ticker-empty">체결 알림을 기다리는 중…</span>
   </div>
-  <!-- 💬 대화 열기 — 채팅을 접었을 때만 보입니다(html[data-chat="off"]).
-       채팅을 지운 것이 아니라 접어둔 것이라, 누르면 예전 그대로 오른쪽 칸에
-       대화가 돌아옵니다. 띠 안에 두는 이유: 화면에 떠 있는 버튼으로 두면
-       스크롤 위치에 따라 주문 버튼(매수/매도) 위를 덮을 수 있습니다. -->
+  <!-- 💬 대화 열기 버튼 — 2026-08-24 대표 지시로 "채팅 항상 열림"이 되면서
+       화면에서 내렸습니다. 지우지 않고 남겨 둡니다(원칙 1-2: 기능 삭제 금지).
+       숨기는 곳은 style.css 의 .chat-fab{display:none} 한 줄뿐이고,
+       js/chat-split.js 가 hidden 속성도 함께 걸어 줍니다.
+       되살리려면 그 한 줄과 html[data-chat="off"] 주석 블록을 되돌리면 됩니다. -->
   <button type="button" id="chat-fab" class="chat-fab" aria-controls="chat-panel" aria-expanded="false" aria-label="실시간 채팅 열기">
     <span class="chat-fab-icon">💬</span>
     <span class="chat-fab-label">대화</span>
@@ -970,7 +972,8 @@
         <div class="panel page-chat-panel" id="chat-panel">
           <div class="field-label">
             <span>💬 실시간 채팅</span>
-            <!-- 접이식 — 대화만 열고 닫습니다. ⚡ 알림은 위쪽 띠로 항상 보입니다. -->
+            <!-- 접기 버튼 — 2026-08-24 대표 지시로 "항상 열림"이 되어 화면에서 내렸습니다.
+                 마크업은 보존합니다(style.css 의 .chat-toggle-btn{display:none} 로만 숨김). -->
             <button type="button" id="chat-toggle-btn" class="chat-toggle-btn" aria-controls="chat-panel" aria-expanded="false">열기 ▸</button>
           </div>
           <div class="chat-messages" id="chat-messages"></div>

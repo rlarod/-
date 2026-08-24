@@ -3748,6 +3748,9 @@ html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
 
 /* ---- 💬 대화 접이식 ---- */
 .chat-toggle-btn{
+  /* 항상 열림(2026-08-24 대표 지시) — 접기 버튼은 화면에서만 숨깁니다.
+     마크업은 index.html 에 그대로 있습니다. 되살리려면 이 display:none 만 지우세요. */
+  display:none;
   margin-left:auto;flex:0 0 auto;
   font:inherit;font-size:13px;font-weight:700;line-height:1;
   color:inherit;background:rgba(255,255,255,0.14);
@@ -3759,14 +3762,31 @@ html[data-tt="1"] #chat-messages .chat-msg-event{display:none;}
    (같은 선택자를 두 벌 만들면 tests/css-duplicate.test.js 가 잡습니다).
    버튼은 margin-left:auto 로 오른쪽 끝에 붙습니다. */
 
-/* 접었을 때 — 채팅 패널을 화면에서만 감추고, 우측 칼럼이 차지하던 23%를
-   거래 화면에 돌려줍니다(1920 차트 42.4% -> 62.7%). 마크업은 그대로입니다. */
-html[data-chat="off"] .page-right .side-chat-panel{display:none;}
-html[data-chat="off"] .page-shell{grid-template-columns:minmax(0,1fr);}
-html[data-chat="off"] .page-right{margin-top:6px;gap:6px;}
+/* ★ 2026-08-24 대표 지시 — "그냥 채팅 열고 닫고 지워버리자. 항상 열려있는걸로 하자."
+   접었다 폈다 하는 상태를 없앴습니다. 채팅 칼럼은 항상 보입니다.
 
-/* 열었을 때 — 예전 모습 그대로 */
-html[data-chat="on"] .chat-fab{display:none;}
+   ── 이 결정의 대가(대표가 알고 고른 것) ──────────────────────────────
+   채팅 칸 23%가 항상 자리를 잡으므로 1920 에서 차트가 61.7% -> 47.0% 로
+   돌아갑니다(실측). 1799px 이하는 원래 채팅이 아래로 쌓이는 1단이라
+   변화가 없습니다(1440 / 768 / 390 / 375 / 360 동일).
+
+   ── 무엇을 지웠나 ────────────────────────────────────────────────────
+   · html[data-chat="off"] 접힘 상태 규칙 3줄 (여기 있던 것)
+   · html[data-chat="on"] .chat-fab 숨김 1줄
+     (.chat-fab 기본값이 이미 display:none 이라 이 줄이 없어도 버튼은 안 보입니다)
+   · js/chat-split.js 의 localStorage("tl.chat.open") 저장·복원과 클릭 리스너
+   마크업(#chat-fab / #chat-toggle-btn)은 지우지 않고 CSS 로만 숨깁니다(원칙 1-2).
+
+   ── 되살리는 방법 ────────────────────────────────────────────────────
+   (1) 아래 주석 안의 세 줄을 다시 살리고
+   (2) .chat-toggle-btn 의 display:none 한 줄을 지우고
+   (3) js/chat-split.js 의 "항상 열림" 블록을 예전 readStored/setOpen 으로 되돌립니다.
+
+   html[data-chat="off"] .page-right .side-chat-panel{display:none;}
+   html[data-chat="off"] .page-shell{grid-template-columns:minmax(0,1fr);}
+   html[data-chat="off"] .page-right{margin-top:6px;gap:6px;}
+   html[data-chat="on"] .chat-fab{display:none;}
+*/
 
 /* ---- 열기 버튼(접었을 때만) — 알림 띠 오른쪽 끝에 붙습니다 ----
    화면에 떠 있는(fixed) 버튼으로 두면 스크롤 위치에 따라 주문창 오른쪽 아래

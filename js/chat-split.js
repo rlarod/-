@@ -4,7 +4,17 @@
  * 채팅 칸에 섞여 있던 두 가지를 분리합니다.
  *
  *   ⚡ 자동 알림(누가 익절/손절/강제청산) → 화면 위쪽 얇은 가로 띠로 "흐르게"
- *   💬 실제 대화                          → 접이식(버튼으로 열고 닫기)
+ *   💬 실제 대화                          → 오른쪽 채팅 칼럼에 그대로 (항상 열림)
+ *
+ * ★ 2026-08-24 대표 지시 — "그냥 채팅 열고 닫고 지워버리자. 항상 열려있는걸로 하자."
+ *   접었다 폈다 하는 상태를 없앴습니다. 지운 것:
+ *     · localStorage("tl.chat.open") 저장·복원
+ *     · #chat-toggle-btn / #chat-fab 클릭 리스너
+ *     · 안 읽은 개수 배지(접힌 상태가 없으니 띄울 자리가 없습니다)
+ *   마크업은 index.html 에 그대로 두고 style.css 에서만 숨깁니다(원칙 1-2).
+ *   대가: 1920 에서 차트가 61.7% -> 47.0% (채팅 칸 23%가 항상 자리를 차지).
+ *   되살리려면 아래 "항상 열림" 블록을 예전 readStored/setOpen 으로 되돌리고
+ *   style.css 의 html[data-chat="off"] 주석을 풀면 됩니다.
  *
  * 1440 실측 기준 채팅 13줄 중 10줄이 자동 알림이었습니다. 그 알림 하나 때문에
  * 오른쪽 세로 칸 23%를 통째로 쓰고 있었고, 그만큼 차트가 좁았습니다(1920 42.4%).
@@ -17,7 +27,7 @@
  *
  * 되돌리기: index.html 에서 이 <script> 한 줄과 #trade-ticker / #chat-fab /
  *           #chat-toggle-btn 마크업을 지우고, style.css 의
- *           "채팅 분리(알림 띠 + 대화 접이식)" 블록을 지우면 원상복구됩니다.
+ *           "채팅 분리(알림 띠)" 블록을 지우면 원상복구됩니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -25,7 +35,6 @@ window.App = window.App || {};
 App.ChatSplit = (function () {
   "use strict";
 
-  const STORE_KEY = "tl.chat.open";
   const MAX_ITEMS = 20;      // 띠에 유지하는 최대 알림 수(오래된 것부터 버림)
   const PX_PER_SEC = 70;     // 흐르는 속도 — 읽을 수 있는 정도로 느리게
   const MIN_SEC = 18;
@@ -34,62 +43,33 @@ App.ChatSplit = (function () {
   let viewport = null;
   let emptyEl = null;
   let items = [];            // {text, kind}
-  let badgeEl = null;
-  let unread = 0;
 
-  /* ---------------- 접이식 상태 ---------------- */
+  /* ---------------- 항상 열림 (2026-08-24 대표 지시) ----------------
+   * 예전에는 readStored()/setOpen() 이 localStorage 를 읽고 써서
+   * data-chat 을 on/off 로 오갔습니다. 지금은 켜는 것 하나뿐입니다.
+   * 되살리려면 이 블록을 readStored/applyOpen/setOpen/isOpen/renderBadge
+   * 네 함수로 되돌리고, style.css 의 html[data-chat="off"] 주석을 푸세요.
+   */
 
-  function readStored() {
-    try {
-      const v = localStorage.getItem(STORE_KEY);
-      // 기본값은 "닫힘" — 차트를 바이낸스급(62%)으로 넓히는 것이 기본 상태입니다.
-      return v === "1";
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function applyOpen(open) {
-    document.documentElement.setAttribute("data-chat", open ? "on" : "off");
+  function applyAlwaysOpen() {
+    document.documentElement.setAttribute("data-chat", "on");
+    // 마크업은 남아 있으므로(CSS 로만 숨김) 보조기술에도 상태를 맞춰 둡니다.
     const btn = document.getElementById("chat-toggle-btn");
     if (btn) {
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-      btn.textContent = open ? "닫기 ▾" : "열기 ▸";
+      btn.setAttribute("aria-expanded", "true");
+      btn.setAttribute("hidden", "hidden");
     }
     const fab = document.getElementById("chat-fab");
-    if (fab) fab.setAttribute("aria-expanded", open ? "true" : "false");
-    if (open) {
-      unread = 0;
-      renderBadge();
-      // 열릴 때 맨 아래로 — chat.js 의 스크롤 상태와 충돌하지 않게 다음 프레임에.
-      requestAnimationFrame(() => {
-        const box = document.getElementById("chat-messages");
-        if (box) box.scrollTop = box.scrollHeight;
-      });
+    if (fab) {
+      fab.setAttribute("aria-expanded", "true");
+      fab.setAttribute("hidden", "hidden");
     }
-  }
-
-  function setOpen(open) {
-    try {
-      localStorage.setItem(STORE_KEY, open ? "1" : "0");
-    } catch (e) {
-      /* 저장 실패해도 이번 세션에는 반영합니다 */
-    }
-    applyOpen(open);
+    const badge = document.getElementById("chat-fab-badge");
+    if (badge) badge.hidden = true;
   }
 
   function isOpen() {
-    return document.documentElement.getAttribute("data-chat") === "on";
-  }
-
-  function renderBadge() {
-    if (!badgeEl) return;
-    if (unread > 0 && !isOpen()) {
-      badgeEl.textContent = unread > 99 ? "99+" : String(unread);
-      badgeEl.hidden = false;
-    } else {
-      badgeEl.hidden = true;
-    }
+    return true;
   }
 
   /* ---------------- ⚡ 알림 띠 ---------------- */
@@ -175,15 +155,8 @@ App.ChatSplit = (function () {
     const box = document.getElementById("chat-messages");
     const ticker = document.getElementById("trade-ticker");
 
-    // 접이식은 띠가 없어도 동작해야 합니다(둘은 독립).
-    applyOpen(readStored());
-
-    const toggle = document.getElementById("chat-toggle-btn");
-    if (toggle) toggle.addEventListener("click", () => setOpen(!isOpen()));
-    const fab = document.getElementById("chat-fab");
-    if (fab) fab.addEventListener("click", () => setOpen(!isOpen()));
-    badgeEl = document.getElementById("chat-fab-badge");
-    renderBadge();
+    // 채팅은 항상 열려 있습니다. 띠가 없어도 이건 켜 둡니다(둘은 독립).
+    applyAlwaysOpen();
 
     if (!box || !ticker) {
       // 띠를 못 만들면 알림을 숨기면 안 됩니다 — data-tt 를 켜지 않아
@@ -204,26 +177,20 @@ App.ChatSplit = (function () {
 
     new MutationObserver((muts) => {
       let changed = false;
-      let talk = 0;
       muts.forEach((m) => {
         m.addedNodes.forEach((n) => {
           if (n.nodeType !== 1) return;
           if (pushRow(n)) changed = true;
-          else if (n.classList && n.classList.contains("chat-msg")) talk++;
         });
       });
+      // 안 읽음 배지는 없앴습니다 — 채팅이 항상 열려 있어 셀 이유가 없습니다.
       if (changed) renderTrack();
-      if (talk && !isOpen()) {
-        unread += talk;
-        renderBadge();
-      }
     }).observe(box, { childList: true });
   }
 
   return {
     init: init,
     // 테스트용
-    _setOpen: setOpen,
     _isOpen: isOpen,
     _items: () => items.slice(),
   };
