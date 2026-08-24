@@ -103,26 +103,41 @@ console.log("\n① 최대 레버리지");
   ok("안내 글자도 14px 이상이다", 안내 >= 14, String(안내));
 }
 
-console.log("\n② TL 지급 공식");
+console.log("\n② TL 지급 공식 — 옛 공식(2026-08-24 대체됨) + 정본 확인");
 {
-  /* TL 화폐 공식은 서버 tl_earned() 가 정본입니다.
-     2026-08-19 계급 점수를 자산 기준으로 바꾸면서, 계급은 rank_points() 로
-     떼어냈고 TL 화폐는 예전 공식 그대로 뒀습니다. 그래서 여기서는
-     rank.js 가 아니라 서버 SQL 에서 상수를 읽습니다. */
+  /* ⚠ 이 구간이 검사하는 "거래횟수 x 10 + 수익률% x 20 + rank_points" 는
+     supabase/schema-tl-hotdeal.sql 의 옛 공식입니다. 정본이 아닙니다.
+
+     정본 = supabase/schema-tl-monthly.sql  (2026-08-24)
+         그달TL = floor(300 x log2(1 + max(0, 그달순수익) / 1000만))
+                  + min(150, 그 달에 거래가 있었던 날짜수 x 5)
+         tl_earned() 는 더 이상 계산하지 않고,
+         tl_transactions 에 남은 지급 기록만 더합니다.
+
+     왜 옛 검사를 그냥 지우지 않나
+       schema-tl-hotdeal.sql 은 상점·구매 기능이 같이 들어 있어 계속 쓰이는 파일이고,
+       그 안의 옛 tl_earned() 는 무엇을 왜 대체했는지 보여주는 기록입니다.
+       그래서 파일도 검사도 지우지 않습니다. 대신 아래 (다) 가
+       정본이 이 공식을 덮었는지를 함께 검사합니다.
+       누군가 서버를 옛 공식으로 되돌리면 (다) 가 실패해서 잡힙니다.
+
+     ok 이름 앞의 "[옛]" 은 "이건 옛 공식 기록이다" 라는 표시입니다. */
+
+  /* (가) 옛 공식 — schema-tl-hotdeal.sql 에 적힌 그대로인지 (기록 보존) */
   const tlSql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
   const earned = tlSql.slice(tlSql.indexOf("function public.tl_earned"));
   const perTrade = Number((earned.match(/\)\s*,\s*0\)\s*\*\s*(\d+)/) || [])[1]);
   const perPct = Number((earned.match(/\)\s*\*\s*(\d+)\s*\n?\s*\+ coalesce/) || [])[1]);
   const init = 100000;
-  ok("공식 상수를 읽어왔다", perTrade > 0 && perPct > 0, [perTrade, perPct].join(","));
+  ok("[옛] 공식 상수를 읽어왔다", perTrade > 0 && perPct > 0, [perTrade, perPct].join(","));
 
   const tl = (closed, realized) => closed * perTrade + Math.max(0, (realized / init) * 100) * perPct;
 
-  ok("수익 거래에 TL 지급", tl(1, 1000) > tl(1, 0), tl(1, 1000) + " vs " + tl(1, 0));
-  ok("손실 거래에는 수익분 TL 미지급", tl(1, -1000) === tl(1, 0), tl(1, -1000) + " vs " + tl(1, 0));
-  ok("손실이 커져도 TL이 마이너스로 안 간다", tl(3, -50000) === 3 * perTrade);
-  ok("부분 청산도 청산 건수로 반영", tl(2, 1000) > tl(1, 1000));
-  ok("같은 상태면 항상 같은 값(중복 지급 불가)", tl(2, 2000) === tl(2, 2000));
+  ok("[옛] 수익 거래에 TL 지급", tl(1, 1000) > tl(1, 0), tl(1, 1000) + " vs " + tl(1, 0));
+  ok("[옛] 손실 거래에는 수익분 TL 미지급", tl(1, -1000) === tl(1, 0), tl(1, -1000) + " vs " + tl(1, 0));
+  ok("[옛] 손실이 커져도 TL이 마이너스로 안 간다", tl(3, -50000) === 3 * perTrade);
+  ok("[옛] 부분 청산도 청산 건수로 반영", tl(2, 1000) > tl(1, 1000));
+  ok("[옛] 같은 상태면 항상 같은 값(중복 지급 불가)", tl(2, 2000) === tl(2, 2000));
 
   /* 2026-08-19 계급 점수 방식이 '자산 배율' 로 바뀌었습니다.
      미실현 손익을 넣지 않는 원칙은 그대로입니다 — 확정되지 않은 숫자를
@@ -144,14 +159,58 @@ console.log("\n② TL 지급 공식");
   ok("랭킹표가 새 점수를 쓴다", /rank_points_all[\s\S]{0,400}public\.rank_points\(p\.id\)/.test(rankSql));
   ok("TL 화폐 공식은 건드리지 않았다", !/create or replace function public\.tl_earned/.test(rankSql));
 
-  /* 서버도 같은 공식이어야 새로고침·재로그인 후에도 같은 값이 나옵니다. */
+  /* (나) 옛 파일은 기록으로 보존합니다 — 고치지도 지우지도 않았는지 확인합니다. */
   const sql = fs.readFileSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql"), "utf8");
   const code = sql.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
-  ok("서버도 청산 건수 x " + perTrade, new RegExp("from public\\.trades t where t\\.user_id = p_uid\\), 0\\) \\* " + perTrade).test(code));
-  ok("서버도 수익률 x " + perPct, new RegExp("where ta\\.user_id = p_uid\\), 0\\)\\) \\* " + perPct).test(code));
-  ok("서버도 손실은 0으로 막는다", /greatest\(0,/.test(code));
-  ok("서버는 저장된 실현손익을 쓴다(새로고침 후에도 유지)", /ta\.realized_pnl/.test(code));
-  ok("서버 잔액은 획득 - 사용", /public\.tl_earned\(p_uid\)[\s\S]{0,120}sum\(amount\)/.test(code));
+  ok("[옛] 서버도 청산 건수 x " + perTrade, new RegExp("from public\\.trades t where t\\.user_id = p_uid\\), 0\\) \\* " + perTrade).test(code));
+  ok("[옛] 서버도 수익률 x " + perPct, new RegExp("where ta\\.user_id = p_uid\\), 0\\)\\) \\* " + perPct).test(code));
+  ok("[옛] 서버도 손실은 0으로 막는다", /greatest\(0,/.test(code));
+  ok("[옛] 서버는 저장된 실현손익을 쓴다(새로고침 후에도 유지)", /ta\.realized_pnl/.test(code));
+  ok("[옛] 서버 잔액은 획득 - 사용", /public\.tl_earned\(p_uid\)[\s\S]{0,120}sum\(amount\)/.test(code));
+
+  /* ===================================================================
+     (다) 정본은 schema-tl-monthly.sql 이다
+     이 검사가 있어야 옛 공식이 조용히 되살아나지 않습니다.
+     =================================================================== */
+  const 정본경로 = path.join(REPO, "supabase", "schema-tl-monthly.sql");
+  ok("정본 파일(schema-tl-monthly.sql)이 있다", fs.existsSync(정본경로));
+
+  const 정본 = fs.existsSync(정본경로) ? fs.readFileSync(정본경로, "utf8") : "";
+  const 정본코드 = 정본.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
+  const 정본earned = 정본코드.slice(정본코드.indexOf("function public.tl_earned"),
+                                   정본코드.indexOf("function public.tl_balance("));
+
+  ok("정본이 tl_earned() 를 다시 정의해 옛 공식을 덮는다",
+     /create or replace function public\.tl_earned\(/.test(정본코드));
+  ok("정본 tl_earned() 구간을 찾았다", 정본earned.length > 50, String(정본earned.length));
+
+  /* 옛 공식의 세 조각이 정본 tl_earned() 안에 하나도 없어야 합니다. */
+  ok("정본 tl_earned() 에 거래 건수(x " + perTrade + ")가 없다", !/public\.trades/.test(정본earned));
+  ok("정본 tl_earned() 에 수익률(realized_pnl)이 없다", !/realized_pnl/.test(정본earned));
+  ok("정본 tl_earned() 에 계급 점수(rank_points)가 없다", !/rank_points/.test(정본earned));
+  ok("정본 tl_earned() 는 저장된 지급 기록만 더한다",
+     /from public\.tl_transactions/.test(정본earned));
+
+  /* 정본에는 새 공식이 실제로 들어 있어야 합니다. */
+  ok("정본에 새 성과 공식(300 x log2, 기준 1000만)이 있다",
+     /300 \* log\(2, \(1 \+ greatest\(0, public\.tl_month_profit/.test(정본코드));
+  ok("정본에 새 참여 공식(거래날짜수 x 5, 상한 150)이 있다",
+     /least\(150, public\.tl_month_days\(p_uid, p_month\) \* 5\)/.test(정본코드));
+
+  /* 옛 파일을 지우지 않았다는 것도 같이 지킵니다 — 기록으로 남길 값어치가 있습니다. */
+  ok("옛 파일(schema-tl-hotdeal.sql)을 지우지 않았다",
+     fs.existsSync(path.join(REPO, "supabase", "schema-tl-hotdeal.sql")));
+  ok("정본이 무엇을 대체했는지 옛 파일 이름을 적어 뒀다",
+     /schema-tl-hotdeal\.sql/.test(정본));
+  ok("옛 공식이 왜 문제였는지도 정본에 적혀 있다(무한 구멍)",
+     /무한 구멍/.test(정본));
+
+  /* 두 공식이 정말 다른 값을 낸다는 것을 숫자로 확인합니다. */
+  const 새달TL = (순수익, 날짜수) =>
+    Math.floor(300 * Math.log2(1 + Math.max(0, 순수익) / 10000000)) + Math.min(150, 날짜수 * 5);
+  ok("옛 공식은 1,000번 긁으면 " + 1000 * perTrade + " TL", 1000 * perTrade === 10000);
+  ok("새 공식은 하루에 1,000번을 해도 5 TL(수익 0)", 새달TL(0, 1) === 5, String(새달TL(0, 1)));
+  ok("두 공식은 같은 값을 내지 않는다(정말 대체됐다)", 1000 * perTrade !== 새달TL(0, 1));
 }
 
 console.log("\n③ 비회원 접근");
