@@ -98,6 +98,22 @@ where p.id not in (select id from _마켓_남길것)
 create unique index if not exists tl_market_products_name_uniq
   on public.tl_market_products (name);
 
+-- ── 같은 함정이 핫딜 상품에도 있어서 미리 막습니다 ────────────────────────
+--
+--   supabase/schema-tl-hotdeal.sql:347       상품 23줄 insert
+--   supabase/schema-tl-product-images.sql:66 상품  3줄 insert
+--   둘 다 "on conflict do nothing" 인데 tl_products 에도 중복 방지 장치가
+--   없습니다. 마켓과 똑같은 함정입니다.
+--
+--   2026-08-25 확인 — 핫딜 상품은 아직 중복이 없습니다(26행 전부 고유).
+--   터지기 전에 미리 막습니다. 지우는 것이 없으니 안전합니다.
+--
+--   이름만으로는 안 됩니다. "아메리카노" 가 스타벅스·메가커피·투썸에 각각
+--   있고 "금액권 10,000원" 도 여러 브랜드에 있습니다. 브랜드+이름으로 묶습니다.
+--
+create unique index if not exists tl_products_brand_name_uniq
+  on public.tl_products (brand, name);
+
 commit;
 
 
