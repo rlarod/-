@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TL 차트 도구막대 아이콘 스프라이트 (디자인팀, 2026-08-25)
+  16px / 단색 / currentColor / stroke-width 1.5 / fill none
+  그라디언트·그림자·이모지 없음. 전부 직접 그렸고 외부에서 받아온 그림이 없습니다.
+
+  쓰는 법(권장) — assets/icons/chart-tools-symbols.html 을 index.html <body> 바로 뒤에
+  한 번 붙여넣고, 버튼 안에서 <use href="#tlc-i-cursor"/> 로 부릅니다.
+  외부 파일 참조는 브라우저마다 currentColor 상속이 달라 권장하지 않습니다.
+  이 파일은 원본 보관·미리보기용입니다.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute"
+     fill="none" stroke="currentColor" stroke-width="1.5"
+     stroke-linecap="round" stroke-linejoin="round">
+<!-- ── 세로 막대(선긋기 도구) 11개 ───────────────────────────────── -->
+<symbol id="tlc-i-cursor" viewBox="0 0 16 16"><path d="M8 1.6v4M8 10.4v4M1.6 8h4M10.4 8h4"/></symbol>
+<symbol id="tlc-i-trendline" viewBox="0 0 16 16"><path d="M5 11 11 5"/><circle cx="3.4" cy="12.6" r="1.6"/><circle cx="12.6" cy="3.4" r="1.6"/></symbol>
+<symbol id="tlc-i-hline" viewBox="0 0 16 16"><path d="M1.6 8h12.8"/><circle cx="5.6" cy="8" r="1.6"/></symbol>
+<symbol id="tlc-i-fib" viewBox="0 0 16 16"><path d="M1.8 3.6h12.4M1.8 8h12.4M1.8 12.4h12.4"/></symbol>
+<symbol id="tlc-i-wave" viewBox="0 0 16 16"><path d="m1.8 11.2 3.4-6 3 5 3-6.6 2.9 5"/></symbol>
+<symbol id="tlc-i-channel" viewBox="0 0 16 16"><path d="M1.8 8.2 8 2M1.8 13 12.8 2.2M7.2 14.2 14.2 7.2"/></symbol>
+<symbol id="tlc-i-brush" viewBox="0 0 16 16"><path d="m2.4 13.6 1.2-3.4 7.3-7.3 2.2 2.2-7.3 7.3z"/><path d="m10.2 3.8 2.2 2.2"/></symbol>
+<symbol id="tlc-i-text" viewBox="0 0 16 16"><path d="M3.4 3.6h9.2M8 3.6v8.8"/></symbol>
+<symbol id="tlc-i-face" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M5.6 9.6q2.4 2.3 4.8 0"/><circle cx="6" cy="6.4" r=".85" fill="currentColor" stroke="none"/><circle cx="10" cy="6.4" r=".85" fill="currentColor" stroke="none"/></symbol>
+<symbol id="tlc-i-ruler" viewBox="0 0 16 16"><rect x="1.6" y="5" width="12.8" height="6" rx="1"/><path d="M4.8 5v2.2M8 5v2.8M11.2 5v2.2"/></symbol>
+<symbol id="tlc-i-zoom" viewBox="0 0 16 16"><circle cx="6.9" cy="6.9" r="4.8"/><path d="m10.5 10.5 3.4 3.4M4.7 6.9h4.4M6.9 4.7v4.4"/></symbol>
+<!-- ── 가로 막대 7개 ─────────────────────────────────────────────── -->
+<symbol id="tlc-i-chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol>
+<symbol id="tlc-i-candle" viewBox="0 0 16 16"><rect x="2.6" y="5.2" width="3.6" height="6" rx=".6"/><path d="M4.4 2.2v3M4.4 11.2v2.6"/><rect x="9.8" y="6.8" width="3.6" height="4.6" rx=".6"/><path d="M11.6 3.8v3M11.6 11.4v2.8"/></symbol>
+<symbol id="tlc-i-fx" viewBox="0 0 16 16"><path d="M6.6 13.4V5.1a2 2 0 0 1 2-2h.5M4.4 7.7h4.4M9.9 8.9l3.7 4.5M13.6 8.9l-3.7 4.5"/></symbol>
+<symbol id="tlc-i-alarm" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></symbol>
+<symbol id="tlc-i-hexagon" viewBox="0 0 16 16"><path d="M8 1.7 13.5 4.85v6.3L8 14.3 2.5 11.15v-6.3z"/></symbol>
+<symbol id="tlc-i-fullscreen" viewBox="0 0 16 16"><path d="M2.2 6.2V2.2h4M9.8 2.2h4v4M13.8 9.8v4h-4M6.2 13.8h-4v-4"/></symbol>
+<symbol id="tlc-i-camera" viewBox="0 0 16 16"><rect x="1.7" y="4.9" width="12.6" height="9.2" rx="1.6"/><path d="M5.6 4.9 6.8 2.7h2.4l1.2 2.2"/><circle cx="8" cy="9.5" r="2.7"/></symbol>
+</svg>

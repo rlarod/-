@@ -1,0 +1,219 @@
+/* =============================================================================
+ * css/chart-toolbar.css — 차트 도구막대 2개 (생김새 전용)
+ * 디자인팀 · 2026-08-25
+ * -----------------------------------------------------------------------------
+ * 이 파일은 "어떻게 생겼는지"만 정합니다. 동작(누르면 무엇이 일어나는지)은
+ * 차트팀의 js/chart-*.js 가 맡습니다. 이 파일은 js 를 부르지 않습니다.
+ *
+ * style.css 는 한 글자도 고치지 않았습니다.
+ * index.html 에는 이 파일을 부르는 <link> 한 줄만 추가했습니다.
+ *
+ * ── 도구막대가 없으면 아무 일도 일어나지 않습니다 ───────────────────────────
+ * 모든 규칙이 .tlc-* 클래스에 걸려 있습니다. 차트팀이 DOM 을 붙이기 전에는
+ * 화면이 지금과 완전히 같습니다.
+ *
+ * ── 바이낸스 실측 (2026-08-25, binance.com/en/futures/BTCUSDT, 1920px) ──────
+ *  [세로 막대] TradingView 모드 drawing-toolbar
+ *      막대 폭 52px / 버튼 52×38px / 세로 pitch 38px(간격 0) / 아이콘 28×28
+ *      배경 #181A20 / 위쪽 여백 6px / 하위메뉴 화살표 자리 11px
+ *  [가로 막대] 바이낸스 자체 차트 상단 줄
+ *      줄 높이 20px / 글자 12px, 굵기 500
+ *      꺼진 글자 #707A8A · 켜진 글자 #EAECEF
+ *      아이콘 16×16 (viewBox 0 0 24 24) / 아이콘 pitch 32px
+ *      기간 버튼끼리 간격 8px
+ *
+ * ── 우리 수치를 왜 다르게 잡았나 ───────────────────────────────────────────
+ * 우리 차트(1920 에서 chart-wrap 800×1136)는 바이낸스 차트(1240px)의 65% 폭입니다.
+ * 52px 세로 막대를 그대로 쓰면 차트 폭의 6.5% 를 먹습니다.
+ * 그래서 아이콘을 우리 규칙대로 16px 로 줄이고 막대를 32px 로 잡았습니다(4.0%).
+ * 가로 pitch 도 32 → 28px (아이콘 16px + 여백 12px).
+ *
+ * ── 되돌리는 방법 ──────────────────────────────────────────────────────────
+ *   1) index.html 의 <link rel="stylesheet" href="css/chart-toolbar.css"> 한 줄 삭제
+ *   2) css/chart-toolbar.css
+ *      assets/icons/chart-tools.svg
+ *      assets/icons/chart-tools-symbols.html   세 파일 삭제
+ * 이 파일은 다른 파일을 고치지 않습니다. 지우면 원래 화면 그대로입니다.
+ * ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+ * 0) 값 — 여기만 고치면 두 막대가 같이 움직입니다.
+ *    확정 팔레트 밖의 색은 한 개도 쓰지 않습니다.
+ * -------------------------------------------------------------------------- */
+.chart-panel{
+  --tlc-bar-h: 30px;      /* 가로 막대 높이 */
+  --tlc-rail-w: 32px;     /* 세로 막대 폭 */
+  --tlc-btn: 28px;        /* 버튼 한 칸 */
+  --tlc-ico: 16px;        /* 아이콘 */
+  --tlc-gap: 0px;         /* 버튼 사이 (바이낸스와 같이 0) */
+  --tlc-idle:   #838DA4;  /* 보조 — 기본 아이콘 */
+  --tlc-hover:  #E7ECF5;  /* 본문 — 올렸을 때 */
+  --tlc-on:     #F0B429;  /* 포인트(골드) — 켜진 도구 하나만 */
+  --tlc-line:   #1D273B;  /* 테두리 */
+  --tlc-tile:   #0D1422;  /* 카드 안 타일 — 켜진 버튼 바탕 */
+}
+
+/* -----------------------------------------------------------------------------
+ * 1) 뼈대
+ *    .chart-panel
+ *      ├─ .tlc-toolbar   가로 막대
+ *      └─ .tlc-body      (가로줄)
+ *           ├─ .tlc-rail   세로 막대
+ *           └─ .chart-wrap 기존 차트 (그대로)
+ * -------------------------------------------------------------------------- */
+.tlc-body{
+  display:flex; flex-direction:row; align-items:stretch;
+  flex:1 1 auto; min-height:0; min-width:0;
+}
+/* .chart-wrap 이 .chart-panel 의 직계 자식이 아니게 되므로 flex 값을 다시 줍니다
+   (style.css 의 .chart-panel > .chart-wrap{flex:1} 이 안 걸리기 때문). */
+.tlc-body > .chart-wrap{
+  flex:1 1 auto; min-width:0; min-height:0; margin:0;
+}
+
+/* -----------------------------------------------------------------------------
+ * 2) 가로 막대
+ * -------------------------------------------------------------------------- */
+.tlc-toolbar{
+  display:flex; align-items:center; gap:var(--tlc-gap);
+  flex:0 0 var(--tlc-bar-h); height:var(--tlc-bar-h);
+  padding:0 2px; margin:0 0 1px;
+  border-bottom:1px solid var(--tlc-line);
+  background:transparent;              /* 카드(#101727) 위에 그대로 */
+  overflow-x:auto; overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* 넘칠 때만 보이는 얇은 스크롤바 — 숨기지 않습니다.
+   숨기면 옆으로 밀 수 있다는 신호가 사라집니다. */
+.tlc-toolbar::-webkit-scrollbar,
+.tlc-rail::-webkit-scrollbar{height:3px; width:3px;}
+.tlc-toolbar::-webkit-scrollbar-thumb,
+.tlc-rail::-webkit-scrollbar-thumb{background:var(--tlc-line); border-radius:2px;}
+.tlc-toolbar::-webkit-scrollbar-track,
+.tlc-rail::-webkit-scrollbar-track{background:transparent;}
+
+/* 가로 막대 오른쪽으로 미는 칸 — 전체화면·카메라를 오른쪽 끝에 둘 때 씁니다 */
+.tlc-spacer{flex:1 1 auto; min-width:0;}
+
+/* -----------------------------------------------------------------------------
+ * 3) 세로 막대
+ * -------------------------------------------------------------------------- */
+.tlc-rail{
+  display:flex; flex-direction:column; align-items:center;
+  flex:0 0 var(--tlc-rail-w); width:var(--tlc-rail-w);
+  padding:3px 0; gap:var(--tlc-gap);
+  border-right:1px solid var(--tlc-line);
+  background:transparent;
+  overflow-y:auto; overflow-x:hidden;
+}
+
+/* 접기 / 펴기 — 가로 막대의 ˅ 버튼이 .tlc-body 의 data-rail 값을 바꿉니다.
+   차트팀: 값은 "on" / "off" 두 가지만 씁니다. 없으면 폭에 따라 자동입니다. */
+.tlc-body[data-rail="off"] > .tlc-rail{display:none;}
+
+/* -----------------------------------------------------------------------------
+ * 4) 버튼 — 두 막대가 같은 모양을 씁니다
+ * -------------------------------------------------------------------------- */
+.tlc-btn{
+  flex:0 0 auto;
+  width:var(--tlc-btn); height:var(--tlc-btn);
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:0; margin:0;
+  background:transparent; border:0; border-radius:4px;  /* 버튼 모서리 4px */
+  color:var(--tlc-idle);
+  cursor:pointer; font:inherit;
+  -webkit-appearance:none; appearance:none;
+  transition:color .12s, background-color .12s;
+}
+.tlc-btn:hover{color:var(--tlc-hover); background:rgba(255,255,255,.04);}
+.tlc-btn:active{color:var(--tlc-hover); background:rgba(255,255,255,.08);}
+.tlc-btn:focus{outline:none;}
+.tlc-btn:focus-visible{outline:1px solid var(--tlc-idle); outline-offset:-1px;}
+
+/* 켜진 도구 — 화면에서 이것 하나만 골드입니다 */
+.tlc-btn[aria-pressed="true"]{color:var(--tlc-on); background:var(--tlc-tile);}
+.tlc-btn[aria-pressed="true"]:hover{color:var(--tlc-on); background:var(--tlc-tile);}
+
+/* 아직 안 만든 도구 — 되는 척하지 않습니다.
+   차트팀: <button class="tlc-btn" data-soon="1" disabled title="준비중"> 로 씁니다.
+   16px 자리에는 "준비중" 글자가 안 들어가서 오른쪽 위 회색 점으로 표시합니다. */
+.tlc-btn[disabled],
+.tlc-btn[data-soon]{cursor:default; opacity:.38;}
+.tlc-btn[disabled]:hover,
+.tlc-btn[data-soon]:hover{color:var(--tlc-idle); background:transparent;}
+.tlc-btn[data-soon]{position:relative;}
+.tlc-btn[data-soon]::after{
+  content:""; position:absolute; top:4px; right:4px;
+  width:3px; height:3px; border-radius:50%;
+  background:currentColor;
+}
+
+/* 아이콘 — 크기는 CSS 로만 정합니다 (SVG 안에 width/height 를 넣지 않았습니다) */
+.tlc-ico{
+  width:var(--tlc-ico); height:var(--tlc-ico);
+  display:block; flex:0 0 auto;
+  fill:none; stroke:currentColor; stroke-width:1.5;
+  stroke-linecap:round; stroke-linejoin:round;
+  pointer-events:none;
+}
+
+/* -----------------------------------------------------------------------------
+ * 5) 구분선 — 도구 묶음을 나눕니다. 색은 테두리색 하나(회색조)
+ * -------------------------------------------------------------------------- */
+.tlc-sep{
+  flex:0 0 auto; background:var(--tlc-line); border:0; align-self:center;
+}
+.tlc-toolbar > .tlc-sep{width:1px; height:14px; margin:0 5px;}
+.tlc-rail    > .tlc-sep{height:1px; width:16px; margin:4px 0;}
+
+/* -----------------------------------------------------------------------------
+ * 6) 좁은 화면 — 세로 막대를 눕힙니다
+ *
+ *   왜 눕히나 (360 실측, 2026-08-25 localhost)
+ *     chart-wrap 이 330px 이고 그중 가격축이 130px 을 먹어 캔들 자리는 200px 입니다.
+ *     여기에 32px 세로 막대를 세우면 캔들 자리가 200 → 168px, 16% 가 날아갑니다.
+ *     눕히면 차트 폭은 330px 그대로이고 대신 높이 28px 을 씁니다.
+ *     차트 높이가 700px 이라 28px 은 4.0% — 폭 16% 보다 훨씬 싸게 먹힙니다.
+ *
+ *   폭 계산 (360)
+ *     쓸 수 있는 폭 330px / 버튼 11개 × 28px = 308px
+ *     구분선 3개까지 넣으면 335px 이라 27px 넘칩니다.
+ *     그래서 이 구간에서만 구분선을 빼고 308px 로 맞췄습니다(22px 남음).
+ *     그래도 넘치면 위에서 만든 얇은 스크롤바가 보입니다. 숨기지 않았습니다.
+ *
+ *   기본은 접힘입니다 — 폰에서는 가로 막대의 ˅ 를 눌러야 나옵니다.
+ *   폰에서 선긋기를 자주 쓰지 않는데 차트 높이를 늘 28px 깎을 이유가 없습니다.
+ *   기능을 지운 게 아니라 접어둔 것이고 마크업은 그대로 남습니다.
+ * -------------------------------------------------------------------------- */
+@media (max-width:767px){
+  .chart-panel{--tlc-bar-h:28px;}
+  .tlc-body{flex-direction:column;}
+  .tlc-rail{
+    flex:0 0 28px; width:auto; height:28px;
+    flex-direction:row; align-items:center;
+    padding:0; margin:0 0 1px;
+    border-right:0; border-bottom:1px solid var(--tlc-line);
+    overflow-x:auto; overflow-y:hidden;
+    display:none;                       /* 폰 기본 = 접힘 */
+  }
+  .tlc-rail > .tlc-sep{display:none;}   /* 폭 계산은 위 주석 참고 */
+  .tlc-body[data-rail="on"] > .tlc-rail{display:flex;}
+}
+
+/* 768 이상은 기본이 펴짐입니다. 위 3)의 [data-rail="off"] 로만 접힙니다. */
+
+/* -----------------------------------------------------------------------------
+ * 7) 기존 지표 범례(.tl-ind-bar, js/chart-indicators.js) 와 자리가 겹치는지
+ *    .tl-ind-bar 는 .chart-wrap 안쪽 왼쪽 위(+8, +6)에 떠 있습니다.
+ *    세로 막대는 .chart-wrap 바깥(형제)이라 겹치지 않습니다 — 실측으로 확인했습니다.
+ *    혹시 차트팀이 세로 막대를 .chart-wrap 안에 넣게 되면 아래 한 줄을 켜세요.
+ *      .chart-wrap > .tlc-rail ~ .tl-ind-bar{left:40px;}
+ * -------------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------------
+ * 8) 움직임 줄이기를 켠 회원
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  .tlc-btn{transition:none;}
+}
