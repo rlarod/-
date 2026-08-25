@@ -1556,10 +1556,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 
 /* 하단 링크 줄 */
 /* 07단계 — 레퍼런스 하단 메뉴는 한 줄(높이 50px 환산)입니다.
-   사이드 폭이 449px로 넓어져 6개가 한 줄에 들어가므로 3열 2행 -> 1행으로
-   되돌립니다. 좁아지면 아래 미디어쿼리가 다시 2행으로 접습니다. */
+   2026-08-25 대표 지시로 "리워드 준비중"·"쪽지 준비중" 두 버튼을 뺐습니다.
+   남은 것은 랭킹 / 커뮤니티 / 내정보 / 로그아웃 4개라 6칸 -> 4칸으로 줄입니다.
+   (6칸 그대로 두면 오른쪽 두 칸이 빈 채로 남아 실측 140~228px 이 비었습니다.) */
 .up-nav{
-  display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin-top:auto;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:auto;
   border-top:1px solid var(--border-soft);
 }
 .up-nav button{
@@ -1570,21 +1571,17 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   overflow:hidden;text-overflow:ellipsis;
 }
 .up-nav button + button{border-left:1px solid var(--border-soft);}
-/* 폭이 모자라면 다시 3열 2행으로 접어 글자가 잘리지 않게 합니다.
-   실측상 내 정보 박스가 460px 이상일 때만 6개가 한 줄에 들어갑니다. */
-@media (max-width:1799px){
-  .up-nav{grid-template-columns:repeat(3,minmax(0,1fr));}
-  .up-nav button:nth-child(-n+3){border-bottom:1px solid var(--border-soft);}
-  .up-nav button:nth-child(3n+1){border-left:none;}
-}
+/* 2026-08-25 — 여기에 "좁으면 3열 2행으로 접는" 규칙이 있었습니다.
+   버튼이 6개였고 한 줄에 넣으려면 내 정보 박스가 460px 이상이어야 했기 때문입니다.
+   리워드·쪽지를 빼서 4개가 되자 접을 필요가 없어졌습니다 — 실측(360/375/390/768/
+   1440/1850/1920 전부): 4개 한 줄 = 칸폭 86px 이상, 글자 잘림 0, 빈칸 0.
+   관리자 5개일 때도 360에서 칸폭 68px 로 잘리지 않았습니다.
+   버튼을 다시 늘리게 되면 이 접기 규칙을 되살려야 합니다. */
 .up-nav button:hover{color:var(--gold);background:var(--surface2);}
-.up-nav-soon{color:var(--text-faint) !important;}
-/* 하단 메뉴가 한 줄이 되면서 "리워드 준비중"이 잘렸습니다.
-   배지 배경/패딩을 걷어내 같은 정보를 더 좁게 표시합니다(문구 유지). */
-.up-soon-badge{
-  font-size:9.5px;font-weight:400;color:var(--text-faint);
-  background:none;border-radius:0;padding:0;flex:0 0 auto;letter-spacing:-0.04em;
-}
+/* 2026-08-25 — .up-nav-soon / .up-soon-badge 규칙을 지웠습니다.
+   두 클래스는 "리워드 준비중"·"쪽지 준비중" 버튼에서만 쓰였고(전체 검색 확인),
+   그 버튼을 대표 지시로 빼면서 어디에도 걸리지 않게 됐습니다.
+   아래 gap 은 준비중 배지용이 아니라 하단 메뉴 버튼 전체에 걸리는 값이라 남깁니다. */
 .up-nav button{gap:2px;}
 
 /* ---- 로그아웃 상태 ---- */
@@ -2178,13 +2175,17 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
     padding:clamp(13px, 0.72vw, 24px) 2px;
     font-size:clamp(15px, 0.66vw, 23px);
   }
-  .page-right .up-soon-badge{font-size:clamp(10px, 0.4vw, 14px);}
+  /* 2026-08-25 — 여기 있던 .page-right .up-soon-badge 규칙은 지웠습니다.
+     리워드·쪽지 "준비중" 배지에만 걸리던 것이라 버튼과 함께 없어졌습니다. */
 }
-/* 1800~2100px 구간에서는 하단 메뉴 6개가 빠듯해 "리워드 준비중"이 잘렸습니다.
-   그 구간에서만 글자와 배지를 한 단계 줄입니다. */
+/* 1800~2100px 구간은 내 정보 박스가 420~454px 로 가장 빠듯한 구간입니다.
+   원래는 하단 메뉴 6개가 들어가느라 "리워드 준비중"이 잘려서 만든 보정인데,
+   2026-08-25 리워드·쪽지를 빼서 4개가 됐습니다.
+   아래 규칙은 준비중 배지가 아니라 하단 메뉴 버튼 전체에 걸리는 값이라 남깁니다
+   (지우면 이 구간 글자가 14px -> 15px 로 커집니다. 잘리진 않지만 굳이 바꾸지 않음).
+   같이 있던 .page-right .up-soon-badge 줄은 걸릴 요소가 없어져 지웠습니다. */
 @media (min-width:1800px) and (max-width:2100px){
   .page-right .up-nav button{font-size:14px;padding-left:0;padding-right:0;gap:1px;}
-  .page-right .up-soon-badge{font-size:9px;letter-spacing:-0.06em;}
 }
 
 /* =========================================================================
@@ -2274,22 +2275,20 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 상시 노출되던 거래내역 표 — 화면에서만 숨김(마감손익 탭에 같은 내용 있음) */
 #cloud-history-panel.position-col-hidden{display:none !important;}
 
-/* 관리자 메뉴가 생기면 하단 메뉴가 7칸이 됩니다(관리자에게만 해당). */
-.page-right .up-nav:has(#up-nav-admin){grid-template-columns:repeat(7,minmax(0,1fr));}
-@media (max-width:1799px){
-  .page-right .up-nav:has(#up-nav-admin){grid-template-columns:repeat(4,minmax(0,1fr));}
-}
-/* 7칸이 되면 좁아지므로 관리자에게만 글자·배지를 한 단계 줄입니다.
-   (2600px 미만에서 "리워드 준비중"이 잘리던 것 보정) */
+/* 관리자 메뉴가 생기면 하단 메뉴가 한 칸 늘어납니다(관리자에게만 해당).
+   2026-08-25 리워드·쪽지를 빼서 4+1 = 5칸입니다(전에는 6+1 = 7칸).
+   좁은 화면에서 접던 규칙도 함께 뺐습니다 — 실측상 360px 에서도 5개가
+   한 줄에 들어갑니다(칸폭 68px, 글자 잘림 0). */
+.page-right .up-nav:has(#up-nav-admin){grid-template-columns:repeat(5,minmax(0,1fr));}
+/* 관리자에게만 한 칸 더 들어가므로 좁은 구간에서 글자를 한 단계 줄입니다.
+   원래는 7칸일 때 "리워드 준비중"이 잘려서 만든 보정인데, 5칸이 된 지금도
+   관리자 칸이 하나 더 있는 것은 같아서 버튼 글자 축소는 그대로 둡니다.
+   준비중 배지(.up-soon-badge)에 걸던 줄들은 걸릴 요소가 없어져 지웠습니다. */
 @media (min-width:1800px) and (max-width:2599px){
   .page-right .up-nav:has(#up-nav-admin) button{font-size:13px;padding-left:0;padding-right:0;gap:1px;}
-  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge{font-size:8.5px;letter-spacing:-0.07em;}
 }
-/* 1800~1900px은 7칸이 가장 빠듯한 구간 — 준비중 배지를 아이콘 크기로 줄입니다. */
 @media (min-width:1800px) and (max-width:1900px){
   .page-right .up-nav:has(#up-nav-admin) button{font-size:12px;}
-  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge{font-size:0;}
-  .page-right .up-nav:has(#up-nav-admin) .up-soon-badge::after{content:"·";font-size:12px;}
 }
 /* 미실현손익 칸 — USDT / (ROE%) / 원화 세 줄 (레퍼런스 구성) */
 #pos-pnl-cell{line-height:1.3;}

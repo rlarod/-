@@ -454,7 +454,18 @@ section("[4] 사용자 정보 패널");
       //   수익률 = 미실현 ROE / 포인트 = 계급 점수
       "손익,지갑,수익률,보유 TL"
     );
-    eq(body.querySelectorAll(".up-nav button").length, 6, "하단 링크 6개");
+    /* 2026-08-25 대표 지시로 리워드·쪽지 준비중 버튼 제거. 옛 기준 6개 → 4개 */
+    const navBtns = body.querySelectorAll(".up-nav button");
+    eq(navBtns.length, 4, "하단 링크 4개");
+    eq(
+      Array.prototype.map.call(navBtns, (b) => b.textContent).join(","),
+      "랭킹,커뮤니티,내정보,로그아웃",
+      "하단 링크는 실제로 동작하는 4개뿐(관리자 버튼은 admin-menu.js가 따로 붙임)"
+    );
+    eq(
+      Array.prototype.map.call(navBtns, (b) => b.dataset.nav).join(","),
+      "ranking,board,mypage,logout"
+    );
   });
 
   t("손익 칸은 보유 포지션의 미실현 손익(시세따라 실시간)", () => {
@@ -508,17 +519,25 @@ section("[4] 사용자 정보 패널");
     ok(pct > 0, "거래 후 진행률이 올라야 함");
   });
 
-  t("리워드/쪽지는 실제 기능이 없으므로 숫자 없이 준비중", () => {
-    const { doc, win } = boot({ nickname: "홍길동" });
-    const soon = doc.querySelectorAll(".up-nav .up-nav-soon");
-    eq(soon.length, 2, "준비중 항목 2개");
-    const txt = Array.prototype.map.call(soon, (b) => b.textContent).join(" ");
-    ok(/리워드/.test(txt) && /쪽지/.test(txt));
-    ok(!/\d/.test(txt), "준비중 항목에 숫자가 있으면 안 됨: " + txt);
-    // 값 표(실제 데이터)에는 리워드가 들어가지 않아야 함
+  /* 2026-08-25 대표 지시로 리워드·쪽지 "준비중" 버튼을 제거했습니다.
+     옛 기준은 "준비중 항목 2개가 있어야 한다" 였는데 뜻이 사라져 반대로 뒤집습니다.
+     실수로 되살아나면 이 검사가 실패합니다.
+     기능을 지운 것이 아니라(원래 없었습니다) 안내 버튼만 뺀 것입니다. */
+  t("리워드·쪽지 준비중 버튼은 없어야 함(2026-08-25 대표 지시로 제거)", () => {
+    const { doc } = boot({ nickname: "홍길동" });
+    const body = doc.getElementById("user-panel-body");
+    eq(doc.querySelectorAll(".up-nav .up-nav-soon").length, 0, "준비중 버튼이 다시 생기면 안 됨");
+    eq(doc.querySelectorAll(".up-soon-badge").length, 0, "준비중 배지가 다시 생기면 안 됨");
+    eq(doc.querySelector('.up-nav button[data-nav="reward"]'), null, "리워드 버튼이 다시 생기면 안 됨");
+    eq(doc.querySelector('.up-nav button[data-nav="message"]'), null, "쪽지 버튼이 다시 생기면 안 됨");
+    ok(!/리워드/.test(body.textContent), "내 정보 패널에 리워드가 있으면 안 됨");
+    ok(!/쪽지/.test(body.textContent), "내 정보 패널에 쪽지가 있으면 안 됨");
+    // 값 표(실제 데이터)에도 리워드가 들어가지 않아야 함 — 옛 검사 그대로 유지
     ok(!/리워드/.test(doc.querySelector(".up-grid").textContent), "값 표에 리워드가 있으면 안 됨");
-    soon[0].dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true }));
-    ok(/준비중/.test(win.__lastAlert || ""), "클릭 시 안내만 떠야 함");
+    // 죽은 코드 정리 확인 — reward/message 안내 alert 분기도 함께 없앴습니다
+    const js = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");
+    ok(!/준비중입니다/.test(js), "js/user-panel.js에 준비중 안내 분기가 남으면 안 됨");
+    ok(!/up-nav-soon|up-soon-badge/.test(js), "js/user-panel.js에 준비중 마크업이 남으면 안 됨");
   });
 
   t("하단 링크는 전부 기존 버튼을 대신 누름(새 로직 없음)", () => {
@@ -636,7 +655,8 @@ section("[5] 기존 기능 보존");
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     ok(/\.page-right \.up-head\{\s*\n\s*padding:clamp\(/.test(css), "프로필 줄 여백이 폭에 비례해야 함");
     ok(/\.page-right \.up-nav button\{\s*\n\s*padding:clamp\(/.test(css), "하단 메뉴 여백이 폭에 비례해야 함");
-    // 좁은 구간에서 "리워드 준비중"이 잘리지 않도록 별도 처리
+    // 1800~2100px은 내 정보 박스가 420~454px로 가장 빠듯한 구간이라 글자를 한 단계 줄입니다.
+    // (2026-08-25 리워드·쪽지 제거 후에도 이 규칙은 하단 메뉴 버튼 전체에 걸리므로 유지)
     ok(/@media \(min-width:1800px\) and \(max-width:2100px\)/.test(css),
       "1800~2100px 구간 글자 축소 규칙 필요(메뉴 잘림 방지)");
   });
@@ -1445,14 +1465,23 @@ section("[5] 기존 기능 보존");
     ok(size(/\.auth-logout-btn\{[\s\S]*?font-size:([\d.]+)px/, "로그아웃") <= 14, "로그아웃 버튼이 너무 큼");
   });
 
-  t("사이드 위젯: 레퍼런스처럼 하단 메뉴 한 줄, 좁아지면 접힘", () => {
+  t("사이드 위젯: 레퍼런스처럼 하단 메뉴 한 줄(칸 수 = 버튼 수)", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const nav = css.match(/\n\.up-nav\{[^}]*\}/)[0];
-    ok(/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(nav),
-      "레퍼런스 하단 메뉴는 한 줄이어야 함");
-    // 폭이 모자라는 구간에서는 접혀야 글자가 잘리지 않음(실측: 460px 미만이면 잘림)
-    ok(/@media \(max-width:1799px\)\{[\s\S]*?\.up-nav\{grid-template-columns:repeat\(3/.test(css),
-      "좁은 화면에서 3열 2행으로 접는 규칙 필요");
+    /* 2026-08-25 대표 지시로 리워드·쪽지 준비중 버튼 제거. 옛 기준 6칸 → 4칸.
+       버튼이 6개일 때는 한 줄에 넣으려면 박스가 460px 이상이어야 해서
+       max-width:1799px에서 3열 2행으로 접었는데, 4개가 되면서 접을 필요가 없어졌습니다.
+       실측(360/375/390/768/1440/1850/1920 전부): 한 줄, 칸폭 86px 이상, 글자 잘림 0, 빈칸 0. */
+    ok(/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(nav),
+      "하단 메뉴는 4칸 한 줄이어야 함(랭킹/커뮤니티/내정보/로그아웃): " + nav);
+    // 칸 수와 버튼 수가 어긋나면 오른쪽에 빈 칸이 남습니다(6칸에 4개일 때 실측 140~228px가 빔)
+    const js0 = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");
+    const navBlock = js0.slice(js0.indexOf('<div class="up-nav">'), js0.indexOf('"</div>";'));
+    eq((navBlock.match(/<button/g) || []).length, 4,
+      "renderShell의 하단 버튼은 4개여야 함(칸 수와 같아야 빈 칸이 안 남음)");
+    // 관리자에게는 admin-menu.js가 한 칸 더 붙이므로 5칸
+    ok(/\.page-right \.up-nav:has\(#up-nav-admin\)\{grid-template-columns:repeat\(5,minmax\(0,1fr\)\);?\}/.test(css),
+      "관리자 하단 메뉴는 5칸이어야 함(4개 + 관리자 1개)");
 
     // 로그인/로그아웃 두 상태를 모두 지원해야 함
     const js = fs.readFileSync(path.join(REPO, "js/user-panel.js"), "utf8");

@@ -15,8 +15,10 @@
  *   총자산 = equity (미실현 포함 평가자산, 주문창의 "평가"와 같은 값)
  *   수익금 = realizedPnl (청산으로 확정된 손익만 — 프로젝트 핵심 원칙)
  *   수익률 = realizedPnl / 100,000 × 100 (랭킹 뷰와 같은 산식)
- * "리워드/보유 코인"은 이 프로젝트에 실제 기능·데이터가 없어서 임의의 숫자를
- * 만들지 않고 "준비중"으로 표시합니다.
+ * 2026-08-25 대표 지시 — 하단 "리워드 준비중"·"쪽지 준비중" 두 버튼을 없앴습니다.
+ * 실제 기능·데이터가 없는 항목이라 안내 버튼만 있었고, 회원이 "곧 생기는 기능"으로
+ * 오해할 수 있어 빼기로 했습니다. 기능 자체를 지운 것이 아니라(원래 없었습니다)
+ * 안내 버튼만 뺀 것입니다. 되살리려면 이 커밋을 되돌리면 됩니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -134,7 +136,10 @@ App.UserPanel = (function () {
 
   // 개미톡 사용자 패널 구조: 헤더(아바타+계급+닉네임+진행률) → 2×2 값 표 → 하단 링크 줄.
   // 값 4칸은 전부 App.Trading.getSnapshot()의 실제 값이고, 진행률은 계급 점수에서
-  // 계산한 실제 비율입니다. 실제 기능이 없는 항목(리워드/쪽지)은 하단에 "준비중"으로만 둡니다.
+  // 계산한 실제 비율입니다.
+  // 하단 메뉴는 실제로 동작하는 것만 둡니다 — 랭킹 / 커뮤니티 / 내정보 / 로그아웃.
+  // (관리자에게는 js/admin-menu.js가 "관리자"를 하나 더 붙입니다.)
+  // 2026-08-25 대표 지시로 "리워드 준비중"·"쪽지 준비중" 두 버튼을 뺐습니다.
   function renderShell(nickname, rank) {
     dom.body.innerHTML =
       '<div class="up-head">' +
@@ -185,8 +190,6 @@ App.UserPanel = (function () {
       '<button type="button" data-nav="ranking">랭킹</button>' +
       '<button type="button" data-nav="board">커뮤니티</button>' +
       '<button type="button" data-nav="mypage">내정보</button>' +
-      '<button type="button" class="up-nav-soon" data-nav="reward">리워드<span class="up-soon-badge">준비중</span></button>' +
-      '<button type="button" class="up-nav-soon" data-nav="message">쪽지<span class="up-soon-badge">준비중</span></button>' +
       '<button type="button" data-nav="logout">로그아웃</button>' +
       "</div>";
 
@@ -195,10 +198,6 @@ App.UserPanel = (function () {
     dom.body.querySelectorAll(".up-nav button").forEach((btn) => {
       btn.addEventListener("click", () => {
         const key = btn.dataset.nav;
-        if (key === "reward" || key === "message") {
-          alert(key === "reward" ? "리워드 기능은 준비중입니다." : "쪽지 기능은 준비중입니다.");
-          return;
-        }
         const target = el(PROXY[key]);
         if (target) target.click();
         else alert("해당 메뉴는 현재 화면에서 숨김 상태입니다.");
