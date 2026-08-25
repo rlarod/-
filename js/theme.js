@@ -41,7 +41,7 @@ App.Theme = (function () {
 
   function paintButton() {
     // 버튼에는 "누르면 무엇이 되는지"를 적습니다.
-    const label = current() === DARK ? "☀ 밝은 모드" : "🌙 다크 모드";
+    const label = current() === DARK ? "밝은 모드" : "다크 모드";
     ["theme-toggle-btn", "header-theme-btn"].forEach((id) => {
       const btn = document.getElementById(id);
       if (btn) btn.textContent = label;

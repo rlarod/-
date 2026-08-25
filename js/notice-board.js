@@ -72,7 +72,7 @@ App.NoticeBoard = (function () {
         return (
           '<li class="notice-board-post" data-id="' + p.id + '">' +
           '<span class="notice-line">' + rank + escapeHtml(p.title) + comments + "</span>" +
-          '<span class="notice-board-post-likes">👍' + p.like_count + "</span></li>"
+          '<span class="notice-board-post-likes">추천 ' + p.like_count + "</span></li>"
         );
       })
       .join("");

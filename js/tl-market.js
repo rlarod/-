@@ -27,11 +27,11 @@ App.TLMarket = (function () {
 
   var CATEGORIES = [
     { id: "all", label: "전체" },
-    { id: "leverage", label: "⚡ 레버리지" },
-    { id: "seed", label: "💰 자금/시드" },
-    { id: "position", label: "👁 포지션" },
-    { id: "trade", label: "🛡 거래/보호" },
-    { id: "etc", label: "🎁 기타" },
+    { id: "leverage", label: "레버리지" },
+    { id: "seed", label: "자금/시드" },
+    { id: "position", label: "포지션" },
+    { id: "trade", label: "거래/보호" },
+    { id: "etc", label: "기타" },
   ];
 
   var state = {
@@ -268,7 +268,7 @@ App.TLMarket = (function () {
         if (res.error) throw res.error;
         var d = res.data || {};
         alert(
-          "🎉 구매 완료!\n\n" +
+          "구매 완료!\n\n" +
             product.name + "이(가) 아이템 보관함에 지급되었습니다.\n\n" +
             "사용 TL  " + tl(d.spent) + "\n" +
             "남은 TL  " + tl(d.balance_after) + "\n" +
@@ -341,12 +341,36 @@ App.TLMarket = (function () {
     });
   }
 
+  /* ── 아이템 표시 마크 ────────────────────────────────────────────────
+   * 2026-08-25 대표 지시(1순위 "이모지 제거").
+   * tl_market_products.icon 은 서버(DB)에 들어 있는 값이라 코드에서 바꿀 수
+   * 없습니다. 지금 들어 있는 값: '100x'(글자) / '👁' '🔄' '💰' '🏷' '🛡'(이모지).
+   * 글자로 된 것은 그대로 쓰고, 이모지는 단색 인라인 SVG 한 개로 대체합니다.
+   *   - 16px 기준, currentColor, stroke-width 1.5, 그라디언트·그림자 없음
+   *   - 아이콘 폰트를 쓰지 않습니다
+   * 되돌리기: 이 함수를 지우고 아래 thumb 줄을
+   *   esc(p.icon || "🎁") 로 되돌리면 됩니다.
+   * DB 값을 바꾸는 것이 근본 해결이지만 SQL 은 대표가 직접 실행합니다.
+   * ------------------------------------------------------------------ */
+  var ITEM_SVG =
+    '<svg class="mk-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true" focusable="false">' +
+    '<path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4"/><path d="M12 11v10"/></svg>';
+
+  function iconMark(icon) {
+    var raw = String(icon == null ? "" : icon).trim();
+    // 이모지(그림문자)를 뺀 나머지가 남으면 그 글자를 씁니다(예: '100x').
+    var text = raw.replace(/[\u{1F000}-\u{1FAFF}\u{2190}-\u{2BFF}\u{FE0F}\u{200D}]/gu, "").trim();
+    return text ? esc(text) : ITEM_SVG;
+  }
+
   function productCard(p) {
     var st = statusInfo(p);
     var owned = ownedQty(p.id);
     var thumb = p.image_url
       ? '<img class="hd-thumb-img" src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '">'
-      : '<span class="mk-icon">' + esc(p.icon || "🎁") + "</span>";
+      : '<span class="mk-icon">' + iconMark(p.icon) + "</span>";
 
     var qtyOptions = "";
     var maxQty = p.stock === null || p.stock === undefined ? 10 : Math.max(1, Math.min(10, Number(p.stock)));
@@ -367,7 +391,7 @@ App.TLMarket = (function () {
       '<div class="hd-thumb mk-thumb">' + thumb + "</div>" +
       '<div class="hd-name">' + esc(p.name) + "</div>" +
       '<div class="mk-desc">' + esc(p.description || "") + "</div>" +
-      '<div class="hd-tl-row"><b class="hd-tl">🔵 ' + esc(tl(p.tl_price)) + "</b></div>" +
+      '<div class="hd-tl-row"><b class="hd-tl">' + esc(tl(p.tl_price)) + "</b></div>" +
       '<div class="hd-actions">' + action + "</div>" +
       "</article>"
     );

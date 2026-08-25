@@ -389,20 +389,25 @@ console.log("\n  기본 정렬");
 }
 
 /* ---------- 글씨 크기 ---------- */
+/* 2026-08-25 · 화면 개편 2순위(대표 지시) — 글자는 줄이고 숫자는 그대로 둡니다.
+   하한을 내렸습니다: 상품명 18->13 / 브랜드명 15->11 / 구매버튼 16->12.
+   TL 가격(.hd-tl)은 "숫자가 주인공"이라 22px 하한을 그대로 둡니다.
+   13.5px 처럼 소수점 크기도 읽도록 정규식을 (\d+) -> ([\d.]+) 로 고쳤습니다.
+   되돌리기: 13/11/12 를 18/15/16 으로, 정규식을 (\d+) 로 되돌리면 됩니다. */
 {
   const css2 = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   function px(re, label) {
     const m = css2.match(re);
     return m ? Number(m[1]) : -1;
   }
-  const name = px(/\.hd-name\{[\s\S]*?font-size:(\d+)px/);
-  const tlSize = px(/\.hd-tl\{font-size:(\d+)px/);
-  const brand = px(/\.hd-brand\{font-size:(\d+)px/);
-  const btn = px(/\.hd-buy-btn\{[\s\S]*?font-size:(\d+)px/);
-  ok("상품명 18px 이상", name >= 18, String(name));
+  const name = px(/\.hd-name\{[\s\S]*?font-size:([\d.]+)px/);
+  const tlSize = px(/\.hd-tl\{font-size:([\d.]+)px/);
+  const brand = px(/\.hd-brand\{font-size:([\d.]+)px/);
+  const btn = px(/\.hd-buy-btn\{[\s\S]*?font-size:([\d.]+)px/);
+  ok("상품명 13px 이상", name >= 13, String(name));
   ok("TL 가격 22px 이상", tlSize >= 22, String(tlSize));
-  ok("브랜드명 15px 이상", brand >= 15, String(brand));
-  ok("구매 버튼 16px 이상", btn >= 16, String(btn));
+  ok("브랜드명 11px 이상", brand >= 11, String(brand));
+  ok("구매 버튼 12px 이상", btn >= 12, String(btn));
   ok("TL 가격이 상품명보다 크다(가장 눈에 띄어야 함)", tlSize > name, tlSize + " vs " + name);
 }
 

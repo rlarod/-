@@ -101,9 +101,9 @@ App.GuestLeaderboard = (function () {
   }
 
   function rankLabel(rank) {
-    if (rank === 1) return '<span class="leaderboard-rank-badge rank-1">🥇 1위</span>';
-    if (rank === 2) return '<span class="leaderboard-rank-badge rank-2">🥈 2위</span>';
-    if (rank === 3) return '<span class="leaderboard-rank-badge rank-3">🥉 3위</span>';
+    if (rank === 1) return '<span class="leaderboard-rank-badge rank-1">1위</span>';
+    if (rank === 2) return '<span class="leaderboard-rank-badge rank-2">2위</span>';
+    if (rank === 3) return '<span class="leaderboard-rank-badge rank-3">3위</span>';
     return rank + "위";
   }
 

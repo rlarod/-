@@ -112,7 +112,7 @@
 
     <!-- 다크모드 전환 — 헤더 우측(연결상태/통화/로그인)은 숨김 상태라
          그 자리에 이 버튼만 따로 둡니다. -->
-    <button type="button" class="header-theme-btn" id="header-theme-btn">🌙 다크 모드</button>
+    <button type="button" class="header-theme-btn" id="header-theme-btn">다크 모드</button>
 
     <div class="top-banner-right">
       <div class="ws-status">
@@ -123,7 +123,7 @@
         <span id="last-update-text" class="mono-strong">-</span>
       </div>
       <div class="auth-user-badge" id="auth-user-badge" style="display:none;">
-        <span>👤 <span id="auth-user-nickname-text"></span></span>
+        <span><span id="auth-user-nickname-text"></span></span>
         <button id="auth-logout-btn" class="auth-logout-btn">로그아웃</button>
       </div>
     </div>
@@ -138,14 +138,14 @@
            .nav-coming-soon 규칙으로 화면에서만 숨깁니다(클릭 안내는 그대로). -->
       <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">코인선물</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">커뮤니티</button>
-      <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">🏆 랭킹</button>
-      <button class="top-banner-nav-btn" id="page-nav-hotdeal" data-page="hotdeal">🔥 TL 핫딜</button>
-      <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">👤 마이페이지</button>
+      <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">랭킹</button>
+      <button class="top-banner-nav-btn" id="page-nav-hotdeal" data-page="hotdeal">TL 핫딜</button>
+      <button class="top-banner-nav-btn" id="page-nav-mypage" data-page="mypage">마이페이지</button>
       <!-- 전쟁터는 화면에서만 숨김(page-battle과 js/market-war.js는 그대로) -->
-      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-battle" data-page="battle">⚔ 전쟁터</button>
+      <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-battle" data-page="battle">전쟁터</button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-schedule">대회일정 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-join">참가신청 <span class="nav-soon-badge">준비중</span></button>
-      <button class="top-banner-nav-btn" id="page-nav-market" data-page="market">🛒 TL 마켓</button>
+      <button class="top-banner-nav-btn" id="page-nav-market" data-page="market">TL 마켓</button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-notice">공지사항 <span class="nav-soon-badge">준비중</span></button>
       <button class="top-banner-nav-btn nav-coming-soon" id="page-nav-support">고객센터 <span class="nav-soon-badge">준비중</span></button>
     </nav>
@@ -205,8 +205,8 @@
   <!-- [박스1 34.4%] 공지사항 | 최신게시물 -->
   <div class="notice-box">
     <div class="notice-board-tabs">
-      <button class="notice-tab-btn active" data-tab="notice">📢 공지사항</button>
-      <button class="notice-tab-btn" data-tab="latest">📰 최신게시물</button>
+      <button class="notice-tab-btn active" data-tab="notice">공지사항</button>
+      <button class="notice-tab-btn" data-tab="latest">최신게시물</button>
     </div>
     <ul class="notice-board-list" id="notice-list-notice"></ul>
     <ul class="notice-board-list" id="notice-list-latest" style="display:none;"></ul>
@@ -217,7 +217,7 @@
        가짜 목록을 만들지 않고 준비중 안내만 표시합니다(탭·자리는 보존). -->
   <div class="notice-box">
     <div class="notice-board-tabs">
-      <button class="notice-tab-btn active" data-tab="popular">🔥 인기글</button>
+      <button class="notice-tab-btn active" data-tab="popular">인기글</button>
       <button class="notice-tab-btn" data-tab="free">자유게시판 <span class="nav-soon-badge">준비중</span></button>
       <button class="notice-tab-btn" data-tab="analysis">분석게시판 <span class="nav-soon-badge">준비중</span></button>
     </div>
@@ -267,7 +267,7 @@
   <!-- ===== 이벤트/공지 배너 — 순수 안내용, 실제 이벤트 없어도 문구는 정직하게(실제 진행중 대회 없음 명시) ===== -->
   <!-- 화면에서만 숨김(코드 보존) -->
   <div class="event-banner page-center">
-    <span class="event-banner-icon">📣</span>
+    <span class="event-banner-icon"></span>
     <span class="event-banner-title">TL · TRADING LEAGUE</span>
     <span class="event-banner-sub">가상 자금으로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
   </div>
@@ -282,7 +282,7 @@
   <!-- ===== 전광판 — 여러 종목을 표로 한눈에(BTC는 실시간, 나머지는 준비중 배지) ===== -->
   <!-- 화면에서만 숨김(코드 보존) -->
   <div class="panel ticker-board-panel page-center" id="ticker-board-panel" style="display:none;">
-    <div class="field-label"><span>📊 전광판</span></div>
+    <div class="field-label"><span>전광판</span></div>
     <div class="table-scroll">
       <table class="ticker-board-table">
         <thead><tr><th style="text-align:left;">종목</th><th>현재가</th><th>등락률</th><th>고가</th><th>저가</th></tr></thead>
@@ -394,7 +394,7 @@
               <span class="ob-price-arrow" id="ob-price-arrow"></span>
               <div class="ob-current-price" id="ob-current-price">현재가 -</div>
             </div>
-            <div class="ob-mark-price-row">🚩 마크가격 <b id="ob-mark-price">-</b></div>
+            <div class="ob-mark-price-row">마크가격 <b id="ob-mark-price">-</b></div>
             <div class="ob-bids" id="ob-bids"></div>
           </div>
         </div>
@@ -606,7 +606,7 @@
   <!-- ===== 서버 거래내역(Supabase) — 위의 로컬 거래내역과는 별개, 기기가 바뀌어도 유지됨 ===== -->
 
   <div class="panel page-center" id="cloud-history-panel">
-    <div class="field-label"><span>☁ 거래내역 (서버 저장 · 새로고침해도 유지)</span></div>
+    <div class="field-label"><span>거래내역 (서버 저장 · 새로고침해도 유지)</span></div>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -632,7 +632,7 @@
   </div>
 
   <div class="panel admin-panel page-center" id="admin-panel" style="display:none;">
-    <div class="field-label"><span>⚠️ 관리자</span></div>
+    <div class="field-label"><span>관리자</span></div>
     <button id="admin-reset-btn" class="admin-reset-btn">전체 시즌 초기화</button>
   </div>
 
@@ -652,14 +652,14 @@
   <!-- ===== 게시판 페이지(기본 숨김) — page-nav.js가 전환을 담당, board.js는 완전히 그대로 ===== -->
   <div id="page-board" style="display:none;">
     <div class="panel" id="board-panel">
-      <div class="field-label"><span>📝 자유게시판</span></div>
+      <div class="field-label"><span>자유게시판</span></div>
 
       <div id="board-list-view">
         <div class="board-toolbar">
           <button id="board-write-btn" class="chat-send-btn">글쓰기</button>
         </div>
         <div id="board-popular-section" style="display:none;">
-          <div class="board-section-title">🔥 인기글</div>
+          <div class="board-section-title">인기글</div>
           <div id="board-popular-list"></div>
         </div>
         <div class="board-section-title">최신글</div>
@@ -694,8 +694,8 @@
           <button id="board-delete-btn" class="admin-reset-btn">삭제</button>
         </div>
         <div class="board-vote-row">
-          <button id="board-like-btn" class="board-vote-btn">👍 추천 <span id="board-like-count">0</span></button>
-          <button id="board-dislike-btn" class="board-vote-btn">👎 비추천 <span id="board-dislike-count">0</span></button>
+          <button id="board-like-btn" class="board-vote-btn">추천 <span id="board-like-count">0</span></button>
+          <button id="board-dislike-btn" class="board-vote-btn">비추천 <span id="board-dislike-count">0</span></button>
         </div>
         <div class="board-comments-section">
           <div class="board-section-title">댓글</div>
@@ -713,7 +713,7 @@
   <div id="page-battle" style="display:none;">
     <div class="panel market-war-panel" id="market-war-panel">
       <div class="ob-header">
-        <span class="ob-title">⚔ 전쟁터 (MARKET WAR)</span>
+        <span class="ob-title">전쟁터 (MARKET WAR)</span>
         <span class="mw-power-label">
           <span class="mw-buy-label">BUY <b id="mw-buy-pct">50%</b></span>
           <span class="mw-sell-label">SELL <b id="mw-sell-pct">50%</b></span>
@@ -738,7 +738,7 @@
   <!-- ===== 랭킹 페이지(기본 숨김) — page-nav.js가 전환 담당, leaderboard.js도 id로만 요소를 찾아서 무수정 ===== -->
   <div id="page-ranking" style="display:none;">
     <div class="panel" id="leaderboard-panel">
-      <div class="field-label"><span>🏆 TL 랭킹 (실현 손익 기준)</span></div>
+      <div class="field-label"><span>TL 랭킹 (실현 손익 기준)</span></div>
       <div class="table-scroll">
         <table>
           <thead><tr>
@@ -757,7 +757,7 @@
        화면에 하드코딩한 상품이나 가격은 없습니다. -->
   <div id="page-market" style="display:none;">
     <div class="panel" id="market-panel">
-      <div class="field-label"><span>🛒 TL 마켓</span></div>
+      <div class="field-label"><span>TL 마켓</span></div>
 
       <div class="hd-head">
         <div class="hd-head-copy">
@@ -779,7 +779,7 @@
       <div class="hd-filters">
         <div class="hd-chip-row" id="mk-category-row"></div>
         <div class="hd-tools">
-          <input type="text" class="hd-search" id="mk-search" placeholder="🔍 아이템 검색" autocomplete="off">
+          <input type="text" class="hd-search" id="mk-search" placeholder="아이템 검색" autocomplete="off">
           <select class="hd-sort" id="mk-sort">
             <option value="popular">인기순</option>
             <option value="new">신상품순</option>
@@ -823,7 +823,7 @@
        화면에 하드코딩한 상품이나 잔액은 없습니다. -->
   <div id="page-hotdeal" style="display:none;">
     <div class="panel" id="hotdeal-panel">
-      <div class="field-label"><span>🔥 TL 핫딜</span></div>
+      <div class="field-label"><span>TL 핫딜</span></div>
 
       <div class="hd-head">
         <div class="hd-head-copy">
@@ -845,7 +845,7 @@
         <div class="hd-chip-row" id="hd-category-row"></div>
         <div class="hd-chip-row" id="hd-price-row"></div>
         <div class="hd-tools">
-          <input type="text" class="hd-search" id="hd-search" placeholder="🔍 상품명 또는 브랜드 검색" autocomplete="off">
+          <input type="text" class="hd-search" id="hd-search" placeholder="상품명 또는 브랜드 검색" autocomplete="off">
           <select class="hd-sort" id="hd-sort">
             <option value="popular">인기순</option>
             <option value="new">신상품순</option>
@@ -857,7 +857,7 @@
       </div>
 
       <div class="hd-section" id="hd-hot-section" style="display:none;">
-        <div class="hd-section-title">🔥 오늘의 핫딜</div>
+        <div class="hd-section-title">오늘의 핫딜</div>
         <div class="hd-grid" id="hd-hot-grid"></div>
       </div>
 
@@ -884,7 +884,7 @@
        기존 'trading:update' 이벤트만 구독(trading.js/ui.js 무수정) ===== -->
   <div id="page-mypage" style="display:none;">
     <div class="panel" id="mypage-panel">
-      <div class="field-label"><span>👤 마이페이지</span></div>
+      <div class="field-label"><span>마이페이지</span></div>
       <div class="mypage-nickname-row">
         <span class="mypage-nickname-label">닉네임</span>
         <span class="mypage-nickname-value" id="mypage-nickname">-</span>
@@ -976,7 +976,7 @@
   <div class="notice-box user-panel-box">
     <!--
     <div class="notice-board-tabs">
-      <button class="notice-tab-btn active" type="button">🪖 내 정보</button>
+      <button class="notice-tab-btn active" type="button">내 정보</button>
     </div>
     -->
     <div class="user-panel-body" id="user-panel-body"></div>
@@ -988,7 +988,7 @@
       <div class="page-chat-col">
         <div class="panel page-chat-panel" id="chat-panel">
           <div class="field-label">
-            <span>💬 실시간 채팅</span>
+            <span>실시간 채팅</span>
             <!-- 접기 버튼 — 2026-08-24 대표 지시로 "항상 열림"이 되어 화면에서 내렸습니다.
                  마크업은 보존합니다(style.css 의 .chat-toggle-btn{display:none} 로만 숨김). -->
             <button type="button" id="chat-toggle-btn" class="chat-toggle-btn" aria-controls="chat-panel" aria-expanded="false">열기 ▸</button>
@@ -1009,7 +1009,7 @@
 <!-- ===== 시즌 초기화 확인창(기본 숨김) — "정말 초기화"를 눌러야만 실행됩니다 ===== -->
 <div class="admin-confirm-overlay" id="admin-confirm-overlay">
   <div class="admin-confirm-card">
-    <div class="admin-confirm-title">⚠️ 전체 시즌 초기화</div>
+    <div class="admin-confirm-title">전체 시즌 초기화</div>
     <div class="admin-confirm-body">
       모든 사용자의:
       <ul>
@@ -1195,5 +1195,11 @@
 <script src="js/chart-tab-mobile.js"></script>
 <!-- [모바일 3단계] 폰에서 주문 패널을 하단 고정 바 + 시트로 (ui.js 무수정 · 마크업 이동 없음) -->
 <script src="js/order-sheet-mobile.js"></script>
+<!-- 이모지 제거 — 수정 금지 파일(board/chat/leaderboard/season)이 그린 이모지만
+     그린 뒤에 글자로 바꿉니다. 원본은 한 글자도 안 고칩니다. -->
+<script src="js/no-emoji.js"></script>
+<!-- 차트 1단계 — 청산가 / 미체결 지정가 주문 가로선 (chart.js 무수정).
+     App.ChartFont.getCharts() 로 차트를 받아 전용 시리즈에 선만 얹습니다. -->
+<script src="js/chart-position-lines.js"></script>
 </body>
 </html>

@@ -96,7 +96,7 @@ App.ChatSplit = (function () {
     span.className = "tt-item" + (it.kind ? " tt-" + it.kind : "");
     const mark = document.createElement("span");
     mark.className = "tt-mark";
-    mark.textContent = it.kind === "profit" ? "▲" : it.kind ? "▼" : "⚡";
+    mark.textContent = it.kind === "profit" ? "▲" : it.kind ? "▼" : "·";
     const txt = document.createElement("span");
     txt.className = "tt-text";
     txt.textContent = it.text;

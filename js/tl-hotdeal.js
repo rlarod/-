@@ -30,12 +30,12 @@ App.TLHotdeal = (function () {
 
   var CATEGORIES = [
     { id: "all", label: "전체" },
-    { id: "cafe", label: "☕ 카페" },
-    { id: "delivery", label: "🍔 배달/외식" },
-    { id: "meal", label: "🍕 식사" },
-    { id: "shopping", label: "🛒 쇼핑" },
-    { id: "life", label: "⛽ 생활" },
-    { id: "etc", label: "🎁 기타" },
+    { id: "cafe", label: "카페" },
+    { id: "delivery", label: "배달/외식" },
+    { id: "meal", label: "식사" },
+    { id: "shopping", label: "쇼핑" },
+    { id: "life", label: "생활" },
+    { id: "etc", label: "기타" },
   ];
 
   /* 가격대 필터 — max 가 null 이면 상한 없음 */
@@ -232,14 +232,14 @@ App.TLHotdeal = (function () {
 
   function badgesFor(product) {
     var out = [];
-    if (product.is_hot) out.push({ cls: "hd-badge-hot", text: "🔥 HOT" });
+    if (product.is_hot) out.push({ cls: "hd-badge-hot", text: "HOT" });
     if (product.list_tl_price && Number(product.list_tl_price) > Number(product.tl_price)) {
-      out.push({ cls: "hd-badge-sale", text: "⚡ 오늘의 특가" });
+      out.push({ cls: "hd-badge-sale", text: "오늘의 특가" });
     }
     var stock = Number(product.stock) || 0;
     if (stock <= 0) out.push({ cls: "hd-badge-out", text: "품절" });
-    else if (stock <= LOW_STOCK) out.push({ cls: "hd-badge-soon", text: "🔥 마감 임박" });
-    if (product.is_limited) out.push({ cls: "hd-badge-limited", text: "🎯 한정수량" });
+    else if (stock <= LOW_STOCK) out.push({ cls: "hd-badge-soon", text: "마감 임박" });
+    if (product.is_limited) out.push({ cls: "hd-badge-limited", text: "한정수량" });
     return out;
   }
 
@@ -358,7 +358,7 @@ App.TLHotdeal = (function () {
         if (res.error) throw res.error;
         var d = res.data || {};
         alert(
-          "🎉 구매 완료!\n\n" +
+          "구매 완료!\n\n" +
             product.brand + " " + product.name + " " + quantity + "개\n" +
             "사용 TL  " + tl(d.spent) + "\n" +
             "남은 TL  " + tl(d.balance_after) + "\n\n" +
@@ -442,7 +442,7 @@ App.TLHotdeal = (function () {
       '<span class="hd-stock">' + (soldOut ? "품절" : "남은수량 " + num(stock)) + "</span>" +
       "</div>" +
       '<div class="hd-tl-row">' + priceRow +
-      '<b class="hd-tl">🔵 ' + esc(tl(p.tl_price)) + "</b></div>" +
+      '<b class="hd-tl">' + esc(tl(p.tl_price)) + "</b></div>" +
       (limit !== null
         ? '<div class="hd-limit">1인 ' + limit + "개 제한" + (already ? " · 구매 " + already + "개" : "") + "</div>"
         : "") +
