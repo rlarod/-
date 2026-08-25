@@ -138,11 +138,64 @@ const 회원세션 = { user: { id: "u1" } };
     ok("괜히 새로고침하지 않는다", reloads.length === 0);
   }
   {
-    const 빈상태 = { balance: 150000000, position: null, closedTrades: [] };
+    /* 시작 잔고 그대로 = 아무도 아무것도 안 한 상태입니다.
+       (예전에는 여기 150000000 이 들어 있었는데, 그건 기본값이 아니라
+        앞사람이 남긴 잔고와 구분이 안 되는 값이었습니다.) */
+    const 빈상태 = { balance: 100000, position: null, closedTrades: [] };
     const { store, reloads, G } = boot({ session: null, data: 빈상태 });
     const r = await G.check();
     ok("거래 흔적 없는 초기 상태는 지우지 않는다", !!store.trading, r);
     ok("초기 상태에서는 새로고침하지 않는다", reloads.length === 0);
+  }
+
+  /* ---------- 잔고만 남은 찌꺼기 (2026-08-25 P1) ----------
+   * js/daily-recharge.js 는 무료 충전 뒤 { balance: N } 만 저장합니다.
+   * 거래를 한 번도 안 한 회원이 충전만 받고 로그아웃 없이 탭을 닫으면
+   * 잔고 하나만 남고, 예전 가드는 이걸 "지울 것 없음" 으로 통과시켰습니다.
+   * 그 결과 다음 사람의 마이페이지 총자산·가용잔고와 메인 자산탭에
+   * 앞사람 잔고가 그대로 보였습니다. */
+  {
+    const 충전만 = {
+      balance: 5000, leverage: 10, position: null, pendingOrder: null,
+      orderHistory: [], closedTrades: [], fundingHistory: [], lastSettledFundingTime: 0,
+    };
+    const { store, G } = boot({ session: null, data: 충전만 });
+    const r = await G.check();
+    ok("잔고만 남아 있어도 정리한다(무료 충전 뒤 탭 닫기)", !store.trading, r);
+  }
+  {
+    const { store, G } = boot({ session: null, data: { balance: 250000, closedTrades: [] } });
+    await G.check();
+    ok("기본값보다 많은 잔고도 정리한다", !store.trading);
+  }
+  {
+    /* 가장 중요 — 회원의 잔고는 절대 지우지 않습니다. */
+    const { store, reloads, G } = boot({ session: 회원세션, data: { balance: 5000, closedTrades: [] } });
+    const r = await G.check();
+    ok("로그인한 회원의 잔고는 지우지 않는다", !!store.trading, r);
+    ok("회원 잔고에는 새로고침도 하지 않는다", reloads.length === 0);
+  }
+  {
+    const { store, G } = boot({ noClient: true, data: { balance: 5000, closedTrades: [] } });
+    const r = await G.check();
+    ok("잔고만 남았어도 로그인 확인이 안 되면 그대로 둔다", !!store.trading, r,
+      "로그인 직후 잠깐 비회원으로 보이는 구간에서 지우면 회원 데이터가 날아갑니다");
+  }
+  {
+    const { store, G } = boot({ sessionErr: true, data: { balance: 5000, closedTrades: [] } });
+    await G.check();
+    ok("확인 요청이 실패하면 잔고도 그대로 둔다", !!store.trading);
+  }
+  {
+    /* 판단 함수 자체 */
+    const { G } = boot({ session: null });
+    ok("시작 잔고는 찌꺼기가 아니다", G.hasLeftoverBalance({ balance: 100000 }) === false);
+    ok("시작 잔고 문자열도 찌꺼기가 아니다", G.hasLeftoverBalance({ balance: "100000" }) === false);
+    ok("기본값과 다른 잔고는 찌꺼기다", G.hasLeftoverBalance({ balance: 5000 }) === true);
+    ok("잔고 칸 자체가 없으면 판단하지 않는다", G.hasLeftoverBalance({ closedTrades: [] }) === false);
+    ok("숫자가 아니면 판단하지 않는다", G.hasLeftoverBalance({ balance: "알수없음" }) === false);
+    ok("빈 값이어도 터지지 않는다", G.hasLeftoverBalance(null) === false);
+    ok("기준 잔고는 trading.js 의 초기자산과 같다", G.DEFAULT_BALANCE === 100000);
   }
   {
     /* 미체결 지정가만 걸어둔 것도 지난 사람의 흔적입니다. */
@@ -209,8 +262,11 @@ const 회원세션 = { user: { id: "u1" } };
       fs.readFileSync(path.join(REPO, "js", "account-isolation.js"), "utf8").includes('"trading-owner"'));
     ok("auth.js 를 건드리지 않았다",
       !fs.readFileSync(path.join(REPO, "js", "auth.js"), "utf8").includes("guest-state-guard"));
-    ok("trading.js 를 건드리지 않았다",
-      !fs.readFileSync(path.join(REPO, "js", "trading.js"), "utf8").includes("guest-state-guard"));
+    const trading = fs.readFileSync(path.join(REPO, "js", "trading.js"), "utf8");
+    ok("trading.js 를 건드리지 않았다", !trading.includes("guest-state-guard"));
+    ok("가드의 기준 잔고가 trading.js 의 초기자산과 어긋나지 않는다",
+      /const INITIAL_BALANCE = 100000/.test(trading) && /var DEFAULT_BALANCE = 100000/.test(SRC),
+      "trading.js 의 INITIAL_BALANCE 가 바뀌면 guest-state-guard.js 의 DEFAULT_BALANCE 도 같이 바꿔야 합니다");
   }
 
   console.log("통과 " + pass + " / 실패 " + fail);

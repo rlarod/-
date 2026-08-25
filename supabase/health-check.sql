@@ -12,6 +12,21 @@
 --   직접 물어봅니다.
 --
 -- 결과는 전부 O / X 로 나옵니다. X 가 있으면 그 SQL 을 다시 실행하면 됩니다.
+--
+-- ── 2026-08-25 안내 파일명 정정 ───────────────────────────────────────────
+--   ①②(랭킹) 의 안내가 schema-leaderboard-fix.sql 로 되어 있었습니다.
+--   그 파일은 옛 계산식입니다. 랭킹 뷰(leaderboard)의 정본은
+--   schema-leaderboard-floor.sql 입니다.
+--
+--     옛것 schema-leaderboard-fix.sql   : greatest(0, realized_pnl)
+--                                         — 잃은 사람은 새로 벌어도 계속 0%
+--     정본 schema-leaderboard-floor.sql : 누적 = max(0, 누적 + 이번손익)
+--                                         — 0 이 바닥, 그다음 번 것은 바로 반영
+--
+--   옛 안내를 그대로 따라 fix 를 실행하면 leaderboard 뷰가 통째로 덮여
+--   랭킹이 옛 계산식으로 되돌아갑니다. 그래서 안내를 정본으로 바꿨습니다.
+--   랭킹 관련으로 X 가 나오면 schema-leaderboard-floor.sql 만 실행하세요.
+--   schema-leaderboard-fix.sql 은 실행하지 마세요.
 -- =========================================================================
 
 select '① 랭킹 — 손실을 0%로 끊는가' as 항목,
@@ -19,7 +34,7 @@ select '① 랭킹 — 손실을 0%로 끊는가' as 항목,
          select 1 from pg_views
          where schemaname = 'public' and viewname = 'leaderboard'
            and definition like '%GREATEST%'
-       ) then 'O' else 'X — schema-leaderboard-fix.sql 실행 필요' end as 결과
+       ) then 'O' else 'X — schema-leaderboard-floor.sql 실행 필요' end as 결과
 
 union all
 select '② 랭킹 — 총자산이 기준자본+수익인가',
@@ -27,7 +42,7 @@ select '② 랭킹 — 총자산이 기준자본+수익인가',
          select 1 from pg_views
          where schemaname = 'public' and viewname = 'leaderboard'
            and definition like '%initial_balance +%'
-       ) then 'O' else 'X — schema-leaderboard-fix.sql 실행 필요' end
+       ) then 'O' else 'X — schema-leaderboard-floor.sql 실행 필요' end
 
 union all
 select '③ 계급 — 자산 기준 함수가 있는가',

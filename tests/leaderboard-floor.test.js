@@ -25,6 +25,7 @@ function ok(name, cond, detail) {
 }
 
 const SQL = fs.readFileSync(path.join(REPO, "supabase", "schema-leaderboard-floor.sql"), "utf8");
+const HEALTH = fs.readFileSync(path.join(REPO, "supabase", "health-check.sql"), "utf8");
 const SRC = fs.readFileSync(path.join(REPO, "js", "cycle-pnl.js"), "utf8");
 
 /* 규칙 그대로 한 줄씩 세는 방법 */
@@ -104,6 +105,33 @@ console.log("\n랭킹 누적 — 0 이 바닥");
   ok("못 읽으면 대체 계산을 쓴다", /Math\.max\(0, pnl\)/.test(SRC));
   ok("실제 손익은 따로 보관한다", /realized_pnl: pnl/.test(SRC),
     "마이페이지 실현손익에는 진짜 값이 나와야 합니다");
+}
+
+/* ---------- 점검 파일이 정본을 가리키는가 (2026-08-25) ----------
+ * health-check.sql 의 랭킹 항목이 schema-leaderboard-fix.sql 을 실행하라고
+ * 안내하고 있었습니다. 그 파일은 옛 계산식(greatest(0, realized_pnl))이고,
+ * 실행하면 leaderboard 뷰를 통째로 덮어 랭킹이 옛것으로 되돌아갑니다.
+ * 정본은 schema-leaderboard-floor.sql 하나뿐입니다.
+ * 안내가 다시 옛 파일로 돌아가지 않게 여기서 잠급니다. */
+{
+  const 안내 = (HEALTH.match(/'X[^']*실행 필요[^']*'/g) || []).join(" | ");
+
+  ok("점검 파일이 옛 랭킹 SQL 을 실행하라고 하지 않는다",
+    !/schema-leaderboard-fix\.sql 실행 필요/.test(HEALTH),
+    "따라 하면 랭킹이 옛 계산식으로 되돌아갑니다: " + 안내);
+
+  ok("랭킹 항목은 정본(schema-leaderboard-floor.sql)을 가리킨다",
+    (HEALTH.match(/schema-leaderboard-floor\.sql 실행 필요/g) || []).length === 2,
+    안내);
+
+  ok("왜 바뀌었는지 점검 파일에 적혀 있다",
+    /정본은[\s\S]{0,80}schema-leaderboard-floor\.sql/.test(HEALTH) &&
+    /schema-leaderboard-fix\.sql 은 실행하지 마세요/.test(HEALTH));
+
+  const 본문 = HEALTH.split(/\r?\n/).map((l) => l.replace(/--.*$/, "")).join("\n");
+  ok("점검 파일은 여전히 읽기 전용이다",
+    !/\b(insert|update|delete|drop|truncate|create|alter)\b/i.test(본문),
+    "health-check.sql 은 아무것도 바꾸면 안 됩니다");
 }
 
 console.log("통과 " + pass + " / 실패 " + fail);

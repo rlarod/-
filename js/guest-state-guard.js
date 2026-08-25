@@ -48,10 +48,39 @@ App.GuestStateGuard = (function () {
   var OWNER_KEY = "trading-owner"; // 이 데이터가 누구 것인지 (account-isolation.js 와 같은 키)
   var RELOAD_FLAG = "tl_guest_state_cleared"; // 새로고침 반복 방지
 
+  /* 시작 잔고 — js/trading.js 의 INITIAL_BALANCE 와 같은 값입니다.
+     아무것도 안 한 사람의 잔고가 이 값이므로, 이 값이면 찌꺼기가 아닙니다.
+     (js/trading.js 는 수정 금지 파일이라 값을 가져올 수 없어 여기에 적어 둡니다.
+      trading.js 의 INITIAL_BALANCE 가 바뀌면 이 값도 같이 바꿔야 합니다.) */
+  var DEFAULT_BALANCE = 100000;
+
   function sb() {
     return App.SupabaseClient && typeof App.SupabaseClient.get === "function"
       ? App.SupabaseClient.get()
       : null;
+  }
+
+  /* 잔고만 남은 찌꺼기인지 — 시작 잔고와 다르면 앞사람이 남긴 것입니다.
+   *
+   * ── 왜 잔고까지 보나 (2026-08-25) ─────────────────────────────────────
+   * 예전에는 포지션·거래내역·미체결만 봤습니다. 그래서 "잔고만" 남은 경우가
+   * "지울 것 없음" 으로 통과했고, 다음 사람의 마이페이지 총자산·가용잔고와
+   * 메인 자산탭(#asset-equity·#asset-balance)에 앞사람 잔고가 그대로 보였습니다.
+   *
+   * 이 상태는 실제로 만들어집니다 — js/daily-recharge.js 가 무료 충전 뒤
+   * { balance: N } 만 저장하므로, 거래를 한 번도 안 한 회원이 충전만 받고
+   * 로그아웃 없이 탭을 닫으면 잔고 하나만 남습니다.
+   *
+   * 다만 시작 잔고(DEFAULT_BALANCE)와 같으면 아무도 아무것도 안 한 것이라
+   * 찌꺼기가 아닙니다. "기본값과 다른 잔고" 일 때만 흔적으로 봅니다.
+   * 숫자가 아니거나 값 자체가 없으면 판단하지 않습니다 — 남기는 쪽이 안전합니다.
+   */
+  function hasLeftoverBalance(d) {
+    if (!d || typeof d !== "object") return false;
+    if (!("balance" in d)) return false;
+    var bal = Number(d.balance);
+    if (!isFinite(bal)) return false;
+    return bal !== DEFAULT_BALANCE;
   }
 
   /* 지울 만한 거래 흔적이 있는지 — 빈 초기 상태는 지울 것도 없습니다. */
@@ -60,7 +89,7 @@ App.GuestStateGuard = (function () {
     var d = App.Storage.load(DATA_KEY);
     if (!d) return false;
     var trades = Array.isArray(d.closedTrades) ? d.closedTrades.length : 0;
-    return !!(d.position || trades > 0 || d.pendingOrder);
+    return !!(d.position || trades > 0 || d.pendingOrder || hasLeftoverBalance(d));
   }
 
   /* 로그인 서버에 직접 물어봅니다.
@@ -151,6 +180,8 @@ App.GuestStateGuard = (function () {
     init: init,
     check: check,
     hasTradingData: hasTradingData,
+    hasLeftoverBalance: hasLeftoverBalance,
     loggedIn: loggedIn,
+    DEFAULT_BALANCE: DEFAULT_BALANCE,
   };
 })();

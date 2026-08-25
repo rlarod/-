@@ -652,7 +652,7 @@
   <!-- ===== 게시판 페이지(기본 숨김) — page-nav.js가 전환을 담당, board.js는 완전히 그대로 ===== -->
   <div id="page-board" style="display:none;">
     <div class="panel" id="board-panel">
-      <div class="field-label"><span>자유게시판</span></div>
+      <div class="field-label"><span>커뮤니티 게시판</span></div>
 
       <div id="board-list-view">
         <div class="board-toolbar">
@@ -1204,5 +1204,8 @@
 <!-- 차트 1단계 — 청산가 / 미체결 지정가 주문 가로선 (chart.js 무수정).
      App.ChartFont.getCharts() 로 차트를 받아 전용 시리즈에 선만 얹습니다. -->
 <script src="js/chart-position-lines.js"></script>
+<!-- 차트 2단계 — 이동평균선(7/25/99) · 볼린저밴드 · 거래량 켜기/끄기 (chart.js 무수정).
+     거래량 막대는 chart.js 가 이미 그리고 있어 새로 만들지 않고 켜고 끄기만 합니다. -->
+<script src="js/chart-indicators.js"></script>
 </body>
 </html>
