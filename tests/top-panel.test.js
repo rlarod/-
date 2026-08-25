@@ -127,11 +127,17 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
   t("① 공지사항 — 기존 데이터 유지", () => {
     ok(/공지사항/.test(boxes[0].textContent));
     ok(boxes[0].querySelector("#notice-list-notice"));
-    // [공지]/[안내] 앞부분이 색상 구분용 태그로 렌더링되는지
+    /* 2026-08-25 — 공지가 코드에 박혀 있던 것을 서버 표로 옮겼습니다.
+       화면을 처음 그릴 때는 기본 문구 1줄만 보이고, 서버에서 읽어온 뒤
+       실제 공지로 채워집니다. 그래서 개수를 세지 않고 구조만 봅니다. */
     const tags = boxes[0].querySelectorAll(".notice-tag");
-    ok(tags.length >= 4, "공지 태그 렌더링 필요");
+    ok(tags.length >= 1, "공지 태그 렌더링 필요");
     ok(boxes[0].querySelector(".notice-tag-notice"), "[공지] 색상 구분");
-    ok(boxes[0].querySelector(".notice-tag-info"), "[안내] 색상 구분");
+
+    const nb = fs.readFileSync(path.join(REPO, "js/notice-board.js"), "utf8");
+    ok(/rpc\("get_notices"/.test(nb), "공지는 서버에서 읽어와야 함");
+    ok(!/STATIC_NOTICES/.test(nb), "공지 문구를 코드에 박아두지 않음");
+    ok(/notice-tag-info/.test(nb), "[안내] 색상 구분 코드는 유지");
   });
 
   t("① 박스1 = 공지사항 | 최신게시물 (레퍼런스 구성)", () => {
@@ -1396,7 +1402,7 @@ section("[5] 기존 기능 보존");
     // 개미톡 헤더의 [공지] 자리 — 새 데이터가 아니라 기존 공지 목록 재사용
     ok(/id="header-notice-text"/.test(html), "헤더 공지 슬롯 필요");
     const nb = fs.readFileSync(path.join(REPO, "js/notice-board.js"), "utf8");
-    ok(/STATIC_NOTICES\[0\]/.test(nb), "헤더 공지는 기존 공지 목록을 재사용해야 함");
+    ok(/notices\[0\]/.test(nb), "헤더 공지는 공지 목록 첫 줄을 재사용해야 함");
 
     // 그라데이션 없는 흰 배경
     const banner = css.match(/\n\.top-banner\{[\s\S]*?\}/)[0];

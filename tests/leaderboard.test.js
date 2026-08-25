@@ -59,8 +59,13 @@ console.log("\n랭킹");
     (fix.match(/ta\.initial_balance \+ coalesce\(rp\.ranking_profit, 0\)/g) || []).length >= 2,
     "지갑 잔고를 쓰면 포지션 보유 중에 줄고, 무료 충전이 섞입니다");
 
-  /* 공지에 적힌 기준과 실제가 같아야 합니다. */
-  ok("공지가 실현 손익 기준이라고 안내한다", /실현 손익\) 기준으로 계산/.test(noticeJs));
+  /* 공지에 적힌 기준과 실제가 같아야 합니다.
+     2026-08-25 — 공지 문구가 코드에서 서버 표로 옮겨졌습니다(대표가 직접
+     쓰고 지울 수 있게). 그래서 코드가 아니라 SQL 의 초기 공지를 봅니다.
+     대표가 이 공지를 지우거나 고칠 수 있으므로, 이 검사는 "처음 넣어둔
+     안내가 실제 계산과 맞는지" 만 확인합니다. */
+  const noticeSql = fs.readFileSync(path.join(REPO, "supabase", "schema-notices.sql"), "utf8");
+  ok("초기 공지가 실현 손익 기준이라고 안내한다", /실현 손익\) 기준으로 계산/.test(noticeSql));
 }
 
 /* ---------- 화면이 쓰는 칸 ---------- */

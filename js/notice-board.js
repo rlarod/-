@@ -15,12 +15,43 @@ window.App = window.App || {};
 App.NoticeBoard = (function () {
   "use strict";
 
-  const STATIC_NOTICES = [
+  /* ── 공지는 서버에서 읽어옵니다 ──────────────────────────────────────
+   * 예전에는 이 자리에 문구 4줄이 코드로 박혀 있었습니다. 관리자가 쓴 게
+   * 아니라서 공지 하나 바꾸려면 코드를 고쳐야 했습니다(2026-08-25 대표 지적).
+   * 이제 public.notices 표에서 읽고, 관리자 창에서 쓰고 지웁니다.
+   * 서버(supabase/schema-notices.sql)를 아직 안 돌렸으면 아래 기본 문구를
+   * 그대로 보여줍니다 — 화면이 비어 보이는 것보다 낫습니다. */
+  const FALLBACK_NOTICES = [
     "[공지] 실제 자금이 오가지 않는 모의투자 플랫폼입니다",
-    "[공지] 랭킹은 청산된 거래(실현 손익) 기준으로 계산됩니다",
-    "[안내] 전쟁터에서 실시간 매수/매도 세력 대결을 확인해보세요",
-    "[안내] 마이페이지에서 내 자산 현황을 한눈에 확인하세요",
   ];
+
+  let notices = FALLBACK_NOTICES.slice();
+
+  function sb() {
+    return App.SupabaseClient && typeof App.SupabaseClient.get === "function"
+      ? App.SupabaseClient.get()
+      : null;
+  }
+
+  async function loadNotices() {
+    const client = sb();
+    if (!client) return;
+    try {
+      const res = await client.rpc("get_notices", { limit_count: 20 });
+      if (res && res.error) throw res.error;
+      const rows = Array.isArray(res.data) ? res.data : [];
+      /* 공지가 하나도 없으면 기본 문구를 남겨둡니다. 관리자가 전부 지웠을
+         때 화면이 텅 비어 "고장난 사이트" 로 보이지 않게 합니다. */
+      if (rows.length) {
+        notices = rows.map((n) => "[" + (n.kind || "공지") + "] " + n.title);
+      }
+      renderNotices();
+      renderHeaderNotice();
+    } catch (e) {
+      /* 서버를 못 읽으면 기본 문구 그대로 둡니다 */
+      console.warn("[notice-board.js] 공지를 불러오지 못했습니다:", e);
+    }
+  }
 
   let dom = {};
 
@@ -37,14 +68,14 @@ App.NoticeBoard = (function () {
   // 별도의 데이터를 만들지 않습니다.
   function renderHeaderNotice() {
     const box = el("header-notice-text");
-    if (!box || !STATIC_NOTICES.length) return;
-    const m = STATIC_NOTICES[0].match(/^\[(.+?)\]\s*(.*)$/);
-    box.textContent = m ? m[2] : STATIC_NOTICES[0];
+    if (!box || !notices.length) return;
+    const m = notices[0].match(/^\[(.+?)\]\s*(.*)$/);
+    box.textContent = m ? m[2] : notices[0];
   }
 
   function renderNotices() {
     if (!dom.notice) return;
-    dom.notice.innerHTML = STATIC_NOTICES.map((t) => {
+    dom.notice.innerHTML = notices.map((t) => {
       const m = t.match(/^\[(.+?)\]\s*(.*)$/);
       if (!m) return "<li>" + escapeHtml(t) + "</li>";
       const tagClass = m[1] === "공지" ? "notice-tag-notice" : "notice-tag-info";
@@ -130,10 +161,29 @@ App.NoticeBoard = (function () {
 
     renderNotices();
     renderHeaderNotice();
+    loadNotices();      /* 서버 공지로 덮어씁니다 */
     loadBoardLists();
     bindTabs();
+
+    /* 관리자가 공지를 올리면 접속 중인 회원 화면에도 바로 뜨게 합니다.
+       실시간이 막힌 환경을 대비해 3분마다 한 번 더 확인합니다. */
+    subscribeNotices();
+    setInterval(loadNotices, 180000);
+  }
+
+  function subscribeNotices() {
+    const client = sb();
+    if (!client || typeof client.channel !== "function") return;
+    try {
+      client
+        .channel("notices_live_" + Date.now())
+        .on("postgres_changes", { event: "*", schema: "public", table: "notices" }, loadNotices)
+        .subscribe();
+    } catch (e) {
+      /* 실시간이 막히면 위 주기 확인이 대신합니다 */
+    }
   }
 
   // 테스트에서 목록 렌더링만 따로 검증하기 위한 통로(내부 로직은 동일 함수 사용)
-  return { init, renderForTest: renderPostList };
+  return { init, renderForTest: renderPostList, loadNotices };
 })();
