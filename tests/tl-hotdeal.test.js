@@ -404,10 +404,10 @@ console.log("\n  기본 정렬");
   const tlSize = px(/\.hd-tl\{font-size:([\d.]+)px/);
   const brand = px(/\.hd-brand\{font-size:([\d.]+)px/);
   const btn = px(/\.hd-buy-btn\{[\s\S]*?font-size:([\d.]+)px/);
-  ok("상품명 13px 이상", name >= 13, String(name));
+  ok("상품명 18px 이상", name >= 18, String(name));
   ok("TL 가격 22px 이상", tlSize >= 22, String(tlSize));
-  ok("브랜드명 11px 이상", brand >= 11, String(brand));
-  ok("구매 버튼 12px 이상", btn >= 12, String(btn));
+  ok("브랜드명 15px 이상", brand >= 15, String(brand));
+  ok("구매 버튼 16px 이상", btn >= 16, String(btn));
   ok("TL 가격이 상품명보다 크다(가장 눈에 띄어야 함)", tlSize > name, tlSize + " vs " + name);
 }
 

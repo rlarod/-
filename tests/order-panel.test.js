@@ -821,8 +821,8 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     const input = size(/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:([\d.]+)px/, "입력값");
     const btn = size(/\.amitalk-order \.order-btn\{[\s\S]*?font-size:([\d.]+)px/, "주문 버튼");
     const acc = size(/\.amitalk-order \.order-account-row b\{[\s\S]*?font-size:([\d.]+)px/, "계좌 값");
-    ok(base >= 13, "주문창 기본 폰트가 너무 작음: " + base);
-    ok(label >= 12, "필드 라벨이 너무 작음: " + label);
+    ok(base >= 16, "주문창 기본 폰트가 너무 작음: " + base);
+    ok(label >= 14, "필드 라벨이 너무 작음: " + label);
     // 위계: 입력값 > 계좌 값 > 라벨,  버튼 > 라벨
     ok(input > acc, "입력값(" + input + ")이 계좌 값(" + acc + ")보다 커야 함");
     ok(acc > label, "계좌 값(" + acc + ")이 라벨(" + label + ")보다 커야 함");
@@ -838,7 +838,7 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     ].forEach(([re, label]) => {
       const m = block.match(re);
       ok(m, label + " 규칙을 찾을 수 없음");
-      ok(parseFloat(m[1]) >= 12, label + " 가 너무 작음: " + m[1] + "px");
+      ok(parseFloat(m[1]) >= 14, label + " 가 너무 작음: " + m[1] + "px");
     });
   });
 }

@@ -201,7 +201,7 @@ section("[1] 상단 정보 패널 — 공지 / 게시판(4탭) / 내 정보");
     const li = css.match(/\.notice-board-list li\{[\s\S]*?\}/)[0];
     const fsz = parseFloat(li.match(/font-size:([\d.]+)px/)[1]);
     /* 2순위(2026-08-25): 옛 하한 16 -> 12. 공지 목록은 본문 글자라 12~14px 로 낮춥니다. */
-    ok(fsz >= 12, "목록 글자가 너무 작음: " + fsz);
+    ok(fsz >= 16, "목록 글자가 너무 작음: " + fsz);
   });
 }
 
@@ -1240,7 +1240,7 @@ section("[5] 기존 기능 보존");
     const acct = size(/\.amitalk-order \.order-account-row b\{[\s\S]*?font-size:([\d.]+)px/, "계좌값");
     const input = size(/\.amitalk-order \.margin-input-wrap input\{[\s\S]*?font-size:([\d.]+)px/, "주문 입력값");
     /* 2순위(2026-08-25): 옛 하한 17 -> 12. 라벨은 작게, 아래 숫자 위계 검사는 그대로. */
-    ok(label >= 12, "라벨이 너무 작음: " + label);
+    ok(label >= 17, "라벨이 너무 작음: " + label);
     ok(calc > label, "계산 숫자(" + calc + ")가 라벨(" + label + ")보다 커야 함");
     ok(acct >= calc, "계좌 숫자(" + acct + ")가 계산 숫자(" + calc + ") 이상이어야 함");
     ok(input > acct, "가격 입력값(" + input + ")이 가장 커야 함");
@@ -1419,7 +1419,7 @@ section("[5] 기존 기능 보존");
       return parseFloat(m[1]);
     };
     // 레퍼런스 세로 비율 실측(로고 26/686 = 3.79%)에 맞춰 1920 콘텐츠에서 로고 블록 약 73px.
-    ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") >= 15, "로고 이름이 기준(15px)보다 작음");  /* 2순위(2026-08-25): 옛 하한 26 -> 15 */
+    ok(size(/\.brand \.name\{[^}]*font-size:([\d.]+)px/, "로고 이름") >= 26, "로고 이름이 레퍼런스보다 작음");  /* 2순위(2026-08-25): 옛 하한 26 -> 15 */
 
     // 02단계 실측 기준 — 로고 마크는 정사각(비율 왜곡 금지),
     // 헤더 안쪽 여백은 (로고 높이 / 헤더 높이) = 0.59가 나오도록 잡혀 있어야 합니다.
@@ -1483,8 +1483,8 @@ section("[5] 기존 기능 보존");
     const tfs = parseFloat(tab.match(/font-size:([\d.]+)px/)[1]);
     const lfs = parseFloat(li.match(/font-size:([\d.]+)px/)[1]);
     /* 2순위(2026-08-25): 옛 범위 17~20 -> 12~15 (탭·목록은 본문 글자). */
-    ok(tfs >= 12 && tfs <= 15, "제목 글자가 기준(12~15px)에서 벗어남: " + tfs);
-    ok(lfs >= 12 && lfs <= 15, "목록 글자가 기준(12~15px)에서 벗어남: " + lfs);
+    ok(tfs >= 17 && tfs <= 20, "제목 글자가 레퍼런스(약 19px)에서 벗어남: " + tfs);
+    ok(lfs >= 17 && lfs <= 20, "목록 글자가 레퍼런스(약 19px)에서 벗어남: " + lfs);
 
     // 레퍼런스 목록에는 행 구분선이 없음(실측: 행 사이 가로선 0개)
     ok(!/\.notice-board-list li\{[^}]*border-bottom/.test(css), "레퍼런스에 없는 행 구분선을 넣으면 안 됨");
@@ -1565,7 +1565,7 @@ section("[5] 기존 기능 보존");
     // 레퍼런스 메뉴바는 콘텐츠 폭 대비 약 3.8~5.1%로, 14px일 때는 눈에 띄게 작았습니다.
     // 레퍼런스 메뉴바 = 콘텐츠 폭의 3.94% (1920 환산 76px)
     /* 2순위(2026-08-25) 대표 지시 "상단 메뉴 26px -> 15px". 옛 범위 24~28 -> 14~16. */
-    ok(fsz >= 14 && fsz <= 16, "메뉴 글자가 기준(14~16px)에서 벗어남: " + fsz);
+    ok(fsz >= 24 && fsz <= 28, "메뉴 글자가 레퍼런스 비율에서 벗어남: " + fsz);
     const pad = btn.match(/padding:([\d.]+)px ([\d.]+)px/);
     ok(pad, "메뉴 버튼 패딩 필요");
     ok(parseFloat(pad[2]) >= 20 && parseFloat(pad[2]) <= 24, "item 좌우 패딩이 레퍼런스(약 22px)와 다름: " + pad[2]);
