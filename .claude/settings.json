@@ -33,7 +33,27 @@
       "mcp__Claude_Browser__find",
       "mcp__Claude_Browser__preview_logs",
       "mcp__Claude_Browser__preview_list",
-      "mcp__Claude_Browser__tabs_context"
+      "mcp__Claude_Browser__tabs_context",
+      "Bash(bash .claude/hooks/guard-protected-files.sh)"
+    ]
+  },
+  "_설명": [
+    "hooks 는 '사람이 잊어도 자동으로 도는 안전장치' 입니다.",
+    "에이전트에게 '확인해줘' 라고 부탁하면 바쁠 때 건너뜁니다. 훅은 안 건너뜁니다.",
+    "PostToolUse — 파일을 고칠 때마다 수정 금지 12개 파일이 그대로인지 확인하고,",
+    "하나라도 바뀌면 그 자리에서 막습니다."
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/guard-protected-files.sh"
+          }
+        ]
+      }
     ]
   }
 }
