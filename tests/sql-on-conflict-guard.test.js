@@ -196,8 +196,10 @@ function protectedBy(ins) {
  * 고친 뒤에는 아래 줄을 지워야 이 검사가 통과합니다.
  * ------------------------------------------------------------------------ */
 const KNOWN_보호안됨 = [
-  "schema-tl-hotdeal.sql::tl_products",
-  "schema-tl-product-images.sql::tl_products",
+  /* 2026-08-25 — 비어 있는 것이 정상입니다.
+     tl_products 두 건은 supabase/마켓중복정리-2026-08-25.sql 이
+     tl_products_brand_name_uniq (brand, name) 를 걸어 해결했습니다.
+     새 항목을 여기 더해서 검사를 통과시키지 마세요. SQL 을 고치세요. */
 ];
 
 /* ========================================================================= */
