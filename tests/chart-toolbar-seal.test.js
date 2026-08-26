@@ -360,8 +360,20 @@ const soon = ALL.filter((b) => b.hasAttribute("data-soon"));
 const dis = ALL.filter((b) => b.hasAttribute("disabled"));
 const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비중") !== -1);
 
-ok("세로 막대 준비중이 7개다", railBtns.filter((b) => b.hasAttribute("data-soon")).length === 7);
-ok("가로 막대 준비중이 6개다", barBtns.filter((b) => b.hasAttribute("data-soon")).length === 6);
+/* ── 준비중 개수 (2026-08-26 선긋기 2차) ───────────────────────────────────────
+ * 처음 셀 때는 세로 7 / 가로 6 = 13 개였습니다. 2차에서 4개를 열었습니다.
+ *   세로 : 피보나치 되돌림(fib) · 자(ruler)          7 -> 5
+ *   가로 : 전체화면(fullscreen) · 카메라(camera)     6 -> 4
+ * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
+ * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
+ * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
+ * 검사를 지우지 마세요 — "준비중이라 써 놓고 실제로 열리는" 모순을 막는 그물입니다. */
+ok("세로 막대 준비중이 5개다 (2026-08-26 fib·ruler 를 열어 7 -> 5)",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 5,
+  "지금 " + railBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
+ok("가로 막대 준비중이 4개다 (2026-08-26 fullscreen·camera 를 열어 6 -> 4)",
+  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 4,
+  "지금 " + barBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
 
 {
   const bad = soon.filter((b) => !b.hasAttribute("disabled")).map((b) => b.getAttribute("data-tlc"));
@@ -397,14 +409,28 @@ ok("가로 막대 준비중이 6개다", barBtns.filter((b) => b.hasAttribute("d
 }
 
 /* 되는 도구는 잠기면 안 됩니다 */
-["cursor", "trend", "hline", "text"].forEach(function (k) {
+["cursor", "trend", "hline", "text", "fib", "ruler"].forEach(function (k) {
   const b = railBtns.filter((x) => x.getAttribute("data-tlc") === k)[0];
   ok("되는 도구 " + k + " 는 잠겨 있지 않다",
     !!b && !b.hasAttribute("disabled") && !b.hasAttribute("data-soon"));
 });
+["expand", "fullscreen", "camera"].forEach(function (k) {
+  const b = barBtns.filter((x) => x.getAttribute("data-tlc") === k)[0];
+  ok("가로 막대 " + k + " 버튼은 잠겨 있지 않다", !!b && !b.hasAttribute("disabled"));
+});
+
+/* 2026-08-26 — 전체화면은 "덮어쓰는" 동작이라 되돌아오는지까지 봅니다.
+   돌아오지 못하면 회원이 차트에 갇힙니다. */
 {
-  const b = barBtns.filter((x) => x.getAttribute("data-tlc") === "expand")[0];
-  ok("접기/펴기 버튼은 잠겨 있지 않다", !!b && !b.hasAttribute("disabled"));
+  const panel = A.win.document.querySelector(".chart-panel");
+  A.M.toggleFullscreen();
+  ok("전체화면을 켜면 차트 칸에 표가 붙는다", panel.getAttribute("data-tlc-full") === "1");
+  ok("전체화면 버튼이 켜진 것으로 보인다",
+    barBtns.filter((x) => x.getAttribute("data-tlc") === "fullscreen")[0].getAttribute("aria-pressed") === "true");
+  A.M.toggleFullscreen();
+  ok("한 번 더 누르면 원래대로 돌아온다 (회원이 갇히지 않는다)", !panel.hasAttribute("data-tlc-full"));
+  ok("전체화면이 style.css 를 고치지 않고 우리 style 태그 안에서만 걸린다",
+    A.win.document.getElementById("chart-drawings-style").textContent.indexOf("chart-panel[data-tlc-full") !== -1);
 }
 
 /* 실제로 눌러 봅니다 */

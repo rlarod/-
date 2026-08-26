@@ -1186,6 +1186,11 @@
 <script src="js/order-pressure-bar.js"></script>
 <!-- 이상한 시세가 거래 계산으로 들어가는 것을 막습니다(trading.js 앞) -->
 <script src="js/price-guard.js"></script>
+<!-- 종목 전환 안전장치 (P1 선행조건). 포지션·미체결이 있으면 종목 전환을 막고,
+     포지션·미체결에 symbol 을 찍고, 다른 종목 시세는 거래엔진에만 안 보이게 합니다.
+     trading.js 가 price:update 를 구독하기 전에 읽혀야 해서 바로 위에 둡니다.
+     trading.js·auth.js·websocket.js·config.js 무수정. 이 한 줄만 지우면 원래대로. -->
+<script src="js/symbol-guard.js"></script>
 <script src="js/trading.js"></script>
 <!-- 실현손익에서 진입 수수료가 빠져 있던 문제 보정(trading.js 무수정) -->
 <script src="js/realized-pnl-fix.js"></script>

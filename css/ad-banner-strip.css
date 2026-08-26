@@ -1,0 +1,15 @@
+/* ===== B안 — 배너를 '한 줄 안내 띠'(높이 40px)로 (2026-08-26 디자인팀) =====
+   근거 — 업비트 거래소는 이미지 배너 대신 높이 42px 짜리 한 줄 공지 띠를 씁니다(실측).
+   134px → 40px 로 낮추면 차트가 94px 위로 올라옵니다.
+
+   style.css 는 건드리지 않았습니다. 이 파일은 style.css 뒤에 불러야 이깁니다.
+   되돌리기 — index.html 에서 이 <link> 한 줄과 <picture class="ad-banner-2026"> 블록을 지웁니다.
+   ==================================================================== */
+.ad-creative-image .ad-banner-light,
+html[data-theme="dark"] .ad-creative-image .ad-banner-dark{display:none;}   /* 옛 jpg 는 화면에서만 숨김 */
+.ad-creative-image{background:#0D1422;}
+.ad-creative-image::before,.ad-creative-image::after{display:none;}          /* 그라디언트 위의 흰 원 2개 제거 */
+.ad-creative-wide{height:40px;}
+.ad-banner-2026{display:block;width:100%;line-height:0;}
+.ad-creative-image .ad-banner-svg{display:block;width:100%;height:40px;object-fit:cover;object-position:center;}
+.ad-creative-image.ad-banner-failed .ad-banner-2026{display:none;}

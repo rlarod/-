@@ -135,7 +135,7 @@ const M = runModule();
   const ready = M.TOOLS.ready;
   const readyLeft = left.filter((t) => t.ready).map((t) => t.k).sort().join(",");
   ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트 넷뿐",
-    readyLeft === "cursor,hline,text,trend", readyLeft);
+    readyLeft === "cursor,fib,hline,ruler,text,trend", readyLeft);
 
   /* 준비중이라고 그린 것은 실제로도 고를 수 없어야 합니다 */
   const lying = left.filter((t) => !t.ready && ready[t.k]);
@@ -216,6 +216,44 @@ const M = runModule();
   ok("점과 선 사이 거리 — 수직 거리", Math.abs(d(0, 10, 0, 0, 10, 0) - 10) < 1e-9);
   ok("점과 선 사이 거리 — 선분 밖은 끝점까지", Math.abs(d(-3, 4, 0, 0, 10, 0) - 5) < 1e-9);
   ok("점과 선 사이 거리 — 길이 0 인 선", Math.abs(d(3, 4, 0, 0, 0, 0) - 5) < 1e-9);
+}
+
+/* ---------- 7-b) 2차 도구 계산부 — 바이낸스 실측값과 맞춘다 (2026-08-26) ----------
+ * 아래 숫자는 눈대중이 아니라 바이낸스 선물 차트(Trading View 모드)에서
+ * 피보나치를 직접 그어 읽은 값입니다.
+ *   binance.com/en/futures/BTCUSDT · 1440px · 1D · 2026-08-26
+ *   두 점 : 0 = 80,780.56  /  1 = 57,617.18
+ *   화면에 찍힌 눈금
+ *     0.236 (75,314.00)  0.382 (71,932.15)  0.5 (69,198.87)
+ *     0.618 (66,465.59)  0.786 (62,574.14)
+ * 우리 계산이 다섯 개 모두 1원 단위까지 같아야 합니다. 어긋나면 회원이
+ * 여기서 잰 되돌림과 바이낸스에서 잰 되돌림이 달라집니다. */
+{
+  ok("피보나치 눈금이 바이낸스 기본값과 같다 (0/0.236/0.382/0.5/0.618/0.786/1)",
+    M.FIB_LEVELS.join(",") === "0,0.236,0.382,0.5,0.618,0.786,1", M.FIB_LEVELS.join(","));
+
+  const shape = { p1: 57617.18, p2: 80780.56 };
+  const 실측 = [[0, 80780.56], [0.236, 75314.00], [0.382, 71932.15], [0.5, 69198.87],
+    [0.618, 66465.59], [0.786, 62574.14], [1, 57617.18]];
+  실측.forEach(function (row) {
+    const got = M.fibPrice(shape, row[0]);
+    ok("피보나치 " + row[0] + " 가 바이낸스와 같다 (" + row[1] + ")",
+      Math.abs(got - row[1]) < 0.005, String(Math.round(got * 100) / 100));
+  });
+
+  ok("눈금 이름은 0.500 이 아니라 0.5 로 적는다", M.fibName(0.5) === "0.5", M.fibName(0.5));
+  ok("눈금 이름 0.236 은 그대로", M.fibName(0.236) === "0.236", M.fibName(0.236));
+  ok("눈금 이름 0 은 0", M.fibName(0) === "0", M.fibName(0));
+
+  /* 자(측정)의 기간 글자 — 바이낸스는 "33d" 로 적습니다 */
+  ok("자 — 33일을 33일로 적는다", M.fmtSpan(33 * 86400) === "33일", M.fmtSpan(33 * 86400));
+  ok("자 — 90분을 1시간 30분으로 적는다", M.fmtSpan(90 * 60) === "1시간 30분", M.fmtSpan(90 * 60));
+  ok("자 — 5분은 5분", M.fmtSpan(5 * 60) === "5분", M.fmtSpan(5 * 60));
+  ok("자 — 거꾸로 잰 것도 같은 길이", M.fmtSpan(-5 * 60) === "5분", M.fmtSpan(-5 * 60));
+
+  ok("두 점으로 만드는 도구는 추세선·피보나치·자 셋이다",
+    Object.keys(M.TOOLS.twoPoint).sort().join(",") === "fib,ruler,trend",
+    Object.keys(M.TOOLS.twoPoint).sort().join(","));
 }
 
 /* ---------- 8) 화면이 없으면 아무것도 안 만든다 ---------- */
