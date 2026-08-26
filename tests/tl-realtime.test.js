@@ -416,8 +416,23 @@ console.log("\n⑨ 밀린 거래분 채우기 · 보정 지급 순서");
 {
   const past = slice("function public.tl_settle_all_past", "grant execute on function public.tl_settle_all_past");
   ok("밀린 것 채우는 함수(tl_settle_all_past)가 있다", past.length > 200, String(past.length));
+  /* 2026-08-26 기준 변경 — 예전에는 `tl_grant_diff(r.uid, null)` 을 검사했습니다.
+     대표가 'TL-밀린것채우기' 를 실행했더니 서버가 이렇게 거부했습니다 —
+       ERROR: 42883: function public.tl_grant_diff(uuid, unknown) does not exist
+       QUERY: amt := coalesce(public.tl_grant_diff(r.uid, null), 0);
+     정의가 tl_grant_diff(p_uid uuid, p_ref uuid default null) 이라, 형(type)이 없는
+     맨 null 은 unknown 으로 넘어가 이름이 맞아도 "그런 함수 없다" 가 됩니다.
+     두 번째 인자는 기본값이 있으니 아예 빼는 것이 맞습니다 (커밋 dd8d2c6, 2026-08-26).
+     검사의 목적은 그대로입니다 — 밀린 것도 '같은 차액 함수' 를 써야 공식이 갈라지지 않습니다. */
   ok("밀린 것도 같은 차액 함수를 쓴다(공식이 갈라지지 않게)",
-     /public\.tl_grant_diff\(r\.uid, null\)/.test(past));
+     /amt := coalesce\(public\.tl_grant_diff\(r\.uid\), 0\);/.test(past),
+     "tl_settle_all_past 가 tl_grant_diff(r.uid) 를 부르지 않습니다 — 지급 공식이 두 벌이 됩니다");
+
+  /* 같은 오류가 두 번 났던 자리입니다(수리본과 원본 파일 양쪽).
+     형 없는 맨 null 로 되돌아가면 여기서 걸립니다. 형을 붙인 null::uuid 는 통과시킵니다. */
+  ok("두 번째 인자로 형 없는 null 을 다시 넘기지 않는다 (42883 재발 방지)",
+     !/tl_grant_diff\s*\([^()]*,\s*null\s*\)/i.test(code),
+     "tl_grant_diff(..., null) 로 되돌아갔습니다 — 서버가 42883 으로 거부합니다");
   ok("회원 전체를 한 번 돌면서 채운다", /from public\.profiles pr/.test(past));
   ok("여러 번 돌려도 안전하다(차액이 0 이면 아무것도 안 함)",
      /if amt > 0 then/.test(past));
