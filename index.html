@@ -16,6 +16,9 @@
 <!-- 시세 바 — 768~1920 에서 뒤쪽 항목(24H 변동률/고가/저가/거래량)이 잘리던 것.
      위 파일과 같은 이유로 style.css 뒤에 와야 순서상 이깁니다. 이 줄만 지우면 원래대로. -->
 <link rel="stylesheet" href="stats-bar-desktop-wrap.css">
+<!-- 마이페이지 금액 칸이 폰에서 잘려 "$100,…"→"$100" 으로 오독되던 것 (P1).
+     위 파일들과 같은 이유로 style.css 뒤에 와야 순서상 이깁니다. 이 줄만 지우면 원래대로. -->
+<link rel="stylesheet" href="mypage-value-fit.css">
 <!-- 차트 도구막대(세로 선긋기 / 가로 도구) 생김새. 디자인팀 전용 파일입니다.
      도구막대 DOM 이 없으면 아무것도 하지 않습니다. 이 줄만 지우면 원래대로. -->
 <link rel="stylesheet" href="css/chart-toolbar.css">
@@ -1214,5 +1217,8 @@
      껍데기는 디자인팀 것(css/chart-toolbar.css · assets/icons/chart-tools.svg)을 그대로 씁니다.
      이 한 줄을 지우면 도구 막대도 그림도 사라지고 원래 화면으로 돌아갑니다. -->
 <script src="js/chart-drawings.js"></script>
+<!-- 폰에서 가격축이 캔들 영역을 잡아먹는 문제 — 화면 폭에 따라 축 글씨만 줄입니다
+     (chart.js·chart-font.js 무수정). 이 한 줄을 지우면 전부 21px 로 돌아갑니다. -->
+<script src="js/chart-axis-fit.js"></script>
 </body>
 </html>
