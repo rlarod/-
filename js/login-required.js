@@ -35,7 +35,7 @@ App.LoginRequired = (function () {
     { id: "board-dislike-btn", label: "비추천" },
     { id: "board-write-submit-btn", label: "글 등록" },
     { id: "board-delete-btn", label: "글 삭제" },
-    { id: "daily-recharge-btn", label: "무료 충전" },
+    { id: "daily-recharge-btn", label: "지갑 초기화" },
     /* 2026-08-24 — 마이페이지 "계정 관리". 비회원에게 로그아웃·회원탈퇴가
        그대로 보이고 눌리던 것을 다른 버튼들과 같은 방식으로 막습니다.
        회원에게는 isLoggedIn() 이 true 라 예전과 똑같이 동작합니다.

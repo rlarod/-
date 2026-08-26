@@ -1,11 +1,22 @@
 /* =========================================================================
  * js/daily-recharge.js — App.DailyRecharge
  * =========================================================================
- * 무료 충전(100,000 USDT) — 한국시간 자정 기준 하루 2회.
+ * 지갑 초기화(100,000 USDT) — 한국시간 자정 기준 하루 2회.
  * 자정이 지나면 횟수가 새로 채워집니다.
- * 포지션을 들고 있으면 충전할 수 없고, 정리한 뒤에만 가능합니다.
+ * 포지션을 들고 있으면 누를 수 없고, 정리한 뒤에만 가능합니다.
+ *
+ * ★ 2026-08-26 대표 지시 — 더하기에서 덮어쓰기로 바뀌었습니다.
+ *   (전) 잔고 30,000 에서 두 번 누르면 230,000
+ *   (후) 잔고가 얼마든 누르면 100,000
+ *
+ *   ⚠ 이제 잔고가 줄어들 수 있습니다.
+ *     잔고 500,000 인 사람이 누르면 400,000 이 사라집니다.
+ *     그래서 서버에 보내기 전에 반드시 확인 창을 띄우고,
+ *     늘어날 때와 줄어들 때의 문구를 다르게 합니다.
+ *     미리 보여 주는 숫자도 서버(recharge_status)가 준 값입니다.
  *
  * 금액·횟수·포지션 확인은 전부 서버(claim_daily_recharge RPC)에서 합니다.
+ * 이 파일에는 금액이 숫자로 적혀 있지 않습니다 — 항상 서버 값을 씁니다.
  * 브라우저에만 기록하면 localStorage를 지우고 무한 충전할 수 있어서입니다.
  * 클라이언트는 금액을 정하지 않고, 서버가 돌려준 잔고를 반영만 합니다.
  *
@@ -25,6 +36,13 @@ App.DailyRecharge = (function () {
 
   function sb() {
     return App.SupabaseClient && App.SupabaseClient.get ? App.SupabaseClient.get() : null;
+  }
+
+  /* 숫자를 1,234 처럼 보여 줍니다. 값이 이상하면 빈 글자를 돌려
+     엉터리 숫자가 확인 창에 뜨지 않게 합니다. */
+  function won(n) {
+    const v = Number(n);
+    return Number.isFinite(v) ? v.toLocaleString() : "";
   }
 
   function setMsg(text, disabled) {
@@ -60,9 +78,9 @@ App.DailyRecharge = (function () {
         return;
       }
       if (data.reason === "has_position") {
-        setMsg("포지션을 정리한 뒤 충전할 수 있습니다", true);
+        setMsg("포지션을 정리한 뒤 초기화할 수 있습니다", true);
       } else if (data.reason === "already_claimed") {
-        setMsg("오늘 충전을 다 썼습니다 · 자정에 다시 채워집니다", true);
+        setMsg("오늘 초기화를 다 썼습니다 · 자정에 다시 채워집니다", true);
       } else {
         setMsg("로그인 후 이용할 수 있습니다", true);
       }
@@ -82,8 +100,8 @@ App.DailyRecharge = (function () {
         );
         setMsg("서버 설정이 아직 적용되지 않았습니다", true);
       } else {
-        console.warn("[daily-recharge.js] 충전 가능 여부 확인 실패:", code, msg, e);
-        setMsg("충전 상태를 확인하지 못했습니다 (" + (code || "오류") + ")", true);
+        console.warn("[daily-recharge.js] 초기화 가능 여부 확인 실패:", code, msg, e);
+        setMsg("초기화 상태를 확인하지 못했습니다 (" + (code || "오류") + ")", true);
       }
     }
   }
@@ -96,7 +114,7 @@ App.DailyRecharge = (function () {
     // (연결이 없을 때도 안내가 뜨도록 서버 확인보다 앞에 둡니다.)
     const snap = App.Trading ? App.Trading.getSnapshot() : null;
     if (snap && snap.position) {
-      alert("포지션을 보유 중에는 충전할 수 없습니다.\n포지션을 정리한 뒤 다시 시도해주세요.");
+      alert("포지션을 보유 중에는 지갑을 초기화할 수 없습니다.\n포지션을 정리한 뒤 다시 시도해주세요.");
       return;
     }
 
@@ -106,8 +124,58 @@ App.DailyRecharge = (function () {
       return;
     }
 
+    /* ★ 누르기 전에 "얼마가 어떻게 되는지" 를 숫자로 보여 줍니다.
+       지금 잔고와 초기화 금액은 서버가 알려 줍니다(브라우저가 정하지 않습니다).
+       이걸 건너뛰면 번 돈을 실수로 날릴 수 있습니다. */
+    let before = null;
+    let target = null;
+    try {
+      const st = await client.rpc("recharge_status");
+      if (st.error) throw st.error;
+      if (st.data) {
+        before = Number(st.data.balance);
+        target = Number(st.data.target);
+      }
+    } catch (e) {
+      console.warn("[daily-recharge.js] 확인 전 잔고 조회 실패:", e);
+    }
+
+    if (!Number.isFinite(before) || !Number.isFinite(target)) {
+      /* 서버가 숫자를 안 줄 땐 그냥 진행하지 않습니다.
+         얼마가 사라지는지 모르는 채로 누르게 하면 안 됩니다. */
+      alert(
+        "지금 잔고를 확인하지 못했습니다.\n" +
+        "지갑 초기화는 잔고를 덮어쓰기 때문에 돈이 줄어들 수 있습니다.\n" +
+        "잠시 뒤에 다시 시도해주세요."
+      );
+      refresh();
+      return;
+    }
+
+    const diff = target - before;
+    let ask;
+    if (diff > 0) {
+      ask =
+        "지갑을 " + won(target) + " USDT 로 초기화합니다.\n\n" +
+        "지금 잔고 " + won(before) + " USDT → " + won(target) + " USDT\n" +
+        won(diff) + " USDT 가 늘어납니다.\n\n" +
+        "계속할까요?";
+    } else if (diff < 0) {
+      ask =
+        "지갑을 " + won(target) + " USDT 로 초기화합니다.\n\n" +
+        "지금 잔고 " + won(before) + " USDT → " + won(target) + " USDT\n" +
+        won(-diff) + " USDT 가 사라집니다. 되돌릴 수 없습니다.\n\n" +
+        "정말 계속할까요?";
+    } else {
+      ask =
+        "지금 잔고가 이미 " + won(target) + " USDT 입니다.\n\n" +
+        "초기화해도 잔고는 그대로이고 오늘 남은 횟수만 줄어듭니다.\n\n" +
+        "계속할까요?";
+    }
+    if (!window.confirm(ask)) return;
+
     busy = true;
-    setMsg("충전 중…", true);
+    setMsg("초기화 중…", true);
     try {
       const { data, error } = await client.rpc("claim_daily_recharge");
       if (error) throw error;
@@ -119,25 +187,31 @@ App.DailyRecharge = (function () {
 
       const left = Number(data.remaining);
       const max = Number(data.max_per_day);
+      /* 끝난 뒤에도 서버가 확정한 숫자로 보여 줍니다. */
+      const moved = Number(data.delta);
       alert(
-        "무료 충전 " + Number(data.amount).toLocaleString() + " USDT 완료\n" +
-        "잔고: " + Number(data.balance).toLocaleString() + " USDT" +
+        "지갑 초기화 완료\n" +
+        (Number.isFinite(moved) && moved !== 0
+          ? (moved > 0 ? won(moved) + " USDT 가 늘었습니다.\n"
+                       : won(-moved) + " USDT 가 줄었습니다.\n")
+          : "") +
+        "잔고: " + won(data.balance) + " USDT" +
         (Number.isFinite(left) && Number.isFinite(max)
-          ? "\n오늘 남은 충전: " + left + "/" + max + "회"
+          ? "\n오늘 남은 초기화: " + left + "/" + max + "회"
           : "")
       );
       window.location.reload();
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/has_position/.test(msg)) {
-        alert("포지션을 보유 중에는 충전할 수 없습니다.");
+        alert("포지션을 보유 중에는 지갑을 초기화할 수 없습니다.");
       } else if (/already_claimed/.test(msg)) {
-        alert("오늘 충전을 다 썼습니다. 자정에 다시 채워집니다.");
+        alert("오늘 초기화를 다 썼습니다. 자정에 다시 채워집니다.");
       } else if (/not_logged_in/.test(msg)) {
         alert("로그인 후 이용할 수 있습니다.");
       } else {
-        alert("충전에 실패했습니다. 잠시 후 다시 시도해주세요.");
-        console.warn("[daily-recharge.js] 충전 실패:", e);
+        alert("초기화에 실패했습니다: " + msg);
+        console.warn("[daily-recharge.js] 초기화 실패:", e);
       }
       busy = false;
       refresh();

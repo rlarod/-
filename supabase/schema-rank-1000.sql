@@ -140,8 +140,14 @@ alter table public.trading_accounts
 
 
 -- ---------------- 3) 충전할 때 그 칸을 같이 채우게 ----------------
--- supabase/schema-daily-recharge.sql 의 claim_daily_recharge() 와 같은
--- 함수인데, recharge_total 누계를 더하는 한 줄이 추가됐습니다.
+-- supabase/schema-daily-recharge.sql 의 claim_daily_recharge() 와 같은 함수입니다.
+--
+-- ★ 2026-08-26 부터 두 파일의 함수 본문을 글자 하나까지 똑같이 맞추었습니다.
+--   전에는 이쪽에만 recharge_total 줄이 있어서, 어느 파일을 나중에 돌렸느냐에
+--   따라 계급 회계가 조용히 달라졌습니다. 이제는 어느 쪽을 나중에 돌려도 같습니다.
+--   한쪽을 고치면 다른 쪽도 꼭 같이 고쳐야 합니다.
+--   (tests/recharge-reset.test.js 가 둘이 같은지 감시합니다)
+--
 -- (금액 · 횟수 제한 · 포지션 보유 시 차단 규칙은 전부 그대로입니다)
 create or replace function public.claim_daily_recharge()
 returns json
@@ -159,7 +165,11 @@ declare
   used integer;
   new_count integer;
   has_pos boolean;
+  old_balance numeric;   -- 초기화하기 전 지갑에 있던 돈
   new_balance numeric;
+  -- 초기화 뒤 지갑에 남길 금액. 예전에는 '더할 금액' 이었고
+  -- 지금은 '만들어 둘 금액' 입니다. 값은 같습니다(100,000).
+  -- ★ 금액은 여기서만 정합니다. 브라우저가 정하면 조작됩니다.
   AMOUNT constant numeric := 100000;
 begin
   if uid is null then
@@ -167,8 +177,8 @@ begin
   end if;
 
   -- 같은 사용자의 동시 요청으로 두 번 충전되는 것을 막습니다.
-  select last_recharge_at, coalesce(recharge_count, 0)
-    into last_at, cnt
+  select last_recharge_at, coalesce(recharge_count, 0), coalesce(balance, 0)
+    into last_at, cnt, old_balance
     from public.trading_accounts where user_id = uid for update;
 
   if not found then
@@ -186,17 +196,38 @@ begin
   end if;
   new_count := used + 1;
 
+  -- ★ 2026-08-26 대표 지시 — 더하기(balance + AMOUNT)에서 덮어쓰기로 바꾸었습니다.
+  --   두 번 누르면 두 번 쌓이던 것을 막습니다. 언제 눌러도 결과는 항상 100,000 입니다.
+  --
+  -- 계급 회계(recharge_total) — '무상으로 받은 돈' 만 쌓습니다.
+  --   받은 돈 = AMOUNT - least(AMOUNT, 이전잔고)  =  max(0, AMOUNT - 이전잔고)
+  --
+  --     이전잔고  30,000 → 받은 돈 70,000  (지갑은 100,000 이 됨)
+  --     이전잔고 500,000 → 받은 돈      0  (받은 게 아니라 버린 것입니다)
+  --
+  --   왜 이렇게 하나
+  --     · 돈이 늘어나는 경우: 늘어난 만큼 그대로 쌓여서 계급이 한 칸도 안 움직입니다.
+  --       (지금까지 '더하기' 때와 완전히 같은 결과입니다)
+  --     · 돈이 줄어드는 경우: 버린 것이라 0 을 쌓고, 지갑이 줄은 만큼 계급도 내려갑니다.
+  --       (2026-08-24 대표 결정 "계급은 지갑에 있는 돈으로 평가" 와 같은 방향)
+  --     · 이 누계는 절대 줄지 않습니다(음수 없음).
+  --       음수가 되면 화면과 서버의 계급이 달라집니다
+  --       (js/rank.js 와 rank_recharged_total() 이 음수를 0 으로 막아서).
+  --
+  -- 계급 공식(1000 × log2(자산/초기자금)) 은 한 글자도 안 건드렸습니다.
   update public.trading_accounts
-     set balance = balance + AMOUNT,
+     set balance = AMOUNT,
          last_recharge_at = now(),
          recharge_count = new_count,
-         -- ★ 이번에 추가된 줄 — 계급 계산에서 뺄 누계
-         recharge_total = coalesce(recharge_total, 0) + AMOUNT,
+         recharge_total = coalesce(recharge_total, 0) + AMOUNT - least(AMOUNT, greatest(0, old_balance)),
          updated_at = now()
    where user_id = uid
    returning balance into new_balance;
 
   return json_build_object('balance', new_balance, 'amount', AMOUNT,
+                           'previous_balance', old_balance,
+                           'delta', AMOUNT - old_balance,
+                           'granted', AMOUNT - least(AMOUNT, greatest(0, old_balance)),
                            'used', new_count,
                            'remaining', greatest(max_per_day - new_count, 0),
                            'max_per_day', max_per_day, 'next_at', next_at);
