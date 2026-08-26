@@ -505,7 +505,8 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
 @media (max-width:400px){
   .stats-bar{gap:10px;}
   .top-banner-inner{padding:12px 14px;}
-  .top-banner-nav-btn{padding:8.5px 8px;font-size:13px;}
+  /* 메뉴 버튼 규칙은 파일 맨 뒤 "360px 안내문구 잘림" 블록으로 옮겼습니다.
+     (≤520 규칙보다 뒤에 있어야 좁은 폭 값이 살아납니다) */
   .mypage-grid{grid-template-columns:1fr;}
 }
 
@@ -2495,8 +2496,6 @@ html[data-theme="dark"]{
 
 /* 변수를 쓰지 않고 색을 직접 적어둔 곳 — 다크모드에서만 덮어씁니다.
    원래 규칙은 그대로 두어 밝은 모드에는 영향이 없습니다. */
-html[data-theme="dark"] .menu-bar{background:#0F4C82;}
-html[data-theme="dark"] .page-right .page-chat-panel > .field-label{background:#0F4C82;}
 html[data-theme="dark"] .pnl-positive{color:#20D68C !important;}
 html[data-theme="dark"] .page-right .up-label{background:var(--surface2);color:var(--text-dim);}
 html[data-theme="dark"] .page-right .up-value{background:var(--surface);}
@@ -3142,13 +3141,20 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 /* 끝까지 밀지 않았을 때만 보입니다(js/menu-scroll-hint.js). */
 .menu-bar-inner.has-more::after{opacity:1;}
+/* 다크에서는 메뉴 바 배경이 --surface2(#0D1422) 입니다.
+   예전에는 힌트에도 옛 배경색(#0F4C82)을 직접 적어 두어, 배경만 낮추고
+   힌트가 안 따라와서 오른쪽 끝에 파란 띠로 남았습니다(확정 팔레트 밖 색).
+   변수를 쓰므로 배경이 또 바뀌어도 자동으로 따라옵니다. */
 html[data-theme="dark"] .menu-bar-inner::after{
-  background:linear-gradient(to right, rgba(15,76,130,0), #0F4C82);
+  background:linear-gradient(to right, rgba(13,20,34,0), var(--surface2));
 }
 /* 좁은 화면에서는 메뉴 좌우 여백을 줄여 한 개라도 더 보이게 */
 @media (max-width:520px){
   .menu-bar-inner{padding:0 4px;}
-  .top-banner-nav-btn{padding-left:10px;padding-right:10px;}
+  /* 좌우 10px 이면 401~408px 구간에서 마지막 메뉴("TL 마켓")가 3px 잘렸습니다.
+     7px 으로 줄이면 402px 에서도 다 들어갑니다(측정 후 여유 약 29px).
+     되돌리기: 7px 을 10px 으로 되돌리면 됩니다. */
+  .top-banner-nav-btn{padding-left:7px;padding-right:7px;}
 }
 
 /* ===== 좁은 화면 — 핫딜/마켓 탭 줄바꿈 =====
@@ -3454,7 +3460,7 @@ html[data-theme="dark"] .chat-send-btn{
   border-radius:8px;
 }
 
-/* 메뉴 바 — 밝은 파랑(#0F4C82)은 딥 네이비 배경에서 혼자 튑니다.
+/* 메뉴 바 — 밝은 파랑(#1769B3)은 딥 네이비 배경에서 혼자 튑니다.
    배경과 같은 계열로 낮추고 아래 경계선으로만 구분합니다. */
 html[data-theme="dark"] .menu-bar{
   background:#0D1422;
@@ -4401,3 +4407,39 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 .admin-notice-del:hover{background:var(--red);color:#fff;}
 .admin-notice-del:disabled{opacity:.5;cursor:default;}
 .admin-notice-empty{color:var(--text-faint);font-size:14px;padding:6px 2px;}
+
+/* =========================================================================
+ * 360px 안내문구 잘림 — 게시판 검색 / 채팅 입력
+ * =========================================================================
+ * 실측(360px, 다크):
+ *   게시판 검색  안내문구 136.1px / 입력칸 안쪽 122px  → 14.1px 모자람
+ *   채팅 입력    안내문구 238.7px / 입력칸 안쪽 230.4px → 8.3px 넘침
+ *
+ * 문구를 줄이거나 글자를 작게 하지 않습니다(문구는 회원에게 무엇을 해야
+ * 하는지 알려주는 안내라 잘리면 뜻이 바뀝니다).
+ * 대신 같은 줄에서 남는 공간을 입력칸에 넘겨줍니다 —
+ * 버튼("검색"·"전송")은 글자가 짧아 좌우 여백을 줄여도 읽는 데 지장이 없고,
+ * 세로 크기(터치 높이)는 건드리지 않습니다.
+ *
+ * 되돌리기: 이 블록(@media (max-width:400px) 하나)을 통째로 지우면
+ *           예전 모습으로 정확히 돌아갑니다.
+ * ========================================================================= */
+@media (max-width:400px){
+  /* 상단 메뉴: 좌우 5px — 360px 에서 메뉴 6개(코인선물…TL 마켓)가 한 줄에
+     다 들어가게 합니다. 글자 크기 13px 은 예전 그대로입니다.
+     이 규칙은 원래 505행 @media(max-width:400px) 안에 있었는데, 그보다 뒤에
+     있는 @media(max-width:520px) 규칙에 좌우 여백이 덮여 죽어 있었습니다.
+     되돌리기: 아래 한 줄을 505행 블록으로 되돌리고 5px→8px 로 바꾸면 됩니다. */
+  .top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}
+
+  /* 검색칸: 고정폭 min(340px,40vw)=144px 대신 남는 폭을 다 받도록 */
+  .board-search-row input{flex:1 1 auto;width:auto;min-width:0;}
+  /* 버튼은 줄어들지 않게 고정 — 안 그러면 입력칸이 커지면서 "검색" 글자가 눌립니다 */
+  .board-search-row select{flex:0 0 auto;}
+  .board-search-row button{flex:0 0 auto;white-space:nowrap;padding-left:12px;padding-right:12px;}
+
+  /* 채팅 입력줄: 줄 여백 10→8, 입력칸 여백 12→10, 버튼 여백 16→12 */
+  .page-right .chat-input-row{padding-left:8px;padding-right:8px;}
+  .page-right .chat-input-row input{padding-left:10px;padding-right:10px;}
+  .page-right .chat-input-row button{padding-left:12px;padding-right:12px;}
+}
