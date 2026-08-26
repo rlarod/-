@@ -10,6 +10,14 @@
  *      2차(B안 22px) 를 거쳐 3차에서 C안(28px) 으로 확정했습니다.
  *      → 아이콘 28 / 버튼 44 아래로 내려가면 이 파일이 실패합니다.
  *
+ *      2026-08-26 4차 — 대표님이 C안이 나간 라이브를 보시고도 "더 키워" 라고
+ *      두 번째로 말씀하셔서 데스크톱(>=768)만 E안(버튼 60 / 아이콘 36)으로
+ *      올렸습니다. 폰(<=767)은 C안(44 / 28) 그대로 둡니다 — 360 차트 칸이
+ *      330px 이라 버튼 60px 이면 한 줄에 5칸뿐이고, 늘 보이는 가로 막대가
+ *      1줄(44px) -> 2줄(120px) 로 늘어나기 때문입니다.
+ *      → 그래서 이 파일은 "한 벌"이 아니라 "데스크톱 값 + 폰 값" 두 벌을 봅니다.
+ *        두 벌을 각각 못 박아 두면 한쪽만 조용히 되돌아가도 잡힙니다.
+ *
  *  (2) 폰에서 도구가 숨는 방식으로 되돌아가면 안 됩니다.
  *      C안은 세로막대 11칸 × 44px = 484px 인데 360 화면의 차트 칸은 330px 입니다.
  *      옆으로 미는 방식(overflow-x:auto)은 오버레이 스크롤바라 밀기 전에는
@@ -67,15 +75,38 @@ console.log("\n차트 도구막대 · 선긋기 봉인");
 /* =============================================================================
  * 1) 도구막대 크기 — C안 (2026-08-25 대표 확정)
  * -------------------------------------------------------------------------- */
-console.log("\n[1] 크기 — C안 봉인");
+console.log("\n[1] 크기 — 데스크톱 E안 / 폰 C안 봉인");
 
-/** .chart-panel 의 크기 변수를 읽습니다(주석은 이미 걷어냈습니다). */
-function cssVar(name) {
-  const m = CSS.match(new RegExp("--" + name + "\\s*:\\s*([^;]+);"));
+/* ── CSS 를 두 범위로 나눕니다 (2026-08-26 4차) ───────────────────────────────
+ * 기본(데스크톱, >=768) : @media (max-width:767px) 블록을 도려낸 나머지
+ * 폰(<=767)             : 그 미디어쿼리 블록 안
+ * 이렇게 나눠야 "같은 변수가 두 곳" 을 실수(중복)와 의도(폰 분리)로 구분할 수
+ * 있습니다. 나누지 않으면 폰 값이 데스크톱 값으로 잘못 읽힙니다.
+ * (block 은 아래 [2] 에 선언돼 있습니다. function 선언이라 여기서 써도 됩니다.) */
+const PHONE_AT = CSS.search(/@media\s*\(\s*max-width\s*:\s*767px\s*\)/);
+const PHONE_CSS = PHONE_AT === -1 ? "" : block(CSS, PHONE_AT);
+const DESK_CSS =
+  PHONE_AT === -1 ? CSS : CSS.slice(0, PHONE_AT) + CSS.slice(PHONE_AT + PHONE_CSS.length);
+
+/** 주어진 범위에서 크기 변수를 읽습니다(주석은 이미 걷어냈습니다). */
+function varIn(scope, name) {
+  const m = scope.match(new RegExp("--" + name + "\\s*:\\s*([^;]+);"));
   return m ? m[1].trim() : null;
 }
+/** 폰 값. 폰에 따로 안 적혀 있으면 데스크톱 값을 물려받습니다(CSS 상속과 같게). */
+function phoneVar(name) {
+  const v = varIn(PHONE_CSS, name);
+  return v !== null ? v : varIn(DESK_CSS, name);
+}
+/** 데스크톱(기본) 값 */
+const cssVar = (n) => varIn(DESK_CSS, n);
 function px(name) {
   const v = cssVar(name);
+  return v === null ? NaN : parseFloat(v);
+}
+/** 폰 값 */
+function pxM(name) {
+  const v = phoneVar(name);
   return v === null ? NaN : parseFloat(v);
 }
 
@@ -85,6 +116,12 @@ const RAIL_W = px("tlc-rail-w");
 const BAR_H = px("tlc-bar-h");
 const BAR_H_M = px("tlc-bar-h-m");
 const STROKE = parseFloat(cssVar("tlc-stroke"));
+
+/* 폰(<=767) 값 — 2026-08-26 부터 데스크톱과 다릅니다 */
+const M_ICO = pxM("tlc-ico");
+const M_BTN = pxM("tlc-btn");
+const M_BAR_H_M = pxM("tlc-bar-h-m");
+const M_STROKE = parseFloat(phoneVar("tlc-stroke"));
 
 ok(
   "아이콘이 28px 아래로 내려가지 않는다 (업비트·바이낸스 실측 28px 이 기준. 16px 은 그 57% 라 대표님이 '작다'고 하셨습니다)",
@@ -100,9 +137,26 @@ ok("세로 막대 폭이 52px 아래로 내려가지 않는다 (업비트·바�
 ok("가로 막대 높이가 46px 아래로 내려가지 않는다", BAR_H >= 46, "지금 " + BAR_H + "px");
 ok("폰 막대 한 줄 높이가 44px 아래로 내려가지 않는다", BAR_H_M >= 44, "지금 " + BAR_H_M + "px");
 
-ok("지금 값이 확정된 C안 그대로다 (46 / 52 / 44 / 28 / 1 / 44)",
-  BAR_H === 46 && RAIL_W === 52 && BTN === 44 && ICO === 28 && STROKE === 1 && BAR_H_M === 44,
+/* 2026-08-26 대표 "더 키워" 두 번째 → 데스크톱 E안, 폰은 C안 유지.
+   옛 기준 "전 폭 공통 C안 (46/52/44/28/1/44)" → "데스크톱 E안 + 폰 C안" 두 벌.
+   한 벌만 보면 한쪽이 조용히 되돌아가도 못 잡습니다. */
+ok("데스크톱(>=768) 값이 확정된 E안 그대로다 (62 / 68 / 60 / 36 / 0.9 / 60)",
+  BAR_H === 62 && RAIL_W === 68 && BTN === 60 && ICO === 36 && STROKE === 0.9 && BAR_H_M === 60,
   [BAR_H, RAIL_W, BTN, ICO, STROKE, BAR_H_M].join(" / "));
+ok("폰(<=767) 값이 확정된 C안 그대로다 (버튼 44 / 아이콘 28 / 획 1 / 한 줄 44)",
+  M_BTN === 44 && M_ICO === 28 && M_STROKE === 1 && M_BAR_H_M === 44,
+  [M_BTN, M_ICO, M_STROKE, M_BAR_H_M].join(" / "));
+ok("폰이 데스크톱보다 작다 (반대로 뒤집히면 폰에서 막대가 세 줄이 됩니다)",
+  M_BTN < BTN && M_ICO < ICO, M_BTN + "/" + M_ICO + " vs " + BTN + "/" + ICO);
+ok("폰 아이콘이 업비트·바이낸스 실측 28px 아래로는 안 내려간다", M_ICO >= 28, "지금 " + M_ICO + "px");
+ok("폰 버튼이 손가락 권고 44px 아래로는 안 내려간다", M_BTN >= 44, "지금 " + M_BTN + "px");
+ok("폰도 아이콘 / 버튼 이 0.60~0.64 다 (안을 섞으면 아이콘이 버튼 밖으로 나갑니다)",
+  M_ICO / M_BTN >= 0.6 && M_ICO / M_BTN <= 0.64, (M_ICO / M_BTN).toFixed(3));
+ok("폰 막대 한 줄 = 폰 버튼", M_BAR_H_M === M_BTN, M_BAR_H_M + " vs " + M_BTN);
+{
+  const ss = M_STROKE * (M_ICO / 16);
+  ok("폰 아이콘 화면 획도 1.5~2.1px 다", ss >= 1.5 && ss <= 2.1, ss.toFixed(2) + "px");
+}
 
 /* 값끼리의 관계 — 새 안(D·E)으로 갈아끼워도 이 관계는 지켜야 합니다 */
 ok("세로 막대 = 버튼 + 8", RAIL_W === BTN + 8, RAIL_W + " vs " + (BTN + 8));
@@ -128,18 +182,39 @@ ok("주석에 업비트 실측(막대 52 / 아이콘 28)이 남아 있다",
   /업비트[\s\S]{0,600}52/.test(CSS_RAW) && /업비트[\s\S]{0,600}28/.test(CSS_RAW));
 ok("주석에 바이낸스 실측이 남아 있다", /바이낸스[\s\S]{0,600}52px/.test(CSS_RAW));
 ok("A안이 왜 퇴짜맞았는지(기준의 57%) 근거가 남아 있다", /57%/.test(CSS_RAW));
-ok("어느 안이 확정인지 적혀 있다", /대표 확정: C안/.test(CSS_RAW));
+ok("어느 안이 확정인지 적혀 있다 (2026-08-25 C안 → 2026-08-26 데스크톱 E / 폰 C)",
+  /2026-08-25 대표 확정: C안/.test(CSS_RAW) && /2026-08-26 대표 확정/.test(CSS_RAW));
+ok("폰만 C안으로 남긴 이유가 숫자로 적혀 있다 (다음 사람이 무심코 합치지 않게)",
+  /폰을 같이 안 올린 이유/.test(CSS_RAW) && /330px/.test(CSS_RAW));
 ok("되돌리는 방법이 적혀 있다", /되돌리는 방법/.test(CSS_RAW));
 
-/* 크기 변수가 두 곳에 선언되면 뒤엣것이 앞을 덮어 수정이 안 먹힙니다
-   (이 프로젝트에서 "같은 CSS 규칙이 두 벌" 이 이미 두 번 났습니다) */
-["tlc-ico", "tlc-btn", "tlc-rail-w", "tlc-stroke", "tlc-bar-h-m"].forEach(function (n) {
-  const c = (CSS.match(new RegExp("--" + n + "\\s*:", "g")) || []).length;
-  ok("--" + n + " 선언이 딱 한 곳이다", c === 1, "지금 " + c + "곳");
+/* 크기 변수가 여러 곳에 선언되면 뒤엣것이 앞을 덮어 수정이 안 먹힙니다.
+   (이 프로젝트에서 "같은 CSS 규칙이 두 벌" 이 이미 세 번 났습니다.)
+
+   2026-08-26 — 옛 기준은 "선언이 딱 한 곳" 이었습니다. 폰을 일부러 다르게
+   두면서 이 기준을 그냥 없애면, 앞으로 실수로 생기는 중복도 같이 놓칩니다.
+   없애지 않고 좁혔습니다:
+
+     기본(데스크톱) 범위에 한 번  +  @media (max-width:767px) 안에 최대 한 번
+
+   즉 "의도한 폰 분리" 딱 한 자리만 열어 주고, 같은 범위 안에서 두 번 적히는
+   진짜 중복(세 번째 선언)은 여전히 실패합니다. 미디어쿼리가 늘어나도 이 검사가
+   먼저 걸리므로 아무 데나 덧붙일 수 없습니다. */
+["tlc-ico", "tlc-btn", "tlc-rail-w", "tlc-stroke", "tlc-bar-h-m", "tlc-bar-h"].forEach(function (n) {
+  const re = () => new RegExp("--" + n + "\\s*:", "g");
+  const all = (CSS.match(re()) || []).length;
+  const inDesk = (DESK_CSS.match(re()) || []).length;
+  const inPhone = (PHONE_CSS.match(re()) || []).length;
+  ok("--" + n + " 가 기본 범위에 딱 한 번 적혀 있다", inDesk === 1, "지금 " + inDesk + "번");
+  ok("--" + n + " 가 폰 미디어쿼리 안에 많아야 한 번 적혀 있다", inPhone <= 1, "지금 " + inPhone + "번");
+  ok("--" + n + " 선언이 이 두 곳 말고 다른 데는 없다", all === inDesk + inPhone,
+    "전체 " + all + " / 기본 " + inDesk + " + 폰 " + inPhone);
 });
+/* 폰 미디어쿼리는 하나뿐이어야 합니다 — 두 개면 위 계산이 무의미해집니다 */
 {
-  const c = (CSS.match(/--tlc-bar-h\s*:/g) || []).length;
-  ok("--tlc-bar-h 는 두 곳뿐이다 (기본값 + 폰 덮어쓰기)", c === 2, "지금 " + c + "곳");
+  const c = (CSS.match(/@media\s*\(\s*max-width\s*:\s*767px\s*\)/g) || []).length;
+  ok("@media (max-width:767px) 가 파일에 딱 하나다 (여러 개면 어느 게 이기는지 알 수 없습니다)",
+    c === 1, "지금 " + c + "개");
 }
 
 /* =============================================================================
@@ -199,15 +274,30 @@ ok("폰 .tlc-toolbar 도 flex-wrap:wrap 이다 (D·E 안으로 키워도 접히�
 ok("폰 .tlc-toolbar 도 overflow:visible 이다 (데스크톱의 overflow-x:auto 를 덮습니다)",
   !!mBar && /overflow\s*:\s*visible/.test(mBar), flat(mBar));
 
-/* 왜 접어야만 하는지를 숫자로 못 박습니다 — 값이 커지면 이 계산도 같이 커집니다 */
+/* 왜 접어야만 하는지 + 왜 폰만 C안인지를 숫자로 못 박습니다.
+   ★ 여기는 반드시 "폰 값(M_BTN)" 으로 잽니다. 데스크톱 값(BTN)으로 재면
+     2026-08-26 처럼 폰/데스크톱이 갈린 뒤로는 틀린 답이 나옵니다. */
 {
   const 세로도구수 = 11;
+  const 가로도구수 = 7;
   const 폰차트칸 = 330; /* 2026-08-25 360 화면 localhost 실측 — .chart-wrap 330px */
-  const 필요폭 = 세로도구수 * BTN;
+  const 한줄칸수 = Math.floor(폰차트칸 / M_BTN);
+  const 필요폭 = 세로도구수 * M_BTN;
+
   ok("세로 도구 11칸이 360 화면 한 줄에 물리적으로 안 들어간다 → 접기가 필수다",
     필요폭 > 폰차트칸, 필요폭 + "px 필요 / " + 폰차트칸 + "px 있음");
-  ok("두 줄이면 다 보인다 (한 줄에 최소 6칸)", Math.floor(폰차트칸 / BTN) >= 6,
-    "한 줄 " + Math.floor(폰차트칸 / BTN) + "칸");
+  ok("두 줄이면 다 보인다 (한 줄에 최소 6칸)", 한줄칸수 >= 6,
+    "한 줄 " + 한줄칸수 + "칸 (폰 버튼 " + M_BTN + "px)");
+
+  /* 늘 보이는 가로 막대가 두 줄이 되면, 세로 막대를 펴지도 않은 회원까지
+     손해를 봅니다. 폰을 E안으로 올리면(60px) 5칸뿐이라 7개가 2줄이 됩니다. */
+  ok("늘 보이는 가로 막대 7개가 360 에서 한 줄에 들어간다 (접힘으로 못 가리는 자리)",
+    가로도구수 <= 한줄칸수, 가로도구수 + "개 / 한 줄 " + 한줄칸수 + "칸");
+  ok("세로 막대가 세 줄이 되지 않는다", Math.ceil(세로도구수 / 한줄칸수) <= 2,
+    Math.ceil(세로도구수 / 한줄칸수) + "줄");
+  ok("마지막 줄에 버튼이 둘 이상 남는다 (한 개만 남으면 깨져 보입니다)",
+    세로도구수 - (Math.ceil(세로도구수 / 한줄칸수) - 1) * 한줄칸수 >= 2,
+    "마지막 줄 " + (세로도구수 - (Math.ceil(세로도구수 / 한줄칸수) - 1) * 한줄칸수) + "개");
 }
 
 /* CSS 기준(767) 과 JS 기준(768) 이 어긋나면 폰에서 막대가 두 번 접히거나 안 접힙니다 */
