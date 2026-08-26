@@ -173,8 +173,17 @@ section("[2] 개미톡 레이아웃 — 요소 존재 및 순서");
     ok(!txt.includes("70%"), "존재하지 않는 70% 값이 있으면 안 됨");
   });
 
-  t("환율 항목은 데이터 소스가 없어 표시하지 않음", () => {
-    ok(!panel.textContent.includes("환율"), "환율 항목이 노출되면 안 됨");
+  /* 2026-08-26 대표 지시 — "환율 1500원을 필요총액 대신 넣자".
+     옛 검사는 "환율이 보이면 실패" 였습니다. 데이터 소스가 없어 가짜 숫자를
+     띄우지 않으려던 규칙이었는데, 화면 표시용 고정 환율을 쓰기로 확정되면서
+     규칙이 뒤집혔습니다. 지금 지켜야 할 것은 "환율을 코드에 박지 않는 것" 입니다.
+     자세한 검사는 tests/order-fx-row.test.js 에 있습니다. */
+  t("환율 항목을 표시한다(값은 App.Config.USD_KRW 하나만 사용)", () => {
+    ok(panel.textContent.includes("환율"), "환율 항목이 있어야 함");
+    ok(panel.querySelector("#acc-fx-rate"), "#acc-fx-rate 없음");
+    const src = fs.readFileSync(path.join(REPO, "js", "order-fee-preview.js"), "utf8");
+    ok(/App\.Config\.USD_KRW/.test(src), "환율은 Config에서 가져와야 함");
+    ok(!/\b1500\b/.test(src.replace(/\/\*[\s\S]*?\*\//g, "")), "환율을 하드코딩하면 안 됨");
   });
 }
 

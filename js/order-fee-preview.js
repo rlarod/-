@@ -27,6 +27,16 @@
  *     진입수수료 = 명목가 × taker
  *     필요총액  = 증거금 + 진입수수료
  *   수정 금지 파일은 건드리지 않고 DOM 만 덧붙입니다.
+ *
+ * 2026-08-26 — 필요총액 자리에 환율
+ *   대표 지시로 필요총액 줄을 화면에서 빼고 그 자리에 환율을 넣었습니다.
+ *   필요총액 줄은 지우지 않고 display:none 으로 감추기만 했습니다
+ *   (injectRows 의 feeRow.style.display 한 줄만 지우면 원복).
+ *   환율 숫자는 이 파일에 적지 않습니다 — App.Config.USD_KRW 만 읽습니다.
+ *
+ *   참고: 필요총액이 "- ( -)" 로 보이던 것은 고장이 아닙니다.
+ *   주문 수량 칸이 비어 있으면(첫 화면 기본값) 계산할 값이 없어서 "-" 입니다.
+ *   수량을 넣거나 % 버튼을 누르면 바로 숫자가 찼습니다(실측 확인).
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -152,6 +162,12 @@ App.OrderFeePreview = (function () {
       '<span class="order-fee-sub"> (<span id="acc-fee-amount">-</span>)</span>' +
       '<span class="order-fee-warn-tag" id="acc-fee-warn" style="display:none;"> 초과</span></b>';
 
+    /* 2026-08-26 대표 지시 — 이 자리에 환율을 넣기로 해서 필요총액 줄을 화면에서 뺍니다.
+       지우지 않고 감추기만 합니다. 마크업·계산은 그대로 살아 있어서
+       아래 한 줄만 지우면 예전 그대로 돌아옵니다.
+       (style.css 는 디자인팀이 작업 중이라 건드리지 않고 인라인으로 감춥니다) */
+    feeRow.style.display = "none";
+
     container.appendChild(feeRow);
 
     dom.feeAmount = el("acc-fee-amount");
@@ -160,7 +176,22 @@ App.OrderFeePreview = (function () {
     return true;
   }
 
+  /* 환율 줄 — 필요총액이 있던 자리입니다(index.html [10] 구역의 #acc-fx-rate).
+     숫자를 여기에 적지 않습니다. App.Config.USD_KRW 하나만 읽습니다.
+     곱하는 대상이 달러가 아니라 USDT 라서 "1 USDT" 로 씁니다. */
+  function renderFxRate() {
+    var slot = el("acc-fx-rate");
+    if (!slot) return;
+    var rate = App.Config ? App.Config.USD_KRW : null;
+    if (typeof rate !== "number" || !isFinite(rate) || rate <= 0) {
+      slot.textContent = "-";
+      return;
+    }
+    slot.textContent = rate.toLocaleString("ko-KR") + "원 / 1 USDT";
+  }
+
   function init() {
+    renderFxRate(); // 환율은 고정값이라 한 번만 찍으면 됩니다(주문 입력과 무관)
     if (!injectRows()) return; // 마크업 없으면 조용히 종료
     render();
     if (App.Bus && typeof App.Bus.on === "function") App.Bus.on("trading:update", render);
@@ -173,5 +204,5 @@ App.OrderFeePreview = (function () {
     init();
   }
 
-  return { init: init, render: render, readOrder: readOrder };
+  return { init: init, render: render, readOrder: readOrder, renderFxRate: renderFxRate };
 })();
