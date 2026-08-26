@@ -95,6 +95,30 @@
 --   7절  이미 쌓여 있는 거래분 한 번에 지급 (밀린 것 채우기)
 --   8절  일회성 보정 지급 실행  ← 반드시 7절 다음
 --   9절  확인
+--
+-- ── 대표님이 하실 일 (2026-08-26 고침) ──────────────────────────────────
+--   이 파일 하나를 통째로 복사해 SQL Editor 에 붙여넣고 Run 을 한 번 누르시면
+--   끝납니다. 다른 파일을 따로 돌리실 필요가 없습니다.
+--
+--   "Potential issues detected" 가 뜨면 Run without RLS 를 누르시면 됩니다.
+--   새 표를 만들지 않으므로 RLS 와 무관합니다.
+--
+--   ★ 결과에서 이 두 줄을 꼭 봐 주세요.
+--       ① 맨 위  '선행조건_확인'          — '✅' 여야 합니다
+--       ② 8절 뒤 '밀린것채우기_보정지급_결과' — '✅' 로 시작해야 합니다
+--     둘 중 하나라도 '⚠' 면 그 문장을 그대로 보내 주세요.
+--
+-- ── 2026-08-26 에 세 번 실패했던 것을 이 파일에서 고쳤습니다 ────────────
+--   (전) 7절에서 '관리자가 아니다(not_admin)' 로 멈췄고,
+--        SQL Editor 는 파일 전체를 한 덩어리로 처리하기 때문에
+--        2~6절(함수·트리거)까지 통째로 되돌아가 서버에 아무것도 남지 않았습니다.
+--        그래서 그 다음에 '그런 함수가 없다(tl_grant_diff)' 오류가 이어졌습니다.
+--   (후) 7절·8절을 실행하는 자리만 바꿨습니다. 계산식·함수 내용·관리자 잠금은
+--        한 글자도 바꾸지 않았습니다. 자세한 설명은 8절 끝에 적어 두었습니다.
+--
+-- ── 지금 서버 상태가 궁금하시면 ─────────────────────────────────────────
+--   supabase/조사-TL실시간-서버상태-2026-08-26.sql 을 먼저 Run 해 보세요.
+--   읽기만 하는 파일이라 아무것도 바뀌지 않습니다.
 -- =========================================================================
 
 
@@ -533,8 +557,8 @@ $fn$;
 
 grant execute on function public.tl_settle_all_past() to authenticated;
 
--- 실행 — 관리자 계정으로 SQL Editor 에 로그인한 상태여야 합니다(am_i_admin).
-select public.tl_settle_all_past() as 밀린것_지급결과;
+-- 실행은 8절 끝에서 7절·8절을 한 번에 돌립니다. 순서가 중요해서 한 곳에 모았습니다.
+-- (여기서 바로 부르면 8절 함수가 아직 만들어지지 않은 상태라 순서를 갈라 놓을 수 없습니다.)
 
 
 -- =========================================================================
@@ -618,8 +642,84 @@ $fn$;
 
 grant execute on function public.tl_migrate_legacy() to authenticated;
 
--- 실행
-select public.tl_migrate_legacy() as 보정지급_결과;
+-- ── 7절·8절 실행 ──────────────────────────────────────────────────────────
+-- 여기서 7절(밀린 것 채우기) → 8절(보정 지급) 을 순서대로 한 번에 돌립니다.
+--
+-- ⚠ 왜 그냥 select 로 부르지 않고 이렇게 감쌌나 — 2026-08-26 에 세 번 실패한 이유입니다.
+--
+--   ① 관리자 확인이 이 창(SQL Editor)에서는 언제나 실패합니다
+--      7절·8절 함수는 맨 앞에서 "지금 부르는 사람이 관리자냐" 를 묻습니다.
+--      그런데 SQL Editor 는 화면에 로그인한 회원이 아니라 서버 자신으로 돌아갑니다.
+--      그래서 "지금 부르는 사람" 이 비어 있고, 관리자 확인이 항상 실패했습니다.
+--      화면에서 관리자로 로그인해도 이 창과는 별개입니다.
+--
+--      ★ 함수의 관리자 잠금은 한 글자도 풀지 않았습니다.
+--        대신 이 실행에 한해서만, 관리자 명단에 있는 사람 한 명의 자격을
+--        잠깐 빌려 씁니다. 아래 set_config 의 맨 뒤 true 가
+--        "이 실행이 끝나면 저절로 풀린다" 는 뜻입니다.
+--        회원 화면·권한에는 아무 영향이 없습니다.
+--
+--   ② 마지막에 오류가 나면 앞의 것까지 전부 없던 일이 됩니다
+--      SQL Editor 는 파일 전체를 한 덩어리로 처리합니다.
+--      그래서 7절에서 터지면 2~6절(함수·트리거)까지 통째로 되돌아갑니다.
+--      실제로 그렇게 되어 서버에는 아무것도 올라가 있지 않았습니다.
+--      → 7절·8절을 "오류를 삼키는 블록" 으로 감쌌습니다.
+--        여기서 무슨 일이 나도 2~6절은 그대로 저장되고,
+--        무엇이 잘못됐는지는 바로 아래 결과표에 글자로 나옵니다.
+--
+-- 여러 번 실행해도 안전합니다. 두 번째부터는 줄 것이 없어 아무 일도 하지 않습니다.
+do $run$
+declare
+  v_admin   uuid;
+  v_settle  json;
+  v_migrate json;
+begin
+  perform set_config('tl.run_result', '', false);
+
+  begin
+    -- (가) 관리자 명단에서 한 명을 고릅니다. 그 사람 자격을 잠깐 빌립니다.
+    select a.user_id into v_admin
+      from public.admin_users a
+      order by a.created_at
+      limit 1;
+
+    if v_admin is null then
+      perform set_config('tl.run_result',
+        '⚠ 관리자 명단(admin_users)이 비어 있어 7절·8절을 건너뛰었습니다. '
+        || '2~6절(함수·트리거)은 정상 저장됐습니다. '
+        || 'supabase/schema-admin-patch.sql 을 먼저 Run 하신 뒤 이 파일을 다시 Run 하세요.',
+        false);
+      return;
+    end if;
+
+    -- (나) 이 실행에 한해서만 "나는 이 관리자다" 로 봅니다. 끝나면 저절로 풀립니다.
+    perform set_config('request.jwt.claim.sub', v_admin::text, true);
+    perform set_config('request.jwt.claims', json_build_object('sub', v_admin)::text, true);
+
+    -- (다) 반드시 7절 먼저, 그 다음 8절. 순서가 바뀌면 보정액이 과하게 나갑니다.
+    select into v_settle  public.tl_settle_all_past() as 밀린것_지급결과;
+    select into v_migrate public.tl_migrate_legacy() as 보정지급_결과;
+
+    -- (라) 빌려 썼던 자격을 바로 되돌립니다.
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.jwt.claims', '', true);
+
+    perform set_config('tl.run_result',
+      '✅ 7절 밀린 것 채우기 ' || coalesce(v_settle::text, '(결과 없음)')
+      || '   /   8절 보정 지급 ' || coalesce(v_migrate::text, '(결과 없음)'), false);
+
+  exception when others then
+    -- 여기서 무슨 일이 나도 2~6절(함수·트리거)은 그대로 저장됩니다.
+    perform set_config('tl.run_result',
+      '⚠ 7절·8절만 실패했습니다 — ' || sqlstate || ' ' || sqlerrm
+      || ' / 2~6절(함수·트리거)은 정상 저장됐습니다. 이 문장을 그대로 보내 주세요.', false);
+  end;
+end
+$run$;
+
+-- ★ 여기서 나온 결과는 이 파일 맨 끝 10절의 표 '① 실행 결과' 칸에 그대로 나옵니다.
+--   Supabase 는 명령이 여러 개면 맨 마지막 것만 보여 주기 때문에, 꼭 보셔야 할 것을
+--   맨 뒤에 모아 두었습니다. 여기서는 아무것도 출력하지 않습니다.
 
 
 -- =========================================================================
@@ -697,3 +797,102 @@ select 순서,
          - 이미받은)                                                                   as 이번지급
 from 단계
 order by 순서;
+
+
+-- =========================================================================
+-- 10절) ★ 대표님이 보실 표 — 맨 마지막 결과가 이것입니다
+-- =========================================================================
+-- Supabase SQL Editor 는 명령이 여러 개면 "맨 마지막 것" 만 보여 줍니다.
+-- 그래서 꼭 보셔야 할 것을 한 표에 모아 맨 뒤에 두었습니다.
+-- 이 표를 캡처해서 보내 주시면 됩니다.
+--
+--   ① 실행 결과      '✅' 로 시작하면 끝난 것입니다. '⚠' 면 그 문장을 그대로 보내 주세요
+--   ② 실시간 트리거   거래할 때마다 TL 을 주는 장치가 걸렸는지
+--   ③ 지급된 TL      이번에 얼마가 나갔는지
+--   ④ 회원별 최종    회원마다 지금 TL 이 얼마인지
+select 구분, 항목, 값
+from (
+
+  select
+    1                                   as 순서,
+    1                                   as 하위,
+    '① 실행 결과'                        as 구분,
+    '7절 밀린 것 채우기 · 8절 보정 지급'   as 항목,
+    coalesce(nullif(current_setting('tl.run_result', true), ''),
+             '(결과를 남기지 못했습니다 — 본부장에게 알려 주세요)')::text as 값
+
+  union all
+
+  select
+    2, 1, '② 실시간 트리거', 'trg_tl_on_trade_insert',
+    (case when exists (
+            select 1
+              from pg_trigger t
+              join pg_class c on c.oid = t.tgrelid
+              join pg_namespace n on n.oid = c.relnamespace
+             where n.nspname = 'public'
+               and c.relname = 'trades'
+               and t.tgname  = 'trg_tl_on_trade_insert')
+          then '✅ 걸렸습니다 — 이제 거래를 닫을 때마다 TL 이 바로 들어갑니다'
+          else '❌ 안 걸렸습니다 — 본부장에게 알려 주세요' end)::text
+
+  union all
+
+  select
+    3, 1, '③ 지급된 TL', '실시간 지급(realtime) 누적',
+    (coalesce(count(*) filter (where x.type = 'realtime'), 0)::text || '줄 / 합계 '
+     || round(coalesce(sum(x.amount) filter (where x.type = 'realtime'), 0))::text || ' TL')::text
+  from public.tl_transactions x
+
+  union all
+
+  select
+    3, 2, '③ 지급된 TL', '보정 지급(migration) 누적',
+    (coalesce(count(*) filter (where x.type = 'migration'), 0)::text || '줄 / 합계 '
+     || round(coalesce(sum(x.amount) filter (where x.type = 'migration'), 0))::text || ' TL')::text
+  from public.tl_transactions x
+
+  union all
+
+  select
+    4, 1, '④ 회원별 최종', p.nickname::text,
+    ('보유 ' || round(public.tl_balance(p.id))::text || ' TL'
+     || '  (획득 ' || round(public.tl_earned(p.id))::text
+     || ' / 사용 ' || round(coalesce((select -sum(x.amount) from public.tl_transactions x
+                                       where x.user_id = p.id and x.amount < 0), 0))::text || ')')::text
+  from public.profiles p
+
+) as 결과
+order by 결과.순서, 결과.하위, 결과.항목;
+
+
+-- =========================================================================
+-- 11절) 되돌리는 방법  (읽기만 하세요. 아래는 실행되는 문장이 아니라 설명입니다)
+-- =========================================================================
+-- 이 파일은 회원 기록을 지우거나 바꾸지 않습니다. 더하기만 합니다.
+--
+-- ① "거래할 때마다 주는 것" 만 멈추고 싶을 때 — 트리거만 떼면 됩니다.
+--    이미 지급된 TL 은 그대로 남습니다.
+--
+--        drop trigger if exists trg_tl_on_trade_insert on public.trades;
+--
+--    (다시 켜려면 이 파일을 다시 Run 하시면 됩니다.)
+--
+-- ② "보유 TL 을 옛 계산으로 되돌리고 싶을 때"
+--    schema-tl-hotdeal.sql 의 옛 tl_earned() 정의를 다시 Run 하면 됩니다.
+--    다만 그 파일은 봉인돼 있고, 옛 공식은 손해를 봐도 TL 이 쌓이는 방식입니다.
+--    되돌리기 전에 반드시 본부장·대표 확인을 받으세요.
+--
+-- ③ "이번에 지급된 TL 기록 자체를 없애고 싶을 때"
+--    tl_transactions 에서 type 이 'realtime' 과 'migration' 인 줄이 이번에 생긴 것입니다.
+--    ★ 회원의 재산 기록이라 이 파일에는 지우는 문장을 일부러 넣지 않았습니다.
+--      정말 필요하면 본부장에게 말씀해 주세요. 지우기 전에 몇 줄인지 먼저 세어 봅니다.
+--
+--        select type, count(*) from public.tl_transactions
+--         where type in ('realtime','migration') group by type;
+--
+-- ④ 이 파일을 여러 번 Run 해도 안전합니다.
+--    함수는 덮어쓰기(create or replace), 인덱스는 없을 때만 만들기(if not exists),
+--    지급은 "받아야 할 만큼에서 이미 받은 만큼을 뺀 차액" 이라 두 번째부터는 0 입니다.
+--    보정 지급은 회원당 평생 1번만 들어갑니다(uq_tl_tx_migration_once).
+-- =========================================================================
