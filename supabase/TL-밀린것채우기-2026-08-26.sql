@@ -72,7 +72,7 @@ declare
 begin
   for r in select pr.id as uid from public.profiles pr
   loop
-    amt := coalesce(public.tl_grant_diff(r.uid, null), 0);
+    amt := coalesce(public.tl_grant_diff(r.uid), 0);
     if amt > 0 then
       n := n + 1;
       total := total + amt;
