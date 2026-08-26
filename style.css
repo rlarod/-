@@ -493,11 +493,9 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
      나머지(청산가/증거금/TP/SL/진입수수료/수익률)는 "더보기"로 펼쳐야 보임 */
   .position-table .mobile-hide{display:none;}
   .position-table.expanded .mobile-hide{display:table-cell;}
-  .position-expand-btn{
-    display:block;width:100%;margin-top:8px;padding:8px 0;background:none;
-    border:1px dashed var(--border);border-radius:3px;color:var(--text-faint);
-    font-family:var(--sans);font-size:20.5px;cursor:pointer;
-  }
+  /* .position-expand-btn 규칙은 파일 맨 뒤 "폰에서 더보기 버튼이 안 보이던 것"
+     블록으로 옮겼습니다. 여기 두면 635행 기본 규칙(display:none)이 파일에서
+     더 뒤라 특이도가 같은 채 덮여 버려, 폰에서 버튼이 아예 안 떴습니다. */
   .mypage-grid{grid-template-columns:1fr 1fr;}
   .mypage-nickname-value{font-size:18px;}
   .leaderboard-rank-badge{font-size:20.5px;}
@@ -4443,3 +4441,85 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
   .page-right .chat-input-row input{padding-left:10px;padding-right:10px;}
   .page-right .chat-input-row button{padding-left:12px;padding-right:12px;}
 }
+
+/* =========================================================================
+ * 폰에서 포지션 표 "더보기" 버튼이 아예 안 보이던 것 (2026-08-26)
+ * =========================================================================
+ * 실측(360 / 375 / 390, 주문 시트를 연 상태):
+ *   #position-expand-btn          display:none  (인라인 스타일 없음)
+ *   .position-table .mobile-hide  18칸, 전부 display:none
+ *   숨은 칸 앞부분 — 금액 · 강제청산가 · TP · SL · 개시증거금 · 진입수수료
+ *
+ * 왜 나쁜가 — 700px 이하에서 .mobile-hide 18칸이 숨겨지고, 그것을 되살리는
+ * 유일한 길이 .position-table.expanded 클래스입니다. 그 클래스를 붙이는 코드는
+ * js/ui.js:627 의 "더보기" 버튼 클릭 핸들러 하나뿐인데, 그 버튼이 안 보이니
+ * 회원은 18칸을 되살릴 방법이 없었습니다. 숨은 칸에 강제청산가가 있습니다
+ * (차트에는 가로선으로 그려지지만 숫자로는 못 봤습니다).
+ *
+ * 원인 — 496행 @media(max-width:700px) 의 display:block 이, 파일에서 더 뒤에
+ *        있는 635행 기본 규칙 display:none 에 덮였습니다. 특이도가 같으면
+ *        뒤가 이깁니다. 같은 날 고친 "TL 마켓" 잘림과 정확히 같은 함정입니다.
+ *
+ * 고침 — 496행에 있던 규칙을 지우고 여기(파일 맨 뒤)로 옮겼습니다.
+ *        635행 기본 규칙(넓은 화면에서는 숨김)은 그대로 둡니다.
+ *        값도 그대로 옮겼고, 터치 크기만 min-height:44px 로 못 박았습니다
+ *        (옮기기 전 실측 높이 40.6px 이라 44px 기준에 3.4px 모자랐습니다).
+ *        js/ui.js 는 한 글자도 고치지 않았습니다 — 클릭 핸들러는 이미 있고,
+ *        보이게만 하면 되는 건이었습니다.
+ *
+ * 되돌리기: 이 블록(@media (max-width:700px) 하나)을 통째로 지우면 예전
+ *           상태(폰에서 버튼이 안 보임)로 정확히 돌아갑니다.
+ * ========================================================================= */
+@media (max-width:700px){
+  .position-expand-btn{
+    display:block;width:100%;margin-top:8px;padding:8px 0;min-height:44px;background:none;
+    border:1px dashed var(--border);border-radius:3px;color:var(--text-faint);
+    font-family:var(--sans);font-size:20.5px;cursor:pointer;
+  }
+}
+
+/* =========================================================================
+ * "교차(Cross) ▾" 배지 — 내용이 상자를 8px 넘고 있던 것 (2026-08-26)
+ * =========================================================================
+ * ⚠ 먼저 정정합니다 — "▾ 가 잘려서 안 보인다"는 사실이 아니었습니다.
+ *   1440 · 1920 에서 localhost 와 라이브를 둘 다 열어 화살표 오른쪽 끝과
+ *   잘리는 선(padding box) 사이를 직접 쟀습니다.
+ *     1440  화살표 오른끝이 잘리는 선보다 2.2px 안쪽  → 안 잘림
+ *     1920  3.6px 안쪽                                 → 안 잘림
+ *   눈으로도 확인했습니다(shots/mm/before-1440-badge.png · live-1440-badge.png).
+ *   overflow:hidden 은 content box 가 아니라 padding box 에서 자릅니다.
+ *   넘친 8px 이 좌우 10px 짜리 여백 안으로 들어가서, 숫자로는 넘치는데
+ *   화면에서는 안 잘린 상태였습니다.
+ *
+ * 그래도 고치는 이유 — 여유가 2.2px 뿐입니다. 웹폰트(Noto Sans KR)가 안 뜨거나
+ *   글자 폭이 조금만 넓어지면 바로 잘립니다. 지금 안 잘리는 건 운입니다.
+ *
+ * 실측(수정 전 / 수정 후) — 상자 / 내용(scrollWidth) / 화살표 여유
+ *    360  155.0 / 153 / -12.8   →  155.0 / 153 / -14.8   (원래 안 넘침)
+ *    375  162.5 / 161 / -16.5   →  162.5 / 161 / -18.5   (원래 안 넘침)
+ *    390  170.0 / 168 / -20.3   →  170.0 / 168 / -22.3   (원래 안 넘침)
+ *    768  359.0 / 357 / -114.8  →  359.0 / 357 / -116.8  (원래 안 넘침)
+ *   1440  133.8 / 140 /  -2.2   →  133.8 / 133 /  -4.2   (8px 넘침 -> 없어짐)
+ *   1920  136.8 / 141 /  -3.6   →  136.8 / 135 /  -5.7   (6px 넘침 -> 없어짐)
+ *   ※ 폰에서는 주문 패널이 아래 시트(js/order-sheet-mobile.js)라, 시트를 닫은
+ *     채로 재면 상자가 0px 으로 나옵니다. 반드시 열고 재야 합니다.
+ *
+ * 글자를 줄이지 않습니다("교차(Cross)"는 증거금 방식을 알려주는 말이고, 옆
+ * 배지 10.00x 와 글자 크기가 어긋나면 더 어색해집니다).
+ * 대신 상자 안에서 글자가 쓸 수 있는 폭을 넓힙니다 —
+ * 좌우 여백 10px→5px, ▾ 앞 간격 7px→3px. 합쳐서 14px 을 되찾습니다.
+ * 글자는 justify-content:center 로 가운데 정렬이라, 여백을 줄여도 넓은 화면에서
+ * 글자가 상자 벽에 붙지 않습니다(위 "화살표 여유"가 그 몫입니다).
+ *
+ * 세로는 건드리지 않습니다 — height:44px 고정이고 바꾼 값이 전부 가로 방향이라
+ * 주문 패널 높이가 변하지 않습니다. 실측으로 확인했습니다(수정 전/후 같은 값)
+ *   1440·1920  1150.0px   768  1158.9px   360·375·390  1173.4px
+ * (수리팀이 이 아래에 넣은 환율 줄과 무관하도록 일부러 가로만 손댔습니다.)
+ *
+ * ▾ 간격은 .amitalk-order .mode-badge-arrow 전체가 아니라 .top-mode-row 안으로
+ * 좁혀서 겁니다 — 같은 클래스를 TP/SL 접기 화살표(1366행)도 쓰기 때문입니다.
+ *
+ * 되돌리기: 아래 두 줄을 지우면 예전(여백 10px / 간격 7px)으로 돌아갑니다.
+ * ========================================================================= */
+.amitalk-order .top-mode-row .margin-mode-badge{padding-left:5px;padding-right:5px;}
+.amitalk-order .top-mode-row .mode-badge-arrow{margin-left:3px;}

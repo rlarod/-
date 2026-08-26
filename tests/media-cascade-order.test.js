@@ -240,6 +240,20 @@ console.log("\n  [자체검증] 탐지기가 진짜로 잡는가");
  *      .mypage-grid   360px 에서 1열로 만들려던 규칙이 죽어 2열 그대로입니다
  *      .chip          "터치 타겟 6px->9px" 주석이 붙어 있는데 실제로는 6px 입니다
  *      .position-table td/th  모바일 글자 크기 규칙이 죽어 있습니다
+ *
+ *    == 갱신 이력 =========================================================
+ *    2026-08-26  (나) 14건 -> 13건. 디자인팀이 아래 한 건을 실제로 고쳤습니다.
+ *      뺀 줄: .position-expand-btn  [<=700px @496행] 이 [기본 @635행] 에 덮임 - display
+ *      무엇이었나 - 700px 이하에서 포지션 표의 .mobile-hide 18칸(금액·강제청산가·
+ *        TP·SL·개시증거금·진입수수료…)이 숨겨지는데, 그것을 되살리는 유일한 길인
+ *        "더보기" 버튼이 display:none 이라 폰에서 아예 안 보였습니다.
+ *        회원이 강제청산가를 숫자로 볼 방법이 없었습니다.
+ *      어떻게 고쳤나 - 496행에 있던 @media(max-width:700px) 규칙을 style.css
+ *        맨 뒤로 옮겼습니다(635행 기본 규칙보다 뒤). 값은 그대로 옮겼고, 터치
+ *        크기만 min-height:44px 로 못 박았습니다. js/ui.js 는 안 건드렸습니다.
+ *      실측(360, 주문 시트를 연 상태) - 버튼 display:none -> block, 높이 49px,
+ *        눌렀더니 .mobile-hide 보이는 칸 0 -> 18, 표에 .expanded 가 붙었습니다.
+ *      아래 5) 의 이름표 검사가 이 자리를 따로 못 박습니다.
  * ========================================================================= */
 
 /* (가) max-width 끼리 - 좁은 쪽이 앞이라 죽은 것 */
@@ -259,7 +273,6 @@ const 기준선_기본 = [
   ".mypage-grid  [<=400px @510행] 이 [기본 @1080행] 에 덮임 - grid-template-columns",
   ".mypage-grid  [<=700px @501행] 이 [기본 @1080행] 에 덮임 - grid-template-columns",
   ".mypage-nickname-value  [<=700px @502행] 이 [기본 @1077행] 에 덮임 - font-size",
-  ".position-expand-btn  [<=700px @496행] 이 [기본 @635행] 에 덮임 - display",
   ".position-grid  [<=700px @487행] 이 [기본 @608행] 에 덮임 - gap",
   ".position-grid b  [<=700px @488행] 이 [기본 @611행] 에 덮임 - font-size",
   ".position-table td  [<=700px @490행] 이 [기본 @2341행] 에 덮임 - font-size,padding-right",
@@ -294,7 +307,7 @@ const CSS = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   ok("좁은 화면 규칙이 넓은 화면 규칙에 새로 덮인 곳이 없다", 새가.length === 0, 새가.join("\n      "));
   ok("좁은 화면 규칙이 뒤에 나온 기본 규칙에 새로 덮인 곳이 없다", 새나.length === 0, 새나.join("\n      "));
   ok("(가) 가 4건을 넘지 않는다", 가.length <= 4, String(가.length));
-  ok("(나) 가 14건을 넘지 않는다", 나.length <= 14, String(나.length));
+  ok("(나) 가 13건을 넘지 않는다", 나.length <= 13, String(나.length));
   ok("min-width 쪽 역전은 0건이다 (여긴 아직 깨끗합니다)", 다.length === 0, 다.join("\n      "));
 
   const 사라진 = 기준선_미디어.concat(기준선_기본)
@@ -331,6 +344,56 @@ console.log("\n  [사고 자리] 메뉴 버튼 - 400 규칙이 520 규칙보다 
     사백 && 오이공 ? "400=@" + 사백.line + "행, 520=@" + 오이공.line + "행" : "규칙 없음");
   ok("400 규칙이 좌우 여백을 직접 정한다 (padding 또는 padding-left/right)",
     !!사백 && 사백.props.some((p) => /^padding(-left|-right)?$/.test(p)), 사백 ? 사백.props.join(",") : "");
+}
+
+console.log("\n  [사고 자리] 포지션 표 더보기 버튼 - 700 규칙이 기본 규칙보다 뒤에 있어야 한다");
+{
+  /* 2026-08-26. 폰(<=700px)에서 포지션 표의 .mobile-hide 18칸이 숨겨지는데,
+     그것을 되살리는 유일한 길이 .position-table.expanded 이고, 그 클래스를 붙이는
+     코드는 js/ui.js 의 "더보기" 버튼 클릭 핸들러 하나뿐입니다. 그 버튼이
+     display:none 이라 폰에서 아예 안 보였습니다(숨은 칸에 강제청산가가 있습니다).
+     기본 규칙 .position-expand-btn{display:none} 은 넓은 화면용이라 남겨 둡니다.
+     대신 700px 규칙이 반드시 그보다 뒤에 있어야 합니다. */
+  const 전부 = 규칙들(CSS).filter((r) => r.sel === ".position-expand-btn");
+  const 기본 = 전부.filter((r) => r.media.length === 0).sort((a, b) => a.line - b.line);
+  const 칠백 = 전부.filter((r) => 최대폭(r.media) === 700).sort((a, b) => a.line - b.line);
+  console.log("    .position-expand-btn - 기본 " + 기본.map((x) => "@" + x.line + "행").join(",") +
+    " / <=700px " + 칠백.map((x) => "@" + x.line + "행").join(","));
+
+  ok("기본(넓은 화면) 숨김 규칙이 그대로 있다", 기본.length >= 1);
+  ok("<=700px 에서 버튼을 보이게 하는 규칙이 있다", 칠백.length >= 1);
+  ok("<=700px 규칙이 display 를 직접 정한다",
+    칠백.length >= 1 && 칠백.some((x) => x.props.indexOf("display") >= 0),
+    칠백.map((x) => x.props.join(",")).join(" | "));
+  ok("<=700px 규칙이 마지막 기본 규칙보다 파일에서 뒤에 있다 (뒤집히면 폰에서 18칸을 다시 못 폅니다)",
+    칠백.length >= 1 && 기본.length >= 1 &&
+    칠백[칠백.length - 1].line > 기본[기본.length - 1].line,
+    (칠백.length ? "700=@" + 칠백[칠백.length - 1].line + "행" : "700 규칙 없음") + ", " +
+    (기본.length ? "기본=@" + 기본[기본.length - 1].line + "행" : "기본 규칙 없음"));
+
+  /* 터치 크기 - 옮기기 전 실측 높이가 40.6px 이라 44px 기준에 3.4px 모자랐습니다.
+     옮기면서 min-height:44px 로 못 박았고(실측 49px), 그 값이 지워지지 않게 봅니다. */
+  const 뒤블록머리 = "@media (max-width:700px){";
+  const 마지막블록 = CSS.lastIndexOf(뒤블록머리);
+  const 몸통 = 마지막블록 >= 0 ? CSS.slice(마지막블록, 마지막블록 + 600) : "";
+  ok("맨 뒤 700px 블록이 .position-expand-btn 을 담고 있다", 몸통.indexOf(".position-expand-btn") >= 0);
+  ok("<=700px 규칙에 터치 크기 44px 이상이 박혀 있다",
+    /min-height\s*:\s*(4[4-9]|[5-9]\d|\d{3,})px/.test(몸통),
+    (몸통.match(/min-height\s*:\s*[^;]+/) || ["min-height 없음"])[0]);
+
+  /* 되돌림 검사 - 700 규칙을 예전 자리(496행 근처 블록)로 돌리면 정말 잡히는가 */
+  {
+    const 표식 = "@media (max-width:700px){\n  .position-expand-btn";
+    ok("(준비) 맨 뒤 700px 더보기 블록 원문을 찾았다", CSS.indexOf(표식) >= 0);
+    const 되돌림 = CSS
+      .replace(표식, "@media (max-width:700px){\n  .tl-되돌림-더미클래스")
+      .replace("  .position-table.expanded .mobile-hide{display:table-cell;}",
+        "  .position-table.expanded .mobile-hide{display:table-cell;}\n  .position-expand-btn{display:block;}");
+    const r = 좁은게앞_기본(되돌림);
+    ok("고치기 전 배치로 되돌리면 더보기 버튼 사고가 다시 잡힌다",
+      r.some((x) => /^\.position-expand-btn\b/.test(x)),
+      r.filter((x) => /position-expand/.test(x)).join(" / ") || "아무것도 안 잡힘");
+  }
 }
 
 /* =========================================================================
