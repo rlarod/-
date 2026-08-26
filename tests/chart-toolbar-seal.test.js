@@ -519,7 +519,10 @@ ok("chart.js 안에 ChartDrawings 라는 글자가 없다", CHART_JS.indexOf("Ch
 ok("chart.js 안에 ChartIndicators 라는 글자가 없다", CHART_JS.indexOf("ChartIndicators") === -1);
 ok("chart.js 안에 ChartPositionLines 라는 글자가 없다", CHART_JS.indexOf("ChartPositionLines") === -1);
 
-["chart-position-lines", "chart-indicators", "chart-drawings"].forEach(function (f) {
+/* 2026-08-26 — 3단계(RSI·MACD)가 들어오면서 chart-oscillators.js 가 늘었습니다.
+   같은 우회 방식(App.ChartFont.getCharts)을 쓰므로 같은 잣대로 함께 봉인합니다.
+   그래서 이 파일의 통과 건수가 112 -> 114 로 늘어나는 것이 정상입니다. */
+["chart-position-lines", "chart-indicators", "chart-drawings", "chart-oscillators"].forEach(function (f) {
   const src = read("js/" + f + ".js");
   const code = stripComments(src);
   ok(f + ".js 가 App.ChartFont.getCharts() 로 차트를 가져온다", code.indexOf("App.ChartFont.getCharts()") !== -1);
