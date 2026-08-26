@@ -1220,5 +1220,13 @@
 <!-- 폰에서 가격축이 캔들 영역을 잡아먹는 문제 — 화면 폭에 따라 축 글씨만 줄입니다
      (chart.js·chart-font.js 무수정). 이 한 줄을 지우면 전부 21px 로 돌아갑니다. -->
 <script src="js/chart-axis-fit.js"></script>
+<!-- 유령 청산 방지 (P1). 이미 청산된 포지션이 서버에 남아 복원되는 것을 걸러냅니다.
+     js/auth.js·js/trading.js 무수정 — App.Storage.save 를 감싸기만 합니다.
+     이 줄만 지우면 원래대로. -->
+<script src="js/ghost-position-guard.js"></script>
+<!-- 위 유령이 처음부터 안 생기게 (재발 방지). supabase-sync.js 172행이 청산
+     이벤트를 버리던 것을 줄세우기로 막습니다. supabase-sync.js 무수정.
+     이 줄만 지우면 원래대로. -->
+<script src="js/persist-sync-queue.js"></script>
 </body>
 </html>
