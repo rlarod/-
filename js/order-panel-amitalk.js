@@ -235,10 +235,16 @@ App.AmiTalkOrderPanel = (function () {
     const box = el("ami-symbols");
     if (!box || !App.SymbolRegistry) return;
     const active = App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "BTCUSDT";
+    // 대표 결정(2026-08-27)으로 종목이 4개가 됐습니다 — 비트코인/나스닥/
+    // 삼성전자/SK하이닉스. 예전에는 crypto 만 걸렀는데, 그러면 이더리움이
+    // 빠진 지금은 비트코인 한 줄만 남아 상단 드롭다운(4줄)과 어긋납니다.
+    // 종목 UI 는 두 곳이고 둘 다 같은 목록·같은 판정이어야 합니다.
     const rows = App.SymbolRegistry.getAll()
-      .filter((s) => s.type === "crypto")
       .map((s) => {
-        const ready = s.dataSource !== "mock";
+        // "거래중"으로 보일지는 App.SymbolRegistry.isEnabled 한 곳에서만 정합니다.
+        // dataSource 로 보면 네 종목이 전부 "binance" 라 전부 거래중으로
+        // 잘못 표시됩니다(회원이 잘못된 정보로 판단하게 됩니다).
+        const ready = App.SymbolRegistry.isEnabled(s.symbol);
         return (
           '<div class="ami-symbol-row' + (s.symbol === active ? " active" : "") + '" data-symbol="' + s.symbol + '">' +
           "<span>" + s.name + " (" + s.symbol + ")</span>" +

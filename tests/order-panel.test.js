@@ -696,14 +696,27 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
       "충전 버튼이 있으면 준비중 안내를 붙이지 않아야 함");
   });
 
-  t("하단 종목: BTC=거래중, ETH=준비중", () => {
+  /* 대표 결정 2026-08-27 — 종목이 4개가 됐습니다
+     (비트코인·나스닥·삼성전자·SK하이닉스). 이더리움은 제외했습니다.
+     상단 드롭다운과 이 목록이 같은 4줄을 보여줘야 합니다 —
+     종목 UI 가 두 곳인데 한 곳만 다르면 회원이 헷갈립니다. */
+  t("하단 종목: 4줄, BTC만 거래중 나머지는 준비중", () => {
     const { doc } = fresh();
     const rows = doc.querySelectorAll("#ami-symbols .ami-symbol-row");
-    eq(rows.length, 2);
+    eq(rows.length, 4);
     ok(/비트코인 \(BTCUSDT\)/.test(rows[0].textContent));
     ok(/거래중/.test(rows[0].textContent));
-    ok(/이더리움 \(ETHUSDT\)/.test(rows[1].textContent));
-    ok(/준비중/.test(rows[1].textContent), "실제 미연동 종목은 준비중이어야 함");
+    ok(!/이더리움/.test(doc.getElementById("ami-symbols").textContent),
+      "이더리움은 대표 결정으로 목록에서 빠졌습니다");
+    [["나스닥", "QQQUSDT"], ["삼성전자", "SAMSUNGUSDT"], ["SK하이닉스", "SKHYNIXUSDT"]]
+      .forEach(([이름, 코드], i) => {
+        const r = rows[i + 1];
+        ok(r.textContent.indexOf(이름 + " (" + 코드 + ")") >= 0, 이름 + " 줄: " + r.textContent);
+        ok(/준비중/.test(r.textContent),
+          "아직 시세가 안 붙은 종목이 거래중으로 보이면 안 됩니다: " + r.textContent);
+      });
+    ok(doc.querySelectorAll("#ami-symbols .ami-symbol-badge.on").length === 1,
+      "거래중 배지는 BTC 한 줄뿐이어야 합니다");
   });
 }
 

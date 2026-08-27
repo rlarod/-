@@ -51,7 +51,10 @@ App.TickerBoard = (function () {
           '<td style="text-align:left;">' +
           s.name +
           ' <span class="ticker-board-code">' + s.symbol + "</span>" +
-          (adapter.isMock ? '<span class="ticker-board-mock-badge">모의</span>' : "") +
+          // 아직 시세가 안 붙은 종목은 값이 계속 "-" 로만 보입니다. 이유를 같이
+          // 적어주지 않으면 회원이 "거래가 뜸한가" 로 오해합니다(조용한 고장).
+          // 판정은 App.SymbolRegistry 한 곳에서만 합니다.
+          (App.SymbolRegistry.isMock(s.symbol) ? '<span class="ticker-board-mock-badge">준비중</span>' : "") +
           "</td>" +
           "<td>" + fmtPrice(price) + "</td>" +
           '<td class="' + changeClass + '">' + fmtPercent(stats.changePercent) + "</td>" +

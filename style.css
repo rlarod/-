@@ -1105,8 +1105,14 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;align-items:center;gap:5px;
 }
 .symbol-select-arrow{font-size:19px;color:var(--text-faint);}
+/* 종목 코드가 길어졌습니다(005930 → SAMSUNGUSDT, NDX → QQQUSDT).
+   폭이 고정이면 이름이 "삼 성 전 자" 처럼 한 글자씩 끊겨 읽을 수 없습니다.
+   실제로 360~1920 여섯 폭 전부에서 그렇게 깨졌습니다.
+   그래서 ① 내용만큼 넓어지게 하고 ② 이름·코드는 절대 안 끊기게 합니다.
+   화면을 넘지 않도록 max-width 로 막아둡니다. */
 .symbol-select-dropdown{
   position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:240px;
+  width:max-content;max-width:calc(100vw - 16px);
   background:var(--surface2);border:1px solid var(--border);border-radius:3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.12);overflow:hidden;
 }
@@ -1116,8 +1122,8 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .symbol-option:last-child{border-bottom:none;}
 .symbol-option:hover{background:var(--surface3);}
-.symbol-option-name{font-size:22px;font-weight:600;color:var(--text);}
-.symbol-option-code{font-size:19px;color:var(--text-faint);font-family:var(--mono);margin-right:auto;margin-left:8px;}
+.symbol-option-name{font-size:22px;font-weight:600;color:var(--text);white-space:nowrap;}
+.symbol-option-code{font-size:19px;color:var(--text-faint);font-family:var(--mono);margin-right:auto;margin-left:8px;white-space:nowrap;}
 .symbol-option-badge{
   font-size:17.5px;font-weight:700;color:var(--text-faint);background:var(--surface3);
   padding:2px 8px;border-radius:3px;white-space:nowrap;
@@ -1126,6 +1132,15 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .symbol-option-disabled{opacity:0.55;}
 .symbol-option-disabled:hover{background:none;cursor:not-allowed;}
 .symbol-option-active .symbol-option-name{color:var(--gold);}
+/* 360 에서는 "SK하이닉스 SKHYNIXUSDT 준비중" 한 줄이 가장 깁니다.
+   실측: 필요한 폭 358px / 쓸 수 있는 폭 344px → 14px 모자라서 '준비중'
+   배지가 판 오른쪽 테두리에 붙어버렸습니다(잘리진 않지만 숨이 막힙니다).
+   글자를 줄이지 않고 여백·간격만 줄여 자리를 만듭니다.
+   코드 글자만 배지와 같은 크기(17.5px)로 맞춥니다 — 코드는 보조 정보입니다. */
+@media (max-width:400px){
+  .symbol-option{padding:11px 9px;gap:8px;}
+  .symbol-option-code{font-size:17.5px;margin-left:6px;}
+}
 
 /* 이벤트/공지 배너 */
 .event-banner{

@@ -30,7 +30,10 @@ App.SymbolSelector = (function () {
     dom.dropdown.innerHTML = symbols
       .map((s) => {
         const isActive = s.symbol === activeSymbol;
-        const isReady = s.dataSource !== "mock";
+        // "전환해도 되는가" 판정은 App.SymbolRegistry.isEnabled 한 곳에서만 합니다.
+        // 예전에는 dataSource 로 봤는데, 네 종목이 전부 실재하는 바이낸스
+        // 종목(dataSource:"binance")이 되면서 그 판정이 못 쓰게 됐습니다.
+        const isReady = App.SymbolRegistry.isEnabled(s.symbol);
         return (
           '<div class="symbol-option' + (isActive ? " symbol-option-active" : "") + (isReady ? "" : " symbol-option-disabled") + '" data-symbol="' + s.symbol + '">' +
           '<span class="symbol-option-name">' + s.name + '</span>' +
@@ -50,7 +53,7 @@ App.SymbolSelector = (function () {
     const meta = App.SymbolRegistry ? App.SymbolRegistry.getBySymbol(symbol) : null;
     if (!meta) return;
 
-    if (meta.dataSource === "mock") {
+    if (!App.SymbolRegistry.isEnabled(symbol)) {
       // 아직 실제 데이터가 연결 안 된 종목 — 구조만 준비된 단계라 여기서 멈춤.
       // 거래엔진(trading.js)이 BTC 단일 종목 전제라서, 여기서 실제로
       // 전환하면 기존 포지션/계산이 깨질 수 있어 의도적으로 막아둡니다.
