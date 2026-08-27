@@ -681,7 +681,9 @@ const 겹침 = 대상.getBoundingClientRect().right - (컨테이너오른쪽끝 
 `index.html` 이 `js/*.js` 를 `<script>` 로 직접 불러옵니다.
 모든 모듈은 `App.<이름>` 형태의 전역 객체이고, `main.js` 가 순서대로 `init()` 을 부릅니다.
 
-테스트: `npm test` (97개 파일)
+테스트: `npm test` — **개수는 `tests/_order.txt` 를 보세요. 여기에 숫자를 적지 않습니다.**
+
+62 → 97 로 고쳤는데 **하루 만에 다시 23 벌어졌습니다.** 숫자를 문서에 박으면 계속 어긋납니다.
 
 ---
 
