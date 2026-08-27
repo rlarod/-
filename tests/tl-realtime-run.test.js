@@ -331,8 +331,8 @@ section("[8] 검사기 자체 확인");
  * ========================================================================= */
 section("[9] 테스트 등록");
 {
-  const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
-  ok("package.json 의 test 목록에 이 파일이 있다",
+  const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
+  ok("npm test 목록(tests/_order.txt)에 이 파일이 있다",
     pkg.indexOf("tests/tl-realtime-run.test.js") >= 0,
     "목록에 없으면 아무도 안 돌립니다");
   ["tests/tl-realtime.test.js", "tests/tl-grant-formula-seal.test.js"].forEach((f) => {

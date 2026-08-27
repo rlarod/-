@@ -43,6 +43,11 @@
  * 그대로면 아무것도 하지 않습니다(문자열 조립·객체 생성도 하지 않음).
  * js/chart.js:449 의 trackedPositionMarker 와 같은 방식입니다.
  *
+ * ── 종목이 다르면 안 그립니다 (2026-08-27) ───────────────────────────
+ * 차트에 그려진 종목이 포지션의 종목이 아니면 세 선을 다 내립니다.
+ * 판단은 js/chart-position-symbol.js 한 곳에서만 하고 여기서는 결과만
+ * 읽습니다(symbolMatches). 그 파일이 없으면 지금까지처럼 그대로 그립니다.
+ *
  * ── 되돌리기 ──────────────────────────────────────────────────────────
  * index.html 의 <script src="js/chart-position-lines.js"></script> 한 줄을
  * 지우면 원래대로 돌아갑니다. 이 파일은 다른 파일을 고치지 않습니다.
@@ -198,6 +203,22 @@ App.ChartPositionLines = (function () {
    * js/limit-close.js 가 들고 있는 목표가입니다(포지션당 하나).
    * 없으면 null 입니다. 읽기만 합니다.
    * ------------------------------------------------------------------- */
+  /* ---------------- 차트 종목 == 포지션 종목 인가 ----------------
+   * 판단은 js/chart-position-symbol.js 가 합니다(포지션이 어느 종목에서
+   * 열렸는지 그 파일이 적어 둡니다). 여기서는 결과만 읽습니다.
+   * 그 파일이 없으면 true 를 돌려 지금까지의 동작을 그대로 둡니다.
+   * ------------------------------------------------------------------- */
+  function symbolMatches() {
+    try {
+      if (App.ChartPositionSymbol && typeof App.ChartPositionSymbol.matches === "function") {
+        return !!App.ChartPositionSymbol.matches();
+      }
+    } catch (e) {
+      /* 판단을 못 하면 지금까지처럼 그립니다 */
+    }
+    return true;
+  }
+
   function readLimitClose() {
     try {
       if (App.LimitClose && typeof App.LimitClose.getTargetForTest === "function") {
@@ -219,6 +240,18 @@ App.ChartPositionLines = (function () {
     var pos = snapshot.position || null;
     var pending = snapshot.pendingOrder || null;
     var lc = readLimitClose();
+
+    /* 지금 보고 있는 차트가 포지션의 종목이 아니면 세 선을 다 내립니다.
+       삼성전자(193 USDT) 캔들에 비트코인 청산가 71,100 짜리 가로선이
+       붙으면 회원이 그 값을 삼성전자 청산가로 읽습니다.
+       판단은 js/chart-position-symbol.js 한 곳에서만 합니다 — 여기서
+       종목을 또 따지면 기준이 두 벌이 됩니다.
+       그 파일이 없으면(스크립트를 뺐으면) 지금까지처럼 그대로 그립니다. */
+    if (!symbolMatches()) {
+      pos = null;
+      pending = null;
+      lc = null;
+    }
 
     /* --- 1. 청산가 --- */
     var liqPrice = pos && typeof pos.liq === "number" && isFinite(pos.liq) ? pos.liq : null;

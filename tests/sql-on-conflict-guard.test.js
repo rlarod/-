@@ -355,7 +355,7 @@ ok("지금 저장소 상태에서 알려진 것 말고는 걸리는 게 없다",
 
 section("[8] package.json 에 들어 있다");
 {
-  const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
+  const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
   ok("npm test 목록에 이 파일이 있다", pkg.includes("tests/sql-on-conflict-guard.test.js"),
     "목록에 없으면 아무도 안 돌립니다");
 }

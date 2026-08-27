@@ -286,7 +286,7 @@ const 회원세션 = { user: { id: "u1" } };
   /* ------------------------------------------------------------------ */
   section("[8] package.json 에 들어 있다");
   {
-    const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
+    const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
     ok("npm test 목록에 이 파일이 있다", pkg.includes("tests/guest-balance-leak.test.js"),
       "목록에 없으면 아무도 안 돌립니다");
   }

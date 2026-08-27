@@ -196,11 +196,30 @@ section("[2] ⛔ P1 포지션이 있으면 전환이 통째로 막힌다");
       "이게 새면 포지션을 든 사람의 소켓만 갈아탑니다(P1)");
   ok("symbol:change 도 안 날아갔다", 신호.indexOf("symbol") < 0, JSON.stringify(신호));
 
-  /* 소스 차원에서도 못 박습니다 — 잠금 확인 없이 쏘면 안 됩니다. */
+  /* 소스 차원에서도 못 박습니다 — 잠금 확인 없이 쏘면 안 됩니다.
+
+     ⚠ 2026-08-27 — 대표 지시로 "포지션을 들고도 다른 종목 차트 보기" 가
+       열리면서 이 줄이 다음처럼 바뀌었습니다.
+
+           if (isLocked())                     ← 옛날
+           if (isLocked() && !canViewOther())  ← 지금
+
+       확인을 뺀 것이 아니라 "그물이 진짜로 작동할 때만" 을 덧붙인 것입니다.
+       canViewOther() 는 js/multi-symbol-view.js 가 없으면 언제나 false 라
+       그 파일을 빼면 옛날과 한 글자도 다르지 않게 동작합니다.
+       (바로 위 [3] 이 그 동작을 실제로 확인합니다 — 이 테스트의 부팅기는
+        js/multi-symbol-view.js 를 안 태우므로 interval:change 가 0건입니다.)
+
+       그래서 "isLocked() 확인이 있는가" 는 그대로 지키되, 뒤에 붙는 조건은
+       허용합니다. 확인 자체를 빼면 여전히 실패합니다. */
   const src = read("js/symbol-stream-switch.js");
   ok("소스에 interval:change 를 쏘기 전 isLocked() 확인이 있다",
-    /if \(isLocked\(\)\)[\s\S]{0,600}?emit\("interval:change"/.test(src),
+    /if \(isLocked\(\)[^)]*\)[\s\S]{0,900}?emit\("interval:change"/.test(src),
     "isLocked() 확인 없이 interval:change 를 쏘면 1번 관문이 통째로 무의미해집니다");
+  ok("그 확인을 통과 못 하면 소켓을 닫은 채로 두지 않는다",
+    /소켓을 다시 붙입니다|emit\("interval:change", \{ interval: iv \}\);\s*\n\s*return false;/.test(src),
+    "4) 에서 호가·체결 소켓을 이미 닫았기 때문에, 여기서 그냥 빠져나가면 " +
+      "호가·최근체결이 영영 빈 채로 남습니다(조용한 고장)");
 
   App.Trading.closePosition();
   ok("정리 — 포지션을 닫았다", App.Trading.getSnapshot().position === null);
@@ -441,9 +460,9 @@ section("[8] 수정 금지 파일 12개 (md5)");
  * ========================================================================= */
 section("[9] 테스트 등록");
 {
-  const pkg = JSON.parse(read("package.json"));
-  ok("package.json 의 test 목록에 이 파일이 있다",
-    String(pkg.scripts.test).indexOf("tests/symbol-stream-switch.test.js") > 0,
+  const 목록 = read("tests/_order.txt"); /* 2026-08-27 — 실행 목록이 package.json 에서 tests/_order.txt 로 옮겨졌습니다 */
+  ok("npm test 목록(tests/_order.txt)에 이 파일이 있다",
+    목록.indexOf("tests/symbol-stream-switch.test.js") >= 0,
     "등록 안 하면 npm test 에서 안 돕니다");
 }
 

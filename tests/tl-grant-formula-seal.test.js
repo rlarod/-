@@ -399,7 +399,7 @@ section("[9] 다른 테스트와 겹치지 않는다");
       fs.existsSync(path.join(REPO, "tests", f)),
       "이 파일이 없어지면 여기서 검사하지 않는 것들이 통째로 안 지켜집니다");
   }
-  const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
+  const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
   for (const f of 있어야할것) {
     ok("npm test 목록에 남아 있다: tests/" + f, pkg.includes("tests/" + f));
   }

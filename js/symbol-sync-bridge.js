@@ -184,19 +184,97 @@ App.SymbolSyncBridge = (function () {
     return isSym(v) ? v : null;
   }
 
-  /* 종목을 모르는 기록이 실제로 어느 종목인가.
-       1) 서버가 알려준 값이 있으면 그것 (로그인 복원 P1)
-       2) 이번 세션에서 만들어진 기록이면 지금 활성 종목
-       3) 그 밖(옛 기록)이면 BTCUSDT — 그때는 그 종목뿐이었습니다
-     옛 기록에 "지금 활성 종목" 을 찍으면 안 됩니다. 종목을 바꿔놓고
-     로그인했을 때 BTC 포지션에 다른 종목 도장이 찍혀 그대로 터집니다. */
-  function resolve(map, key, createdMs) {
-    var fromServer = recall(map, key);
-    if (fromServer) return fromServer;
-    if (typeof createdMs === "number" && isFinite(createdMs) && createdMs >= PAGE_LOAD) {
-      return activeSymbol();
+  /* ------------------------------------------------------------------
+   * "이 기록의 포지션이 무슨 종목이었나" — 로컬에서 찾기
+   * ------------------------------------------------------------------
+   * 한 번 저장할 때 저장소를 최대 한 번만 읽습니다. 거래내역 200건 ·
+   * 주문내역 100건을 훑기 때문에, 건마다 읽으면 새로고침이 느려집니다.
+   * ------------------------------------------------------------------ */
+  var passLive;     // undefined = 이번 회차에 아직 안 읽음
+  var passStored;
+
+  function beginPass() { passLive = undefined; passStored = undefined; }
+
+  function liveDoc() {
+    if (passLive !== undefined) return passLive;
+    passLive = null;
+    if (App.Trading && typeof App.Trading.getSnapshot === "function") {
+      try { passLive = App.Trading.getSnapshot(); } catch (e) { passLive = null; }
     }
-    return DEFAULT_SYMBOL;
+    return passLive;
+  }
+
+  function storedDoc() {
+    if (passStored !== undefined) return passStored;
+    passStored = null;
+    if (App.Storage && typeof App.Storage.load === "function") {
+      try { passStored = App.Storage.load(TRADING_KEY); } catch (e) { passStored = null; }
+    }
+    return passStored;
+  }
+
+  /* 문서 하나에서 포지션(없으면 미체결)의 종목을 꺼냅니다.
+     openTime 을 주면 "같은 포지션" 일 때만 인정합니다. */
+  function fromDoc(doc, openTime) {
+    if (!doc || typeof doc !== "object") return null;
+    var p = doc.position;
+    if (p && typeof p === "object" && isSym(p.symbol)) {
+      if (openTime === null || openTime === undefined || p.openTime === openTime) return p.symbol;
+    }
+    if (openTime !== null && openTime !== undefined) return null;
+    var o = doc.pendingOrder;
+    if (o && typeof o === "object" && isSym(o.symbol)) return o.symbol;
+    return null;
+  }
+
+  /* openTime 이 정확히 같은 포지션의 종목 — 옛 기록에도 안전합니다. */
+  function matchedSymbol(doc, openTime) {
+    if (openTime === null || openTime === undefined) return null;
+    return fromDoc(doc, openTime) || fromDoc(liveDoc(), openTime) || fromDoc(storedDoc(), openTime);
+  }
+
+  /* 지금 들고 있는 포지션(또는 미체결)의 종목.
+     지금 저장 중인 문서 → 거래엔진 → 직전 저장분 순으로 봅니다.
+     ⚠ 전량 청산 직후에는 앞의 둘이 비어 있고 "직전 저장분" 에만 남아 있습니다.
+        이번 P1 이 딱 그 경우입니다. */
+  function heldSymbol(doc) {
+    return fromDoc(doc, null) || fromDoc(liveDoc(), null) || fromDoc(storedDoc(), null);
+  }
+
+  /* 종목을 모르는 기록이 실제로 어느 종목인가 — 위에서부터 "처음 나오는 값".
+       1) 서버가 알려준 값                    (로그인 복원 P1)
+       2) 로컬에 저장된 포지션의 symbol       ← 2026-08-27 P1 로 추가
+       3) activeSymbol()                      (이번 세션에서 만들어진 기록만)
+       4) DEFAULT_SYMBOL(BTCUSDT)             (옛 기록. 그때는 그 종목뿐)
+
+     ── 2) 를 왜 넣었나 (2026-08-27 P1) ──────────────────────────────────
+     삼성전자 포지션을 들고 새로고침하면 활성 종목만 BTCUSDT 로 되돌아갑니다
+     (js/symbol-stream-switch.js:90-93 — 활성 종목은 저장하지 않습니다).
+     그래서 그 뒤에 청산하면 closedTrades[0] 이 3) 으로 내려가 BTCUSDT 로
+     찍혔습니다. 채팅 알림도 서버 trades 도 전부 비트코인으로 남았습니다
+     (실측 — 네 종목 모두 BTCUSDT). 포지션에는 진짜 종목이 남아 있으므로
+     그것을 먼저 봅니다.
+
+     ⚠ 옛 기록에 "지금 활성 종목" 이나 "지금 들고 있는 포지션" 을 찍으면
+        안 됩니다. 그래서 이번 세션 밖의 기록은 openTime 이 정확히 같은
+        포지션일 때만 2) 를 인정하고, 아니면 그대로 4) 로 내려갑니다. */
+  function resolve(map, key, createdMs, doc, openTime) {
+    var fromServer = recall(map, key);
+    if (fromServer) return fromServer;                                    /* 1) */
+
+    /* 2)-a 같은 포지션인지 openTime 으로 대조합니다(옛 기록에도 안전합니다). */
+    var matched = matchedSymbol(doc, openTime);
+    if (matched) return matched;
+
+    var sameSession = typeof createdMs === "number" && isFinite(createdMs) && createdMs >= PAGE_LOAD;
+    if (!sameSession) return DEFAULT_SYMBOL;                              /* 4) */
+
+    /* 2)-b 이번 세션에서 생긴 기록이면 "지금 들고 있는 포지션" 의 종목입니다.
+       청산 기록(closedTrades)에는 openTime 이 없어서 이 단계가 필요합니다. */
+    var held = heldSymbol(doc);
+    if (held) return held;                                                /* 2) */
+
+    return activeSymbol();                                                /* 3) */
   }
 
   /* ------------------------------------------------------------------
@@ -211,19 +289,26 @@ App.SymbolSyncBridge = (function () {
     return true;
   }
 
+  /* ⚠ resolve() 는 "찍어야 할 때만" 부릅니다. 인자 자리에서 미리 계산하면
+     이미 찍혀 있는 기록 300건에도 매번 저장소를 뒤지게 됩니다. */
   function stampTradingDoc(data) {
     if (!data || typeof data !== "object") return;
+    beginPass();
 
     var pos = data.position;
     if (pos && typeof pos === "object") {
-      stampOne(pos, resolve(posSym, pos.openTime, pos.openTime), "stampPosition");
+      if (!isSym(pos.symbol)) {
+        stampOne(pos, resolve(posSym, pos.openTime, pos.openTime, data, pos.openTime), "stampPosition");
+      }
       remember(posSym, pos.openTime, pos.symbol);
     }
 
     var po = data.pendingOrder;
     if (po && typeof po === "object") {
       var poTime = typeof po.createdTime === "number" ? po.createdTime : po.openTime;
-      stampOne(po, resolve(orderSym, po.id, poTime), "stampPendingOrder");
+      if (!isSym(po.symbol)) {
+        stampOne(po, resolve(orderSym, po.id, poTime, data, null), "stampPendingOrder");
+      }
       remember(orderSym, po.id, po.symbol);
     }
 
@@ -232,7 +317,9 @@ App.SymbolSyncBridge = (function () {
       for (var i = 0; i < trades.length; i++) {
         var t = trades[i];
         if (!t || typeof t !== "object") continue;
-        stampOne(t, resolve(tradeSym, t.closeTime, t.closeTime), "stampClosedTrades");
+        if (!isSym(t.symbol)) {
+          stampOne(t, resolve(tradeSym, t.closeTime, t.closeTime, data, null), "stampClosedTrades");
+        }
         remember(tradeSym, t.closeTime, t.symbol);
       }
     }
@@ -242,7 +329,9 @@ App.SymbolSyncBridge = (function () {
       for (var j = 0; j < orders.length; j++) {
         var o = orders[j];
         if (!o || typeof o !== "object") continue;
-        stampOne(o, resolve(orderSym, o.id, o.createdTime), "stampOrderHistory");
+        if (!isSym(o.symbol)) {
+          stampOne(o, resolve(orderSym, o.id, o.createdTime, data, null), "stampOrderHistory");
+        }
         remember(orderSym, o.id, o.symbol);
       }
     }

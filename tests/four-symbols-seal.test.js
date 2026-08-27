@@ -472,7 +472,7 @@ section("[6] 화면 배율 상한 검사가 살아 있다");
     /화면최대\s*<=\s*엔진최대/.test(spec) && /setLeverage\s*\(/.test(spec),
     "이 검사를 지우면 화면에서 150배를 고를 수 있게 돼도 아무도 안 잡습니다");
   ok("  package.json 에 symbol-spec.test.js 가 등록돼 있다",
-    read("package.json").indexOf("tests/symbol-spec.test.js") >= 0);
+    read("tests/_order.txt").indexOf("tests/symbol-spec.test.js") >= 0);
 
   /* 값도 가볍게 한 번 더 봅니다(엔진 상한은 소스의 상수를 읽습니다). */
   const engine = parseInt((read("js/trading.js").match(/MAX_LEVERAGE\s*=\s*(\d+)/) || [])[1], 10);
@@ -515,8 +515,8 @@ section("[7] 수정 금지 파일 12개");
  * ========================================================================= */
 section("[8] 테스트 등록");
 {
-  ok("package.json 의 test 목록에 이 파일이 있다",
-    read("package.json").indexOf("tests/four-symbols-seal.test.js") >= 0,
+  ok("npm test 목록(tests/_order.txt)에 이 파일이 있다",
+    read("tests/_order.txt").indexOf("tests/four-symbols-seal.test.js") >= 0,
     "목록에 없으면 아무도 안 돌립니다");
 }
 

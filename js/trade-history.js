@@ -30,6 +30,30 @@ App.TradeHistory = (function () {
 
   const MAX_ROWS = 100;
 
+  /* 종목 칸이 비어 있는 옛 기록이 실제로 어느 종목인가.
+     종목 전환이 열리기 전(2026-08-27 커밋 b5dcf7a 이전)에는 거래 가능한
+     종목이 BTCUSDT 하나뿐이었으므로, 비어 있으면 BTCUSDT 가 사실입니다.
+     ⚠ 여기서 "지금 활성 종목" 으로 떨어지면 안 됩니다 — 그게 이 버그입니다. */
+  const DEFAULT_SYMBOL = "BTCUSDT";
+
+  /* 이 줄(t.symbol)이 이 파일이 고친 전부입니다 — 2026-08-27 [P2]
+     ── 무엇이 틀렸나 ──────────────────────────────────────────────────
+     App.Utils.formatQty(n, symbol) 는 symbol 을 안 주면 App.Config 의
+     "지금 활성 종목" 으로 떨어집니다(js/utils.js:78-80).
+     그래서 삼성전자로 바꾼 뒤 거래내역을 열면 과거 비트코인 거래가
+     "0.050000 주" 로 보였습니다. 숫자도 화면도 멀쩡해서 회원은 고장인 줄
+     모르고 그대로 믿습니다.
+
+     거래내역은 "지금 무슨 종목을 보고 있는가" 가 아니라 "그 거래가 무슨
+     종목이었나" 를 써야 합니다. 서버 trades 표에 symbol 칸이 있습니다
+     (supabase/schema.sql:113 — text not null default 'BTCUSDT').
+
+     ⚠ 자릿수는 종목별로 나누지 않습니다. 대표 지시(2026-08-27)로 매수 단위는
+        네 종목 모두 비트코인과 같습니다. 바뀌는 것은 뒤에 붙는 이름뿐입니다. */
+  function rowSymbol(t) {
+    return t && typeof t.symbol === "string" && t.symbol ? t.symbol : DEFAULT_SYMBOL;
+  }
+
   let dom = {};
 
   function el(id) {
@@ -120,7 +144,7 @@ App.TradeHistory = (function () {
           '<td><span class="badge ' + t.side + '">' + (t.side === "long" ? "LONG" : "SHORT") + "</span></td>" +
           "<td>" + App.Utils.formatCurrencyPlain(t.entry_price) + "</td>" +
           "<td>" + App.Utils.formatCurrencyPlain(t.exit_price) + "</td>" +
-          "<td>" + App.Utils.formatQty(t.quantity) + "</td>" +
+          "<td>" + App.Utils.formatQty(t.quantity, rowSymbol(t)) + "</td>" +
           "<td>" + t.leverage + "x</td>" +
           "<td>" + App.Utils.formatCurrency(t.margin) + "</td>" +
           '<td class="' + pnlClass + '">' + App.Utils.formatCurrencySigned(손익) + "</td>" +
@@ -177,5 +201,5 @@ App.TradeHistory = (function () {
   }
 
   /* 검산·테스트용으로 열어둡니다. 화면 동작에는 쓰지 않습니다. */
-  return { init, renderRows, 실제손익, 진입수수료 };
+  return { init, renderRows, 실제손익, 진입수수료, rowSymbol, DEFAULT_SYMBOL };
 })();

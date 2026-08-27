@@ -152,8 +152,8 @@ section("[6] 경고 문구");
  * ========================================================================= */
 section("[7] 테스트 등록");
 {
-  const pkg = read("package.json");
-  ok("package.json 의 test 목록에 이 파일이 있다",
+  const pkg = read("tests/_order.txt"); /* 2026-08-27 — 실행 목록이 package.json 에서 tests/_order.txt 로 옮겨졌습니다 */
+  ok("npm test 목록(tests/_order.txt)에 이 파일이 있다",
     pkg.indexOf("tests/chat-dedupe-sql-safety.test.js") >= 0,
     "목록에 없으면 아무도 안 돌립니다");
 }

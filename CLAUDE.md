@@ -639,7 +639,7 @@ const 겹침 = 대상.getBoundingClientRect().right - (컨테이너오른쪽끝 
 `index.html` 이 `js/*.js` 를 `<script>` 로 직접 불러옵니다.
 모든 모듈은 `App.<이름>` 형태의 전역 객체이고, `main.js` 가 순서대로 `init()` 을 부릅니다.
 
-테스트: `npm test` (62개 파일 / 2,646개)
+테스트: `npm test` (97개 파일)
 
 ---
 

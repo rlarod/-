@@ -371,8 +371,8 @@ console.log("\n(9) 돌연변이 자체검증 (실제 파일은 건드리지 않�
  * ===================================================================== */
 console.log("\n(10) 테스트 등록");
 {
-  const pkg = read(path.join(REPO, "package.json"));
-  ok("package.json 의 test 목록에 들어 있다", /tests\/team-structure\.test\.js/.test(pkg));
+  const pkg = read(path.join(REPO, "tests", "_order.txt")); /* 2026-08-27 — 실행 목록이 package.json 에서 tests/_order.txt 로 옮겨졌습니다 */
+  ok("npm test 목록(tests/_order.txt)에 들어 있다", /tests\/team-structure\.test\.js/.test(pkg));
 }
 
 /* =====================================================================

@@ -168,6 +168,33 @@ App.SymbolStreamSwitch = (function () {
     }
   }
 
+  /* ⭐ (e) 포지션을 들고도 다른 종목을 "볼" 수 있는가 — 2026-08-27
+     한 줄짜리 스위치(js/multi-symbol-view.js)가 없으면 언제나 false 라
+     어제와 100% 같습니다.
+
+     그물이 진짜로 작동하는 것을 확인한 뒤에만 엽니다.
+       requiredSymbol() !== null   내 포지션 종목을 알고 있다
+       getNettedCount() === 1      시세 통로가 정확히 하나로 걸려 있다
+     포지션은 있는데 requiredSymbol() 이 아직 null 인 짧은 창이 실제로
+     있습니다(복원 직후 ~ 첫 trading:update). 그 창에서는 false 라
+     오늘과 똑같이 막힙니다 — 안전한 쪽입니다. */
+  function multiViewOn() {
+    return !!(
+      App.MultiSymbolView &&
+      typeof App.MultiSymbolView.isOn === "function" &&
+      App.MultiSymbolView.isOn()
+    );
+  }
+
+  function canViewOther() {
+    if (!multiViewOn()) return false;
+    try {
+      return !!App.MultiSymbolView.netIsWorking();
+    } catch (e) {
+      return false; /* 못 읽으면 안 여는 쪽으로 */
+    }
+  }
+
   function symbolName(sym) {
     if (App.SymbolRegistry && typeof App.SymbolRegistry.getBySymbol === "function") {
       var m = App.SymbolRegistry.getBySymbol(sym);
@@ -367,6 +394,26 @@ App.SymbolStreamSwitch = (function () {
   /* ------------------------------------------------------------------
    * 3-2) 제목 글자 — index.html 에 박힌 BTCUSDT
    * ------------------------------------------------------------------ */
+  /* 포지션 표 종목 칸에 무엇을 쓸 것인가.
+     포지션(또는 미체결)이 있으면 그 종목, 없으면 보고 있는 종목입니다. */
+  function positionCellSymbol(screenSymbol) {
+    if (App.SymbolGuard && typeof App.SymbolGuard.requiredSymbol === "function") {
+      try {
+        var need = App.SymbolGuard.requiredSymbol();
+        if (typeof need === "string" && need) return need;
+      } catch (e) {
+        /* 못 읽으면 화면 종목으로 — 오늘과 같습니다 */
+      }
+    }
+    return screenSymbol;
+  }
+
+  /* 포지션 종목이 바뀌거나 포지션이 사라지면 그 칸만 다시 씁니다.
+     (전환을 안 해도 값이 맞아야 하므로 방송에 붙여둡니다.) */
+  function refreshPositionCell() {
+    setText(".position-symbol-cell .position-symbol-name", positionCellSymbol(activeSymbol()));
+  }
+
   function applyLabels(sym) {
     var s = sym || activeSymbol();
 
@@ -381,9 +428,18 @@ App.SymbolStreamSwitch = (function () {
 
     /* index.html:568 포지션 표 종목 칸.
        그리는 쪽 js/ui.js 는 수정 금지라 DOM 을 밖에서 고쳐 씁니다.
-       포지션이 있으면 전환 자체가 막히므로(1번 관문), 이 값은 언제나
-       "지금 포지션의 종목" 과 같습니다. */
-    setText(".position-symbol-cell .position-symbol-name", s);
+
+       ⚠ 2026-08-27 정정 — 예전에는 여기에 "포지션이 있으면 전환 자체가
+         막히므로 이 값은 언제나 포지션의 종목과 같습니다" 라고 적혀
+         있었습니다. 포지션을 들고도 다른 차트를 볼 수 있게 연 순간
+         그 말이 거짓이 됐습니다(대표 지시).
+
+       포지션 표는 "지금 보고 있는 종목" 이 아니라 "내가 들고 있는 종목" 을
+       보여줘야 합니다. 화면 종목으로 덮으면 회원이 삼성전자 화면을 보는
+       동안 BTC 포지션이 삼성전자 포지션으로 보입니다 — 오류도 안 나고
+       화면도 멀쩡한 조용한 고장이라, 회원은 그걸 사실로 믿고 판단합니다.
+       포지션이 없을 때만 화면 종목을 씁니다(빈 표의 안내 값). */
+    setText(".position-symbol-cell .position-symbol-name", positionCellSymbol(s));
 
     /* 호가창 머리글의 수량 단위(BTC/주)는 js/ob-header-currency.js 담당 */
     if (App.ObHeaderCurrency && typeof App.ObHeaderCurrency.apply === "function") {
@@ -594,13 +650,27 @@ App.SymbolStreamSwitch = (function () {
   function switchTo(symbol) {
     if (typeof symbol !== "string" || !symbol) return false;
 
-    /* 0) 문 확인 — 여기서 끝나면 아래를 하나도 안 합니다 */
-    if (isLocked()) {
+    /* 0) 문 확인 — 여기서 끝나면 아래를 하나도 안 합니다.
+
+       ⭐ 2026-08-27 대표 지시로 "종목 보기" 는 엽니다.
+          "바이낸스에서 포지션 잡고 있다고 다른 차트 못 보는 거 아니잖아"
+          막을 대상이 "종목 보기" 가 아니라 "주문" 으로 바뀌었습니다.
+          차트·호가·최근체결·지표·선긋기는 전부 열립니다.
+          주문은 엔진이 구조적으로 한 종목만 들 수 있어서 그대로 막힙니다
+          (js/trading.js:116 · :119 — 열 수 있는 게 아니라 없는 기능입니다). */
+    if (isLocked() && !canViewOther()) {
       stats.blocked++;
-      var msg =
-        App.SymbolGuard && typeof App.SymbolGuard.message === "function"
-          ? App.SymbolGuard.message(symbolName(symbol))
-          : "지금은 종목을 바꿀 수 없습니다.";
+      /* 여기 오는 경우는 두 가지입니다.
+         · 기능이 꺼져 있음(js/multi-symbol-view.js 를 뺐음) → 어제 그대로 안내
+         · 그물이 아직 안 걸린 아주 짧은 창(복원 직후 ~ 첫 trading:update)
+           → 잠깐만 기다리면 됩니다. 옛 안내문("포지션을 정리하세요")은
+             이제 틀린 말이라 쓰지 않습니다. */
+      var 준비중 = multiViewOn();
+      var msg = 준비중
+        ? "잠시 후 다시 눌러주세요 — 포지션 보호 장치가 준비 중입니다."
+        : (App.SymbolGuard && typeof App.SymbolGuard.message === "function"
+            ? App.SymbolGuard.message(symbolName(symbol))
+            : "지금은 종목을 바꿀 수 없습니다.");
       console.warn("[symbol-stream-switch.js] " + msg);
       try {
         window.alert(msg);
@@ -648,18 +718,33 @@ App.SymbolStreamSwitch = (function () {
     var closed = closeFeedSockets();
 
     /* 5) interval:change — ⛔ 잠금을 한 번 더 확인한 뒤에만 쏩니다.
-          js/symbol-guard.js 는 이 신호를 안 막습니다(P1). */
-    if (isLocked()) {
-      stats.blocked++;
-      console.error(
-        "[symbol-stream-switch.js] interval:change 직전에 포지션이 생겼습니다 — 쏘지 않습니다."
-      );
-      return false;
-    }
+          js/symbol-guard.js 는 이 신호를 안 막습니다(P1).
+
+          ⚠⚠ 2026-08-27 — 여기는 위 0) 이 먼저 막아줘서 지금까지 한 번도
+             안 닿던 곳입니다. 종목 보기를 여는 순간 여기가 "첫 실행 지점"
+             이 됩니다. 그리고 바로 위 4) 에서 호가·체결 소켓을 이미
+             닫았습니다. 예전처럼 그냥 return false 하면
+             소켓은 닫혔는데 새로 안 붙습니다 — 호가·최근체결이 영영 빈
+             채로 남는 조용한 고장입니다.
+             그래서 빠져나갈 때도 반드시 다시 붙입니다(원래 종목으로 되돌린
+             뒤 interval:change 를 쏩니다). */
     var iv =
       App.Config && typeof App.Config.getActiveInterval === "function"
         ? App.Config.getActiveInterval()
         : "1m";
+
+    if (isLocked() && !canViewOther()) {
+      stats.blocked++;
+      console.error(
+        "[symbol-stream-switch.js] interval:change 직전에 보호 장치가 풀렸습니다 — " +
+          from + " 로 되돌리고 소켓을 다시 붙입니다(닫힌 채로 두지 않습니다)."
+      );
+      override = from === baseSymbol() ? null : from;
+      applyLabels(from);
+      App.Bus.emit("interval:change", { interval: iv });
+      return false;
+    }
+
     App.Bus.emit("interval:change", { interval: iv });
 
     /* 6) 새 값이 오는지 지켜봅니다 */
@@ -690,6 +775,9 @@ App.SymbolStreamSwitch = (function () {
     App.Bus.on("trade:tick", markTrade);
     App.Bus.on("orderbook:update", markBook);
     App.Bus.on("ticker:update", fixVolumeUnit);
+    /* 포지션 표 종목 칸은 전환과 무관하게 늘 포지션 종목이어야 합니다. */
+    App.Bus.on("trading:update", refreshPositionCell);
+    App.Bus.on("trading:persisted", refreshPositionCell);
     wired = true;
     return true;
   }

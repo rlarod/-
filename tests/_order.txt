@@ -1,0 +1,116 @@
+# 테스트 실행 순서 — npm test 가 이 목록대로 돌립니다
+#
+# 2026-08-27 — 그전에는 package.json 의 test 가
+#   node a.test.js && node b.test.js && ... (93개)
+# 였습니다. && 는 앞이 실패하면 뒤를 아예 실행하지 않아서,
+# 2번째인 tests/top-panel.test.js 가 1건 실패하자 **뒤의 91개가 한 번도
+# 실행되지 않았습니다.** (같은 사고가 전에도 있었습니다 — 수정 금지 파일 12개가
+#  줄바꿈 때문에 전부 실패했을 때 나머지 42개가 실행조차 안 됐습니다)
+#
+# 그래서 목록을 여기로 옮기고 tests/_run-all.js 가 전부 돌린 뒤 끝에 모아 보여줍니다.
+#
+# 이 목록은 옛 사슬에서 스크립트로 그대로 뽑았습니다. 손으로 다시 적지 않았습니다.
+# 순서에 이유가 있을 수 있으니 임의로 바꾸지 않습니다.
+#
+# 새 테스트를 만들면 여기에 한 줄 추가하세요.
+# 빠뜨리면 tests/test-registry.test.js 가 잡아냅니다.
+
+tests/order-panel.test.js
+tests/top-panel.test.js
+tests/comment-fix.test.js
+tests/recharge-rules.test.js
+tests/recharge-reset.test.js
+tests/order-fee-preview.test.js
+tests/order-unit-mismatch.test.js
+tests/tl-brand.test.js
+tests/tl-hotdeal.test.js
+tests/chart-font.test.js
+tests/tl-market.test.js
+tests/rank-table.test.js
+tests/rank-badge.test.js
+tests/leverage-guest-tl.test.js
+tests/realized-pnl.test.js
+tests/chat-safety.test.js
+tests/leaderboard.test.js
+tests/account-isolation.test.js
+tests/season-reset.test.js
+tests/price-guard.test.js
+tests/currency-refresh.test.js
+tests/funding-record.test.js
+tests/history.test.js
+tests/tpsl-guard.test.js
+tests/board-detail.test.js
+tests/board-naming.test.js
+tests/multi-tab.test.js
+tests/performance.test.js
+tests/sync-columns.test.js
+tests/sync-guard.test.js
+tests/funding-restore.test.js
+tests/tl-balance-sync.test.js
+tests/nickname-rules.test.js
+tests/private-info.test.js
+tests/mypage.test.js
+tests/social-login.test.js
+tests/guest-state-guard.test.js
+tests/trade-events-chat.test.js
+tests/admin-chat-tools.test.js
+tests/dark-theme.test.js
+tests/trades-dedupe.test.js
+tests/trading-cycle.test.js
+tests/market-unbuilt.test.js
+tests/trade-history-fee.test.js
+tests/leaderboard-floor.test.js
+tests/stats-bar-priority.test.js
+tests/stream-signals.test.js
+tests/placeholder-values.test.js
+tests/memory-counters.test.js
+tests/css-duplicate-rules.test.js
+tests/guest-leaderboard.test.js
+tests/fee-rate-digits.test.js
+tests/ob-header-currency.test.js
+tests/three-addons.test.js
+tests/table-scroll-hint.test.js
+tests/stats-bar-wrap.test.js
+tests/member-delete-sql.test.js
+tests/sql-mass-delete-guard.test.js
+tests/sql-function-duplicates.test.js
+tests/tl-monthly.test.js
+tests/tl-realtime.test.js
+tests/tl-realtime-run.test.js
+tests/tl-hotdeal-seal.test.js
+tests/tl-balance-fix-seal.test.js
+tests/rank-formula-seal.test.js
+tests/no-emoji.test.js
+tests/dev-server.test.js
+tests/team-structure.test.js
+tests/docs-staleness.test.js
+tests/notices.test.js
+tests/chart-indicators.test.js
+tests/chart-drawings.test.js
+tests/sql-on-conflict-guard.test.js
+tests/guest-balance-leak.test.js
+tests/tl-grant-formula-seal.test.js
+tests/mypage-value-fit.test.js
+tests/chart-toolbar-seal.test.js
+tests/ghost-position.test.js
+tests/ghost-position-seal.test.js
+tests/chat-event-dedupe.test.js
+tests/chart-oscillators.test.js
+tests/media-cascade-order.test.js
+tests/narrow-360-fit-seal.test.js
+tests/order-fx-row.test.js
+tests/symbol-switch-unbuilt.test.js
+tests/symbol-spec.test.js
+tests/symbol-guard.test.js
+tests/symbol-sync-bridge.test.js
+tests/storage-save-wrap-order.test.js
+tests/chat-dedupe-sql-safety.test.js
+tests/symbol-stream-switch.test.js
+tests/four-symbols-seal.test.js
+tests/symbol-after-refresh.test.js
+tests/trade-history-symbol-unit.test.js
+tests/test-registry.test.js
+tests/order-symbol-row-ind-bar-seal.test.js
+tests/multi-symbol-view.test.js
+tests/stale-price-guard.test.js
+tests/chart-position-symbol.test.js

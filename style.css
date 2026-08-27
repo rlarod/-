@@ -581,6 +581,12 @@ input[type=range]::-webkit-slider-thumb{
 .err-msg{font-size:20px;color:var(--red);margin-top:8px;min-height:14px;}
 
 .account-divider{height:1px;background:var(--border-soft);margin:10px 0;}
+/* 주문창 맨 끝에 오는 구분선은 나눌 것이 없습니다 (2026-08-27)
+   .amitalk-order 안에서 이 요소는 계산 높이가 0px 로 나옵니다(선이 안 그려짐).
+   그런데 위아래 여백 10px 씩은 남아서 주문창 제일 밑에 20px 짜리 빈 칸이
+   생겨 있었습니다. 마크업은 그대로 두고 여백만 걷습니다.
+   되돌리려면 이 규칙 한 줄을 지우면 됩니다. */
+.amitalk-order > .account-divider:last-child{margin:0;}
 
 /* ---------- 현재 포지션 — 바이낸스 실제 포지션 표 참고, 컬럼 순서/구성 그대로 재현 ---------- */
 .position-empty{font-size:20.5px;color:var(--text-faint);padding:14px 0;text-align:center;}
@@ -874,7 +880,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-weight:700;color:#fff;font-size:34px;
 }
-.auth-title{font-size:31px;font-weight:700;color:var(--text);margin-bottom:6px;}
+/* 31px -> 24px (2026-08-27)
+   문구가 "BTCUSDT 모의투자"(9자) 에서 "모의투자 트레이딩 리그"(12자) 로 길어지면서
+   390 에서 두 줄로 접혀 "…트레이딩 리 / 그" 로 끊겼습니다(실측 제목 292px = 글자 들어갈 폭 292px).
+   카드를 넓히는 대신 글자를 줄였습니다 — 이 카드의 31/26/20.5px 는 원래도 과하게 컸습니다.
+   24px 이면 360(글자 들어갈 폭 262px)에서도 한 줄입니다.
+   되돌리려면 31px 로 바꾸면 됩니다(대신 문구가 두 줄이 됩니다). */
+.auth-title{font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px;}
 .auth-sub{font-size:20.5px;color:var(--text-dim);margin-bottom:22px;}
 .auth-input{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;
@@ -1256,6 +1268,10 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  *    색을 빼고 중립 회색으로 두어 실제 값이 생겼을 때만 눈에 들어오게 합니다.
  * ========================================================================= */
 .amitalk-order{
+  /* position:relative — 주문 잠금 덮개(.tl-order-lock)의 기준점입니다.
+     덮개는 position:absolute; inset:0 이라 이 값이 없으면 페이지 전체를 덮습니다.
+     자세한 내용은 파일 끝 ".tl-order-lock" 블록과 js/order-lock-notice.js 참고. */
+  position:relative;
   padding:12px;font-size:21px;
   font-family:var(--sans);
   --ami-accent:#E07B0B;          /* 레버리지/Last 강조(개미톡 주황을 살짝 차분하게) */
@@ -1453,7 +1469,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    덕분에 주문창이 약 160px 짧아져 거래 행(=차트) 높이도 함께 줄일 수 있습니다. */
 /* 하루 1회 무료 충전 버튼 자리 — 이전에 "재충전 무료/아이템(준비중)"으로
    숨겨뒀던 영역을 실제 기능이 생기면서 다시 노출합니다. */
-.amitalk-order .ami-promo{display:flex;flex-direction:column;gap:5px;align-items:stretch;background:none;border:none;padding:0;margin:10px 0 0;}
+/* background/border 에 !important 가 붙은 이유 — 아래 다크 규칙
+   (html[data-theme="dark"] ... .ami-promo{background:var(--surface2)}) 이
+   선택자가 더 좁아서 그냥 두면 이깁니다. 이 칸은 버튼을 담는 자리라
+   배경이 없어야 합니다. 예전에는 이 !important 한 줄이 2326 줄 부근에
+   따로 떨어져 있었는데, 같은 선택자가 두 벌이 되어 여기로 합쳤습니다. */
+.amitalk-order .ami-promo{display:flex;flex-direction:column;gap:5px;align-items:stretch;background:none !important;border:none !important;padding:0;margin:10px 0 0;}
 .daily-recharge-btn{
   width:100%;padding:11px 10px;border-radius:3px;cursor:pointer;
   background:var(--gold);color:#fff;border:1px solid var(--gold);
@@ -1467,36 +1488,101 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .daily-recharge-note{
   font-size:13.5px;color:var(--text-faint);text-align:center;line-height:1.4;
 }
-.amitalk-order .ami-symbol-row:not(.active){display:none;}
-.amitalk-order .ami-promo{
-  display:flex;align-items:baseline;justify-content:center;gap:6px;
-  margin-top:16px;padding:13px 10px;border-radius:3px;cursor:pointer;
-  background:#FBEDF1;color:#B4586C;font-size:18.5px;font-weight:500;letter-spacing:-0.01em;
-}
+/* 2026-08-27 — 주문창 종목 목록이 4개 중 1개만 보이던 것.
+   원래 규칙: .amitalk-order .ami-symbol-row:not(.active){display:none;}
+   2026-08-17(b6bcf9a) 에 넣은 것이고, 그때 이유는
+   "재충전/아이템·이더리움은 미구현(준비중) 항목이라 화면에서만 숨긴다" 였습니다.
+   그때는 활성 아닌 줄이 이더리움 하나뿐이었고 그게 준비중이었습니다.
+   지금은 대표 결정(2026-08-27)으로 비트코인·나스닥·삼성전자·SK하이닉스
+   네 종목이 전부 열려 있어(넷 다 배지가 "거래중") 전제가 사실이 아닙니다.
+   상단 탭은 4개인데 주문창만 1개라 두 곳이 서로 다른 목록을 보여주고 있었고,
+   js/order-panel-amitalk.js 의 준비중 안내 클릭 처리도 닿을 수 없는 코드였습니다.
+   그래서 숨김을 걷습니다. 되돌리려면 위 한 줄을 여기에 그대로 다시 넣으면 됩니다.
+
+   ⚠️ 다만 주문창은 여유가 0 이었습니다(scrollHeight 1149 / clientHeight 1148).
+   줄을 3개 더 켜면 그만큼 주문창에 스크롤이 생기므로, 줄 자체를 눌러
+   차지하는 높이를 줄입니다. 글자 20px 는 보조 목록치고 과하게 컸습니다
+   (본문 기준 13px). 배지도 같이 줄여 오른쪽 여백을 되찾습니다. */
+/* [삭제됨 2026-08-27] 옛 "재충전 무료 · 준비중" 알약 규칙이 여기 있었습니다.
+   .amitalk-order .ami-promo{display:flex;align-items:baseline;justify-content:center;
+     gap:6px;margin-top:16px;padding:13px 10px;border-radius:3px;cursor:pointer;
+     background:#FBEDF1;color:#B4586C;font-size:18.5px;font-weight:500;letter-spacing:-0.01em;}
+   ── 왜 죽은 규칙인가 (선언 하나씩 확인했습니다) ──
+     background:#FBEDF1  → 위 .ami-promo 의 background:none !important 가 이깁니다
+                           (예전에는 그 !important 가 2279 줄 부근에 따로 있었는데,
+                            같은 선택자가 두 벌이 되어 위로 합쳤습니다)
+     color:#B4586C       → 2622 줄 다크 규칙의 color:var(--text) 가 이깁니다
+     border-radius/cursor→ 이제 알약이 아니라 "하루 1회 충전" 버튼을 담는 칸입니다.
+                           클릭 핸들러도 버튼이 없을 때만 붙습니다
+                           (js/order-panel-amitalk.js initPromo)
+     font-size:18.5px    → 안의 버튼(17px)·안내문(13.5px)이 각자 정합니다
+     align-items:baseline / justify-content:center / gap:6px
+                         → 바로 위 규칙의 flex-direction:column + align-items:stretch
+                           + gap:5px 와 서로 어긋나던 값입니다
+     padding:13px 10px / margin-top:16px
+                         → 유일하게 살아 있던 효과. 알약이 사라졌는데 알약 여백만
+                           남아 주문창 밑에 32px 빈 칸을 만들고 있었습니다.
+   그래서 규칙째 지웁니다. 살아 있는 정의는 위 .ami-promo 한 벌뿐입니다.
+   되돌리려면 위 주석 안의 규칙을 그대로 다시 붙이면 됩니다. */
 /* 배지 테두리/배경을 걷어내고 같은 줄에 자연스럽게 읽히는 보조 텍스트로 */
 .amitalk-order .ami-promo-badge{
   background:none;border:none;padding:0;color:#C89AA6;font-size:15.5px;font-weight:400;
 }
 .amitalk-order .ami-promo-badge::before{content:"· ";}
-.amitalk-order .ami-symbols{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+/* margin-top 8->0, gap 6->2 : 아래 .ami-symbol-row 주석 참조(4줄을 담기 위해) */
+.amitalk-order .ami-symbols{margin-top:0;display:flex;flex-direction:column;gap:2px;}
+/* 2026-08-27 — 4줄을 주문창 안에 담기 위해 줄을 눌렀습니다.
+   주문창은 원래 여유가 0 이었습니다(scrollHeight 1149 / clientHeight 1148).
+   1440 실측 — 옛 한 줄 56px, 4줄이면 56x4 + gap 6x3 = 242px 이라
+   숨김만 걷으면 186px 이 넘칩니다.
+   글자 20px 는 보조 목록치고 과했습니다(본문 기준 13px).
+   글자 20->14px, 위아래 여백 13->3px, gap 6->2px 로 줄여 4줄을 담았습니다.
+   14px 밑으로는 내리지 않습니다 — tests/order-panel.test.js 가 주문창 본문
+   글자의 하한을 14px 로 못박아 두었습니다(장식 요소인 배지만 예외).
+   그래서 모자란 높이는 글자가 아니라 여백에서 가져왔습니다.
+   색·테두리·모서리는 그대로입니다.
+   되돌리려면 padding:13px 46px / font-size:20px / justify-content:center 로,
+   .ami-symbols 는 margin-top:8px / gap:6px 로 되돌리면 됩니다.
+   justify-content 와 좌우 여백은 예전에 아래쪽에 따로 한 벌이 더 있었는데
+   같은 속성을 두 곳에서 다투고 있어 이 한 곳으로 합쳤습니다. */
 .amitalk-order .ami-symbol-row{
-  position:relative;display:flex;align-items:center;justify-content:center;
-  padding:13px 46px;border:1px solid var(--ami-line);border-radius:3px;
-  background:#fff;font-size:20px;font-weight:500;color:var(--ami-value-sub);
+  position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:3px 14px;border:1px solid var(--ami-line);border-radius:3px;
+  background:#fff;font-size:14px;line-height:1.25;font-weight:500;color:var(--ami-value-sub);
   cursor:pointer;text-align:center;letter-spacing:-0.01em;
 }
 .amitalk-order .ami-symbol-row.active{border-color:var(--gold);color:var(--gold);font-weight:600;cursor:default;}
+/* position:absolute / right / top / transform 은 아래쪽에서 position:static 으로
+   덮여 이미 죽어 있던 선언이라 걷어냈습니다(겹침 수정 때 나란히 놓기로 바뀜).
+   flex:0 0 auto 도 그때 아래에 따로 있던 것을 여기로 합쳤습니다.
+   글자 14.5->11px, 여백 3px 7px->2px 5px : 줄을 누르면서 같이 줄였습니다. */
 .amitalk-order .ami-symbol-badge{
-  position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  font-size:14.5px;font-weight:500;color:var(--ami-label);background:#F2F4F7;
-  border-radius:3px;padding:3px 7px;letter-spacing:0;
+  flex:0 0 auto;
+  /* position:static 은 지금은 없어도 같은 결과지만 일부러 남겨 둡니다.
+     예전에 이 배지가 position:absolute 라 종목 이름과 22x26px 겹쳤습니다.
+     tests/dark-theme.test.js 가 "배지를 겹쳐 놓지 않고 나란히 둔다" 로
+     이 한 줄을 못박아 두었습니다. 누가 다시 absolute 를 넣으면 그 자리에서
+     터지라고 놔두는 표식입니다. */
+  position:static;
+  font-size:11px;font-weight:500;color:var(--ami-label);background:#F2F4F7;
+  border-radius:3px;padding:2px 5px;letter-spacing:0;
 }
-.amitalk-order .ami-symbol-badge.on{color:#fff;background:var(--gold);}
+/* "거래중" 배지 — 골드에서 회색조로 (2026-08-27)
+   줄을 4개 다 켜면서 골드 배지가 1개에서 4개로 늘었습니다. 네 줄이 전부
+   "거래중" 이라 배지가 서로를 구분해 주지 못하는데 색만 네 군데 생겼습니다.
+   골드는 "지금 보고 있는 종목"(활성 줄의 테두리·글자) 한 곳에만 남깁니다.
+   정상 상태인 "거래중" 은 조용한 회색, 예외 상태인 "준비중" 은 기존 배지
+   모양(회색 알약) 그대로라 오히려 눈에 걸립니다.
+   되돌리려면 아래를 {color:#fff;background:var(--gold);} 로 되돌리고,
+   3746 줄 부근에 있던 다크 전용 규칙(background:var(--gold);color:#191600)을
+   다시 넣으면 됩니다. */
+.amitalk-order .ami-symbol-badge.on{background:none;color:var(--text-faint);padding:2px 0;font-weight:400;}
 
 /* ---- 좁은 화면 ---- */
 @media (max-width:900px){
   .amitalk-order .interval-btn[data-order-type]{padding:8px 14px;}
-  .amitalk-order .ami-symbol-row{padding:13px 44px;}
+  /* 폰에서는 손가락으로 눌러야 해서 위아래를 데스크톱(4px)보다 조금 넉넉히 둡니다 */
+  .amitalk-order .ami-symbol-row{padding:6px 14px;}
 }
 @media (max-width:400px){
   .amitalk-order .order-preview-row b{font-size:18.5px;}
@@ -2037,9 +2123,24 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    답답해졌습니다. 폼이 편하게 들어가는 300px 을 최소로 잡습니다.
    세 박스가 같은 변수를 쓰므로 윗줄 정렬은 그대로 유지됩니다. */
 :root{ --top-box-h:clamp(340px, 11.27vw, 355px); }
+/* 2026-08-27 — 1800px 이상에서 첫 화면에 차트가 거의 안 보이던 문제.
+   왼쪽 공지/게시판 박스는 실제 내용이 206px 인데 340px 로 고정돼 있어
+   134px 이 순수한 빈 칸이었습니다. 그만큼 차트가 아래로 밀려서
+   1920x1080 에서 차트가 338px 밖에 안 보였습니다.
+   왼쪽 두 박스만 내용 높이를 따르게 하고, 오른쪽 "내 정보" 는 그대로 둡니다.
+   오른쪽을 같이 줄이지 않는 이유 — 로그아웃 상태 로그인 폼의 자연 높이가
+   293px 이라 340 밑으로 내리면 박스 안에 스크롤이 생깁니다(2026-08-19 에
+   245px 로 내렸다가 되돌린 적이 있습니다).
+   대신 왼쪽·오른쪽 카드 아랫변이 어긋납니다(왼쪽 428 / 오른쪽 562).
+   차트 134px 을 얻는 대가로 받아들인 것입니다.
+   max-height 를 남겨 둔 이유 — 공지는 서버에서 최대 20줄까지 내려올 수 있어
+   height:auto 만 두면 박스가 계속 길어져 차트를 다시 밀어냅니다.
+   340px 을 넘지 않게 막아 두면 넘치는 부분은 아래 overflow-y:auto 로 처리됩니다.
+   되돌리려면 아래 두 줄을 지우고
+   `.notice-board-wrap > .notice-box,` 를 height 규칙 선택자에 다시 넣으면 됩니다. */
 @media (min-width:1800px){
-  .notice-board-wrap > .notice-box,
   .page-right > .user-panel-box{height:var(--top-box-h);}
+  .notice-board-wrap > .notice-box{height:auto;max-height:var(--top-box-h);}
   /* 내용이 더 길어져도 박스가 늘어나지 않고 안에서만 스크롤되게 */
   .notice-board-wrap > .notice-box > .notice-board-list{overflow-y:auto;min-height:0;}
   .page-right > .user-panel-box > .user-panel-body{overflow-y:auto;min-height:0;}
@@ -2246,8 +2347,12 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .page-right .up-state-loss   .up-value{color:var(--red) !important;}
 .page-right .up-state-flat   .up-value{color:var(--text) !important;}
 
-/* 무료 충전 버튼 자리 — 예전 프로모션 배너의 분홍 배경/테두리를 걷어냅니다. */
-.amitalk-order .ami-promo{background:none !important;border:none !important;}
+/* [옮김 2026-08-27] "무료 충전 버튼 자리 — 예전 프로모션 배너의 분홍 배경/테두리를
+   걷어냅니다" 규칙이 여기 있었습니다.
+   .amitalk-order .ami-promo{background:none !important;border:none !important;}
+   같은 선택자가 두 벌이라 다음 사람이 어느 쪽이 진짜인지 찾아야 했습니다.
+   지운 게 아니라 원래 정의가 있는 곳(.amitalk-order .ami-promo, 1462 줄 부근)으로
+   !important 째 옮겼습니다. 동작은 그대로입니다. */
 
 /* =========================================================================
  * 포지션 표 — 레퍼런스 스타일
@@ -3709,12 +3814,17 @@ html[data-theme="dark"] .board-page-btn.active{
   text-decoration:none;
 }
 
-/* 심볼 배지 — 금색 배경에 흰 글자라 읽기 어려웠습니다(실측).
-   밝은 배경에는 어두운 글자를 씁니다. 카카오 버튼과 같은 원칙입니다. */
-html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
-  background:var(--gold);
-  color:#191600;
-}
+/* [삭제됨 2026-08-27] 다크 전용 골드 배지 규칙이 여기 있었습니다.
+   html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
+     background:var(--gold); color:#191600; }
+   ── 왜 죽은 규칙인가 ──
+   "금색 배경에 흰 글자라 읽기 어렵다" 를 고치려고 글자를 어둡게 한 규칙입니다.
+   그런데 이제 .ami-symbol-badge.on 에 금색 배경 자체가 없습니다
+   (배지를 회색조로 바꿨습니다 — 위 .ami-symbol-badge.on 주석 참조).
+   금색 배경이 없으니 "밝은 배경에는 어두운 글자" 를 적용할 대상이 없고,
+   남겨두면 회색조 배지를 다시 금색으로 되돌려 놓습니다.
+   되돌리려면 위 .ami-symbol-badge.on 을 골드로 되돌린 뒤 이 규칙도 같이
+   되살리면 됩니다. 둘은 한 짝입니다. */
 
 /* ===== 글자가 칸 밖으로 삐져나오던 자리 =====
    실측으로 두 군데를 찾았습니다. 둘 다 글자가 두 줄로 접히면서 정해진
@@ -3732,20 +3842,12 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 /* 2) 종목 줄 — "비트코인 (BTCUSDT)" 가 두 줄이 되면서
       오른쪽 '거래중' 배지와 22x26px 겹쳤습니다(실측).
       배지 자리를 먼저 확보하고 이름이 그 안에서만 놓이게 합니다. */
-.amitalk-order .ami-symbol-row{
-  justify-content:space-between;
-  gap:8px;
-  padding-left:14px;padding-right:14px;
-}
 .amitalk-order .ami-symbol-row > span:first-child{
   min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   text-align:left;
 }
-.amitalk-order .ami-symbol-badge{
-  flex:0 0 auto;
-  position:static;   /* 겹침의 원인이던 겹쳐 놓기를 풀고 나란히 놓습니다 */
-}
+
 
 /* =========================================================================
  * 시세 바 — 안전 항목 우선 배치 + 스크롤 힌트 (js/stats-bar-priority.js)
@@ -4498,6 +4600,114 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 }
 
 /* =========================================================================
+ * 주문 잠금 안내 (.tl-order-lock) — 2026-08-27 대표 지시
+ * =========================================================================
+ * 대표: "바이낸스에서 포지션 잡고 있다고 다른 차트 못 보는 거 아니잖아"
+ *
+ * 막는 대상이 "종목 보기" 에서 "주문" 으로 바뀌었습니다.
+ * 차트·호가·최근 체결·지표·선긋기·시간봉은 그대로 열려 있고,
+ * 주문 패널만 덮개로 가립니다.
+ *
+ * 짝이 되는 코드: js/order-lock-notice.js (덮개 한 장을 append 하고
+ * 보일지 말지만 정합니다. 거래 로직·잠금 판정은 건드리지 않습니다.)
+ *
+ * ── 왜 팝업이 아니라 그 자리인가 ────────────────────────────────
+ * 엔진에 포지션 자리가 하나뿐이라 두 번째 종목 주문은 구조적으로 불가능합니다.
+ * "아직 안 연 기능" 이 아니라 "없는 기능" 이라, 누를 때마다 alert 을 띄우는 것보다
+ * 그 자리에 상시 안내를 두는 편이 맞습니다.
+ * 바이낸스도 로그아웃 상태에서 주문 패널 자리에 팝업이 아니라
+ * "Log In or Register Now to trade" 를 그 자리에 둡니다
+ * (조사팀 캡처 shots/bh-binance-1440.png).
+ *
+ * ── 자리를 차지하지 않습니다 ────────────────────────────────────
+ * position:absolute 라 주문창 높이를 1px 도 늘리지 않습니다.
+ * 방금 종목 줄 4개를 넣느라 주문창 여유가 0 이었기 때문에(1440 실측
+ * scrollHeight 1149 / clientHeight 1148) 흐름에 끼워 넣으면 바로 넘칩니다.
+ *
+ * ── 색 ──────────────────────────────────────────────────────────
+ * 확정 팔레트만 씁니다. 안내에 빨강을 쓰지 않습니다(빨강은 손익 전용).
+ * 골드는 "돌아가기" 버튼 하나뿐이고, 그 배경 위 글자는 어두운 색입니다.
+ * 덮개가 뒤의 매수(초록)·매도(빨강) 버튼을 흐리게 만들기 때문에
+ * 잠긴 동안에는 화면의 색 있는 요소가 오히려 줄어듭니다.
+ *
+ * ── 되돌리는 법 ────────────────────────────────────────────────
+ * index.html 의 <script src="js/order-lock-notice.js"> 한 줄을 지우면
+ * 덮개가 만들어지지 않습니다. 이 블록과 .amitalk-order 의 position:relative
+ * 까지 지우면 흔적이 남지 않습니다.
+ * ========================================================================= */
+.tl-order-lock{
+  position:absolute;inset:0;z-index:6;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:12px;
+  /* --bg #0A0F1C 를 그대로 쓴 반투명 막. 뒤 내용이 무엇인지는 보이되
+     읽어서 판단할 수는 없게 — "지금 여기는 못 쓴다" 가 한눈에 읽혀야 합니다. */
+  background:rgba(10,15,28,0.82);
+}
+.tl-order-lock[hidden]{display:none;}
+
+/* 덮개가 떠 있는 동안 주문창 내용은 흐리고 눌리지 않게.
+   지우지 않고 흐리게만 둡니다 — 무엇이 가려진 것인지 보여야 하기 때문입니다. */
+.amitalk-order[data-tl-order-locked="1"] > *:not(.tl-order-lock){
+  opacity:.3;
+  pointer-events:none;
+}
+
+.tl-order-lock-card{
+  width:100%;max-width:280px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  /* 그림자 아님 — 카드 윗변에 흰색 3% 얇은 선 */
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+  padding:14px 14px 12px;
+  text-align:center;
+}
+.tl-order-lock-card p{margin:0;}
+
+/* 지금 보고 있는 종목 — 맥락이라 작고 조용하게 */
+.tl-order-lock-now{
+  font-size:12px;line-height:1.4;color:var(--text-faint);
+}
+/* 핵심 한 줄 — 이 카드에서 제일 먼저 읽혀야 하는 문장 */
+.tl-order-lock-main{
+  margin-top:4px !important;
+  font-size:15px;line-height:1.4;font-weight:600;color:var(--text);
+}
+/* 이유 — "보유 중인 포지션이 있습니다" 등. js/symbol-guard.js 가 준 문장 그대로 */
+.tl-order-lock-why{
+  margin-top:4px !important;
+  font-size:12px;line-height:1.4;color:var(--text-faint);
+}
+.tl-order-lock-btn{
+  width:100%;margin-top:12px;
+  padding:9px 10px;
+  border:1px solid var(--gold);border-radius:4px;
+  background:var(--gold);
+  /* 밝은 배경에는 어두운 글자 — 카카오 버튼과 같은 원칙 */
+  color:#191600;
+  font-family:var(--sans);font-size:14px;font-weight:700;
+  cursor:pointer;transition:.12s;
+}
+.tl-order-lock-btn:hover{filter:brightness(1.08);}
+/* 무엇이 아직 열려 있는지 — 겁먹지 않게 마지막에 한 줄 */
+.tl-order-lock-ok{
+  margin-top:10px !important;
+  font-size:11px;line-height:1.4;color:var(--text-faint);
+}
+
+
+/* 폰 — 주문 잠금 덮개. 시트 안에서도 같은 자리에 뜹니다.
+   ⚠ 이 블록은 style.css 의 "마지막" @media (max-width:700px) 가 되면 안 됩니다.
+      tests/media-cascade-order.test.js 가 맨 뒤 700px 블록이 .position-expand-btn
+      (폰에서 포지션 18칸을 펴는 더보기 버튼)을 담고 있는지 검사합니다.
+      그래서 그 블록보다 앞에 둡니다. 서로 겹치는 속성이 없어 순서는 무관합니다. */
+@media (max-width:700px){
+  .tl-order-lock{padding:10px;}
+  .tl-order-lock-card{max-width:none;padding:12px 12px 10px;}
+  .tl-order-lock-main{font-size:14px;}
+}
+
+/* =========================================================================
  * 폰에서 포지션 표 "더보기" 버튼이 아예 안 보이던 것 (2026-08-26)
  * =========================================================================
  * 실측(360 / 375 / 390, 주문 시트를 연 상태):
@@ -4630,4 +4840,38 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
 .position-card .position-toolbar{
   position:absolute;right:0;bottom:100%;margin-bottom:-2px;
   padding:0;z-index:3;
+}
+
+/* =========================================================================
+ * 지표 칩(.tl-ind-bar) 이 폰에서 가격축을 덮던 자리 — 2026-08-27
+ * =========================================================================
+ * 칩 막대는 js/chart-indicators.js 가 런타임에 <style id="chart-indicators-style">
+ * 로 넣습니다. 거기서 `position:absolute; top:6px; left:8px` 만 주고
+ * 오른쪽 끝을 안 막아 놨습니다. 그래서 막대 폭이 내용만큼(max-content) 늘어나
+ * 오른쪽 가격축 위로 올라탔습니다.
+ *
+ * 실측(겹침 = 칩최우측 - 가격축왼쪽, 0 이하여야 안 가려진 것)
+ *    360  가격축 273.5~344.0(70.5px)   칩 끝 325.8   겹침 +52.3
+ *    375  가격축 283.5~358.0(74.5px)   칩 끝 325.8   겹침 +42.3
+ *    390  가격축 299.5~374.0(74.5px)   칩 끝 325.8   겹침 +26.3
+ *    768  가격축 621.5(130.5px)        칩 끝 393.8   겹침 -227.7  (원래 문제 없음)
+ *   1440  가격축 667.5(130.5px)        칩 끝 393.8   겹침 -273.7  (원래 문제 없음)
+ * 덮인 건 "거래량" 칩이고, 그 밑에 가격 눈금 글자가 깔려 있었습니다.
+ *
+ * 고치는 방법 — 막대에 오른쪽 끝을 줘서 가격축 앞에서 멈추게 합니다.
+ * 이미 flex-wrap:wrap 이라 폭이 좁아지면 알아서 두 줄로 접힙니다.
+ * 칩을 지우거나 감추지 않습니다. 줄만 접힙니다.
+ * 가격축 폭이 폰 74.5px / 태블릿 이상 130.5px 으로 달라서 두 구간으로 나눕니다.
+ *
+ * js/chart-indicators.js 를 고치지 않는 이유 — 그 파일이 넣는 <style> 은
+ * style.css 보다 뒤에 붙어서 같은 순위면 그쪽이 이깁니다. 그래서 선택자를
+ * 한 단계 더 좁게(.chart-panel .chart-wrap .tl-ind-bar) 써서 덮습니다.
+ * DOM·칩 개수·클릭 동작은 그대로입니다.
+ *
+ * ── 되돌리는 법 ──────────────────────────────────────────────────
+ * 이 블록 전체를 지우면 원래대로(오른쪽 끝 없음) 돌아갑니다.
+ * ========================================================================= */
+.chart-panel .chart-wrap .tl-ind-bar{right:138px;}
+@media (max-width:900px){
+  .chart-panel .chart-wrap .tl-ind-bar{right:82px;}
 }

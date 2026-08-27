@@ -574,8 +574,8 @@ console.log("\n⑫ 안전");
  * ===================================================================== */
 console.log("\n⑬ 테스트 등록");
 {
-  const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
-  ok("package.json 의 test 목록에 tl-realtime 이 들어 있다", /tests\/tl-realtime\.test\.js/.test(pkg));
+  const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
+  ok("npm test 목록(tests/_order.txt)에 tl-realtime 이 들어 있다", /tests\/tl-realtime\.test\.js/.test(pkg));
   ok("옛 파일 봉인 확인(tl-monthly)도 목록에 남아 있다", /tests\/tl-monthly\.test\.js/.test(pkg));
 }
 

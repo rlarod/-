@@ -100,6 +100,12 @@ App.SymbolGuard = (function () {
      js/trading.js 는 수정 금지 파일(md5 고정)이라 이 지문은 변하지 않습니다. */
   var ENGINE_MARKS = ["checkTriggers(", "checkPendingOrder("];
 
+  /* 펀딩 쪽 엔진 함수 지문 — js/trading.js:367 onFundingUpdate.
+     js/chart.js:108 에 같은 이름이 하나 더 있어 본문으로 가려냅니다. */
+  var FUNDING_EVENT = "funding:update";
+  var FUNDING_HANDLER = "onFundingUpdate";
+  var FUNDING_MARKS = ["settleFunding(", "lastKnownFundingTime"];
+
   function isEngineHandler(fn) {
     if (typeof fn !== "function" || fn.name !== TRADING_HANDLER) return false;
     var src;
@@ -307,14 +313,76 @@ App.SymbolGuard = (function () {
    * 2) 도장 — 포지션·미체결에 symbol 찍기
    * ------------------------------------------------------------------ */
 
-  /* 종목을 모르는 기록이 실제로 어느 종목인가:
-     · 복원 구간(부팅 전) = js/auth.js 가 서버에서 가져온 것.
-       auth.js 는 symbol 을 안 실어오므로 서버 사실(BTCUSDT)로 찍습니다.
-       여기서 "지금 활성 종목" 으로 찍으면, 종목을 바꿔놓고 로그인했을 때
-       BTC 포지션에 다른 종목 도장이 찍혀 ② 가 그대로 터집니다.
-     · 부팅 뒤 = trading.js 가 방금 만든 것이므로 지금 활성 종목입니다. */
-  function symbolFor(duringRestore) {
+  /* 종목을 모르는 기록이 실제로 어느 종목인가 — 위에서부터 "처음 나오는 값" 을
+     씁니다. (2026-08-27 P1 수리)
+
+         1) 서버에서 복원된 그 포지션 행의 symbol
+         2) 로컬에 저장된 포지션의 symbol      ← 이번에 새로 넣은 단계
+         3) activeSymbol()                     ← 복원이 끝난 뒤라야 맞습니다
+         4) DEFAULT_SYMBOL(BTCUSDT)            ← 다 없을 때만. 옛 기록 호환
+
+     ── 1) 은 이 파일이 하지 않습니다 ─────────────────────────────────────
+     js/symbol-sync-bridge.js 가 우리보다 "바깥" 에서 App.Storage.save 를 감싸
+     서버가 준 종목으로 먼저 찍습니다. 아래 stamp() 는 값이 이미 있으면
+     건너뛰므로, 서버가 아는 행은 여기까지 내려오지 않습니다.
+     이 순서는 tests/storage-save-wrap-order.test.js 가 못 박고 있습니다.
+
+     ── 2) 를 왜 넣었나 (이번 P1) ─────────────────────────────────────────
+     삼성전자 포지션을 들고 새로고침하면 활성 종목만 BTCUSDT 로 되돌아갑니다
+     (js/symbol-stream-switch.js:90-93 — 활성 종목은 저장하지 않습니다).
+     그 상태에서 3)·4) 로 바로 내려가면 삼성전자 포지션에 BTCUSDT 도장이
+     찍혀, 회원 거래기록·채팅 알림·서버 trades 가 전부 비트코인으로 남습니다.
+     로컬에 저장된 포지션에는 진짜 종목이 그대로 남아 있으므로 그것을 봅니다.
+
+     ⚠ 4) 를 없애면 안 됩니다. 옛 기록에는 종목 칸이 비어 있고, 그때는
+        거래 가능한 종목이 BTCUSDT 하나뿐이었으므로 비어 있으면 BTCUSDT 가
+        사실입니다.
+     ⚠ 이 변경은 3) 그물을 "더 느슨하게" 만들지 않습니다. 도장이 더 정확해질
+        뿐이라 passes() 가 지금보다 더 많이 통과시키는 일은 없습니다
+        (오히려 다른 종목 시세를 더 정확히 걸러냅니다). */
+
+  /* 저장 문서 하나에서 "이 포지션의 종목" 을 꺼냅니다.
+     openTime 을 주면 같은 포지션일 때만 인정합니다 — 옛 기록에 엉뚱한 종목이
+     번지지 않게 하려는 것입니다. */
+  function docSymbol(doc, openTime) {
+    if (!doc || typeof doc !== "object") return null;
+    var p = doc.position;
+    if (p && typeof p === "object" && typeof p.symbol === "string" && p.symbol) {
+      if (openTime === null || p.openTime === openTime) return p.symbol;
+    }
+    if (openTime !== null) return null;
+    var o = doc.pendingOrder;
+    if (o && typeof o === "object" && typeof o.symbol === "string" && o.symbol) return o.symbol;
+    return null;
+  }
+
+  /* 직전에 저장된 문서. 읽기만 합니다(App.Storage.load 는 아무도 안 감쌉니다). */
+  function storedDoc() {
+    if (!App.Storage || typeof App.Storage.load !== "function") return null;
+    try {
+      return App.Storage.load(TRADING_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* 2) 로컬에 저장된 포지션의 symbol
+     지금 저장 중인 문서 → 거래엔진이 들고 있는 것 → 직전 저장분 순으로 봅니다. */
+  function localSymbol(holder, openTime) {
+    return docSymbol(holder, openTime) || docSymbol(snapshot(), openTime) || docSymbol(storedDoc(), openTime);
+  }
+
+  /* 3) 4) — 여기까지 왔다는 것은 어디에도 종목이 안 적혀 있다는 뜻입니다.
+     복원 구간에는 activeSymbol() 을 쓰면 안 됩니다(아직 제자리가 아닙니다). */
+  function fallbackSymbol(duringRestore) {
     return duringRestore ? DEFAULT_SYMBOL : activeSymbol();
+  }
+
+  function symbolFor(duringRestore, holder, obj) {
+    var openTime = obj && typeof obj.openTime === "number" && isFinite(obj.openTime) ? obj.openTime : null;
+    var local = localSymbol(holder, openTime);
+    if (local) return local;
+    return fallbackSymbol(duringRestore);
   }
 
   function stamp(obj, symbol) {
@@ -325,11 +393,18 @@ App.SymbolGuard = (function () {
     return true;
   }
 
+  /* 찍을 필요가 있을 때만 종목을 찾습니다 — 저장할 때마다 저장소를 읽지
+     않게 하려는 것입니다(이미 찍힌 기록이 대부분입니다). */
+  function stampLazy(holder, obj, duringRestore) {
+    if (!obj || typeof obj !== "object") return false;
+    if (typeof obj.symbol === "string" && obj.symbol) return false;
+    return stamp(obj, symbolFor(duringRestore, holder, obj));
+  }
+
   function stampBoth(holder, duringRestore) {
     if (!holder || typeof holder !== "object") return;
-    var sym = symbolFor(duringRestore);
-    stamp(holder.position, sym);
-    stamp(holder.pendingOrder, sym);
+    stampLazy(holder, holder.position, duringRestore);
+    stampLazy(holder, holder.pendingOrder, duringRestore);
   }
 
   function wrapStorage() {
@@ -386,6 +461,77 @@ App.SymbolGuard = (function () {
     return payload.symbol === need;
   }
 
+  /* ==================================================================
+   * (b) 엔진 핸들러가 도는 동안만 getActiveSymbol() 이 포지션 종목을
+   *     돌려주게 합니다 — 2026-08-27 "포지션 들고 다른 차트 보기"
+   * ==================================================================
+   * js/trading.js:89 · :368 이 이렇게 걸러냅니다.
+   *     if (payload.symbol !== cfg().getActiveSymbol()) return;
+   * 다른 종목 차트를 보는 동안 getActiveSymbol() 은 "보고 있는 종목" 이라,
+   * 그물이 통과시킨 내 포지션 시세를 엔진이 스스로 버립니다. 그러면
+   * 강제청산·TP·SL·지정가·펀딩이 전부 조용히 멈춥니다(오류 0건). P1.
+   * js/trading.js 는 수정 금지 파일이라, 그 함수가 도는 그 순간에만
+   * 값을 바꿔치기했다가 반드시 되돌립니다.
+   *
+   * ⛔ 안전 조건 세 가지 — 조사팀이 예외를 실제로 일으켜 확인한 것입니다.
+   *   ① try/finally 필수. 없으면 예외 한 번에 화면 전체가 포지션 종목으로
+   *      영구히 굳습니다. main.js:48-56 의 emit 이 리스너 예외를 삼키고
+   *      console.error 만 찍어서 아무도 모릅니다(전형적인 조용한 고장).
+   *   ② 되돌릴 값은 반드시 지역변수(var prev). 모듈 전역 한 칸에 담으면
+   *      중첩 호출에서 깨집니다.
+   *   ③ 조건을 읽는 것도 try 안. 못 읽으면 "스왑하지 않는" 쪽으로 떨어집니다.
+   *
+   * 이 파일 밖의 스위치(js/multi-symbol-view.js)가 없으면 한 줄도 안 돕니다.
+   * ================================================================== */
+  var swapped = 0;      // 실제로 바꿔치기한 횟수 (실측용)
+  var swapFailed = 0;   // 조건을 못 읽어 그냥 지나간 횟수
+
+  function multiOn() {
+    return !!(App.MultiSymbolView && typeof App.MultiSymbolView.isOn === "function" && App.MultiSymbolView.isOn());
+  }
+
+  /* 지금 바꿔치기해야 하는가. 해야 하면 종목 이름을, 아니면 null 을 줍니다.
+     ③ 여기서 던지는 예외는 부르는 쪽 try 가 받아 null 로 떨어뜨립니다. */
+  function swapTarget() {
+    if (!multiOn()) return null;
+    if (nettedCount !== 1) return null;              // (e) 그물이 하나로 걸려 있어야
+    var need = requiredSymbol();
+    if (!need) return null;                          // (e) 포지션 종목을 알아야
+    if (!App.Config || typeof App.Config.getActiveSymbol !== "function") return null;
+    if (need === activeSymbol()) return null;        // 같은 종목이면 바꿀 게 없습니다
+    return need;
+  }
+
+  /* 엔진 함수 하나를 "바꿔치기한 채로" 부릅니다. */
+  function callWithPositionSymbol(fn, self, args) {
+    var prev = null;          // ② 지역변수
+    var didSwap = false;
+    try {                     // ③ 조건 읽기도 try 안
+      var need = swapTarget();
+      if (need) {
+        prev = App.Config.getActiveSymbol;
+        var stub = function () { return need; };
+        /* js/symbol-stream-switch.js:199 가 이 표식으로 "이미 걸었는지" 를
+           봅니다. 잠깐이라도 표식이 사라지면 두 번 걸릴 수 있어 옮겨 답니다. */
+        if (prev && prev.__streamSwitch) stub.__streamSwitch = prev.__streamSwitch;
+        stub.__symbolGuardStub = true;
+        App.Config.getActiveSymbol = stub;
+        didSwap = true;
+        swapped++;
+      }
+    } catch (e) {
+      didSwap = false;
+      swapFailed++;
+    }
+    try {
+      return fn.apply(self, args);
+    } finally {               // ① 무슨 일이 있어도 되돌립니다
+      if (didSwap) {
+        try { App.Config.getActiveSymbol = prev; } catch (e2) { /* noop */ }
+      }
+    }
+  }
+
   function makeNet(fn) {
     var netted = function (payload) {
       if (!passes(payload)) {
@@ -399,9 +545,61 @@ App.SymbolGuard = (function () {
         }
         return undefined;
       }
-      return fn.apply(this, arguments);
+      return callWithPositionSymbol(fn, this, arguments);
     };
     netted.__symbolNet = true;
+    return netted;
+  }
+
+  /* ------------------------------------------------------------------
+   * (b) 펀딩 쪽 — 그물은 price:update 하나만 감쌉니다. 펀딩은 따로입니다.
+   * ------------------------------------------------------------------
+   * js/trading.js:367 onFundingUpdate 도 같은 방식으로 걸러내므로 같은
+   * 바꿔치기가 필요합니다. 게다가 두 종목 markPrice 가 한 소켓으로 같이
+   * 들어오므로, 남의 종목 펀딩이 내 포지션에 정산되지 않게 걸러야 합니다.
+   *
+   *   ⚠ 왜 돈 문제인가 (조사팀 실측)
+   *      증거금 10,000 · 10배 · BTC 롱
+   *        정상(BTC)      −7.653 USDT
+   *        삼성 화면에서   0.000 USDT   ← 요율 0% 라 정산이 통째로 사라짐
+   *      같은 정산 시각에 부호가 반대인 실제 이력도 있습니다
+   *        BTC +0.005927%(회원이 냄) / 삼성 −0.017501%(회원이 받음)
+   *      정산 주기도 다릅니다 — BTC·나스닥 8시간 / 삼성·SK하이닉스 4시간
+   *
+   * ⚠ getNettedCount() 는 건드리지 않습니다. 시세 통로가 하나라는 그 숫자는
+   *    price:update 전용이라, 여기는 따로 셉니다(getFundingNettedCount()).
+   * ------------------------------------------------------------------ */
+  var fundingNetted = 0;
+  var fundingDropped = 0;
+
+  /* js/trading.js:367 의 것만 고릅니다 — js/chart.js:108 에 같은 이름이
+     또 있어서 이름만으로는 안 됩니다(그물이 겪은 것과 같은 함정). */
+  function isEngineFundingHandler(fn) {
+    if (typeof fn !== "function" || fn.name !== FUNDING_HANDLER) return false;
+    var src;
+    try { src = Function.prototype.toString.call(fn); } catch (e) { return false; }
+    for (var i = 0; i < FUNDING_MARKS.length; i++) {
+      if (src.indexOf(FUNDING_MARKS[i]) < 0) return false;
+    }
+    return true;
+  }
+
+  function makeFundingNet(fn) {
+    var netted = function (payload) {
+      if (multiOn() && !passes(payload)) {
+        fundingDropped++;
+        if (fundingDropped <= 5) {
+          console.warn(
+            "[symbol-guard.js] 내 포지션은 " + requiredSymbol() + " 인데 " +
+            (payload && payload.symbol) + " 펀딩이 들어왔습니다 — 정산하지 않습니다. " +
+            "(요율·마크가격·정산주기가 종목마다 달라 그대로 두면 돈이 어긋납니다)"
+          );
+        }
+        return undefined;
+      }
+      return callWithPositionSymbol(fn, this, arguments);
+    };
+    netted.__symbolFundingNet = true;
     return netted;
   }
 
@@ -413,6 +611,10 @@ App.SymbolGuard = (function () {
       if (event === PRICE_EVENT && isEngineHandler(fn) && !fn.__symbolNet) {
         nettedCount++;
         return origOn.call(App.Bus, event, makeNet(fn));
+      }
+      if (event === FUNDING_EVENT && isEngineFundingHandler(fn) && !fn.__symbolFundingNet) {
+        fundingNetted++;
+        return origOn.call(App.Bus, event, makeFundingNet(fn));
       }
       /* 그 밖의 구독자(차트·호가·UI)는 손대지 않습니다. */
       return origOn.call(App.Bus, event, fn);
@@ -538,6 +740,14 @@ App.SymbolGuard = (function () {
     getDroppedCount: function () { return dropped; },
     getStampedCount: function () { return stamped; },
     getNettedCount: function () { return nettedCount; },
+    /* (b) 실측용 — 시세 통로 숫자(getNettedCount)와 섞지 않습니다. */
+    getFundingNettedCount: function () { return fundingNetted; },
+    getFundingDroppedCount: function () { return fundingDropped; },
+    getSwappedCount: function () { return swapped; },
+    getSwapFailedCount: function () { return swapFailed; },
+    isEngineFundingHandler: isEngineFundingHandler,
+    swapTarget: swapTarget,
+    callWithPositionSymbol: callWithPositionSymbol,
     isEngineHandler: isEngineHandler,
     getLastBlockReason: function () { return lastBlockReason; },
     isArmed: function () { return armed; },

@@ -78,7 +78,14 @@
 <div id="auth-gate" class="auth-gate">
   <div class="auth-card">
     <div class="auth-mark">₿</div>
-    <div class="auth-title">BTCUSDT 모의투자</div>
+    <!-- 2026-08-27 — "BTCUSDT 모의투자" 였습니다.
+         대표 결정으로 종목이 넷(비트코인·나스닥·삼성전자·SK하이닉스)이 됐는데
+         로그인 첫 화면에 비트코인 이름만 걸려 있어, 처음 오는 사람이
+         "비트코인만 되는 곳" 으로 읽습니다. 특정 종목 이름 대신 사이트 이름을 씁니다.
+         종목이 더 늘어도 이 줄은 다시 안 고쳐도 됩니다.
+         어느 JS 도 이 값을 다시 쓰지 않습니다(auth-title 로 js/ 전체 검색 0건).
+         되돌리려면 아래 한 줄을 원래 문구로 바꾸면 됩니다. -->
+    <div class="auth-title">모의투자 트레이딩 리그</div>
     <div class="auth-sub">닉네임과 비밀번호로 로그인/회원가입하세요</div>
     <input type="text" id="auth-nickname-input" class="auth-input" maxlength="12" placeholder="닉네임" autocomplete="off">
     <input type="password" id="auth-password-input" class="auth-input" placeholder="비밀번호" autocomplete="off">
@@ -659,7 +666,7 @@
   <div class="disclaimer page-center">
 
     <b>안내</b> — 이 페이지는 실제 자금이 오가지 않는 모의투자 플랫폼입니다. 가격은 Binance Futures
-    BTCUSDT 실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
+    실시간 시세를 그대로 사용합니다(가공/변환 없음). 롱/숏 진입, 청산가 도달 시 자동 강제청산,
     수동 포지션 종료, 거래내역이 모두 브라우저 메모리 안에서만 계산되며 실제 주문은 전송되지 않습니다.
   </div>
   </div>
@@ -1169,6 +1176,11 @@
 <!-- 차트 축 글씨 크기 — 캔버스라 CSS로 못 키웁니다. createChart를 감싸
      layout.fontSize를 넣습니다. 반드시 js/chart.js 앞에 있어야 합니다. -->
 <script src="js/chart-font.js"></script>
+<!-- 포지션 가로선이 종목을 보게 합니다 — 차트 종목 != 포지션 종목이면
+     진입가·TP·SL(js/chart.js가 그림)을 숨깁니다. chart.js가 그 선을 만드는
+     순간을 가로채야 하므로 반드시 js/chart.js 앞에 있어야 합니다.
+     이 한 줄을 지우면 원래대로 돌아갑니다. -->
+<script src="js/chart-position-symbol.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/orderbook.js"></script>
 <script src="js/orderbook-price-arrow.js"></script>
@@ -1271,6 +1283,19 @@
      symbol-guard.js 뒤여야 합니다(1번 관문이 먼저 자물쇠를 걸어야 함).
      이 한 줄만 지우면 종목 전환이 통째로 사라지고 원래대로 돌아갑니다. -->
 <script src="js/symbol-stream-switch.js"></script>
+
+<!-- ⭐ 포지션을 들고도 다른 종목 차트를 볼 수 있게 엽니다 (2026-08-27 대표 지시).
+     다섯 조각이 한 묶음입니다 — 이 한 줄을 지우면 다섯 개가 통째로 꺼지고
+     어제와 100% 같아집니다(js/symbol-guard.js · js/symbol-stream-switch.js 의
+     조각들이 전부 App.MultiSymbolView.isOn() 을 물어보고 나서 움직입니다).
+     ⚠ 반드시 js/symbol-guard.js(1208행) 뒤여야 합니다. -->
+<script src="js/multi-symbol-view.js"></script>
+
+<!-- 🔴 [P1] 종목을 바꾼 직후 매수하면 옛 종목 가격으로 체결되던 것을 막습니다.
+     js/trading.js 가 symbol:change 를 안 봐서 state.currentPrice 에 옛 종목
+     가격이 3.5~8.5초 남아 있었습니다. 이 한 줄을 지우면 원래대로 돌아갑니다. -->
+<script src="js/stale-price-guard.js"></script>
+
 <!-- 차트 3단계 — RSI · MACD 를 차트 아래 별도 칸(pane)에 (chart.js 무수정).
      기본은 둘 다 꺼짐. 2단계 지표 막대에 버튼 두 개만 이어 붙입니다.
      이 한 줄을 지우면 3단계 이전 화면으로 그대로 돌아갑니다. -->
@@ -1291,5 +1316,14 @@
      새 전환 경로가 생기지 않습니다. 반드시 symbol-stream-switch.js 뒤.
      이 한 줄과 main.js 의 "SymbolTabs" 를 지우면 탭이 사라집니다. -->
 <script src="js/symbol-tabs.js"></script>
+
+<!-- ===== 주문 잠금 안내 (2026-08-27 대표 지시) =====
+     대표: "바이낸스에서 포지션 잡고 있다고 다른 차트 못 보는 거 아니잖아"
+     막는 대상이 "종목 보기" 에서 "주문" 으로 바뀌었습니다. 차트/호가/최근 체결은
+     그대로 열어두고, 주문 패널 위에만 덮개를 얹어 상시 안내를 둡니다.
+     잠금 판정은 js/symbol-guard.js 한 곳에서만 읽어옵니다(여기서 다시 계산하지 않음).
+     자리를 차지하지 않는 덮개라(position:absolute) 주문창 높이는 그대로입니다.
+     스스로 켜지므로 main.js 에 등록하지 않습니다. 이 한 줄만 지우면 덮개가 사라집니다. -->
+<script src="js/order-lock-notice.js"></script>
 </body>
 </html>

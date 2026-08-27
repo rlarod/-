@@ -295,9 +295,18 @@ ok(
   "serve 가 devDependencies 에 남아 있다 (되돌릴 때 설치 없이 바로 되게)",
   !!(pkg.devDependencies && pkg.devDependencies.serve)
 );
+/* 2026-08-27 — 실행 목록이 package.json 의 && 사슬에서 tests/_order.txt 로
+   옮겨졌습니다. 확인하는 것("이 테스트가 npm test 로 실제 돈다")은 그대로고
+   보는 자리만 바뀌었습니다. 왜 옮겼는지는 tests/_run-all.js 머리말 참조. */
 ok(
-  "npm test 에 이 테스트가 등록돼 있다",
-  /tests\/dev-server\.test\.js/.test(scripts.test || "")
+  "npm test 가 전체 실행기(tests/_run-all.js)를 부른다",
+  /tests[/\\]_run-all\.js/.test(scripts.test || "")
+);
+ok(
+  "npm test 목록(tests/_order.txt)에 이 테스트가 등록돼 있다",
+  /tests\/dev-server\.test\.js/.test(
+    fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8")
+  )
 );
 ok(
   "새 패키지를 설치하지 않았다 (dependencies 없음)",

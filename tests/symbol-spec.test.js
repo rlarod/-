@@ -312,8 +312,8 @@ section("[8] 수정 금지 파일");
  * ========================================================================= */
 section("[9] 테스트 등록");
 {
-  ok("package.json 의 test 목록에 이 파일이 있다",
-    read("package.json").indexOf("tests/symbol-spec.test.js") >= 0,
+  ok("npm test 목록(tests/_order.txt)에 이 파일이 있다",
+    read("tests/_order.txt").indexOf("tests/symbol-spec.test.js") >= 0,
     "목록에 없으면 아무도 안 돌립니다");
 }
 

@@ -148,8 +148,8 @@ console.log("\n⑥ 돌연변이 (봉인이 풀리면 잡는가)");
  * ===================================================================== */
 console.log("\n⑦ 테스트 등록");
 {
-  const pkg = fs.readFileSync(path.join(REPO, "package.json"), "utf8");
-  ok("package.json 의 test 목록에 들어 있다", /tests\/tl-monthly\.test\.js/.test(pkg));
+  const pkg = fs.readFileSync(path.join(REPO, "tests", "_order.txt"), "utf8");
+  ok("npm test 목록(tests/_order.txt)에 들어 있다", /tests\/tl-monthly\.test\.js/.test(pkg));
 }
 
 console.log("\n==========================================================");
