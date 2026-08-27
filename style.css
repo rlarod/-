@@ -751,7 +751,23 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .ob-mark-price-row b{font-family:var(--mono);font-weight:600;color:var(--text-dim);}
 .ob-current-price-row .ob-current-price{margin:0;flex:1;}
-.ob-price-arrow{font-size:21px;font-weight:700;color:var(--text-faint);width:14px;text-align:center;}
+/* 상자를 글자에 맞춥니다 — 2026-08-28
+   실측 — 1440 에서 브라우저로 직접 쟀습니다.
+         ▲/▼ 글자는 이 폰트에서 font-size 와 똑같은 21px 을 차지하는데
+         상자가 14px 이라 7px 이 상자 "오른쪽" 밖으로 삐져나갔습니다.
+         왼쪽 삐짐 0px / 오른쪽 삐짐 7px — 한쪽으로만 나갔습니다.
+         잘리지는 않지만 그 7px 때문에 글자 끝이 오른쪽 "현재가" 를 1px 파고들었습니다.
+           전 — 상자오른끝 835.47 / 글자오른끝 842.47 / 현재가왼끝 841.47  → 사이 -1px
+           후 — 상자오른끝 842.47 / 글자오른끝 842.47 / 현재가왼끝 848.47  → 사이  6px
+         768·1440·1920 에서 같은 7px 이었습니다.
+         360·375·390 은 #orderbook-tabs-content 와 #orderbook-panel 이
+         display:none 이라 이 줄이 안 그려져 재지지 않았습니다.
+         (마크업은 그대로 있고 탭으로 숨겨진 것입니다)
+   width 를 1em 으로 두면 font-size 를 따라가서 같은 어긋남이 다시 생기지 않습니다.
+   화살표 크기(21px)는 그대로입니다 — 상승·하락 표시라 줄이지 않았습니다.
+   빈 상태에서도 폭을 유지해야 현재가가 안 흔들리므로 고정폭은 그대로 둡니다.
+   되돌리려면 width:1em 을 width:14px 으로 되돌리면 됩니다. */
+.ob-price-arrow{font-size:21px;font-weight:700;color:var(--text-faint);width:1em;text-align:center;}
 .ob-price-arrow-up{color:var(--green);}
 .ob-price-arrow-down{color:var(--red);}
 .ob-current-price{
@@ -3306,6 +3322,19 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
    숨기지 않고 살짝 흐리게만 해서 '무엇이 있는지'는 보이게 합니다. */
 .login-required{opacity:0.6;cursor:pointer;}
 .login-required:hover{opacity:0.75;}
+
+/* 골드 버튼(어두운 글자)만 흐림을 한 단계 낮춥니다 — 2026-08-28
+   opacity 는 배경과 글자를 같이 흐리게 해서 대비가 함께 무너집니다.
+   실측: #F0B429 위 #0A0F1C 는 10.26:1 인데, opacity 0.6 이 걸리면
+         화면에 실제로 찍히는 색이 rgb(150,117,40) 위 rgb(12,18,32) = 4.34:1 로
+         떨어집니다(기준 4.5:1 미달). 여섯 폭 전부 4.34 로 같았습니다.
+   0.75 로 낮추면 6.16:1 입니다. 잠김 표시(흐림)는 그대로 남고,
+   바로 옆 .board-search-row button(검색, 흐림 없음)과도 여전히 구분됩니다.
+   해당 버튼 4개 — 글쓰기 · 글 등록 · 댓글 등록 · 채팅 전송 (전부 .chat-send-btn)
+   흰 글자 버튼(.order-btn 등)은 이 문제가 없어 .login-required 의 0.6 을 그대로 씁니다.
+   되돌리려면 아래 두 줄을 지우면 됩니다(그러면 0.6 이 다시 적용됩니다). */
+.chat-send-btn.login-required{opacity:0.75;}
+.chat-send-btn.login-required:hover{opacity:0.88;}
 
 /* ===== 내 정보 칸 안의 로그인 폼 =====
    전체 화면 창(.auth-gate)을 없애고 카드만 옮겨왔습니다.
