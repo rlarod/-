@@ -584,7 +584,9 @@ input[type=range]::-webkit-slider-thumb{
 
 /* ---------- 현재 포지션 — 바이낸스 실제 포지션 표 참고, 컬럼 순서/구성 그대로 재현 ---------- */
 .position-empty{font-size:20.5px;color:var(--text-faint);padding:14px 0;text-align:center;}
-.position-card{padding-top:8px;}
+/* position:relative 는 파일 맨 뒤 "일괄청산 자리 옮김"(2026-08-27) 때문입니다.
+   규칙을 두 벌로 만들지 않으려고 값만 여기로 합쳤습니다 — 자세한 이유는 맨 뒤 주석. */
+.position-card{padding-top:8px;position:relative;}
 .badge{font-family:var(--sans);font-size:19px;font-weight:700;padding:3px 9px;border-radius:3px;letter-spacing:0.03em;}
 .badge.long{background:var(--green-soft);color:var(--green);}
 .badge.short{background:var(--red-soft);color:var(--red);}
@@ -4523,3 +4525,56 @@ html[data-theme="dark"] .amitalk-order .ami-symbol-badge.on{
  * ========================================================================= */
 .amitalk-order .top-mode-row .margin-mode-badge{padding-left:5px;padding-right:5px;}
 .amitalk-order .top-mode-row .mode-badge-arrow{margin-left:3px;}
+
+/* =========================================================================
+ * 포지션 카드 — "현재 포지션" 글자와 표 사이가 65px 비어 있던 것 (2026-08-27)
+ * =========================================================================
+ * 대표 지적: "포지션 중간에 너무 빈 칸이 길다"
+ *
+ * ── 실측 (포지션 1개 보유 상태를 브라우저에서 재현, 고치기 전) ──────
+ *   "현재 포지션" 글자 아래끝 → 표 머리(종목/수량/진입가) 윗끝
+ *     360 · 375 · 390 · 768 · 1440 · 1920  전부 65.0px
+ *   그 65px 의 내역
+ *     라벨 margin-bottom            5px
+ *     .position-card padding-top    8px
+ *     .position-toolbar            44px  ← 일괄청산 버튼 한 줄이 통째로
+ *     표 margin-top                 8px
+ *   일괄청산 버튼은 폭 88.9px 뿐인데 그 줄이 342px 을 다 쓰고 있었고,
+ *   버튼 왼쪽 253px 은 완전한 빈 공간이었습니다. 세로로 44px 을 쓰면서
+ *   가로로도 74% 가 비어 있던 셈입니다.
+ *   캡처(전): shots/posgap/before-360.png
+ *
+ * ── 어떻게 고쳤나 ────────────────────────────────────────────────
+ * 버튼을 지우거나 줄이지 않습니다(터치 높이 38px 그대로). **자리만** 옮겨
+ * "현재 포지션" 라벨 줄의 오른쪽 빈 자리에 올렸습니다. 바이낸스 포지션
+ * 패널도 제목 줄 오른쪽에 Close All 이 붙습니다.
+ *   결과 — 라벨 아래끝 → 표 머리 : 65.0px → 21.0px
+ *          포지션 영역 전체 높이 : 216.7px → 172.7px (-44.0px)
+ *
+ * ⚠ 마크업은 한 글자도 안 건드렸습니다. index.html 의 .position-toolbar 는
+ *   여전히 .table-scroll 안에 그대로 있고, 버튼 id(#pos-close-all)와
+ *   js/position-table-extra.js 의 클릭 처리도 그대로입니다.
+ *
+ * ⚠ 왜 top:0 이 아니라 bottom:100% 인가
+ *   js/table-scroll-hint.js 가 .table-scroll 을 감싸개 <div> 로 감싸는데,
+ *   그 감싸개가 position:relative 라서 **툴바의 기준 상자가 감싸개**가 됩니다.
+ *   기준 상자가 두 가지(감싸개 있을 때/없을 때)로 갈리므로, 어느 쪽이든
+ *   "스크롤 상자 위쪽"을 가리키는 bottom:100% 로 붙였습니다.
+ *     감싸개 있음(실제) : 버튼이 라벨 줄 위 0.8px 지점부터 38px
+ *     감싸개 없음(JS 꺼짐): 8px 더 위로 — 그래도 라벨 줄 위입니다
+ *   .position-card 에 position:relative 를 주는 이유는, 감싸개가 없을 때
+ *   버튼이 화면 맨 위로 날아가지 않게 기준 상자를 보장하기 위해서입니다.
+ *   그 한 줄은 여기 쓰지 않고 **586행의 기존 .position-card 규칙에 합쳤습니다**
+ *   (같은 선택자를 두 벌로 만들면 뒤엣것이 앞을 덮어 나중에 못 찾습니다 —
+ *    tests/css-duplicate-rules.test.js 가 그걸 막고 있습니다).
+ *   되돌릴 때는 586행에서 position:relative 한 낱말도 같이 지우십시오.
+ *   (style.css 는 감싸개 클래스 이름을 쓰지 않습니다 — 테스트가 그것을 봉인
+ *    하고 있어서, 이름 대신 "어느 쪽이든 되는" 방식으로 붙였습니다.)
+ *
+ * 되돌리기: 이 블록(아래 두 규칙)을 통째로 지우면 정확히 예전 상태
+ *          (일괄청산이 표 위 44px 짜리 자기 줄을 차지하던 상태)로 돌아갑니다.
+ * ========================================================================= */
+.position-card .position-toolbar{
+  position:absolute;right:0;bottom:100%;margin-bottom:-2px;
+  padding:0;z-index:3;
+}

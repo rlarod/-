@@ -155,12 +155,67 @@ console.log("\n[충돌 방지] 거래내역 표에는 손대지 않는가");
     "js/ui.js 가 .table-scroll 을 통째로 갈아끼우는 것이 사실이다(그래서 피한 것)",
     /querySelector\(["']\.table-scroll["']\)/.test(ui)
   );
-  /* 거래내역 패널이 감싸지지 않았는지 실제 DOM 으로 확인 */
+  /* ── 기준선 갱신 (2026-08-27, 디자인팀 / 본부장 지시) ──────────────
+     원래 이 검사는 "랭킹 밖의 .table-scroll 은 하나도 안 감싼다" 였습니다.
+     그날(2026-08-24) 기준으로는 index.html 안에 처음부터 있는 .table-scroll
+     중 감싸도 되는 것이 랭킹 하나뿐이었기 때문입니다.
+
+     2026-08-27 에 **현재 포지션 표**(#position-card .table-scroll)를 대상에
+     넣으면서 이 검사가 걸렸습니다. 검사를 지우지 않고 **허용 목록 방식으로
+     좁혔습니다** — 아래 ALLOWED 에 적힌 것만 감쌀 수 있고, 그 밖의 상자가
+     감싸지면 여전히 실패합니다.
+
+     왜 포지션 표를 넣었나 (실측, 포지션 1개 보유 상태를 브라우저에서 재현)
+       폭    표 전체   보이는 폭   숨는 양    스크롤바 높이
+        360   1594px    342px    1252px     0px  ← 밀 수 있다는 신호가 0
+       1440   1594px   1422px     172px     0px
+       1920   1492px   1450px      42px     0px
+     전날 "더보기"로 18칸을 펼칠 수 있게 고쳤는데, 밀 수 있다는 표시가 없어
+     강제청산가를 여전히 못 보는 상태였습니다.
+
+     ⚠ 거래내역(.history-panel 의 표)은 **여전히 허용 목록에 없습니다.**
+       js/ui.js 302행이 그 .table-scroll 을 querySelector 로 집어 옮기기
+       때문에, 부팅 시점에 감싸면 안 됩니다(하단 탭이 만들어진 뒤에
+       LATE_TARGETS 로 붙습니다). */
+  const ALLOWED = ["#leaderboard-panel", "#position-card"];
   const others = [...h.doc.querySelectorAll(".table-scroll")].filter(
-    (b) => !b.closest("#leaderboard-panel")
+    (b) => !ALLOWED.some((sel) => b.closest(sel))
   );
   const wrapped = others.filter((b) => b.parentNode.classList.contains(layerCls));
-  ok("랭킹 밖의 .table-scroll 은 하나도 안 감쌌다", wrapped.length === 0, wrapped.length + "개 감쌈");
+  ok("허용 목록 밖의 .table-scroll 은 하나도 안 감쌌다", wrapped.length === 0, wrapped.length + "개 감쌈");
+
+  /* 반대 방향 — 포지션 표는 **반드시** 감싸져 있어야 합니다.
+     (안 감싸면 힌트가 표와 같이 밀려서 아무 소용이 없습니다) */
+  const posBox = h.doc.querySelector("#position-card .table-scroll");
+  ok("포지션 표의 스크롤 상자가 있다", !!posBox);
+  ok(
+    "★ 포지션 표가 힌트 층으로 감싸졌다",
+    !!posBox && posBox.parentNode.classList.contains(layerCls)
+  );
+  ok(
+    "포지션 표 힌트는 카드 안쪽 타일색(var(--surface2)) 변형을 쓴다",
+    !!posBox && posBox.parentNode.classList.contains("tl-hint-surface2")
+  );
+  ok(
+    "대상 목록(LATE_TARGETS)에 포지션 표가 적혀 있다",
+    h.App.TableScrollHint._LATE_TARGETS.indexOf("#position-card .table-scroll") !== -1
+  );
+  ok(
+    "포지션 표는 여전히 12칸 그대로다(열을 지우지 않음)",
+    h.doc.querySelectorAll("#position-table thead th").length === 12,
+    h.doc.querySelectorAll("#position-table thead th").length + "칸"
+  );
+  ok(
+    "일괄청산 버튼이 그대로 있다(마크업 보존)",
+    !!h.doc.getElementById("pos-close-all")
+  );
+
+  /* CSS 변형이 확정 팔레트 값을 쓰는지 */
+  const css2 = h.doc.getElementById("tl-table-hint-style").textContent;
+  ok(
+    "변형 규칙이 var(--surface2) 를 쓴다(대체값 #0D1422)",
+    /var\(--surface2,#0D1422\)/.test(css2)
+  );
 }
 
 /* =========================================================================

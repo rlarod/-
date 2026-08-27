@@ -76,8 +76,38 @@ App.TableScrollHint = (function () {
   var LATE_TARGETS = [
     "#tab-panel-history .table-scroll",   /* 마감손익 */
     "#tab-panel-orders .table-scroll",    /* 주문내역 */
-    "#tab-panel-assets .table-scroll"     /* 자산 — 펀딩 정산 내역 */
+    "#tab-panel-assets .table-scroll",    /* 자산 — 펀딩 정산 내역 */
+    "#position-card .table-scroll"        /* 현재 포지션 — 2026-08-27 추가 */
   ];
+
+  /* 2026-08-27 추가 — 현재 포지션 표
+     -----------------------------------------------------------------
+     전날(2026-08-26) 폰에서 "더보기"로 18칸을 펼칠 수 있게 고쳤는데,
+     펼쳐도 **옆으로 밀 수 있다는 표시가 없어서** 강제청산가를 여전히
+     못 보는 상태였습니다. 반쪽짜리 수정이었습니다.
+
+     실측 (포지션 1개 보유 상태를 브라우저에서 재현, 붙이기 전)
+       폭    표 전체   보이는 폭   숨는 양   스크롤바 높이
+        360   1594px    342px     1252px    0px  ← 신호 0
+        375   1594px    357px     1237px    0px
+        390   1594px    372px     1222px    0px
+        768   1594px    750px      844px    0px
+       1440   1594px   1422px      172px    0px
+       1920   1492px   1450px       42px    0px
+     ※ 1440·1920 도 숨는 양이 0 이 아닙니다. 그래서 "폰에서만"으로 막지
+       않고 전 폭에 붙입니다 — 어차피 숨는 게 없으면 스스로 꺼집니다.
+
+     ⚠ 이 상자는 #position-card 가 display:none 일 때(포지션 없음) 폭이
+       0 이라 판단이 불가능한데, updateOne() 이 그 경우 양쪽 힌트를 모두
+       꺼서 넘어갑니다(이미 있던 처리). */
+
+  /* 힌트 색을 카드 안쪽 타일색(var(--surface2))으로 쓰는 상자.
+     본부장 지시(2026-08-27) — 힌트 색은 반드시 확정 팔레트 값으로.
+     ※ 실측: 포지션 표 뒤 실제 배경은 .panel 의 rgb(16,23,39)=var(--surface).
+       var(--surface2)=#0D1422 는 그보다 RGB 로 3/3/5 어두운 값이라
+       눈에 띄는 띠는 아니지만, 정확히 같은 색을 원하면 아래 목록에서
+       선택자 한 줄만 빼면 var(--surface) 로 돌아갑니다. */
+  var SURFACE2_TARGETS = ["#position-card .table-scroll"];
 
   var LAYER_CLASS = "tl-table-hint-layer";
   var STYLE_ID = "tl-table-hint-style";
@@ -102,6 +132,11 @@ App.TableScrollHint = (function () {
         "background:linear-gradient(to right, rgba(16,23,39,0), var(--surface,#101727));}" +
       "." + LAYER_CLASS + "::before{left:0;" +
         "background:linear-gradient(to left, rgba(16,23,39,0), var(--surface,#101727));}" +
+      /* 카드 안쪽 타일 위에 놓인 표용 변형 — 확정 팔레트 var(--surface2) */
+      "." + LAYER_CLASS + ".tl-hint-surface2::after{right:0;" +
+        "background:linear-gradient(to right, rgba(13,20,34,0), var(--surface2,#0D1422));}" +
+      "." + LAYER_CLASS + ".tl-hint-surface2::before{left:0;" +
+        "background:linear-gradient(to left, rgba(13,20,34,0), var(--surface2,#0D1422));}" +
       /* 아직 볼 게 남은 쪽만 켭니다. 끝까지 밀면 꺼져서 값을 안 가립니다. */
       "." + LAYER_CLASS + ".tl-has-next::after{opacity:1;}" +
       "." + LAYER_CLASS + ".tl-has-prev::before{opacity:1;}" +
@@ -182,6 +217,11 @@ App.TableScrollHint = (function () {
   }
 
   /* ---------------- 붙이기 ---------------- */
+  function markVariant(sel, layer) {
+    if (!layer) return;
+    if (SURFACE2_TARGETS.indexOf(sel) !== -1) layer.classList.add("tl-hint-surface2");
+  }
+
   function attach(sel) {
     var box = document.querySelector(sel);
     if (!box) return;
@@ -192,11 +232,12 @@ App.TableScrollHint = (function () {
       /* 누군가 상자를 감싸개 밖으로 옮겼으면 다시 감싸기만 합니다
          (표를 새로 만들지 않습니다 — 같은 DOM 노드 그대로입니다). */
       var again = wrap(box);
-      if (again) { layers[i].layer = again; updateOne(layers[i]); }
+      if (again) { layers[i].layer = again; markVariant(sel, again); updateOne(layers[i]); }
       return;
     }
     var layer = wrap(box);
     if (!layer) return;
+    markVariant(sel, layer);
     var entry = { box: box, layer: layer };
     layers.push(entry);
     box.addEventListener("scroll", function () { updateOne(entry); }, { passive: true });
@@ -280,6 +321,7 @@ App.TableScrollHint = (function () {
     _LAYER_CLASS: LAYER_CLASS,
     _TARGETS: TARGETS,
     _LATE_TARGETS: LATE_TARGETS,
+    _SURFACE2_TARGETS: SURFACE2_TARGETS,
     _attachAll: attachAll
   };
 })();
