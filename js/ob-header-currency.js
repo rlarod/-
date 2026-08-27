@@ -33,8 +33,21 @@ App.ObHeaderCurrency = (function () {
   var UNIT = { KRW: "원", USDT: "USDT" };
 
   var headEl = null;
+  var qtyEls = null;   // [수량, 총수량] — 2026-08-27 추가
   var observer = null;
   var applying = false;
+
+  /* 수량 단위(BTC / 주) — 종목 규격표(App.SymbolRegistry)에서 읽습니다.
+     index.html:402 에 `수량(BTC)` `총수량(BTC)` 이 글자로 박혀 있어서,
+     종목을 삼성전자로 바꾸면 "1.020000 주" 인데 머리글만 BTC 로 남습니다. */
+  function qtyUnitName() {
+    if (App.Utils && typeof App.Utils.qtyUnit === "function") {
+      try {
+        return App.Utils.qtyUnit() || "BTC";
+      } catch (e) { /* noop */ }
+    }
+    return "BTC";
+  }
 
   function currentUnit() {
     var cur = "USDT";
@@ -52,15 +65,32 @@ App.ObHeaderCurrency = (function () {
     return document.querySelector("#orderbook-panel .ob-header .ob-cols span");
   }
 
+  function findQtyEls() {
+    var all = document.querySelectorAll("#orderbook-panel .ob-header .ob-cols span");
+    if (!all || all.length < 3) return null;
+    return [all[1], all[2]];
+  }
+
   function apply() {
     if (!headEl || !headEl.isConnected) headEl = findHead();
+    if (!qtyEls || !qtyEls[0] || !qtyEls[0].isConnected) qtyEls = findQtyEls();
     if (!headEl) return;
 
     var want = "가격(" + currentUnit() + ")";
-    if (headEl.textContent === want) return;   // 이미 맞으면 안 씁니다(루프 방지)
+    var unit = qtyUnitName();
+    var wantQty = ["수량(" + unit + ")", "총수량(" + unit + ")"];
+
+    /* 이미 맞으면 한 글자도 안 씁니다(MutationObserver 무한 루프 방지). */
+    var qtyOk =
+      !qtyEls || (qtyEls[0].textContent === wantQty[0] && qtyEls[1].textContent === wantQty[1]);
+    if (headEl.textContent === want && qtyOk) return;
 
     applying = true;
-    headEl.textContent = want;
+    if (headEl.textContent !== want) headEl.textContent = want;
+    if (qtyEls) {
+      if (qtyEls[0].textContent !== wantQty[0]) qtyEls[0].textContent = wantQty[0];
+      if (qtyEls[1].textContent !== wantQty[1]) qtyEls[1].textContent = wantQty[1];
+    }
     applying = false;
   }
 
@@ -80,10 +110,13 @@ App.ObHeaderCurrency = (function () {
 
   function init() {
     headEl = findHead();
+    qtyEls = findQtyEls();
     if (!headEl) return;    // 마크업이 없으면 조용히 종료
     apply();
     if (App.Bus && typeof App.Bus.on === "function") {
       App.Bus.on("currency:change", apply);
+      /* 종목이 바뀌면 수량 단위도 같이 바뀝니다(BTC → 주). */
+      App.Bus.on("symbol:change", apply);
     }
     watch();
   }

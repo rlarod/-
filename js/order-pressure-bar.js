@@ -48,9 +48,27 @@ App.OrderPressureBar = (function () {
 
   function onTradeTick(p) {
     if (!p) return;
+    /* 종목 확인 (2026-08-27, 종목 전환 4번 관문)
+       이걸 안 보면 종목을 바꾼 뒤 60초 동안 옛 종목 체결이 비율에 섞입니다.
+       같은 방식이 js/trades.js·js/orderbook.js 에 이미 있습니다. */
+    if (
+      typeof p.symbol === "string" &&
+      App.Config &&
+      typeof App.Config.getActiveSymbol === "function" &&
+      p.symbol !== App.Config.getActiveSymbol()
+    ) {
+      return;
+    }
     const qty = Number(p.qty);
     if (!isFinite(qty) || qty <= 0) return;
     ticks.push({ t: p.time || Date.now(), qty: qty, isBuy: !p.isBuyerMaker });
+  }
+
+  /* 종목이 바뀌면 모아둔 옛 종목 체결을 통째로 버립니다.
+     안 버리면 새 종목 이름표 아래에 옛 종목 비율이 최대 60초간 남습니다. */
+  function onSymbolChange() {
+    ticks = [];
+    render();
   }
 
   // 최근 WINDOW_MS 동안의 체결량 비율. 데이터가 없으면 null(=모름).
@@ -99,6 +117,7 @@ App.OrderPressureBar = (function () {
     if (!dom.buyBar) return; // 마크업 없으면 조용히 종료
 
     App.Bus.on("trade:tick", onTradeTick);
+    App.Bus.on("symbol:change", onSymbolChange);
     render();
     timer = setInterval(render, REFRESH_INTERVAL_MS);
   }

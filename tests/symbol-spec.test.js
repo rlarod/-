@@ -18,7 +18,7 @@
  *   [2] 나스닥을 "지수"라고 부르지 않는다 (QQQ 는 ETF, 41배 차이)
  *   [3] 규격표가 한 곳(App.SymbolRegistry)에만 있고 네 종목 값이 같다
  *   [4] 단위 이름만 종목마다 다르다 (삼성전자가 "BTC" 로 나오면 틀린 정보)
- *   [5] 종목 전환이 아직 잠겨 있다 (4번 전까지)
+ *   [5] 종목 전환이 열려 있고, 열린 종목은 실제로 바뀐다 (2026-08-27 개정)
  *   [6] 가짜 시세를 만드는 어댑터가 하나도 안 만들어진다
  *   [7] ⭐ 화면 레버리지 상한이 엔진 상한(trading.js)을 넘지 않는다
  *   [8] 수정 금지 파일 무수정
@@ -56,7 +56,11 @@ function strip(src) {
 
 console.log("\n종목 코드 4개 + 종목별 규격표");
 
-const { App, win, doc } = boot();
+const { App, win, doc } = boot({
+  /* ⚠ 2026-08-27 — 4번 관문을 같이 태웁니다. 안 태우면 아래 [5] 의 클릭 검사가
+     App.SymbolStreamSwitch 가 없어서 "준비 중" 으로 조용히 떨어져 헛돕니다. */
+  extra: ["js/symbol-guard.js", "js/symbol-stream-switch.js"],
+});
 ["js/market-data/binance-adapter.js", "js/market-data/mock-adapter.js", "js/market-data.js",
   "js/symbol-selector.js"].forEach((f) => win.eval(read(f)));
 
@@ -156,43 +160,65 @@ section("[4] 단위 이름은 종목 것으로");
 }
 
 /* =========================================================================
- * [5] 종목 전환은 아직 잠겨 있다 (4번 시세 재연결 전까지)
+ * [5] 종목 전환 — 2026-08-27 기준 개정
+ *     옛 기준: "아직 잠겨 있다(BTCUSDT 만 열림)"
+ *     새 기준: 4번 관문(js/symbol-stream-switch.js)이 들어와 네 종목이
+ *              열렸습니다. 그래서 "열렸다면 눌렀을 때 정말 바뀌는가" 와
+ *              "배지가 사실과 같은가" 를 봅니다.
+ *     ⚠ 옛 기준을 그냥 지우지 않았습니다 — 잠긴 종목이 다시 생기면
+ *        그 종목은 여전히 "준비 중" 으로 막혀야 합니다(아래 두 갈래).
  * ========================================================================= */
-section("[5] 종목 전환은 아직 잠김");
+section("[5] 종목 전환 — 열린 종목은 바뀌고, 잠긴 종목은 막힌다");
 {
-  ok("BTCUSDT 만 열려 있다",
-    EXPECT.filter((s) => App.SymbolRegistry.isEnabled(s)).join(",") === "BTCUSDT",
-    EXPECT.filter((s) => App.SymbolRegistry.isEnabled(s)).join(","));
-  ["QQQUSDT", "SAMSUNGUSDT", "SKHYNIXUSDT"].forEach((s) => {
-    ok(s + " 는 잠겨 있다 (isMock=true)", App.SymbolRegistry.isMock(s) === true,
-      s + " 가 열렸습니다 — 4번(시세 재연결)이 끝났는지 확인하세요");
-  });
-  ok("종목을 바꾸는 함수가 아직 없다", typeof App.Config.setActiveSymbol === "undefined",
-    "App.Config.setActiveSymbol 이 생겼습니다");
+  const 열린 = EXPECT.filter((s) => App.SymbolRegistry.isEnabled(s));
+  const 잠긴 = EXPECT.filter((s) => !App.SymbolRegistry.isEnabled(s));
 
-  /* 목록에는 4개가 뜨되, 눌러도 "준비 중" 이 나와야 합니다. */
+  ok("네 종목이 전부 열려 있다(4번 관문 완료)",
+    열린.join(",") === "BTCUSDT,QQQUSDT,SAMSUNGUSDT,SKHYNIXUSDT",
+    열린.join(",") + " — 목록이 바뀌었으면 여기 기준도 사실대로 고치세요");
+  ok("전환 통로는 App.SymbolStreamSwitch.switchTo 하나다",
+    typeof App.SymbolStreamSwitch.switchTo === "function" &&
+      typeof App.Config.setActiveSymbol === "undefined",
+    "App.Config.setActiveSymbol 이 생겼습니다 — 전환 경로가 둘이 되면 " +
+    "한쪽이 전환 순서를 안 지킵니다");
+
   const btn = doc.getElementById("symbol-select-btn");
   const dd = doc.getElementById("symbol-select-dropdown");
   btn.dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
   ok("드롭다운에 4줄이 뜬다", dd.querySelectorAll(".symbol-option").length === 4,
     String(dd.querySelectorAll(".symbol-option").length));
-  ["QQQUSDT", "SAMSUNGUSDT", "SKHYNIXUSDT"].forEach((sym) => {
+
+  /* (가) 잠긴 종목 — 눌러도 "준비 중" 만 뜨고 안 바뀐다 */
+  잠긴.forEach((sym) => {
     btn.dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
     win.__lastAlert = null;
+    const 앞 = App.Config.getActiveSymbol();
     dd.querySelector('[data-symbol="' + sym + '"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
-    ok(sym + " 를 눌러도 '준비 중' 만 뜨고 종목이 안 바뀐다",
-      /준비 중/.test(String(win.__lastAlert)) && App.Config.getActiveSymbol() === "BTCUSDT",
+    ok(sym + " 는 잠겨 있어 눌러도 '준비 중' 만 뜨고 안 바뀐다",
+      /준비 중/.test(String(win.__lastAlert)) && App.Config.getActiveSymbol() === 앞,
       String(win.__lastAlert) + " / 활성종목=" + App.Config.getActiveSymbol());
   });
+
+  /* (나) 열린 종목 — 눌렀으면 실제로 바뀌어야 한다 */
+  열린.forEach((sym) => {
+    if (sym === App.Config.getActiveSymbol()) return;
+    btn.dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+    dd.querySelector('[data-symbol="' + sym + '"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+    ok(sym + " 를 누르면 실제로 " + sym + " 로 바뀐다",
+      App.Config.getActiveSymbol() === sym,
+      "활성종목=" + App.Config.getActiveSymbol() +
+      " — 안 바뀌면 회원은 이름만 바뀐 옛 종목 숫자를 봅니다");
+  });
+  App.SymbolStreamSwitch.switchTo("BTCUSDT");
 
   /* 종목 UI 가 두 곳입니다 — 주문창 목록도 같은 판정이어야 합니다. */
   const box = doc.getElementById("ami-symbols");
   const rows = box.querySelectorAll(".ami-symbol-row");
   ok("주문창 종목 목록에도 4줄이 뜬다", rows.length === 4, String(rows.length));
-  ok("주문창에서 '거래중' 배지는 BTC 한 줄뿐이다",
-    box.querySelectorAll(".ami-symbol-badge.on").length === 1,
-    String(box.querySelectorAll(".ami-symbol-badge.on").length) +
-    " — 아직 못 쓰는 종목이 '거래중' 으로 보이면 회원이 잘못 판단합니다");
+  ok("주문창 '거래중' 배지 수가 열린 종목 수와 같다",
+    box.querySelectorAll(".ami-symbol-badge.on").length === 열린.length,
+    String(box.querySelectorAll(".ami-symbol-badge.on").length) + " vs 열린 종목 " + 열린.length +
+    " — 배지가 사실과 다르면 회원이 잘못 판단합니다");
 }
 
 /* =========================================================================

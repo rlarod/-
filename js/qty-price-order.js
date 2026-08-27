@@ -182,6 +182,18 @@ App.QtyPriceOrder = (function () {
     const levSlider = el("lev-slider");
     if (levSlider) levSlider.addEventListener("input", () => setTimeout(syncMargin, 0));
 
+    /* 종목이 바뀌면 수량 단위 이름도 같이 바뀝니다(BTC → 주).
+       2026-08-27 실측 — 이걸 안 하면 삼성전자로 바꾼 뒤에도 주문수량 칸이
+       "0.000000 BTC" 로 남아 회원이 단위를 오해합니다. 숫자 규격(0.001·6자리)은
+       네 종목이 같으므로 이름만 다시 씁니다. */
+    if (App.Bus && typeof App.Bus.on === "function") {
+      App.Bus.on("symbol:change", () => {
+        const unitEl = el("order-qty-unit");
+        if (unitEl) unitEl.textContent = unitLabel();
+        syncMargin();
+      });
+    }
+
     syncMargin();
   }
 

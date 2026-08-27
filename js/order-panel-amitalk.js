@@ -257,8 +257,27 @@ App.AmiTalkOrderPanel = (function () {
     box.addEventListener("click", (e) => {
       const row = e.target.closest(".ami-symbol-row");
       if (!row || row.classList.contains("active")) return;
-      alert(row.textContent.trim().replace("준비중", "") + " 종목은 준비중입니다.");
+      const sym = row.getAttribute("data-symbol");
+      // 안 열린 종목은 그대로 안내만. 판정은 App.SymbolRegistry.isEnabled 한 곳에서만.
+      if (!sym || !App.SymbolRegistry.isEnabled(sym)) {
+        alert(row.textContent.trim().replace("준비중", "") + " 종목은 준비중입니다.");
+        return;
+      }
+      // 실제 전환은 js/symbol-stream-switch.js 한 곳에서만 합니다(전환 순서 보존).
+      if (App.SymbolStreamSwitch && typeof App.SymbolStreamSwitch.switchTo === "function") {
+        App.SymbolStreamSwitch.switchTo(sym);
+      }
     });
+    // 종목이 바뀌면 이 목록의 "거래중"/활성 표시도 같이 갱신합니다.
+    if (App.Bus && typeof App.Bus.on === "function" && !initPromo.bound) {
+      initPromo.bound = true;
+      App.Bus.on("symbol:change", () => {
+        const now = App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "";
+        box.querySelectorAll(".ami-symbol-row").forEach((r) => {
+          r.classList.toggle("active", r.getAttribute("data-symbol") === now);
+        });
+      });
+    }
   }
 
   /* ---------------- init ---------------- */

@@ -700,23 +700,31 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
      (비트코인·나스닥·삼성전자·SK하이닉스). 이더리움은 제외했습니다.
      상단 드롭다운과 이 목록이 같은 4줄을 보여줘야 합니다 —
      종목 UI 가 두 곳인데 한 곳만 다르면 회원이 헷갈립니다. */
-  t("하단 종목: 4줄, BTC만 거래중 나머지는 준비중", () => {
-    const { doc } = fresh();
+  /* ⭐ 2026-08-27 기준 개정 — 4번 관문(js/symbol-stream-switch.js)이 들어와
+     네 종목에 실제로 시세가 붙었습니다. 그래서 "BTC만 거래중" 은 더 이상
+     사실이 아닙니다. 지우지 않고 기준을 바꿉니다:
+     **배지는 App.SymbolRegistry.isEnabled 와 항상 일치한다.**
+     이 기준이면 나중에 어떤 종목을 다시 잠가도 그대로 맞습니다. */
+  t("하단 종목: 4줄, 배지가 등록소 판정(isEnabled)과 일치", () => {
+    const { doc, App } = fresh();
     const rows = doc.querySelectorAll("#ami-symbols .ami-symbol-row");
     eq(rows.length, 4);
     ok(/비트코인 \(BTCUSDT\)/.test(rows[0].textContent));
-    ok(/거래중/.test(rows[0].textContent));
     ok(!/이더리움/.test(doc.getElementById("ami-symbols").textContent),
       "이더리움은 대표 결정으로 목록에서 빠졌습니다");
-    [["나스닥", "QQQUSDT"], ["삼성전자", "SAMSUNGUSDT"], ["SK하이닉스", "SKHYNIXUSDT"]]
+    [["비트코인", "BTCUSDT"], ["나스닥", "QQQUSDT"],
+     ["삼성전자", "SAMSUNGUSDT"], ["SK하이닉스", "SKHYNIXUSDT"]]
       .forEach(([이름, 코드], i) => {
-        const r = rows[i + 1];
+        const r = rows[i];
         ok(r.textContent.indexOf(이름 + " (" + 코드 + ")") >= 0, 이름 + " 줄: " + r.textContent);
-        ok(/준비중/.test(r.textContent),
-          "아직 시세가 안 붙은 종목이 거래중으로 보이면 안 됩니다: " + r.textContent);
+        const 열림 = App.SymbolRegistry.isEnabled(코드);
+        ok(/거래중/.test(r.textContent) === 열림,
+          코드 + " — 등록소는 " + (열림 ? "열림" : "잠김") + " 인데 배지는 '" +
+          r.textContent.replace(/.*\)/, "").trim() + "' 입니다. " +
+          "배지가 사실과 다르면 회원이 잘못된 정보로 판단합니다");
       });
-    ok(doc.querySelectorAll("#ami-symbols .ami-symbol-badge.on").length === 1,
-      "거래중 배지는 BTC 한 줄뿐이어야 합니다");
+    eq(doc.querySelectorAll("#ami-symbols .ami-symbol-badge.on").length,
+      App.SymbolRegistry.getAll().filter((s) => App.SymbolRegistry.isEnabled(s.symbol)).length);
   });
 }
 

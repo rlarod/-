@@ -122,11 +122,27 @@ App.RecentTrades = (function () {
     render(); // 데이터는 그대로, 가격 표시만 다시 계산
   }
 
+  /* 종목이 바뀌면 모아둔 옛 종목 체결을 통째로 버립니다 (2026-08-27, 4번 관문).
+     ⚠ 화면만 지우면 소용없습니다 — recentTrades 배열이 남아 있으면 새 종목
+        체결이 한 건 오는 순간 flush() → render() 가 옛 종목 29줄을 그대로
+        다시 그립니다. 배열을 비우고 행을 숨겨야 합니다. */
+  function onSymbolChange(payload) {
+    recentTrades = [];
+    pendingTicks = [];
+    for (let i = 0; i < rowEls.length; i++) rowEls[i].style.display = "none";
+    const sym =
+      (payload && payload.symbol) ||
+      (App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "");
+    const title = container ? container.querySelector(".ob-title") : null;
+    if (title && sym) title.textContent = "최근 체결 (" + sym + ")";
+  }
+
   function init() {
     injectPanel();
     if (!listEl) return; // 호가창 패널이 없으면(예: 다른 페이지) 조용히 아무 것도 안 함
     App.Bus.on("trade:tick", onTradeTick);
     App.Bus.on("currency:change", onCurrencyChange);
+    App.Bus.on("symbol:change", onSymbolChange);
   }
 
   return { init };

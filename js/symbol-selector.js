@@ -1,14 +1,17 @@
 /* =========================================================================
  * js/symbol-selector.js — App.SymbolSelector
  * =========================================================================
- * "BTCUSDT ▾" 드롭다운 — 구조만 먼저 만드는 단계(다종목 실제 연동은
- * 보류 중: 삼성전자/SK하이닉스는 증권 계좌, NASDAQ은 API 키가 필요해서
- * 사용자님이 준비되면 진행하기로 함).
+ * "BTCUSDT ▾" 드롭다운.
  *
  * App.SymbolRegistry(이미 존재)에 등록된 종목을 그대로 나열합니다.
- * BTC(dataSource:"binance")만 실제로 거래 가능하고, 나머지(mock)는
- * "준비중" 배지를 붙이고 클릭해도 아무 것도 안 바뀝니다 — trading.js/
- * websocket.js/chart.js 등 실제 거래 엔진은 이 파일이 전혀 안 건드립니다.
+ * "전환해도 되는가" 판정은 App.SymbolRegistry.isEnabled 한 곳에서만 하고,
+ * 안 열린 종목은 "준비중" 배지를 붙이고 눌러도 안 바뀝니다.
+ *
+ * ⚠ 2026-08-27 — 실제 전환이 열렸습니다. 이 파일은 종목을 직접 바꾸지
+ *   않습니다. 누른 종목을 App.SymbolStreamSwitch.switchTo() 에 넘기기만
+ *   합니다. 전환 순서(활성 종목 → symbol:change → 화면 비우기 → 소켓 닫기
+ *   → interval:change → 도착 확인)는 그 파일 한 곳에만 있습니다.
+ *   trading.js/websocket.js/chart.js 는 여전히 이 파일이 전혀 안 건드립니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -54,15 +57,37 @@ App.SymbolSelector = (function () {
     if (!meta) return;
 
     if (!App.SymbolRegistry.isEnabled(symbol)) {
-      // 아직 실제 데이터가 연결 안 된 종목 — 구조만 준비된 단계라 여기서 멈춤.
-      // 거래엔진(trading.js)이 BTC 단일 종목 전제라서, 여기서 실제로
-      // 전환하면 기존 포지션/계산이 깨질 수 있어 의도적으로 막아둡니다.
-      alert(meta.name + "은(는) 아직 준비 중입니다. BTC만 먼저 이용해주세요.");
+      // 아직 열리지 않은 종목(enabled:false). 목록에는 보이지만 안 바뀝니다.
+      alert(meta.name + "은(는) 아직 준비 중입니다.");
       closeDropdown();
       return;
     }
-    // BTC(이미 활성 종목)를 다시 눌렀을 때는 그냥 닫기만 함
+
+    const active = App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "BTCUSDT";
+    if (symbol === active) {
+      closeDropdown(); // 지금 보고 있는 종목을 다시 누른 것 — 닫기만 합니다
+      return;
+    }
+
+    // 실제 전환은 js/symbol-stream-switch.js 한 곳에서만 합니다.
+    // (활성 종목 바꾸기 → symbol:change → 화면 비우기 → 소켓 닫기 →
+    //  interval:change → 3.5초 뒤 도착 확인, 이 순서를 지켜야 합니다.)
+    // 포지션·미체결이 있으면 그 안에서 거부하고 안내를 띄웁니다.
+    if (App.SymbolStreamSwitch && typeof App.SymbolStreamSwitch.switchTo === "function") {
+      App.SymbolStreamSwitch.switchTo(symbol);
+    } else {
+      alert(meta.name + "은(는) 아직 준비 중입니다.");
+    }
     closeDropdown();
+  }
+
+  /* 버튼 글자(index.html:315 에 BTCUSDT 로 박혀 있음)를 지금 종목으로 맞춥니다.
+     열려 있는 드롭다운의 "거래중" 표시도 같이 갱신합니다. */
+  function onSymbolChange() {
+    const sym = App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "";
+    const label = dom.btn ? dom.btn.querySelector(".stat-label") : null;
+    if (label && sym) label.textContent = sym;
+    if (dom.dropdown && dom.dropdown.style.display === "block") renderDropdown();
   }
 
   function openDropdown() {
@@ -86,6 +111,8 @@ App.SymbolSelector = (function () {
     if (!dom.btn || !dom.dropdown) return;
 
     dom.btn.addEventListener("click", toggleDropdown);
+    if (App.Bus && typeof App.Bus.on === "function") App.Bus.on("symbol:change", onSymbolChange);
+    onSymbolChange();
     document.addEventListener("click", (e) => {
       if (dom.dropdown.style.display === "block" && !dom.dropdown.contains(e.target) && e.target !== dom.btn) {
         closeDropdown();

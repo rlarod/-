@@ -66,7 +66,14 @@
     const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "TradesFit", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "Trading", "OrderInfoPanel", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
       ⚡ 알림 띠를 없애고 알림을 다시 채팅에 보이게 했습니다.
       되살리려면 이 주석을 풀고 index.html 의 <script src="js/chat-split.js"> 도 푸세요. */
-      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI", "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS", "NoEmoji"];
+      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI", "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
+      /* 종목 전환(4번 관문). WS 뒤에 둡니다 — 소켓 감싸기는 스크립트를 읽는 즉시
+         이미 끝나 있고, 여기 init() 은 화면 글자(종목명·단위)만 맞춥니다.
+         RecentTrades 가 만든 패널 제목도 같이 고치므로 그보다 뒤여야 합니다. */
+      "SymbolStreamSwitch",
+      /* 상품탭 줄의 종목 탭 4개. SymbolStreamSwitch 뒤여야 합니다 —
+         눌렀을 때 그 모듈의 switchTo 를 그대로 부르기 때문입니다. */
+      "SymbolTabs", "NoEmoji"];
     modules.forEach((name) => {
       if (App[name] && typeof App[name].init === "function") {
         // 버그 수정: 여기 try/catch가 없으면 앞쪽 모듈(예: MarketWar) 하나가

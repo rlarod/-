@@ -59,16 +59,15 @@
  *
  * ── dataSource ──────────────────────────────────────────────────────────
  *   네 종목 모두 바이낸스 선물에 실재하므로 전부 "binance" 입니다.
- *   ⚠ "실재한다"와 "지금 쓸 수 있다"는 다릅니다. 지금 js/websocket.js 는
- *     BTCUSDT 하나만 구독하므로 나머지 세 종목은 가격이 안 옵니다.
- *     그래서 가짜 시세를 만들지 않습니다(mock-adapter 를 안 태웁니다).
- *     값이 없는 상태로 두고, 화면에는 "준비중" 으로만 나옵니다.
+ *   가짜 시세는 만들지 않습니다(mock-adapter 를 안 태웁니다).
  *
  * ── enabled — 종목 전환을 여는 스위치 ───────────────────────────────────
  *   false = 목록에는 보이지만 눌러도 "준비 중입니다" 만 나옵니다.
- *   ⛔ 4번 작업(시세 다시 연결)이 끝나기 전에는 true 로 바꾸지 마세요.
- *      지금 열면 종목을 바꿔도 시세가 안 따라와서, 다른 종목 시세로
- *      강제청산되는 사고가 납니다(tests/symbol-switch-unbuilt.test.js 참고).
+ *   ⭐ 2026-08-27 — 네 종목 전부 true 입니다. 4번 관문
+ *      (js/symbol-stream-switch.js)이 종목을 바꿀 때 세 소켓을 새 주소로
+ *      다시 붙여 주기 때문입니다. 그 파일의 <script> 를 지우면 전환이
+ *      사라지므로, 지울 때는 여기 세 종목도 false 로 같이 돌려놓으세요.
+ *      (안 돌려놓으면 눌러도 아무 일이 안 일어나는 조용한 고장이 됩니다.)
  *
  * ── isMock() 의 뜻이 바뀌지 않게 지켰습니다 ─────────────────────────────
  *   isMock() 은 "아직 실전으로 못 쓰는 종목" 판정에 쓰이고 있고,
@@ -126,7 +125,7 @@ App.SymbolRegistry = (function () {
       name: "나스닥", // ⚠ "나스닥100" / "지수" 금지 — 파일 맨 위 설명 참고
       type: "index",
       dataSource: "binance",
-      enabled: false, // 4번(시세 재연결) 전까지 잠금
+      enabled: true, // 2026-08-27 4번 관문(js/symbol-stream-switch.js)이 시세를 붙여 개방
       spec: spec("주", {
         contractType: "TRADIFI_PERPETUAL",
         underlyingType: "EQUITY",
@@ -142,7 +141,7 @@ App.SymbolRegistry = (function () {
       name: "삼성전자",
       type: "stock",
       dataSource: "binance",
-      enabled: false, // 4번(시세 재연결) 전까지 잠금
+      enabled: true, // 2026-08-27 4번 관문(js/symbol-stream-switch.js)이 시세를 붙여 개방
       spec: spec("주", {
         contractType: "TRADIFI_PERPETUAL",
         underlyingType: "KR_EQUITY",
@@ -158,7 +157,7 @@ App.SymbolRegistry = (function () {
       name: "SK하이닉스",
       type: "stock",
       dataSource: "binance",
-      enabled: false, // 4번(시세 재연결) 전까지 잠금
+      enabled: true, // 2026-08-27 4번 관문(js/symbol-stream-switch.js)이 시세를 붙여 개방
       spec: spec("주", {
         contractType: "TRADIFI_PERPETUAL",
         underlyingType: "KR_EQUITY",

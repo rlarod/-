@@ -74,6 +74,19 @@ App.LimitClose = (function () {
       return;
     }
 
+    /* ⛔ [P1] 종목 확인 (2026-08-27, 종목 전환 4번 관문)
+       종목 전환이 열리기 전에는 종목이 BTCUSDT 하나뿐이라 아무도 이걸 안 봤는데,
+       그대로 두면 다른 종목 가격으로 지정가 청산이 터집니다.
+       포지션에 찍힌 종목(js/symbol-guard.js 의 도장)과 시세의 종목이 다르면
+       아무것도 하지 않습니다. 도장이 없는 옛 기록은 지금 활성 종목으로 봅니다. */
+    const posSymbol =
+      pos.symbol ||
+      (App.Config && typeof App.Config.getActiveSymbol === "function"
+        ? App.Config.getActiveSymbol()
+        : null);
+    const tickSymbol = payload && typeof payload.symbol === "string" ? payload.symbol : null;
+    if (posSymbol && tickSymbol && posSymbol !== tickSymbol) return;
+
     const price = payload && isFinite(payload.price) ? payload.price : snap.currentPrice;
     if (!isFinite(price)) return;
 

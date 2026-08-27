@@ -1,0 +1,79 @@
+/* ===== C안 — 광고 대신 '지금 리그 상태' 띠 (2026-08-26 디자인팀) ============
+   근거(2026-08-26 직접 실측, 1440x900) — 토스증권 홈은 헤더(52px) 바로 아래
+   44px 장 시간 띠 + 176px 지수 카드(코스피 등 숫자)를 놓습니다. 첫 화면에
+   가로 600px 넘는 이미지는 0개입니다. 바이낸스 홈도 첫 화면에서 제일 큰 글자가
+   광고 문구가 아니라 이용자 수 숫자(328,439,869 USERS TRUST US)입니다.
+
+   무엇을 하나
+   1) jpg 소재 두 장과 옛 문구 소재를 화면에서만 숨깁니다(파일·마크업 그대로).
+   2) js/ad-status-bar.js 가 만든 .tl-status-bar 한 줄을 보여줍니다.
+      값은 이미 그려진 랭킹 표에서만 읽고, 없으면 "준비중" 배지가 나옵니다.
+   3) 색 있는 요소는 1개뿐입니다 — 1위 수익률(상승 #26C281 / 하락 #F0506E).
+      라벨·구분선·화살표는 전부 보조색 #838DA4 입니다.
+
+   높이 134px -> 40px (모바일 두 줄 62px).
+
+   되돌리기 — index.html 에서 이 <link> 와 ad-status-bar.js <script> 두 줄을 지웁니다.
+   style.css 는 건드리지 않았습니다.
+   ========================================================================== */
+
+/* 1) 옛 소재는 화면에서만 숨김 (마크업·파일 보존) */
+.top-ad-banner .ad-creative-image{display:none;}
+
+/* 2) 상태 띠 */
+.tl-status-bar{
+  display:flex;align-items:center;gap:0;
+  height:40px;padding:0 12px;
+  background:#101727;
+  border-top:1px solid rgba(255,255,255,0.03);   /* 카드 위 흰색 3% 얇은 선 */
+  border-bottom:1px solid #1D273B;
+  box-shadow:none;cursor:pointer;
+  overflow:hidden;white-space:nowrap;
+}
+.tl-status-item{
+  display:inline-flex;align-items:baseline;gap:6px;
+  padding:0 12px;min-width:0;
+}
+.tl-status-item + .tl-status-item{border-left:1px solid #1D273B;}
+.tl-status-item:first-child{padding-left:0;}
+
+.tl-status-label{
+  font-size:11px;line-height:1;color:#838DA4;font-weight:400;flex:0 0 auto;
+}
+/* 숫자는 줄이지 않습니다 — 글자만 작게, 숫자는 크고 굵게. */
+.tl-status-value{
+  font-size:14px;line-height:1;color:#E7ECF5;font-weight:700;
+  font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.tl-status-unit{font-size:11px;font-weight:400;color:#838DA4;margin-left:1px;}
+
+/* 화면에서 유일하게 색이 있는 값 */
+.tl-status-rate{font-weight:700;}
+.tl-status-rate.is-up{color:#26C281;}
+.tl-status-rate.is-down{color:#F0506E;}
+
+/* 아직 없는 값 — 숫자를 지어내지 않고 배지로 */
+.tl-status-soon{
+  display:inline-block;font-size:10px;font-weight:600;line-height:1;
+  color:#838DA4;background:#0D1422;border:1px solid #1D273B;border-radius:3px;
+  padding:4px 6px;vertical-align:1px;
+}
+
+.tl-status-go{
+  margin-left:auto;flex:0 0 auto;padding-left:12px;
+  font-size:11px;font-weight:600;line-height:1;color:#838DA4;
+}
+
+/* 모바일 — 360 기준. '랭킹 보기'는 자리가 없어 감춥니다(마크업 보존). */
+@media (max-width:719px){
+  .tl-status-bar{height:38px;padding:0 10px;}
+  .tl-status-item{padding:0 8px;gap:4px;}
+  .tl-status-label{font-size:10px;}
+  .tl-status-value{font-size:13px;}
+  .tl-status-go{display:none;}
+}
+@media (max-width:400px){
+  .tl-status-item{padding:0 6px;}
+  .tl-status-value{font-size:12px;}
+}

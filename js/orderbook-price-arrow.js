@@ -20,6 +20,18 @@ App.OrderbookPriceArrow = (function () {
 
   function onPriceUpdate(payload) {
     if (!dom.arrow) return;
+    /* 종목 확인 (2026-08-27, 종목 전환 4번 관문)
+       이걸 안 보면 다른 종목 시세와 비교해서 화살표 방향이 틀립니다.
+       js/orderbook.js 의 현재가 표시와 같은 판정입니다. */
+    if (
+      payload &&
+      typeof payload.symbol === "string" &&
+      App.Config &&
+      typeof App.Config.getActiveSymbol === "function" &&
+      payload.symbol !== App.Config.getActiveSymbol()
+    ) {
+      return;
+    }
     const price = payload.price;
     if (lastPrice !== null) {
       if (price > lastPrice) {
@@ -38,6 +50,12 @@ App.OrderbookPriceArrow = (function () {
     dom = { arrow: el("ob-price-arrow") };
     if (!dom.arrow) return; // 마크업 없으면 조용히 종료
     App.Bus.on("price:update", onPriceUpdate);
+    /* 종목이 바뀌면 비교 기준을 버립니다 — 옛 종목 가격과 비교하면 안 됩니다. */
+    App.Bus.on("symbol:change", () => {
+      lastPrice = null;
+      dom.arrow.textContent = "";
+      dom.arrow.className = "ob-price-arrow";
+    });
   }
 
   return { init };

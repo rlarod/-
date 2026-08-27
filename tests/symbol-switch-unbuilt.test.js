@@ -38,11 +38,29 @@
  *          거기에 더해 런타임에서 App.Bus.emit 을 감시하며 종목 UI 를
  *          전수로 눌러 보고 symbol:change 가 0건인지 봅니다.
  *
- * ── 여전히 못 박는 것 (아직 안 열림) ─────────────────────────────────────
+ * ── ⭐ 2026-08-27 (두 번째 개정) — 종목 전환이 열렸습니다 ─────────────────
+ *   js/symbol-stream-switch.js(4번 관문)가 들어오면서 아래 세 가지가
+ *   사실이 아니게 됐습니다. 지우지 않고 **더 센 기준으로 바꿨습니다.**
+ *
+ *     옛: symbol:change 를 쏘는 코드가 0곳이다
+ *     새: 쏘는 곳이 정확히 한 곳(js/symbol-stream-switch.js)뿐이다
+ *         → 전환 순서를 안 지키는 두 번째 경로가 생기면 실패합니다
+ *
+ *     옛: 종목 UI 두 곳을 눌러도 symbol:change 가 0건이다
+ *     새: 누른 횟수만큼 날아간다
+ *         → 옛 기준은 종목이 전부 열리면 반복문이 0회 돌아 조용히 통과합니다
+ *
+ *     옛: 전환 가능한 종목은 BTCUSDT 하나뿐이다
+ *     새: 네 종목이 전부 열려 있고, 열려 있다면 index.html 이 4번 관문을
+ *         반드시 싣고 있다 (관문 없이 열면 조용한 고장)
+ *
+ * ── 여전히 못 박는 것 ────────────────────────────────────────────────────
  *     App.Config.setActiveSymbol 등 7개 이름이 없다 (자물쇠만 걸려 있다)
- *     symbol:change 를 실제로 쏘는 코드가 0곳이다 (듣는 곳만 4곳)
- *     js/symbol-selector.js       상단 드롭다운이 준비중 종목을 alert 로 막는다
+ *       → 4번 관문도 이 이름들을 만들지 않습니다. 전환은 App.SymbolStreamSwitch
+ *         .switchTo 한 통로로만 갑니다.
+ *     js/symbol-selector.js       상단 드롭다운이 안 열린 종목을 alert 로 막는다
  *     js/order-panel-amitalk.js   주문창 종목 목록도 똑같이 막는다
+ *     두 UI 모두 스스로 종목을 바꾸지 않고 4번 관문에 넘기기만 한다
  *   ⚠ 종목 UI 가 두 곳입니다. 2026-08-26 돌연변이 M3 에서 주문창 쪽만 뚫었더니
  *     드롭다운 검사는 전부 통과했습니다. 반드시 둘 다, 전수로 봅니다.
  *
@@ -88,9 +106,17 @@ function strip(src) {
 const JS_DIR = path.join(REPO, "js");
 const JS_FILES = fs.readdirSync(JS_DIR).filter((f) => f.endsWith(".js"));
 
-/* 안전장치 두 겹. index.html 도 이 순서입니다(symbol-guard → symbol-sync-bridge).
-   순서 자체는 tests/storage-save-wrap-order.test.js 가 따로 못 박습니다. */
-const GUARDS = ["js/symbol-guard.js", "js/symbol-sync-bridge.js"];
+/* 안전장치 두 겹 + 4번 관문(실제로 종목을 바꾸는 곳).
+   index.html 도 이 순서입니다(symbol-guard → symbol-sync-bridge → symbol-stream-switch).
+   순서 자체는 tests/storage-save-wrap-order.test.js 가 따로 못 박습니다.
+   ⚠ 2026-08-27 — js/symbol-stream-switch.js 를 여기 넣지 않으면, 종목 UI 를
+     눌러도 App.SymbolStreamSwitch 가 없어서 "준비 중입니다" 로 조용히 떨어지고
+     클릭 검사가 통째로 헛돕니다(우회 ① 과 같은 모양입니다). */
+const GUARDS = [
+  "js/symbol-guard.js",
+  "js/symbol-sync-bridge.js",
+  "js/symbol-stream-switch.js",
+];
 
 /* App.Config 에 생길 수 있는 "종목 바꾸기" 이름들.
    js/symbol-guard.js 의 SETTER_NAMES 와 같은 목록입니다. */
@@ -128,7 +154,7 @@ App.bootApp();          // 여기서부터 armed = false (복원 구간 종료)
  *     2026-08-27 이전에는 이 절이 없어서, 안전장치가 라이브에 있는데도
  *     이 테스트는 "안전장치 없는 세상" 을 보고 있었습니다.
  * ========================================================================= */
-section("[0] 안전장치 두 겹이 실제로 실려 있다 (우회 ① 봉인)");
+section("[0] 안전장치 두 겹 + 4번 관문이 실제로 실려 있다 (우회 ① 봉인)");
 {
   ok("App.SymbolGuard 가 떠 있다",
     !!(App.SymbolGuard && typeof App.SymbolGuard.passes === "function"),
@@ -136,6 +162,10 @@ section("[0] 안전장치 두 겹이 실제로 실려 있다 (우회 ① 봉인)
   ok("App.SymbolSyncBridge 가 떠 있다",
     !!(App.SymbolSyncBridge && typeof App.SymbolSyncBridge.rewrite === "function"),
     "js/symbol-sync-bridge.js 가 안 태워졌습니다");
+  ok("App.SymbolStreamSwitch 가 떠 있고 준비됐다",
+    !!(App.SymbolStreamSwitch && App.SymbolStreamSwitch.isReady()),
+    "js/symbol-stream-switch.js 가 안 태워졌거나 App.Config.getActiveSymbol 을 못 감쌌습니다 — " +
+    "그러면 아래 클릭 검사가 '준비 중입니다' 로 조용히 떨어져 전부 헛돕니다");
 
   /* 글자로만 확인하지 않습니다 — 그물이 실제로 걸렸는지는 숫자로 봅니다.
      getNettedCount() 가 1 이라는 것은 js/trading.js 의 price:update 구독을
@@ -300,12 +330,22 @@ function emit쏘는곳(src) {
     if (ON.test(src)) 듣는곳.push(rel);
   });
 
-  ok("symbol:change 를 쏘는 코드가 0곳이다", 쏘는곳.length === 0,
-    "생겼습니다: " + 쏘는곳.join(", ") + " — 이 신호가 날아오는 순간 " +
-    "차트·지표가 다른 종목으로 갈아탑니다. 4번(시세 재연결)이 먼저입니다");
+  /* ⭐ 2026-08-27 기준 개정 — 4번 관문이 들어오면서 "0곳" 이 사실이 아니게
+     됐습니다. 지우지 않고 더 센 기준으로 바꿉니다:
+     **쏘는 곳은 정확히 한 곳(js/symbol-stream-switch.js)뿐이다.**
+     여기가 뚫리면 전환 순서(활성 종목 → symbol:change → 화면 비우기 →
+     소켓 닫기 → interval:change)를 안 지키는 두 번째 경로가 생기고,
+     그 경로는 js/symbol-guard.js 의 잠금(isLocked)도 안 거칩니다. */
+  ok("symbol:change 를 쏘는 곳이 정확히 한 곳이다", 쏘는곳.length === 1,
+    쏘는곳.length + "곳: " + 쏘는곳.join(", ") + " — 전환 경로가 둘이 되면 " +
+    "한쪽이 순서를 안 지켜 옛 종목 값이 새 이름표 아래 남거나, " +
+    "포지션 잠금을 건너뛴 채 소켓만 갈아탑니다");
+  ok("그 한 곳이 js/symbol-stream-switch.js 다",
+    쏘는곳.length === 1 && 쏘는곳[0].indexOf("js/symbol-stream-switch.js") === 0,
+    쏘는곳.join(", "));
 
-  /* 듣는 곳은 있습니다 — "안 오는 신호를 기다리는 중" 이라는 현재 사실입니다. */
-  ok("듣는 곳은 그대로 있다(" + 듣는곳.length + "곳, 안 오는 신호를 기다리는 중)",
+  /* 듣는 곳은 그대로 있습니다. */
+  ok("듣는 곳이 여러 곳 있다(" + 듣는곳.length + "곳)",
     듣는곳.length >= 1, 듣는곳.join(", "));
   console.log("      └ 듣는 곳: " + 듣는곳.join(", "));
 }
@@ -355,6 +395,8 @@ const 준비중종목 = App.SymbolRegistry.getAll()
 const 거래중종목 = App.SymbolRegistry.getAll()
   .filter((s) => App.SymbolRegistry.isEnabled(s.symbol))
   .map((s) => s.symbol);
+/* 아래 [3][4] 에서 실제로 눌러 본 종목. [4-ㄹ] 이 "헛돌지 않았다" 를 이걸로 봅니다. */
+const 눌러본종목 = [];
 
 /* =========================================================================
  * [3] 종목 UI ① — 상단 드롭다운(js/symbol-selector.js)
@@ -368,9 +410,15 @@ section("[3] 종목 UI ① 상단 드롭다운");
     "네 종목이 전부 binance 라 전부 '거래중' 으로 잘못 표시됩니다");
   ok("alert 뒤에 return 으로 멈춘다", /alert\([\s\S]{0,200}?return;/.test(sel),
     "return 이 없으면 알림만 띄우고 그대로 진행합니다");
-  ok("이 파일이 종목을 실제로 바꾸지 않는다",
+  /* ⭐ 2026-08-27 기준 개정 — 이제 전환이 열렸습니다. 그래도 이 파일이
+     "스스로" 바꾸면 안 됩니다. 전환 순서를 아는 곳은 4번 관문 하나뿐이라,
+     드롭다운은 그 곳에 넘기기만 해야 합니다. */
+  ok("이 파일이 스스로 종목을 바꾸지 않는다(신호도 직접 안 쏜다)",
     !/setActiveSymbol|switchSymbol|changeSymbol/.test(sel) && emit쏘는곳(sel).length === 0,
-    "종목을 바꾸는 호출이 들어왔습니다");
+    "종목을 직접 바꾸는 호출이 들어왔습니다 — 전환 순서를 안 지키는 두 번째 경로입니다");
+  ok("전환은 App.SymbolStreamSwitch.switchTo 에 넘긴다",
+    /App\.SymbolStreamSwitch[\s\S]{0,80}?switchTo\(/.test(sel),
+    "4번 관문을 안 거치면 화면에 옛 종목 값이 남고 소켓이 안 갈아탑니다");
 
   /* 글자만 보지 않고 실제로 눌러 봅니다. */
   win.eval(read("js/symbol-selector.js"));
@@ -410,6 +458,25 @@ section("[3] 종목 UI ① 상단 드롭다운");
       "안내: " + String(win.__lastAlert) + " / 활성: " + App.Config.getActiveSymbol() +
       " — 바뀌었다면 보유 중인 포지션이 다른 종목 시세로 강제청산됩니다");
   });
+
+  /* ⭐ 열린 종목은 실제로 바뀌어야 합니다(전수).
+     2026-08-27 이전에는 이 자리가 없어서, 종목이 전부 열리면
+     위 준비중 반복문이 0회 돌고 절 전체가 조용히 통과했습니다. */
+  거래중종목.forEach((s) => {
+    if (s === App.Config.getActiveSymbol()) return; // 지금 보고 있는 종목
+    const 이전 = App.Config.getActiveSymbol();
+    click(btn); // 다시 열기
+    const el = dd.querySelector('[data-symbol="' + s + '"]');
+    if (!el) { ok(s + " 줄이 드롭다운에 있다", false, "없습니다"); return; }
+    눌러본종목.push(s);
+    click(el);
+    ok("드롭다운에서 " + s + " 를 누르면 실제로 " + s + " 로 바뀐다",
+      App.Config.getActiveSymbol() === s,
+      "활성: " + App.Config.getActiveSymbol() + " (이전 " + 이전 + ") — " +
+      "안 바뀌면 회원은 이름만 바뀐 옛 종목 숫자를 보게 됩니다");
+  });
+  /* 다음 절(주문창)이 같은 출발선에서 시작하게 되돌립니다. */
+  App.SymbolStreamSwitch.switchTo("BTCUSDT");
 }
 
 /* =========================================================================
@@ -420,14 +487,17 @@ section("[4] 종목 UI ② 주문창 종목 목록");
 {
   const amit = strip(read("js/order-panel-amitalk.js"));
   ok("주문창에도 종목 목록(#ami-symbols)이 있다", /ami-symbols/.test(amit));
-  ok("주문창 종목 목록이 '준비중' 안내만 하고 끝난다",
+  ok("안 열린 종목은 '준비중' 안내로 막는다",
     /종목은 준비중입니다/.test(amit) && /alert\(/.test(amit));
   ok("주문창도 등록소 판정(isEnabled)으로 거래중을 가른다",
     /App\.SymbolRegistry\.isEnabled\(/.test(amit),
     "주문창과 드롭다운이 서로 다른 기준을 쓰면 한쪽이 잘못된 배지를 보여줍니다");
-  ok("주문창 종목 목록이 종목을 실제로 바꾸지 않는다",
+  ok("주문창 종목 목록이 스스로 종목을 바꾸지 않는다(신호도 직접 안 쏜다)",
     !/setActiveSymbol|switchSymbol|changeSymbol/.test(amit) && emit쏘는곳(amit).length === 0,
-    "종목을 바꾸는 호출이 들어왔습니다");
+    "종목을 직접 바꾸는 호출이 들어왔습니다 — 전환 순서를 안 지키는 두 번째 경로입니다");
+  ok("주문창도 App.SymbolStreamSwitch.switchTo 에 넘긴다",
+    /App\.SymbolStreamSwitch[\s\S]{0,80}?switchTo\(/.test(amit),
+    "⚠ 2026-08-26 돌연변이 M3 — 주문창 쪽만 뚫었더니 드롭다운 검사는 전부 통과했습니다");
 
   const box = doc.getElementById("ami-symbols");
   const rows = box.querySelectorAll(".ami-symbol-row");
@@ -445,20 +515,45 @@ section("[4] 종목 UI ② 주문창 종목 목록");
       /준비중/.test(String(win.__lastAlert)) && App.Config.getActiveSymbol() === "BTCUSDT",
       "안내: " + String(win.__lastAlert) + " / 활성: " + App.Config.getActiveSymbol());
   });
+
+  /* ⭐ 열린 종목은 주문창에서도 실제로 바뀌어야 합니다(전수). */
+  거래중종목.forEach((s) => {
+    if (s === App.Config.getActiveSymbol()) return;
+    const el = box.querySelector('.ami-symbol-row[data-symbol="' + s + '"]');
+    if (!el) { ok(s + " 줄이 주문창에 있다", false, "없습니다"); return; }
+    눌러본종목.push(s);
+    click(el);
+    ok("주문창에서 " + s + " 를 누르면 실제로 " + s + " 로 바뀐다",
+      App.Config.getActiveSymbol() === s,
+      "활성: " + App.Config.getActiveSymbol());
+  });
+  App.SymbolStreamSwitch.switchTo("BTCUSDT");
 }
 
 /* -------------------------------------------------------------------------
- * [4-ㄹ] 위에서 UI 를 다 눌러 보는 동안 symbol:change 가 한 번도 안 날아갔다.
+ * [4-ㄹ] 위에서 UI 를 눌러 보는 동안 symbol:change 가 실제로 날아갔다.
  *   글자 검사가 아니라 실제 실행 결과입니다.
+ *   ⭐ 2026-08-27 기준 개정 — 옛 기준은 "0건" 이었습니다. 종목이 전부 열리면
+ *      준비중 종목이 0개가 되어 클릭 반복문이 0회 돌고, 아무것도 안 누른 채
+ *      "0건" 이 조용히 통과합니다. 그래서 "누른 횟수만큼 날아갔다" 로 바꿉니다.
  * ----------------------------------------------------------------------- */
-section("[4-ㄹ] 두 UI 를 다 눌러도 symbol:change 가 0건");
+section("[4-ㄹ] 두 UI 를 눌렀을 때 symbol:change 가 누른 횟수만큼 날아간다");
 {
-  ok("눌러 본 준비중 종목이 1개 이상이다(클릭 검사가 헛돌지 않았다)",
-    준비중종목.length >= 1,
-    "준비중 종목이 0개면 위 클릭 검사가 아무것도 안 한 것입니다");
-  ok("종목 UI 두 곳을 전수로 눌렀는데 symbol:change 가 0건이다", 쏜신호.length === 0,
-    쏜신호.length + "건 날아갔습니다: " + JSON.stringify(쏜신호).slice(0, 200));
-  console.log("      └ 눌러 본 준비중 종목: " + 준비중종목.join(", "));
+  const 전수 = 준비중종목.length + 눌러본종목.length;
+  ok("실제로 눌러 본 종목이 1개 이상이다(클릭 검사가 헛돌지 않았다)",
+    전수 >= 1,
+    "0개면 위 클릭 검사가 아무것도 안 한 것입니다");
+  /* 되돌리기용 switchTo("BTCUSDT") 두 번도 신호를 쏩니다 — 그래서 '이상' 으로 봅니다. */
+  ok("눌러서 바뀐 종목 수(" + 눌러본종목.length + ")만큼은 symbol:change 가 날아갔다",
+    쏜신호.length >= 눌러본종목.length,
+    쏜신호.length + "건 — 클릭이 4번 관문까지 안 갔습니다");
+  ok("안 열린 종목을 누른 것은 신호를 안 쐈다",
+    쏜신호.length === 눌러본종목.length + (눌러본종목.length ? 2 : 0),
+    "쏜 신호 " + 쏜신호.length + "건 / 눌러서 바뀐 종목 " + 눌러본종목.length + "개 " +
+    "+ 되돌리기 2건 — 숫자가 더 크면 준비중 종목에서도 신호가 샜습니다: " +
+    JSON.stringify(쏜신호).slice(0, 200));
+  console.log("      └ 눌러 본 준비중 종목: " + (준비중종목.join(", ") || "없음(전부 열림)"));
+  console.log("      └ 눌러서 바뀐 종목: " + (눌러본종목.join(", ") || "없음"));
 }
 
 /* =========================================================================
@@ -592,10 +687,26 @@ section("[7] 종목 목록의 현재 사실");
   ok("네 종목 코드가 바이낸스 실제 코드다",
     all.map((s) => s.symbol).join(",") === "BTCUSDT,QQQUSDT,SAMSUNGUSDT,SKHYNIXUSDT",
     all.map((s) => s.symbol).join(","));
-  ok("실제로 전환 가능한(enabled) 종목은 BTCUSDT 하나뿐이다",
-    거래중종목.join(",") === "BTCUSDT",
-    거래중종목.join(",") + " — 종목이 열렸습니다. 4번(시세 재연결)이 끝났는지, " +
-    "그리고 포지션 도장이 그 종목으로 제대로 찍히는지 먼저 확인하세요");
+  /* ⭐ 2026-08-27 기준 개정 — 4번 관문이 끝나 네 종목이 전부 열렸습니다.
+     옛 기준("BTCUSDT 하나뿐") 은 더 이상 사실이 아니라 지웠습니다.
+     대신 "열려 있다면 시세를 붙이는 곳이 반드시 같이 실려 있어야 한다" 를
+     못 박습니다 — 관문 없이 열기만 하면 조용한 고장이 됩니다. */
+  ok("열린 종목이 1개 이상이다", 거래중종목.length >= 1, 거래중종목.join(","));
+  ok("네 종목이 전부 열려 있다(2026-08-27 4번 관문 완료)",
+    거래중종목.join(",") === "BTCUSDT,QQQUSDT,SAMSUNGUSDT,SKHYNIXUSDT",
+    거래중종목.join(",") + " — 목록이 바뀌었으면 여기 기준도 사실대로 고치세요");
+  ok("종목이 열려 있으면 index.html 이 4번 관문을 싣고 있다",
+    거래중종목.length <= 1 || read("index.html").indexOf('src="js/symbol-stream-switch.js"') > 0,
+    "js/symbol-stream-switch.js 없이 종목만 열면, 눌러도 시세가 안 따라와 " +
+    "이름표만 바뀐 옛 종목 숫자가 그대로 남습니다(조용한 고장)");
+  ok("4번 관문이 symbol-guard.js 보다 뒤에 실린다",
+    (function () {
+      const h = read("index.html");
+      const g = h.indexOf('src="js/symbol-guard.js"');
+      const s = h.indexOf('src="js/symbol-stream-switch.js"');
+      return g > 0 && s > g;
+    })(),
+    "앞으로 가면 자물쇠(App.Config 감싸기)가 아직 안 걸린 상태로 전환이 열립니다");
   준비중종목.forEach((s) => {
     ok(s + " 는 아직 잠겨 있다", App.SymbolRegistry.isMock(s) === true,
       s + " 가 열렸습니다. 포지션·미체결 안전장치가 같이 들어갔는지 확인하세요");

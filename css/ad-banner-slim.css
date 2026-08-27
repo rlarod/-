@@ -1,0 +1,14 @@
+/* ===== C안 — 문구 배너를 그대로 두되 높이만 64px 로 (2026-08-26 디자인팀) =====
+   근거 — 바이낸스 선물 상단의 시세 미니 띠가 약 32px, 업비트 공지 띠가 42px 입니다.
+   134px 는 거래 화면 기준으로 두 배 이상 두껍습니다. 64px 로 낮추면 차트가 70px 올라옵니다.
+
+   되돌리기 — index.html 에서 이 <link> 한 줄과 <picture class="ad-banner-2026"> 블록을 지웁니다.
+   ==================================================================== */
+.ad-creative-image .ad-banner-light,
+html[data-theme="dark"] .ad-creative-image .ad-banner-dark{display:none;}
+.ad-creative-image{background:#0D1422;}
+.ad-creative-image::before,.ad-creative-image::after{display:none;}
+.ad-creative-wide{height:64px;}
+.ad-banner-2026{display:block;width:100%;line-height:0;}
+.ad-creative-image .ad-banner-svg{display:block;width:100%;height:64px;object-fit:cover;object-position:center;}
+.ad-creative-image.ad-banner-failed .ad-banner-2026{display:none;}

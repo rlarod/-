@@ -1219,6 +1219,10 @@
 <script src="js/order-panel-amitalk.js"></script>
 <!-- 시세 바: 마크가격·펀딩비가 화면 밖으로 밀려 안 보이던 문제 (chart.js 무수정) -->
 <script src="js/stats-bar-priority.js"></script>
+<!-- 24H 거래량 단위 — js/chart.js:498 이 " BTC" 를 글자로 박아 씁니다(수정 금지).
+     그 한 칸의 textContent 를 가로채 종목 단위(App.Utils.qtyUnit)로 갈아끼웁니다.
+     비트코인일 때는 결과가 같아 화면이 안 바뀝니다. 이 한 줄을 지우면 원복. -->
+<script src="js/stat-volume-unit.js"></script>
 <!-- [모바일 2단계] 폰에서 차트를 호가창·최근체결과 같은 탭 자리로 (chart.js·orderbook-tabs.js 무수정) -->
 <script src="js/chart-tab-mobile.js"></script>
 <!-- [모바일 3단계] 폰에서 주문 패널을 하단 고정 바 + 시트로 (ui.js 무수정 · 마크업 이동 없음) -->
@@ -1259,6 +1263,14 @@
      종목 전환은 열지 않습니다. 지금은 BTCUSDT 뿐이라 나가는 값이 그대로입니다.
      symbol-guard.js 뒤여야 합니다(도장을 먼저 찍어야 함). 이 한 줄만 지우면 원래대로. -->
 <script src="js/symbol-sync-bridge.js"></script>
+<!-- 종목 추가 4번(마지막) 관문 — 종목을 바꾸면 시세도 따라옵니다.
+     websocket.js·orderbook.js·chart.js·config.js 무수정. 세 가지를 같이 씁니다.
+     ① App.Config.getActiveSymbol 감싸기(세 소켓 주소가 전부 여기서 나옵니다)
+     ② 전역 WebSocket 감싸기 → 호가·체결 소켓만 닫아 스스로 새 주소로 다시 붙게
+     ③ interval:change 를 빌려 옛 봉 찌꺼기(liveCandle·syntheticCandle)를 비우기
+     symbol-guard.js 뒤여야 합니다(1번 관문이 먼저 자물쇠를 걸어야 함).
+     이 한 줄만 지우면 종목 전환이 통째로 사라지고 원래대로 돌아갑니다. -->
+<script src="js/symbol-stream-switch.js"></script>
 <!-- 차트 3단계 — RSI · MACD 를 차트 아래 별도 칸(pane)에 (chart.js 무수정).
      기본은 둘 다 꺼짐. 2단계 지표 막대에 버튼 두 개만 이어 붙입니다.
      이 한 줄을 지우면 3단계 이전 화면으로 그대로 돌아갑니다. -->
@@ -1272,5 +1284,12 @@
      거래량·MACD 칸 위에 겹치던 것 — 지우지 않고 시간축 띠로 자리만 옮깁니다.
      chart.js·style.css 무수정. 이 한 줄을 지우면 원래 자리로 돌아갑니다. -->
 <script src="js/chart-attr-logo.js"></script>
+<!-- 상품탭 줄에 종목 탭 4개 (대표 지시 2026-08-27 "여기다 종목 만들어 넣자").
+     .product-tabs 안에 App.SymbolRegistry 의 종목을 그리기만 합니다.
+     "바꿔도 되나" 판정은 SymbolRegistry.isEnabled, 실제 전환은
+     SymbolStreamSwitch.switchTo — 드롭다운(symbol-selector.js)과 같은 통로라
+     새 전환 경로가 생기지 않습니다. 반드시 symbol-stream-switch.js 뒤.
+     이 한 줄과 main.js 의 "SymbolTabs" 를 지우면 탭이 사라집니다. -->
+<script src="js/symbol-tabs.js"></script>
 </body>
 </html>

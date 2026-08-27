@@ -1,0 +1,97 @@
+/* =========================================================================
+ * B안(2차) — 광고 배너를 '시세 띠' 와 같은 종류의 한 줄로 바꿉니다
+ * 2026-08-26 디자인팀 · 1차 시안 거절 뒤 다시 만든 것
+ * =========================================================================
+ * 1차가 왜 촌스러웠나 (본부장 진단을 그대로 받았습니다)
+ *   - 조종석(cockpit) 화면 한가운데에 카드·그라디언트·큰 글씨·가운데 정렬을
+ *     넣어서, 사이트에서 유일하게 광고처럼 보이는 물건이 됐습니다.
+ *
+ * 이번 기준 (전부 숫자로 지킵니다)
+ *   높이   36px          (기준 40px 이하 / 지금 배너 134px)
+ *   배경   없음(페이지 배경 그대로). 그라디언트·빛번짐 없음
+ *   경계   아래쪽 1px 선 하나 (var(--border) #1D273B). 카드·상자 없음
+ *   모서리 0px
+ *   글자   라벨 11px #838DA4 / 값 13px #E7ECF5
+ *   숫자   var(--mono) + tabular-nums — 위 시세 바(.stat-value)와 같은 방식
+ *   색     골드 0곳. 색이 있는 것은 1위 수익률 하나뿐(상승 초록/하락 빨강)
+ *   정렬   왼쪽
+ *   장식   점·아이콘·이모지 0개. 그림자 0개
+ *
+ * 어디서 값이 오나 — js/ad-status-bar.js 가 이미 화면에 그려져 있는
+ *   랭킹 표(#leaderboard-body)에서만 읽습니다. 서버를 새로 부르지 않고
+ *   계산도 하지 않습니다. 지어낸 숫자는 0개입니다.
+ *
+ * "시즌 기간" 칸은 이 파일에서 화면에서만 뺍니다 — 지금 서버에 시즌 시작·종료
+ *   날짜가 없어서(js/season.js 는 초기화 버전 번호만 다룹니다) 보여줄 진짜
+ *   값이 없습니다. 값이 생기면 아래 :has() 한 줄만 지우면 다시 나옵니다.
+ *   마크업은 그대로 둡니다.
+ *
+ * 되돌리기 — index.html 에서 이 <link> 한 줄을 지우면 예전 배너로 돌아갑니다.
+ * style.css 는 한 글자도 고치지 않았습니다.
+ * ========================================================================= */
+
+/* 1) 옛 소재는 화면에서만 숨김 (파일·마크업 보존) */
+.top-ad-banner .ad-creative,
+.top-ad-banner .ad-creative-image,
+.top-ad-banner .ad-banner-img{display:none;}
+.top-ad-banner{padding:0;}
+
+/* 2) 상태 띠 — 카드가 아니라 '선으로 나눈 한 줄' */
+.tl-status-bar{
+  display:flex;align-items:center;gap:0;
+  height:36px;padding:0 12px;
+  background:none;                       /* 페이지 배경 그대로 */
+  border:0;
+  border-bottom:1px solid var(--border); /* 경계는 아래 1px 하나만 */
+  border-radius:0;
+  box-shadow:none;
+  cursor:pointer;
+  overflow:hidden;white-space:nowrap;
+}
+.tl-status-item{
+  display:inline-flex;align-items:baseline;gap:6px;
+  padding:0 14px;min-width:0;
+}
+.tl-status-item:first-child{padding-left:0;}
+.tl-status-item + .tl-status-item{border-left:1px solid var(--border);}
+
+.tl-status-label{
+  font-size:11px;line-height:1;font-weight:400;color:var(--text-dim);flex:0 0 auto;
+}
+/* 글자는 작게, 숫자는 그대로 — 시세 바(.stat-value)와 같은 글꼴·같은 고정폭 */
+.tl-status-value{
+  font-family:var(--mono);
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+  font-size:13px;line-height:1;font-weight:700;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;
+}
+.tl-status-unit{font-size:11px;font-weight:400;color:var(--text-dim);margin-left:1px;}
+
+/* 이 띠에서 색이 있는 유일한 것 — 1위 수익률(숫자에만) */
+.tl-status-rate{font-weight:700;}
+.tl-status-rate.is-up{color:var(--green);}
+.tl-status-rate.is-down{color:var(--red);}
+
+/* 오른쪽 끝 이동 표시 — 회색조. 권유 문구가 아니라 어디로 가는지만 알립니다 */
+.tl-status-go{
+  margin-left:auto;flex:0 0 auto;padding-left:14px;
+  font-size:11px;font-weight:400;line-height:1;color:var(--text-dim);
+}
+
+/* 진짜 값이 없는 칸은 화면에서 뺍니다 (마크업 보존).
+   되살리기: 아래 한 줄만 지우면 "시즌 기간 준비중" 이 다시 나옵니다. */
+.tl-status-item:has(.tl-status-soon){display:none;}
+.tl-status-item:has(.tl-status-soon) + .tl-status-item{border-left:0;}
+
+/* 모바일 — 360 기준. '랭킹 보기'는 자리가 없어 화면에서만 뺍니다 */
+@media (max-width:719px){
+  .tl-status-bar{height:34px;padding:0 10px;}
+  .tl-status-item{padding:0 10px;gap:5px;}
+  .tl-status-go{display:none;}
+}
+@media (max-width:400px){
+  .tl-status-item{padding:0 8px;}
+  .tl-status-label{font-size:10px;}
+  .tl-status-value{font-size:12px;}
+}
