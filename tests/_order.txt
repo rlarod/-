@@ -142,3 +142,5 @@ tests/symbol-guard-emit-view.test.js
 tests/boot-once.test.js
 tests/signup-insert-guard.test.js
 tests/chart-indicator-menu-seal.test.js
+tests/order-pressure-unknown.test.js
+tests/chart-attr-logo-seal.test.js

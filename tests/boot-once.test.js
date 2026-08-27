@@ -621,15 +621,38 @@ section("[8] 시즌 확인 → 부팅 순서 (①로그인 ②세션복구지연
     뒷갈래.indexOf("App.bootApp(") !== -1,
     "boot() 를 직접 부르면 시즌 확인이 부팅보다 뒤로 갑니다 " +
     "(2026-08-27 실측 init:Trading @11ms / season:check @47ms)");
+  /* ⚠ 주석을 먼저 걷어냅니다 — main.js 의 설명 주석에 "App.Season.checkAndReset() 을
+     기다리는 중이라면" 이라는 문장이 들어 있어서, 그냥 찾으면 코드가 뒤집혀도
+     통과합니다 (2026-08-28 돌연변이 M2a 로 실제로 이 오탐을 확인했습니다). */
+  const 코드만8 = (function (t) {
+    let out = "", i = 0;
+    for (;;) {
+      const a = t.indexOf("/" + "*", i);
+      if (a === -1) { out += t.slice(i); break; }
+      out += t.slice(i, a) + " ";
+      const b = t.indexOf("*" + "/", a + 2);
+      if (b === -1) break;
+      i = b + 2;
+    }
+    return out.split("\n").map(function (l) {
+      const j = l.indexOf("/" + "/");
+      return j === -1 ? l : l.slice(0, j);
+    }).join("\n");
+  })(src8);
   ok("App.bootApp 이 시즌 확인을 기다린 '뒤에' boot() 를 부른다",
     (function () {
-      const bi = src8.indexOf("App.bootApp = async function");
-      const 몸통 = bi !== -1 ? src8.slice(bi, src8.indexOf("function start()", bi)) : "";
-      const s = 몸통.indexOf("checkAndReset()");
-      const b = 몸통.lastIndexOf("boot();");
-      return s !== -1 && b !== -1 && s < b;
+      const bi = 코드만8.indexOf("App.bootApp = async function");
+      const 몸통 = bi !== -1 ? 코드만8.slice(bi, 코드만8.indexOf("function start()", bi)) : "";
+      const si = 몸통.indexOf("await App.Season.checkAndReset()");
+      const bo = 몸통.lastIndexOf("boot();");
+      return si !== -1 && bo !== -1 && si < bo;
     })(),
     "boot() 가 시즌 확인보다 앞에 있습니다");
+  /* 자체검증 — 위 주석 걷어내기가 고장나면 아래가 먼저 빨개집니다 */
+  ok("(자체검증) 주석 걷어내기가 실제로 동작한다",
+    코드만8.indexOf("기다리는 중이라면") === -1 &&
+    코드만8.indexOf("App.bootApp = async function") !== -1,
+    "주석이 안 걷혔거나 코드까지 지웠습니다");
 }
 
 console.log("\n==========================================================");
