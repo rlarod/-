@@ -89,18 +89,30 @@ App.OrderPressureBar = (function () {
     return { buyPct: buyPct, sellPct: 100 - buyPct };
   }
 
+  /* '모름' 표시를 켜고 끕니다 (2026-08-28).
+     계산은 아무것도 안 바뀝니다. 보이는 것만 바꿉니다.
+     빗금 모양은 css/order-pressure-unknown.css 에 있습니다. */
+  function setUnknown(on) {
+    if (dom.box) dom.box.classList.toggle("is-unknown", !!on);
+  }
+
   function render() {
     const r = computeRatio();
 
     if (!r) {
-      // 체결이 하나도 없음 — 반반이 아니라 "모른다"고 말합니다.
-      if (dom.buyBar) dom.buyBar.style.width = "50%";
-      if (dom.sellBar) dom.sellBar.style.width = "50%";
+      /* 체결이 하나도 없음 — 반반이 아니라 "모른다"고 말합니다.
+         ★막대를 50%로 두면 안 됩니다★ — 글자는 "—" 인데 막대만 반반이면
+         회원은 막대를 보고 '진짜 반반' 으로 읽습니다. 실제로 주말 새벽에
+         체결이 7분 연속 0건인 구간이 있었습니다(삼성전자 2026-08-16). */
+      setUnknown(true);
+      if (dom.buyBar) dom.buyBar.style.width = "0";
+      if (dom.sellBar) dom.sellBar.style.width = "0";
       if (dom.buyPctText) dom.buyPctText.textContent = "매수 —";
       if (dom.sellPctText) dom.sellPctText.textContent = "매도 —";
       return;
     }
 
+    setUnknown(false);
     if (dom.buyBar) dom.buyBar.style.width = r.buyPct + "%";
     if (dom.sellBar) dom.sellBar.style.width = r.sellPct + "%";
     if (dom.buyPctText) dom.buyPctText.textContent = "매수 " + r.buyPct + "%";
@@ -113,8 +125,13 @@ App.OrderPressureBar = (function () {
       sellBar: el("order-pressure-sell"),
       buyPctText: el("order-pressure-buy-text"),
       sellPctText: el("order-pressure-sell-text"),
+      box: null,
     };
     if (!dom.buyBar) return; // 마크업 없으면 조용히 종료
+    /* '모름' 표시를 붙일 바깥 상자. closest 가 없는 환경도 대비합니다. */
+    dom.box =
+      (dom.buyBar.closest && dom.buyBar.closest(".order-pressure-bar")) ||
+      document.querySelector(".order-pressure-bar");
 
     App.Bus.on("trade:tick", onTradeTick);
     App.Bus.on("symbol:change", onSymbolChange);

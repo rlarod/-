@@ -38,6 +38,19 @@ alter table public.trading_accounts alter column initial_balance set default 100
 
 -- ---------------- 2) 신규 계정 생성 시 강제 ----------------
 -- auth.js 가 보내는 10,000 을 서버에서 100,000 으로 덮습니다.
+--
+-- ⚠⚠ 2026-08-28 — 이 함수의 ★정본은 이 파일이 아닙니다★.
+--     정본: supabase/fix-signup-insert-guard.sql
+--
+--     그 파일이 본문을 늘려서 가입할 때 아래 네 칸도 같이 고정합니다.
+--       recharge_total · recharge_count · last_recharge_at · cycle_no
+--     (계급 자산 = 지갑 + 증거금 − recharge_total 이라, recharge_total 에
+--      음수를 실어 가입하면 거래 없이 계급이 올라갑니다)
+--
+--     ★이 파일을 다시 Run 하면 그 네 줄이 조용히 사라집니다.★
+--     오류도 안 나고 화면도 멀쩡합니다. 다시 Run 하셨다면
+--     ★곧바로 fix-signup-insert-guard.sql 도 다시 Run★ 해 주세요.
+--     (그 파일의 [3] 판정이 '5. ✅' 인지 보시면 확인됩니다)
 create or replace function public.force_starting_balance()
 returns trigger
 language plpgsql

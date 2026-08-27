@@ -28,6 +28,9 @@
 <!-- 배너 없애기(A안) — 2026-08-27 대표 결정. 마크업(#top-ad-banner)은 그대로 두고
      화면에서만 접습니다. 되돌리기: 이 link 한 줄만 지우면 배너가 돌아옵니다. -->
 <link rel="stylesheet" href="css/ad-banner-off.css">
+<!-- 매수/매도 압력 바 — 체결이 없을 때 가짜 50:50 대신 회색 빗금(모름)을 보입니다.
+     2026-08-28. 되돌리기: 이 link 한 줄만 지우면 원래대로. -->
+<link rel="stylesheet" href="css/order-pressure-unknown.css">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- 본문 글꼴: Spoqa Han Sans Neo (@font-face는 style.css 상단에 선언).
@@ -490,14 +493,17 @@
         <div id="qty-price-order-anchor"></div>
 
         <!-- ===== [6] 매수/매도 비율 바 ===== -->
-        <div class="order-pressure-bar">
+        <!-- 첫 화면은 '아직 셀 체결이 없음' 이 맞습니다. 예전엔 여기가 50%/50% 라
+             페이지를 열자마자 가짜 반반이 보였습니다. 2026-08-28 수정.
+             값이 들어오면 js/order-pressure-bar.js 가 is-unknown 을 떼고 채웁니다. -->
+        <div class="order-pressure-bar is-unknown">
           <div class="order-pressure-labels">
-            <span id="order-pressure-buy-text">매수 50%</span>
-            <span id="order-pressure-sell-text">매도 50%</span>
+            <span id="order-pressure-buy-text">매수 —</span>
+            <span id="order-pressure-sell-text">매도 —</span>
           </div>
           <div class="order-pressure-track">
-            <div class="order-pressure-buy" id="order-pressure-buy" style="width:50%;"></div>
-            <div class="order-pressure-sell" id="order-pressure-sell" style="width:50%;"></div>
+            <div class="order-pressure-buy" id="order-pressure-buy" style="width:0;"></div>
+            <div class="order-pressure-sell" id="order-pressure-sell" style="width:0;"></div>
           </div>
         </div>
 

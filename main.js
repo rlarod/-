@@ -90,8 +90,18 @@
    * ①②는 App.bootApp 을 통하지만 ③은 boot() 를 바로 부릅니다.
    * 그래서 App.bootApp 이 아니라 boot() 에 자물쇠를 겁니다 — 셋 다 지나갑니다.
    * ------------------------------------------------------------- */
+  /* ⭐ 2026-08-28 보강 — "시작함" 과 "끝남" 을 나눠서 들고 있습니다.
+   *   bootDone     부팅을 "시작했다". 재진입 자물쇠라 bootModules() 보다
+   *                반드시 먼저 켜야 합니다(안 그러면 모듈 init() 도중에
+   *                또 불렸을 때 부팅이 통째로 한 번 더 돕니다 — P1 재발).
+   *   bootFinished 부팅이 "끝까지 갔다". 경고 문구에만 씁니다.
+   *   bootedModules 이미 init() 을 부른 모듈 이름. 부팅이 도중에 끊겨
+   *                다시 시도할 때 같은 모듈을 두 번 켜지 않게 막습니다.
+   *                (두 번 켜면 주문창 리스너가 두 겹이 되는 그 P1 입니다) */
   let bootDone = false;
+  let bootFinished = false;
   let bootPromise = null;
+  const bootedModules = Object.create(null);
 
   /* 누가 두 번 불렀는지 나중에 잡을 수 있게 부른 자리를 남깁니다. */
   function calledFrom() {
@@ -108,14 +118,33 @@
       /* 조용히 넘기지 않습니다 — 두 번 부르는 길이 남아 있다는 뜻이라
          콘솔에 어디서 불렀는지 그대로 남깁니다. */
       console.warn(
-        "[main.js] 이미 부팅했습니다 — 두 번째 부팅을 건너뜁니다.\n" +
+        "[main.js] 이미 부팅했습니다 — 두 번째 부팅을 건너뜁니다" +
+        (bootFinished ? "" : " (첫 부팅이 아직 진행 중입니다)") + ".\n" +
         "  (그냥 두면 주문창 리스너가 두 겹이 되어 '절반만 닫기' 가 3/4 을 닫습니다)\n" +
         "  부른 곳: " + calledFrom()
       );
       return;
     }
+    /* ⚠ 이 줄은 아래 모듈 돌리기보다 "먼저" 여야 합니다.
+       뒤로 옮기면 모듈 init() 안에서 또 부팅을 부를 때 자물쇠가 아직 안 걸려
+       있어서 부팅이 한 번 더 돕니다(tests/boot-once.test.js [6] 이 잡습니다). */
     bootDone = true;
-    bootModules();
+    try {
+      bootModules();
+    } catch (err) {
+      /* 여기까지 오는 길은 거의 없습니다 — 모듈마다 try/catch 라 init() 오류는
+         밖으로 안 나옵니다. 그래도 목록을 도는 도중에 끊기면 자물쇠만 켜진 채
+         남아 "이미 부팅했습니다" 만 찍고 다시는 못 부팅하게 됩니다.
+         그래서 자물쇠를 풀어 다시 시도할 수 있게 합니다. 이미 켠 모듈은
+         bootedModules 에 남아 두 번 켜지지 않습니다(P1 재발 방지). */
+      bootDone = false;
+      console.error(
+        "[main.js] 부팅이 도중에 끊겼습니다 — 다시 부를 수 있게 자물쇠를 풉니다.\n" +
+        "  (이미 켠 모듈은 다시 켜지 않습니다)", err
+      );
+      throw err;
+    }
+    bootFinished = true;
   }
 
   function bootModules() {
@@ -132,6 +161,10 @@
       "SymbolTabs", "NoEmoji"];
     modules.forEach((name) => {
       if (App[name] && typeof App[name].init === "function") {
+        /* 부팅이 끊겨 다시 시도하는 경우 — 이미 켠 모듈은 건너뜁니다.
+           (두 번 켜면 같은 노드에 리스너가 한 겹 더 붙습니다) */
+        if (bootedModules[name]) return;
+        bootedModules[name] = true;
         // 버그 수정: 여기 try/catch가 없으면 앞쪽 모듈(예: MarketWar) 하나가
         // init() 도중 에러를 던졌을 때 forEach 전체가 멈춰서, 뒤에 있는
         // Trading/UI/WS(진짜 거래 기능)가 아예 초기화되지 않습니다.
@@ -167,7 +200,7 @@
       );
       return bootPromise;
     }
-    bootPromise = (async function () {
+    const p = (async function () {
       if (App.Season && typeof App.Season.checkAndReset === "function") {
         try {
           await App.Season.checkAndReset();
@@ -177,7 +210,14 @@
       }
       boot();
     })();
-    return bootPromise;
+    bootPromise = p;
+    /* 부팅이 실패로 끝났으면 다시 부를 수 있게 약속을 비웁니다.
+       (그냥 두면 이후 호출이 전부 "영구히 거부된 약속" 을 그대로 받습니다)
+       그 사이에 누가 새로 부팅을 걸었으면 그건 건드리지 않습니다. */
+    p.catch(function () {
+      if (bootPromise === p) bootPromise = null;
+    });
+    return p;
   };
 
   function start() {
@@ -187,7 +227,23 @@
     if (App.Auth && typeof App.Auth.init === "function") {
       App.Auth.init();
     } else {
-      boot();
+      /* ⭐ 2026-08-28 — 여기서 boot() 를 바로 부르면 시즌 확인이 부팅보다
+         뒤로 갑니다(③번 길).
+           boot() 직접 호출 → bootDone=true, bootPromise 는 그대로 null
+           → 조금 뒤 js/guest-access.js:137 이 App.bootApp() 을 부르면
+             그때서야 App.Season.checkAndReset() 이 돌고, 이어지는 boot() 는
+             "이미 부팅했습니다" 로 건너뜁니다.
+         그러면 js/trading.js 가 localStorage 를 이미 메모리에 올린 뒤에
+         시즌 초기화가 일어나서, 초기화가 화면에 반영되지 않습니다
+         (실측 — init:Trading @11ms 인데 season:check @47ms 였습니다).
+         그래서 ③번 길도 App.bootApp() 을 거쳐 "시즌 확인 → 부팅" 순서를
+         지킵니다.
+         ⚠ 늦어지지 않습니다 — 이 길은 Supabase 로드 실패 때 오는 길이고,
+           그때 App.Season.checkAndReset() 은 client 가 없어 첫 줄에서 바로
+           돌아옵니다(js/season.js:32~33). App.Season 자체가 없으면 건너뜁니다. */
+      App.bootApp().catch(function (err) {
+        console.error("[main.js] 부팅에 실패했습니다:", err);
+      });
     }
   }
 

@@ -140,3 +140,5 @@ tests/interval-native-truth.test.js
 tests/leverage-engine-cap.test.js
 tests/symbol-guard-emit-view.test.js
 tests/boot-once.test.js
+tests/signup-insert-guard.test.js
+tests/chart-indicator-menu-seal.test.js

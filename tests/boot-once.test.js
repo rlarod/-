@@ -314,6 +314,324 @@ section("[5] 자물쇠가 boot() 에 걸려 있다");
     fs.existsSync(path.join(REPO, "main.js")) && !fs.existsSync(path.join(REPO, "js/main.js")));
 }
 
+/* =========================================================================
+ * [6] 부팅 도중에 또 부르면 — 자물쇠는 bootModules() 보다 "먼저" 걸려야 한다
+ *     2026-08-28 본부장 돌연변이 ② 로 뚫린 구멍. [1]~[5] 31건이 전부 통과했습니다.
+ *
+ *  무엇이 뚫렸나 — main.js 의 이 두 줄 순서를 뒤집으면 새는데 아무도 안 잡았습니다.
+ *        bootDone = true;   ←  이 줄이 먼저여야 합니다
+ *        bootModules();
+ *     "부팅이 중간에 실패하면 다시는 못 부팅하니 성공한 뒤에 잠그자" 는 그럴듯한
+ *     이유로 누가 뒤집기 쉽습니다. 실제로 bootModules() 는 모듈마다 try/catch 라
+ *     밖으로 오류를 안 던집니다 — 즉 "성공한 뒤에 잠그기" 는 얻는 게 없고
+ *     아래 구멍만 생깁니다.
+ *
+ *  왜 새나 — App.bootApp 의 자물쇠(bootPromise)는 이때 아직 비어 있습니다.
+ *        bootPromise = (async function () { ... boot(); })();
+ *     App.Season 이 없으면 이 async 함수가 await 없이 boot() 까지 그대로 달려서,
+ *     bootPromise 에 값이 대입되기 "전에" 모듈 init() 들이 이미 돌고 있습니다.
+ *     (App.Season 은 js/season.js 인데, Supabase 로드가 실패하면 없습니다 —
+ *      ③번 길과 같은 상황입니다)
+ *     그래서 그 사이에 어떤 모듈의 init() 이 App.bootApp() 을 부르면
+ *     bootPromise 도 null, bootDone 도 아직 false → 부팅이 통째로 한 번 더 돕니다.
+ *
+ *  2026-08-28 실측 (돌연변이 ② 를 넣은 사본에서 잰 값)
+ *        원본        재진입 1회 · price:update 3 · trading:update 4
+ *        두 줄 뒤집음  재진입 2회 · price:update 6 · trading:update 7
+ *     [2] 의 "두 번 부팅" 과 완전히 같은 숫자입니다 = 같은 P1 이 그대로 돌아옵니다.
+ * ========================================================================= */
+section("[6] 부팅 도중에 또 부르면 (재진입) — 자물쇠가 모듈 init 보다 먼저 걸린다");
+{
+  /* 부팅 중에 App.bootApp() 을 한 번 더 부르는 모듈을 심습니다.
+     Theme 은 main.js 모듈 목록에 실제로 있는 이름입니다.
+
+     ⚠ 여기서는 [1] 의 기준값과 바로 비교하지 않습니다. 이 시험은 부팅 뒤
+        60ms 를 더 기다리는데, 그 사이 모듈 하나가 trading:update 를 늦게
+        하나 더 구독합니다(원본에서도 4 → 5). 조건이 다른 값끼리 비교하면
+        엉뚱한 곳이 빨개집니다. 그래서 "재진입 안 하는 같은 시험(대조군)" 을
+        한 번 더 돌려 그 값과 비교합니다 — 조건이 완전히 같습니다. */
+  const 재진입시험 = async function (시즌있음, 재진입할지) {
+    const { win } = makeWindow({ blockAutoBoot: true });
+    quiet(function () { win.eval(read("main.js")); });
+    const App = win.App;
+
+    const counts = {};
+    const origOn = App.Bus.on;
+    App.Bus.on = function (e, f) { counts[e] = (counts[e] || 0) + 1; return origOn.call(this, e, f); };
+
+    if (시즌있음) App.Season = { checkAndReset: function () { return Promise.resolve(); } };
+
+    let 돈횟수 = 0;
+    App.Theme = {
+      init: function () { 돈횟수++; if (재진입할지 && 돈횟수 === 1) App.bootApp(); },
+    };
+
+    const w = console.warn; console.warn = function () {};
+    try { await App.bootApp(); await new Promise(function (r) { setTimeout(r, 60); }); }
+    finally { console.warn = w; }
+
+    return { 돈횟수: 돈횟수, m: measure({ App: App, doc: win.document, win: win, counts: counts }) };
+  };
+
+  {
+    const 대조 = await 재진입시험(false, false);   // 재진입 없음
+    const 실험 = await 재진입시험(false, true);    // 부팅 중에 App.bootApp() 한 번 더
+
+    ok("(대조군) 재진입이 없으면 모듈 init() 은 당연히 1회",
+      대조.돈횟수 === 1, "Theme.init() " + 대조.돈횟수 + "회");
+
+    ok("App.Season 이 없을 때 — 모듈 init() 이 딱 한 번만 돈다 (뒤집으면 2)",
+      실험.돈횟수 === 1, "Theme.init() " + 실험.돈횟수 + "회");
+    ok("App.Season 이 없을 때 — price:update 구독자가 대조군과 같다 (뒤집으면 두 배)",
+      실험.m.구독가격 === 대조.m.구독가격, 실험.m.구독가격 + " vs 대조군 " + 대조.m.구독가격);
+    ok("App.Season 이 없을 때 — trading:update 구독자가 대조군과 같다 (뒤집으면 두 배)",
+      실험.m.구독방송 === 대조.m.구독방송, 실험.m.구독방송 + " vs 대조군 " + 대조.m.구독방송);
+    ok("App.Season 이 없을 때 — 틱 1번에 trading:update 1번",
+      실험.m.틱당방송 === 1, String(실험.m.틱당방송));
+    ok("App.Season 이 없을 때 — 절반만 닫기가 여전히 50%", 실험.m.비율 === 50, 실험.m.비율 + "%");
+    ok("App.Season 이 없을 때 — 거래내역 1건", 실험.m.건수 === 1, String(실험.m.건수));
+    ok("App.Season 이 없을 때 — 잔고 99,492.55", 실험.m.잔고 === 기준값.잔고, String(실험.m.잔고));
+  }
+
+  {
+    /* 시즌이 있으면 await 때문에 bootPromise 가 먼저 채워져 App.bootApp 자물쇠도
+       같이 막아줍니다. 그래도 여기까지 같이 못 박아 둡니다. */
+    const 실험 = await 재진입시험(true, true);
+    ok("App.Season 이 있을 때도 — 모듈 init() 이 딱 한 번",
+      실험.돈횟수 === 1, "Theme.init() " + 실험.돈횟수 + "회");
+    ok("App.Season 이 있을 때도 — 절반만 닫기가 50%", 실험.m.비율 === 50, 실험.m.비율 + "%");
+    ok("App.Season 이 있을 때도 — 거래내역 1건", 실험.m.건수 === 1, String(실험.m.건수));
+  }
+
+  /* 소스로도 한 번 더 — 왜 터졌는지 바로 읽히게 */
+  const src6 = read("main.js");
+  const bi6 = src6.indexOf("function boot()");
+  const end6 = src6.indexOf("function bootModules()", bi6);
+  const 본문6 = (bi6 !== -1 && end6 !== -1) ? src6.slice(bi6, end6) : "";
+  const 잠금6 = 본문6.indexOf("bootDone = true");
+  const 호출6 = 본문6.indexOf("bootModules()");
+  ok("boot() 안에서 'bootDone = true' 가 'bootModules()' 보다 먼저 나온다",
+    잠금6 !== -1 && 호출6 !== -1 && 잠금6 < 호출6,
+    "bootDone=true " + 잠금6 + " / bootModules() " + 호출6 +
+    " — 뒤집으면 모듈 init() 중에 부팅이 한 번 더 돕니다");
+}
+
+/* =========================================================================
+ * [7] 부팅이 도중에 끊기면 — 자물쇠를 풀어 다시 부팅할 수 있어야 한다
+ *     그러면서 이미 켠 모듈은 두 번 켜지 않아야 한다
+ *
+ *     2026-08-28 감사팀 지적 ① / 본부장 돌연변이 ① 로 뚫린 구멍.
+ *     이 절을 넣기 전 [1]~[6] 43건이 그 돌연변이를 하나도 못 잡았습니다.
+ *
+ *  무엇이 뚫렸나 — main.js boot() 의 try/catch 를 통째로 지우면
+ *        bootDone = true;
+ *        bootModules();          ← 여기서 끊기면 bootDone 은 true 로 남는다
+ *     부팅이 중간에 끊긴 채 자물쇠만 켜져서, 그 뒤로는 몇 번을 불러도
+ *     "이미 부팅했습니다" 만 찍고 화면이 영영 반쪽으로 남습니다.
+ *     오류도 안 뜨고 껍데기는 멀쩡합니다 — 전형적인 조용한 고장입니다.
+ *
+ *  ⚠ 부팅 실패를 인위로 만들어야 합니다. bootModules() 는 모듈마다 try/catch 라
+ *     init() 이 던져도 밖으로 안 나옵니다. 그래서 감사팀이 쓴 방법 그대로
+ *     App.<모듈> 을 "읽는 순간 던지는 getter" 로 심습니다 —
+ *     forEach 안의 App[name] 접근은 그 try/catch 바깥입니다.
+ *
+ *  2026-08-28 실측 (돌연변이 ① 을 넣은 사본에서 잰 값)
+ *        원본            첫 부팅 끊김 → 다시 부팅 성공 · 주문창 있음 · 절반만 닫기 50%
+ *        try/catch 삭제  다시 부팅 거부("이미 부팅했습니다") · 주문창 없음 · 주문 불가
+ * ========================================================================= */
+section("[7] 부팅이 도중에 끊겨도 다시 부팅할 수 있다 (자물쇠를 되돌린다)");
+{
+  const { win } = makeWindow({ blockAutoBoot: true });
+  quiet(function () { win.eval(read("main.js")); });
+  const App = win.App;
+
+  /* MarketWar 는 main.js 모듈 목록에서 Trading 보다 앞입니다.
+     여기서 끊으면 Trading·UI 가 아예 안 켜집니다(= 주문창이 안 생깁니다). */
+  let 던짐 = 0;
+  Object.defineProperty(App, "MarketWar", {
+    configurable: true,
+    get: function () { 던짐++; throw new Error("[시험] 부팅을 일부러 끊습니다"); },
+  });
+
+  /* TradesFit 은 MarketWar 보다 앞입니다 — 다시 부팅할 때 이 모듈이 두 번
+     켜지면 같은 노드에 리스너가 한 겹 더 붙는 그 P1 이 그대로 돌아옵니다. */
+  let 앞모듈init = 0;
+  App.TradesFit = { init: function () { 앞모듈init++; } };
+
+  const errs = [];
+  const e0 = console.error, w0 = console.warn;
+  console.error = function () { errs.push(String(arguments[0])); };
+  console.warn = function () {};
+
+  let 첫부팅오류 = null;
+  try { await App.bootApp(); } catch (err) { 첫부팅오류 = err; }
+
+  ok("첫 부팅이 실제로 도중에 끊겼다 (시험 준비가 됐다)",
+    던짐 === 1 && !!첫부팅오류, "getter 던짐 " + 던짐 + "회 / 오류 " + 첫부팅오류);
+  ok("끊긴 시점에는 주문창이 아직 없다 (Trading·UI 가 못 켜졌다)",
+    !win.document.querySelector('.chip[data-close-ratio="0.5"]'));
+  ok("끊기기 전 모듈은 한 번 켜졌다", 앞모듈init === 1, String(앞모듈init));
+  ok("왜 끊겼는지 콘솔에 남긴다 (조용히 죽지 않는다)",
+    errs.some(function (x) { return x.indexOf("자물쇠를 풉니다") !== -1; }),
+    JSON.stringify(errs.slice(0, 2)));
+
+  /* 끊긴 원인을 걷어내고 다시 부팅합니다 (실제로는 늦게 온 재시도 / 새로고침) */
+  Object.defineProperty(App, "MarketWar", { configurable: true, value: undefined });
+
+  const warns = [];
+  console.warn = function () { warns.push(String(arguments[0])); };
+  try { await App.bootApp(); } finally { console.warn = w0; console.error = e0; }
+
+  ok("다시 부팅이 실제로 됐다 (자물쇠가 풀렸다 — 돌연변이 ① 이면 여기가 터집니다)",
+    !!win.document.querySelector('.chip[data-close-ratio="0.5"]'),
+    "주문창이 없습니다. bootDone 이 true 로 남아 '이미 부팅했습니다' 만 찍습니다: " +
+    JSON.stringify(warns.slice(0, 2)));
+  ok("다시 부팅해도 이미 켠 모듈은 두 번 안 켠다 (리스너 두 겹 = P1 재발)",
+    앞모듈init === 1, "TradesFit.init() " + 앞모듈init + "회");
+
+  const m7 = measure({ App: App, doc: win.document, win: win, counts: null });
+  ok("다시 부팅한 뒤 절반만 닫기가 50%", m7.비율 === 기준값.비율, m7.비율 + "%");
+  ok("다시 부팅한 뒤 거래내역 1건", m7.건수 === 기준값.건수, String(m7.건수));
+  ok("다시 부팅한 뒤 잔고 99,492.55", m7.잔고 === 기준값.잔고, String(m7.잔고));
+  ok("다시 부팅한 뒤 틱 1번에 trading:update 1번", m7.틱당방송 === 1, String(m7.틱당방송));
+
+  /* 소스로도 한 번 더 — 왜 터졌는지 바로 읽히게 */
+  const src7 = read("main.js");
+  const b7 = src7.indexOf("function boot()");
+  const e7 = src7.indexOf("function bootModules()", b7);
+  const 본문7 = (b7 !== -1 && e7 !== -1) ? src7.slice(b7, e7) : "";
+  ok("boot() 안에 '끊기면 자물쇠를 되돌린다'(bootDone = false) 가 있다",
+    본문7.indexOf("bootDone = false") !== -1,
+    "부팅이 한 번 끊기면 다시는 못 부팅합니다");
+  ok("bootModules() 가 이미 켠 모듈을 기억한다 (bootedModules)",
+    src7.indexOf("bootedModules") !== -1);
+}
+
+/* =========================================================================
+ * [8] 시즌 확인은 언제나 부팅보다 "먼저" 끝난다 — 세 경로 전부
+ *
+ *     2026-08-28 감사팀 지적 ② / 본부장 돌연변이 ② 로 뚫린 구멍.
+ *     이 절을 넣기 전 [1]~[7] 이 아래 두 돌연변이를 하나도 못 잡았습니다.
+ *       M2a  App.bootApp 안에서 boot() 를 시즌 확인보다 앞으로  → 세 경로 전부 뒤집힘
+ *       M2b  start() 의 'Auth 없음' 갈래가 boot() 를 직접 호출  → ③번 길만 뒤집힘
+ *
+ *  왜 순서가 중요한가 — js/trading.js 는 init() 에서 localStorage 를 읽어
+ *     메모리에 올립니다. 그 "뒤에" 시즌 초기화가 일어나면 초기화된 값이
+ *     화면에 반영되지 않습니다. 관리자가 "전체 시즌 초기화" 를 눌렀는데
+ *     회원 화면에는 옛 잔고·옛 포지션이 그대로 남아 보입니다(P1 — 회원이
+ *     틀린 숫자로 판단합니다). 오류는 안 납니다.
+ *
+ *  2026-08-27 실측 (③번 길이 boot() 를 직접 부르던 때)
+ *        init:Trading @11ms  →  season:check @47ms      ← 뒤집혀 있었습니다
+ *  2026-08-28 지금 (세 경로 전부 App.bootApp 을 거칩니다)
+ *        season:check 가 언제나 init:Trading 보다 앞입니다.
+ *
+ *  ⚠ ms 는 기계에 따라 흔들리므로 "몇 번째로 일어났는가"(순번)로 판정하고
+ *     ms 는 사람이 읽는 용도로만 찍습니다.
+ * ========================================================================= */
+section("[8] 시즌 확인 → 부팅 순서 (①로그인 ②세션복구지연 ③App.Auth 없음)");
+{
+  /* 시즌 확인과 Trading 초기화가 각각 몇 번째로 일어났는지 기록합니다 */
+  function 계측(App, t0) {
+    const 기록 = [];
+    let 순번 = 0;
+    App.Season = {
+      checkAndReset: function () {
+        기록.push({ 이름: "season:check", 순번: ++순번, ms: Date.now() - t0 });
+        /* 실제 season.js 처럼 서버를 한 번 기다립니다 */
+        return new Promise(function (r) { setTimeout(r, 30); });
+      },
+    };
+    const orig = App.Trading.init;
+    App.Trading.init = function () {
+      기록.push({ 이름: "init:Trading", 순번: ++순번, ms: Date.now() - t0 });
+      return orig.apply(this, arguments);
+    };
+    return 기록;
+  }
+
+  function 판정(라벨, 기록) {
+    const s = 기록.filter(function (x) { return x.이름 === "season:check"; })[0];
+    const t = 기록.filter(function (x) { return x.이름 === "init:Trading"; })[0];
+    const 설명 = 기록.map(function (x) { return x.이름 + " @" + x.ms + "ms"; }).join(" → ")
+      || "(시즌 확인도 부팅도 안 돌았습니다)";
+    ok(라벨 + " — 시즌 확인이 돌았다", !!s, 설명);
+    ok(라벨 + " — Trading 이 켜졌다", !!t, 설명);
+    ok(라벨 + " — season:check 가 init:Trading 보다 먼저다", !!s && !!t && s.순번 < t.순번, 설명);
+  }
+
+  /* ── ① 로그인 길 (js/auth.js 가 App.bootApp() 을 부릅니다) ── */
+  {
+    const { win } = makeWindow({ blockAutoBoot: true });
+    quiet(function () { win.eval(read("main.js")); });
+    const App = win.App;
+    const 기록 = 계측(App, Date.now());
+    const w = console.warn; console.warn = function () {};
+    try { await App.bootApp(); } finally { console.warn = w; }
+    판정("①로그인", 기록);
+  }
+
+  /* ── ② 세션복구 지연 길 (js/guest-access.js 가 나중에 부릅니다) ── */
+  {
+    const { win } = makeWindow({ blockAutoBoot: true });
+    quiet(function () { win.eval(read("main.js")); });
+    const App = win.App;
+    const 기록 = 계측(App, Date.now());
+    await new Promise(function (r) { setTimeout(r, 80); });   // 세션 복구를 기다리는 동안
+    const w = console.warn; console.warn = function () {};
+    try { await App.bootApp(); } finally { console.warn = w; }
+    판정("②세션복구지연", 기록);
+  }
+
+  /* ── ③ App.Auth 가 없는 길 (Supabase 로드 실패 → main.js start()) ──
+     여기가 2026-08-27 에 실제로 뒤집혀 있던 길입니다. */
+  {
+    const { win } = makeWindow({ blockAutoBoot: false });
+    quiet(function () { win.eval(read("main.js")); });
+    const App = win.App;
+    /* start() 는 DOMContentLoaded 뒤에 도니 아직 안 늦었습니다 */
+    const 기록 = 계측(App, Date.now());
+
+    /* ③번 길은 스스로 부팅하므로 quiet() 로 못 감쌉니다.
+       "모듈이 없거나" 경고(차트·WS 등을 일부러 안 태웁니다)를 여기서 가립니다. */
+    const w3 = console.warn; console.warn = function () {};
+    try {
+      await new Promise(function (r) {
+        if (win.document.readyState === "complete") return r();
+        win.document.addEventListener("DOMContentLoaded", function () { r(); });
+        win.addEventListener("load", function () { r(); });
+        setTimeout(r, 1500);
+      });
+      /* 시즌 30ms + 부팅. 전체를 한꺼번에 돌릴 때를 생각해 넉넉히 둡니다 */
+      await new Promise(function (r) { setTimeout(r, 300); });
+    } finally { console.warn = w3; }
+
+    ok("③App.Auth없음 — 실제로 부팅됐다 (주문창이 있다)",
+      !!win.document.querySelector('.chip[data-close-ratio="0.5"]'));
+    판정("③App.Auth없음", 기록);
+  }
+
+  /* 소스로도 — 왜 터졌는지 바로 읽히게 */
+  const src8 = read("main.js");
+  const si8 = src8.indexOf("function start()");
+  const 본문8 = si8 !== -1 ? src8.slice(si8) : "";
+  const else8 = 본문8.indexOf("} else {");
+  const 뒷갈래 = else8 !== -1 ? 본문8.slice(else8) : "";
+  ok("start() 의 'Auth 가 없을 때' 갈래가 App.bootApp() 을 거친다",
+    뒷갈래.indexOf("App.bootApp(") !== -1,
+    "boot() 를 직접 부르면 시즌 확인이 부팅보다 뒤로 갑니다 " +
+    "(2026-08-27 실측 init:Trading @11ms / season:check @47ms)");
+  ok("App.bootApp 이 시즌 확인을 기다린 '뒤에' boot() 를 부른다",
+    (function () {
+      const bi = src8.indexOf("App.bootApp = async function");
+      const 몸통 = bi !== -1 ? src8.slice(bi, src8.indexOf("function start()", bi)) : "";
+      const s = 몸통.indexOf("checkAndReset()");
+      const b = 몸통.lastIndexOf("boot();");
+      return s !== -1 && b !== -1 && s < b;
+    })(),
+    "boot() 가 시즌 확인보다 앞에 있습니다");
+}
+
 console.log("\n==========================================================");
 console.log("통과 " + pass + " / 실패 " + fail);
 if (fail) { console.log("실패 있음 ❌"); process.exit(1); }

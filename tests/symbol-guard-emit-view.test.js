@@ -87,7 +87,12 @@ function boot(opts) {
     "js/symbol-guard.js", "js/trading.js",
     "js/multi-symbol-view.js", "js/order-lock-notice.js",
   ];
-  if (withFix) files.push("js/symbol-guard-emit-view.js");
+  /* opts.wrongOrder — js/symbol-guard.js 보다 "먼저" 읽습니다([6] 에서 씁니다).
+     실제 화면에서는 아무도 init() 을 손으로 안 부르므로 아래에서도 안 부릅니다. */
+  if (withFix) {
+    if (opts.wrongOrder) files.splice(files.indexOf("js/symbol-guard.js"), 0, "js/symbol-guard-emit-view.js");
+    else files.push("js/symbol-guard-emit-view.js");
+  }
   for (const f of files) {
     try { win.eval(read(f)); }
     catch (e) { throw new Error("모듈 로드 실패 " + f + ": " + e.message); }
@@ -98,7 +103,7 @@ function boot(opts) {
   const A = win.App;
   if (A.SymbolGuard) A.SymbolGuard.armUi();
   if (A.MultiSymbolView && A.MultiSymbolView.init) A.MultiSymbolView.init();
-  if (withFix && A.SymbolGuardEmitView) A.SymbolGuardEmitView.init();
+  if (withFix && !opts.wrongOrder && A.SymbolGuardEmitView) A.SymbolGuardEmitView.init();
   if (A.OrderLockNotice && A.OrderLockNotice.init) A.OrderLockNotice.init();
 
   return { dom, win, App: A, doc: win.document };
@@ -325,6 +330,57 @@ section("[5] index.html 등록 · git 추적");
   } catch (e) { tracked = ""; }
   ok("git 에 추적되고 있다 (clone 한 PC 에서 빈 링크가 되지 않는다)",
     tracked === "js/symbol-guard-emit-view.js", tracked || "git ls-files 결과 없음");
+}
+
+/* =========================================================================
+ * [6] 읽는 순서가 잘못되면 스스로 거부한다 — 2026-08-28 추가
+ *     본부장 돌연변이 ⑤ 로 뚫린 구멍. [0]~[5] 28건이 전부 통과했습니다.
+ *
+ *  무엇이 뚫렸나 — js/symbol-guard-emit-view.js 의 이 한 줄을 지워도
+ *  아무 검사도 안 걸렸습니다.
+ *        if (!App.Bus.__symbolGuardedEmit) return false;
+ *  이 줄은 "js/symbol-guard.js 가 먼저 emit 을 감싼 뒤가 아니면 나는 감싸지
+ *  않는다" 는 뜻입니다. 이 모듈은 반드시 symbol-guard 의 emit 감싸기보다
+ *  "바깥" 이어야 합니다 — 안쪽이면 symbol-guard 의 symbol:change 판정까지
+ *  바꿔치기된 값을 읽게 됩니다.
+ *
+ *  [5] 는 index.html 의 글자 순서만 봅니다. 그런데 이 줄이 없으면
+ *  index.html 을 고치지 않아도 (읽는 순서가 어떤 이유로든 어긋나는 순간)
+ *  조용히 안쪽에 붙습니다. 오류도 안 나고 화면도 멀쩡합니다.
+ *  그래서 글자 검사(정적) 말고 "실제로 거부하는지" 를 같이 봅니다.
+ *
+ *  ⚠ 실제 화면에서는 아무도 init() 을 손으로 부르지 않습니다 —
+ *     파일 끝에서 스스로 켭니다. 그래서 이 칸은 손으로 부르지 않고
+ *     스스로 켜진 결과만 봅니다(실제와 같은 조건).
+ * ========================================================================= */
+section("[6] symbol-guard 보다 먼저 읽히면 감싸기를 거부한다");
+{
+  {
+    const { App } = boot();                       // 올바른 순서
+    ok("올바른 순서면 감쌌다 (isWrapped true)",
+      App.SymbolGuardEmitView.isWrapped() === true,
+      String(App.SymbolGuardEmitView.isWrapped()));
+  }
+  {
+    const { App } = boot({ wrongOrder: true });   // symbol-guard 보다 먼저 읽음
+    ok("먼저 읽히면 감싸지 않는다 (isWrapped false — 안쪽에 붙지 않는다)",
+      App.SymbolGuardEmitView.isWrapped() === false,
+      String(App.SymbolGuardEmitView.isWrapped()));
+    const st = App.SymbolGuardEmitView.getStats();
+    ok("감싸지 않았으니 방송에 손댄 흔적이 하나도 없다",
+      st.restored === 0 && st.skipped === 0 && st.noReal === 0 && st.stolen === 0,
+      JSON.stringify(st));
+
+    /* 거부만 하고 끝내지 않습니다 — 나중에 순서가 갖춰지면 스스로 붙습니다.
+       (init() 이 50ms 간격으로 200번까지 다시 시도합니다) */
+    ok("거부한 뒤에도 다시 시도할 준비가 되어 있다 (init 이 재시도 타이머를 건다)",
+      read("js/symbol-guard-emit-view.js").indexOf("setInterval") !== -1);
+  }
+
+  /* 소스로도 한 번 더 — 지웠을 때 왜 터졌는지 바로 읽히게 */
+  ok("js/symbol-guard-emit-view.js 가 __symbolGuardedEmit 를 확인한 뒤에만 감싼다",
+    read("js/symbol-guard-emit-view.js").indexOf("if (!App.Bus.__symbolGuardedEmit) return false;") !== -1,
+    "이 줄이 없으면 symbol-guard 안쪽에 조용히 붙습니다");
 }
 
 console.log("\n==========================================================");

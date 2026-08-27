@@ -34,6 +34,18 @@
 
 
 -- ---------------- 1) 트리거 함수 수정 ----------------
+--
+-- ⚠⚠ 2026-08-28 — 이 함수의 ★정본은 이 파일이 아닙니다★.
+--     정본: supabase/fix-signup-insert-guard.sql
+--
+--     그 파일이 아래 내용을 ★그대로 담고★ 가입할 때 네 칸을 더 고정합니다.
+--       recharge_total · recharge_count · last_recharge_at · cycle_no
+--     (계급 자산 = 지갑 + 증거금 − recharge_total 이라, recharge_total 에
+--      음수를 실어 가입하면 거래 없이 계급이 올라갑니다)
+--
+--     ★이 파일을 다시 Run 하면 그 네 줄이 조용히 사라집니다.★
+--     오류도 안 나고 화면도 멀쩡합니다. 다시 Run 하셨다면
+--     ★곧바로 fix-signup-insert-guard.sql 도 다시 Run★ 해 주세요.
 create or replace function public.force_starting_balance()
 returns trigger
 language plpgsql

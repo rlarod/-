@@ -78,7 +78,17 @@ const BASELINE = {
   "get_my_rank": 4,
   "check_chat_message": 4,
   "reset_season": 3,
-  "force_starting_balance": 2,
+  /* 2026-08-28 수리팀 — 2 에서 3 으로 올렸습니다. 왜 올렸는지 남깁니다.
+   *   supabase/fix-signup-insert-guard.sql 이 세 번째 벌입니다.
+   *   가입(INSERT) 때 recharge_total 등 네 칸을 서버가 고정하려면
+   *   이 함수 본문을 늘려야 하는데, 앞의 두 파일은 그대로 두는 것이
+   *   맞다고 봤습니다 —
+   *     schema-initial-balance.sql 을 고치면 그 파일의 '기존 회원 보정'
+   *     UPDATE 까지 같이 다시 돌게 되고,
+   *     지갑초기화-해결.sql 은 사고 기록으로 남겨야 합니다.
+   *   대신 두 파일 모두에 "정본은 fix-signup-insert-guard.sql" 이라고
+   *   적어 뒀고, tests/signup-insert-guard.test.js 가 그 표시를 지킵니다. */
+  "force_starting_balance": 3,
   "claim_daily_recharge": 2,
   "rank_points_all": 1,
   "rank_points": 1,
