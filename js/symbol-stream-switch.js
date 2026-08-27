@@ -50,6 +50,10 @@
  *   4) 호가·체결 소켓 두 개를 닫습니다 (fstream.binance.com 인 것만)
  *   5) interval:change 방송 — "지금 간격" 을 그대로 실어야 합니다
  *      ⚠ 1s/5s/15s 를 실으면 js/interval-guard.js 가 1m 으로 되돌립니다
+ *   5-2) ⭐ 소켓이 실제로 닫히기를 기다리지 않습니다 (2026-08-28)
+ *        크롬이 onclose 를 불러주기까지 2.1초 + 재접속 대기 1.0초 =
+ *        3.1초를 그냥 기다리고 있었습니다(실측). 핸들러를 손에 쥐고
+ *        떼어낸 뒤 우리가 직접 부릅니다. 자세한 것은 hardClose() 주석.
  *   6) 새 값이 오는지 지켜보고, 안 오면 회원에게 보이게 알립니다
  *      (8초 — 콘솔에만 / 15초 — 화면에 빨간 띠. 실측 근거는 SOFT_MS 주석)
  *
@@ -93,6 +97,12 @@
  *     그 상태의 청산 기록이 어느 종목으로 남는지는 이 파일 밖의 문제입니다.
  *
  * ── 되돌리는 방법 ───────────────────────────────────────────────────────
+ *   ⭐ "즉시 끊기"(2026-08-28) 만 되돌리려면 세 곳을 지웁니다 —
+ *      switchTo 안의 fastCloseCombined() · scheduleHeal() 호출 두 줄,
+ *      closeFeedSockets 의 hardClose(r.ws, r.url) 을 r.ws.close() 로,
+ *      track() 안의 installOpenKick(ws, url) 한 줄.
+ *      그러면 어제(2026-08-27)와 100% 같은 동작으로 돌아갑니다.
+ *
  *   index.html 에서 <script src="js/symbol-stream-switch.js"></script> 한 줄을
  *   지우면 종목 전환이 통째로 사라집니다.
  *   ⚠ 그때는 js/symbol-registry.js 의 세 종목도 enabled:false 로 같이
@@ -119,6 +129,7 @@ App.SymbolStreamSwitch = (function () {
   var CHECK_MS = 15000; // 회원에게 보이는 경고
   var RECHECK_MS = 1000; // 늦게 온 값으로 경고를 지우는 주기
   var GIVEUP_MS = 30000; // 이만큼 지나면 다시 재보지 않습니다
+  var HEAL_MS = 3000; // 합본 스트림이 다시 안 붙었으면 되살리는 그물 (5-2 의 안전장치)
 
   var origGetActiveSymbol = null;
   var override = null; // null 이면 원본 값(BTCUSDT)을 그대로 씁니다
@@ -129,7 +140,7 @@ App.SymbolStreamSwitch = (function () {
   var softTimer = null;
   var recheckTimer = null;
   var alertBox = null;
-  var stats = { switches: 0, blocked: 0, failed: 0, closed: 0 };
+  var stats = { switches: 0, blocked: 0, failed: 0, closed: 0, healed: 0 };
   var lastMissing = [];
 
   /* ------------------------------------------------------------------
@@ -260,6 +271,7 @@ App.SymbolStreamSwitch = (function () {
 
   function track(ws, url) {
     sockets.push({ ws: ws, url: String(url || "") });
+    installOpenKick(ws, url); /* 갓 붙은 합본 소켓이 즉사하지 않게 — 위 설명 참고 */
     if (sockets.length > 30) prune();
   }
 
@@ -299,10 +311,180 @@ App.SymbolStreamSwitch = (function () {
     return true;
   }
 
+  /* ------------------------------------------------------------------
+   * ⭐ 2026-08-28 — 즉시 끊기 (종목 전환 대기시간 줄이기)
+   * ------------------------------------------------------------------
+   * 실측(1440, 로컬, 크롬) — 예전 방식으로 소켓을 "정중히" 닫으면
+   *
+   *   0ms      ws.close() 를 부름
+   *   3142ms   새 소켓이 만들어짐   ← 이 3.1초가 통째로 대기시간이었습니다
+   *
+   * 안이 이렇습니다.
+   *   ① 크롬이 close 핸드셰이크를 마치고 onclose 를 부를 때까지 ~2.1초
+   *   ② 그 onclose 안의 scheduleReconnect 가 setTimeout(connect, 1000)
+   *
+   * 그래서 두 가지를 같이 없앱니다.
+   *
+   *   ① onclose 를 기다리지 않습니다.
+   *      핸들러를 먼저 손에 쥐고 → 소켓에서 떼고 → close() 하고 →
+   *      우리가 그 핸들러를 그 자리에서 직접 부릅니다.
+   *      ⚠ "떼고 버리기" 만 하면 아무도 재접속을 안 합니다(영원히 빈 화면).
+   *        떼는 이유는 크롬이 나중에 또 불러서 소켓이 두 벌 열리는 걸
+   *        막기 위해서고, 재접속은 우리가 직접 불러 일으킵니다.
+   *      ⚠ onmessage 도 같이 뗍니다 — 닫는 중인 옛 소켓이 마지막 한 방울을
+   *        흘려서 새 종목 화면에 옛 종목 값이 섞이는 걸 막습니다.
+   *
+   *   ② 그 핸들러가 도는 동안에만 setTimeout 을 잠깐 갈아끼워서,
+   *      거기서 예약되는 "connect" 라는 이름의 타이머 하나만 앞당깁니다.
+   *      이름이 connect 가 아니면 손대지 않습니다(원래 지연 그대로).
+   *      저장소의 재접속 세 곳이 전부 setTimeout(connect, …) 입니다 —
+   *      js/websocket.js:211 · js/orderbook.js:100 · js/trade-stream-fix.js:139
+   *
+   * ⛔ 수정 금지 파일은 한 글자도 안 건드립니다. 위 세 파일의 재접속
+   *    코드를 그대로 두고, 그 코드가 "지금" 돌게만 만듭니다.
+   * ------------------------------------------------------------------ */
+  var FAST_RECONNECT_MS = 30; // 0 으로 두지 않습니다 — 호출 스택이 풀릴 틈을 줍니다
+  var fast = { hardClosed: 0, handlerFired: 0, noHandler: 0, collapsed: 0, slowTimer: 0, idleKicks: 0 };
+
+  function fakeCloseEvent(ws) {
+    return {
+      type: "close",
+      code: 1000,
+      reason: "종목 전환 — 즉시 끊기",
+      wasClean: true,
+      target: ws,
+      currentTarget: ws,
+    };
+  }
+
+  /* 핸들러 한 번이 도는 그 순간에만 setTimeout 을 갈아끼웁니다. */
+  function callCloseHandler(ws, handler, url) {
+    var origST = window.setTimeout;
+    var hit = 0;
+    try {
+      window.setTimeout = function (fn, ms) {
+        if (typeof fn === "function" && fn.name === "connect") {
+          hit++;
+          return origST.call(window, fn, FAST_RECONNECT_MS);
+        }
+        return origST.apply(window, arguments);
+      };
+      handler.call(ws, fakeCloseEvent(ws));
+    } catch (e) {
+      console.warn("[symbol-stream-switch.js] onclose 를 직접 부르다 실패: " + url, e);
+    } finally {
+      window.setTimeout = origST; /* 무슨 일이 있어도 되돌립니다 */
+    }
+    fast.collapsed += hit;
+    if (!hit) fast.slowTimer++;
+    return hit;
+  }
+
+  /* ------------------------------------------------------------------
+   * ⭐ 2026-08-28 — "갓 붙은 소켓을 2.9초 만에 죽이는 고리" 끊기
+   * ------------------------------------------------------------------
+   * 실측(1440, 로컬) — 종목을 바꾼 뒤 합본 스트림이 이렇게 돌았습니다.
+   *
+   *    344ms  열림 → (한 건도 안 옴) → 2916ms 강제 종료
+   *   3953ms  열림 → (한 건도 안 옴) → 6978ms 강제 종료
+   *   … 이 고리를 10번 돌고 38.4초 만에 첫 값이 왔습니다.
+   *
+   * 왜 그러냐 —
+   *   js/websocket.js:246  interval:change 가 lastMessageAt = 0 으로 만듭니다
+   *   js/websocket.js:217  좀비 감시가 2초마다 Date.now() - lastMessageAt 을 봅니다
+   *
+   * lastMessageAt 이 0 이면 "쉰 시간" 이 1970년부터가 되어 언제나
+   * ZOMBIE_KILL_MS(12초)를 넘습니다. 그래서 갓 붙은 소켓이 첫 값을 받기도
+   * 전에 죽습니다. 첫 값이 늦게 오는 순간이 한 번이라도 있으면 고리에 갇힙니다
+   * (죽임 → 재접속 → 또 죽임). 12초를 기다려주는 장치가 12초를 한 번도
+   * 안 주는 셈입니다.
+   *
+   * ⚠ 이 고리는 우리가 쏜 interval:change 때문에 생깁니다. 그래서 우리가
+   *   막습니다. js/websocket.js 는 한 글자도 안 고칩니다.
+   *
+   * 어떻게 —
+   *   합본 소켓이 "열린" 그 순간에 딱 한 번, 그 소켓의 onmessage 에
+   *   **빈 문자열**을 넣어 줍니다.
+   *     js/websocket.js:78-84  lastMessageAt = Date.now(); … JSON.parse 실패 → return
+   *   즉 시계만 지금으로 맞추고, 값은 한 글자도 안 만듭니다.
+   *   화면에 뜨는 숫자·이벤트가 하나도 안 생깁니다(파싱에서 바로 되돌아감).
+   *
+   * ⚠ 좀비 감시를 무력화하는 게 아닙니다. 오히려 제대로 돌게 합니다 —
+   *   이제 "연결이 열린 뒤 12초 동안 값이 없으면 죽인다" 가 됩니다.
+   *   지금은 "연결이 열리자마자 죽인다" 입니다.
+   *   진짜 죽은 연결은 12초 뒤에 그대로 걸립니다.
+   *
+   * 되돌리려면 installOpenKick() 호출 한 줄(track 안)을 지우면 됩니다.
+   * ------------------------------------------------------------------ */
+  function isCombinedUrl(url) {
+    var u = String(url || "");
+    return u.indexOf(STREAM_HOST) >= 0 && u.indexOf(COMBINED_MARK) >= 0;
+  }
+
+  function kickIdleClock(ws) {
+    var h = null;
+    try {
+      if (typeof ws.onmessage === "function") h = ws.onmessage;
+    } catch (e) {
+      return;
+    }
+    if (!h) return;
+    try {
+      h.call(ws, { data: "", __idleClockKick: true }); /* 파싱 실패 → 값 없음, 시계만 갱신 */
+      fast.idleKicks++;
+    } catch (e) {
+      /* noop */
+    }
+  }
+
+  function installOpenKick(ws, url) {
+    if (!isCombinedUrl(url)) return;
+    if (!ws || typeof ws.addEventListener !== "function") return;
+    try {
+      ws.addEventListener("open", function () {
+        kickIdleClock(ws);
+      });
+    } catch (e) {
+      /* noop */
+    }
+  }
+
+  /* 소켓 하나를 즉시 버립니다. 핸들러가 없으면 예전처럼 그냥 닫기만 합니다. */
+  function hardClose(ws, url) {
+    var handler = null;
+    try {
+      if (typeof ws.onclose === "function") handler = ws.onclose;
+    } catch (e) {
+      handler = null;
+    }
+    if (handler) {
+      try {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        ws.onopen = null;
+      } catch (e) {
+        handler = null; /* 못 떼면 예전 방식으로 — 느리지만 안전합니다 */
+      }
+    }
+    try {
+      ws.close(); /* ⚠ 반드시 실제로 닫습니다. 안 닫으면 좀비가 쌓입니다 */
+    } catch (e) {
+      /* noop */
+    }
+    fast.hardClosed++;
+    if (handler) {
+      fast.handlerFired++;
+      callCloseHandler(ws, handler, url);
+    } else {
+      fast.noHandler++;
+    }
+  }
+
   /* 호가·체결 소켓만 닫습니다.
      ⚠ fstream.binance.com 이 아닌 소켓(Supabase 실시간 등)은 절대 안 닫습니다.
      ⚠ 합본 스트림은 5) 의 interval:change 가 닫습니다(봉 찌꺼기까지 같이
-        비워야 하기 때문입니다). */
+        비워야 하기 때문입니다). 닫힌 뒤의 "기다림" 만 5-2) 가 없앱니다. */
   function closeFeedSockets() {
     prune();
     var n = 0;
@@ -310,7 +492,7 @@ App.SymbolStreamSwitch = (function () {
       if (r.url.indexOf(STREAM_HOST) < 0) return;
       if (r.url.indexOf(COMBINED_MARK) >= 0) return;
       try {
-        r.ws.close();
+        hardClose(r.ws, r.url);
         n++;
       } catch (e) {
         /* noop — onclose 가 재연결을 처리합니다 */
@@ -318,6 +500,77 @@ App.SymbolStreamSwitch = (function () {
     });
     stats.closed += n;
     return n;
+  }
+
+  /* 5-2) 합본 스트림 — 닫는 건 js/websocket.js 가 이미 했습니다(interval:change).
+     우리는 "크롬이 onclose 를 불러줄 때까지" 의 2.1초만 없앱니다.
+     ⚠ 반드시 interval:change 를 쏜 뒤에 부릅니다. 그래야 js/websocket.js 가
+       liveCandle·syntheticCandle 을 비우고 ws.close() 를 부른 다음이 됩니다.
+     ⚠ onclose 손잡이가 없으면 아무것도 안 합니다 — 예전 경로 그대로 둡니다.
+       (손잡이 없이 떼면 재접속을 아무도 안 해서 영영 빈 화면이 됩니다) */
+  function fastCloseCombined() {
+    prune();
+    /* ⚠ 딱 하나만 건드립니다 — 가장 마지막에 만들어진 합본 소켓.
+       js/websocket.js 의 ws 변수가 가리키는 게 그것입니다. 닫히는 중인
+       옛 소켓까지 같이 두드리면 재접속이 두 번 예약돼 소켓이 두 벌 열립니다. */
+    var target = null;
+    for (var i = sockets.length - 1; i >= 0; i--) {
+      var r = sockets[i];
+      if (!isCombinedUrl(r.url)) continue;
+      var st = 3;
+      try { st = r.ws.readyState; } catch (e) { /* noop */ }
+      if (st === 3) continue; /* 이미 완전히 닫힘 — 재접속은 이미 예약돼 있습니다 */
+      if (typeof r.ws.onclose !== "function") continue; /* 안전: 예전 경로에 맡깁니다 */
+      target = r;
+      break;
+    }
+    if (!target) return 0;
+    hardClose(target.ws, target.url);
+    return 1;
+  }
+
+  /* 합본 스트림이 살아 있는가(연결 중이거나 열려 있는가) */
+  function hasLiveCombined(sym) {
+    prune();
+    var s = String(sym || activeSymbol()).toLowerCase();
+    for (var i = 0; i < sockets.length; i++) {
+      var r = sockets[i];
+      if (r.url.indexOf(COMBINED_MARK) < 0) continue;
+      if (r.url.indexOf(s) < 0) continue;
+      var st = 3;
+      try {
+        st = r.ws.readyState;
+      } catch (e) {
+        /* noop */
+      }
+      if (st === 0 || st === 1) return true;
+    }
+    return false;
+  }
+
+  /* 그물 — 즉시 끊기가 어떤 이유로든 재접속을 못 일으켰으면 여기서 되살립니다.
+     이 길로 들어오는 것 자체가 사고이므로 콘솔에 크게 남깁니다. */
+  var healTimer = null;
+  function scheduleHeal(sym) {
+    if (healTimer) clearTimeout(healTimer);
+    var mySeq = seq;
+    healTimer = setTimeout(function () {
+      if (mySeq !== seq) return;
+      if (hasLiveCombined(sym)) return;
+      stats.healed++;
+      console.error(
+        "[symbol-stream-switch.js] " +
+          sym +
+          " 합본 스트림이 " +
+          HEAL_MS +
+          "ms 안에 다시 안 붙었습니다 — interval:change 를 한 번 더 쏩니다."
+      );
+      var iv2 =
+        App.Config && typeof App.Config.getActiveInterval === "function"
+          ? App.Config.getActiveInterval()
+          : "1m";
+      App.Bus.emit("interval:change", { interval: iv2 });
+    }, HEAL_MS);
   }
 
   function openFeedUrls() {
@@ -742,10 +995,19 @@ App.SymbolStreamSwitch = (function () {
       override = from === baseSymbol() ? null : from;
       applyLabels(from);
       App.Bus.emit("interval:change", { interval: iv });
+      fastCloseCombined(); /* 5-2 — 이 길로 나갈 때도 기다리지 않습니다 */
+      scheduleHeal(from);
       return false;
     }
 
     App.Bus.emit("interval:change", { interval: iv });
+
+    /* 5-2) ⭐ 합본 스트림도 크롬의 onclose 를 기다리지 않습니다 (2026-08-28)
+       ⚠ 반드시 interval:change 다음이어야 합니다 — js/websocket.js 가
+         liveCandle·syntheticCandle 을 비우고 ws.close() 를 부른 뒤라야
+         옛 종목 봉 찌꺼기가 안 남습니다. */
+    var quick = fastCloseCombined();
+    scheduleHeal(symbol);
 
     /* 6) 새 값이 오는지 지켜봅니다 */
     startWatch(symbol);
@@ -759,7 +1021,11 @@ App.SymbolStreamSwitch = (function () {
         iv +
         " 유지, 닫은 소켓 " +
         closed +
-        "개)"
+        "개 + 합본 " +
+        quick +
+        "개, 즉시 재접속 " +
+        fast.collapsed +
+        "회)"
     );
     return true;
   }
@@ -836,7 +1102,22 @@ App.SymbolStreamSwitch = (function () {
     getLastMissing: function () {
       return lastMissing.slice();
     },
+    /* 즉시 끊기 계기판 — 실측·점검용 (2026-08-28) */
+    getFastStats: function () {
+      return {
+        hardClosed: fast.hardClosed,
+        handlerFired: fast.handlerFired,
+        noHandler: fast.noHandler,
+        collapsed: fast.collapsed,
+        slowTimer: fast.slowTimer,
+        idleKicks: fast.idleKicks,
+        healed: stats.healed,
+        reconnectMs: FAST_RECONNECT_MS,
+      };
+    },
+    hasLiveCombined: hasLiveCombined,
     _closeFeedSockets: closeFeedSockets,
+    _fastCloseCombined: fastCloseCombined,
   };
 })();
 
