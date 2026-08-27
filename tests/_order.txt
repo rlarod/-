@@ -116,3 +116,7 @@ tests/stale-price-guard.test.js
 tests/chart-position-symbol.test.js
 tests/stream-loading-hint-seal.test.js
 tests/order-lock-notice-seal.test.js
+tests/limit-close-symbol-seal.test.js
+tests/seed-recharge-guard.test.js
+tests/html-assets-tracked.test.js
+tests/forced-liquidation-wipeout-seal.test.js

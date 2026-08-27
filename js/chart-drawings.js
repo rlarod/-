@@ -21,9 +21,13 @@
  *   카메라는 게시판·대화방에 자랑하려고 찍는 것이며, 자와 피보나치는
  *   되돌림·목표가를 재는 데 씁니다. 만들기 쉬운 순서로 고르지 않았습니다.
  *
- * 아직 자리만 잡아 둔 것 (9개)
+ * 3차(2026-08-27)에서 연 것 — fx 지표 (가로 막대)
+ *   지표 계산·그리기는 이미 다 되어 있었는데 켜는 자리가 차트 왼쪽 위 작은
+ *   글자 줄 하나뿐이었습니다. 목록은 js/chart-indicator-menu.js 가 만듭니다.
+ *
+ * 아직 자리만 잡아 둔 것 (8개)
  *   세로 막대 — 파동 / 여러선 / 브러시 / 표정 / 돋보기
- *   가로 막대 — 봉 종류 / fx 지표 / 알람 / 육각형
+ *   가로 막대 — 봉 종류 / 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
  *
@@ -161,7 +165,9 @@ App.ChartDrawings = (function () {
     { k: "expand", icon: "tlc-i-chevron", label: "도구 막대 접기/펴기", ready: true },
     { k: "sep1", sep: true },
     { k: "candletype", icon: "tlc-i-candle", label: "봉 종류", ready: false },
-    { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: false },
+    /* 3차(2026-08-27) — fx 를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
+       목록 자체는 js/chart-indicator-menu.js 가 만듭니다. */
+    { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: true },
     { k: "alert", icon: "tlc-i-alarm", label: "알람", ready: false },
     { k: "hex", icon: "tlc-i-hexagon", label: "육각형", ready: false },
     { k: "spacer", spacer: true },
@@ -1144,7 +1150,22 @@ App.ChartDrawings = (function () {
       toggleFullscreen();
       return;
     }
-    if (def.k === "camera") saveImage();
+    if (def.k === "camera") {
+      saveImage();
+      return;
+    }
+    /* fx 지표 — 목록은 별도 파일이 만듭니다(js/chart-indicator-menu.js).
+       그 파일이 없으면 아무 일도 하지 않습니다(오류를 내지 않습니다). */
+    if (def.k === "fx") {
+      var menu = window.App && App.ChartIndicatorMenu;
+      if (menu && typeof menu.toggle === "function") menu.toggle(barButton("fx"));
+    }
+  }
+
+  /* 가로 막대에서 버튼 하나를 찾아 줍니다 (목록이 붙을 자리 기준점) */
+  function barButton(k) {
+    if (!els.bar || !els.bar.querySelector) return null;
+    return els.bar.querySelector('.tlc-btn[data-tlc="' + k + '"]');
   }
 
   /* ---------------- 세로 막대 접기/펴기 ----------------

@@ -364,6 +364,9 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  * 처음 셀 때는 세로 7 / 가로 6 = 13 개였습니다. 2차에서 4개를 열었습니다.
  *   세로 : 피보나치 되돌림(fib) · 자(ruler)          7 -> 5
  *   가로 : 전체화면(fullscreen) · 카메라(camera)     6 -> 4
+ * 3차(2026-08-27) 에서 하나 더 열었습니다.
+ *   가로 : fx 지표(fx)                               4 -> 3
+ *   지표 계산·그리기가 이미 다 되어 있는데 켜는 자리가 없어서 잠겨 있던 것입니다.
  * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
@@ -371,8 +374,8 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
 ok("세로 막대 준비중이 5개다 (2026-08-26 fib·ruler 를 열어 7 -> 5)",
   railBtns.filter((b) => b.hasAttribute("data-soon")).length === 5,
   "지금 " + railBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
-ok("가로 막대 준비중이 4개다 (2026-08-26 fullscreen·camera 를 열어 6 -> 4)",
-  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 4,
+ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
+  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
   "지금 " + barBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
 
 {

@@ -182,6 +182,24 @@ grant execute on function public.purchase_tl_market_item to authenticated;
 
 -- ---------------- 5) 사용 ----------------
 -- 아이템을 1개 차감하고 효과를 겁니다. TL 은 여기서 차감하지 않습니다(구매 때만).
+--
+-- =====================================================================
+-- 이 함수는 supabase/fix-seed-recharge-guard.sql 에도 똑같이 있습니다.
+-- 그 파일이 정본입니다(2026-08-27). 여기 있는 것과 내용이 같으므로
+-- 어느 쪽을 나중에 Run 해도 결과가 같습니다.
+-- 고칠 때는 반드시 두 파일을 같이 고치세요. 한쪽만 고치면
+-- 다른 쪽을 나중에 돌렸을 때 수리가 조용히 되돌아갑니다.
+--
+-- seed_recharge 는 recharge_total(계급에서 빼는 무상 지급 누계)에
+-- 같이 쌓아야 합니다. 안 쌓으면 1장당 계급이 정확히 +1000점 오릅니다.
+-- =====================================================================
+
+-- 계급에서 빼는 '무상으로 받은 돈' 누계입니다.
+-- schema-daily-recharge.sql / schema-rank-1000.sql 에도 같은 줄이 있습니다.
+-- 어느 파일을 먼저 돌려도 되게 세 곳에 모두 둡니다(있으면 그냥 넘어갑니다).
+alter table public.trading_accounts
+  add column if not exists recharge_total numeric not null default 0;
+
 create or replace function public.use_user_item(p_product_id uuid)
 returns json
 language plpgsql
@@ -195,6 +213,7 @@ declare
   new_balance numeric;
   start_bal numeric;
   eff jsonb := '{}'::jsonb;
+  added numeric;
 begin
   if uid is null then raise exception 'not_logged_in'; end if;
 
@@ -216,11 +235,30 @@ begin
 
   -- 효과 적용 — 잔고를 건드리는 종류만 여기서 처리합니다.
   if it.item_type = 'seed_recharge' then
+    -- (1) 2026-08-27 추가 - 포지션을 들고 있으면 충전하지 않습니다.
+    --     지갑 초기화(claim_daily_recharge), 재충전 이용권(account_reset) 과
+    --     같은 검사입니다. 예외가 나면 트랜잭션 전체가 되돌아가므로
+    --     아이템은 차감되지 않고 그대로 남습니다.
+    if exists (select 1 from public.positions where user_id = uid) then
+      raise exception 'has_position';
+    end if;
+
+    added := coalesce(it.effect_value, 0);
+
+    -- (2) 2026-08-27 추가 - recharge_total 에 같이 쌓습니다.
+    --     무상으로 받은 돈이라 계급 계산에서 빠져야 합니다
+    --     (2026-08-24 대표 결정 / js/rank.js:154-163 과 같은 규칙).
+    --     지갑에 들어간 금액과 계급에서 빼는 금액이 정확히 같으므로
+    --     시드 충전권으로는 계급이 한 칸도 안 움직입니다.
     update public.trading_accounts
-       set balance = balance + coalesce(it.effect_value, 0), updated_at = now()
+       set balance        = balance + added,
+           recharge_total = coalesce(recharge_total, 0) + added,
+           updated_at     = now()
      where user_id = uid
      returning balance into new_balance;
-    eff := jsonb_build_object('added', coalesce(it.effect_value, 0), 'balance', new_balance);
+
+    eff := jsonb_build_object('added', added, 'balance', new_balance,
+                              'counted_as_recharge', true);
 
   elsif it.item_type = 'account_reset' then
     select initial_balance into start_bal from public.trading_accounts where user_id = uid;

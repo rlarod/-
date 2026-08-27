@@ -7,7 +7,10 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const REPO = path.join(__dirname, "..");
+/* REPO 를 밖에서 바꿀 수 있게 해 둡니다 — 다른 테스트들과 같은 방식입니다.
+   일부러 깨뜨려 보는 확인(돌연변이 검증)을 할 때 실제 파일을 건드리지 않고
+   복사본을 태우기 위해서입니다. 안 주면 예전과 완전히 같습니다. */
+const REPO = process.env.REPO || path.join(__dirname, "..");
 let pass = 0;
 let fail = 0;
 function ok(name, cond, detail) {
@@ -95,7 +98,11 @@ function makeServer(opts) {
     products: JSON.parse(JSON.stringify(opts.products || [])),
     items: {},         // product_id -> {quantity, ...}
     logs: [],
-    account: { balance: opts.balance || 100000, initial_balance: 100000 },
+    /* recharge_total — '무상으로 받은 돈' 누계. 계급 계산에서 빼는 값입니다
+       (2026-08-24 대표 결정 / schema-rank-1000.sql / js/rank.js:154-163).
+       2026-08-27 이전에는 이 가짜 서버에 이 칸 자체가 없어서, 시드 충전권이
+       계급을 부풀리는지 아닌지를 테스트가 아예 못 보고 있었습니다. */
+    account: { balance: opts.balance || 100000, initial_balance: 100000, recharge_total: 0 },
     hasPosition: !!opts.hasPosition,
     now: opts.now || Date.now(),
   };
@@ -135,7 +142,25 @@ function makeServer(opts) {
     }
     let balance = null;
     if (it.item_type === "seed_recharge") {
-      s.account.balance += Number(it.effect_value) || 0;
+      /* ⛔ 2026-08-27 — 실제 SQL 과 맞췄습니다.
+         supabase/fix-seed-recharge-guard.sql:246-260 (정본) 과
+         supabase/schema-tl-market.sql:237-262 이 이렇게 돕니다.
+
+         왜 바뀌었나 — 그전에는 이 분기에 아무 검사가 없었고, 가짜 서버에도
+         없었습니다. 그래서 테스트는 전부 통과하는데 "포지션 보유 중 차단" 을
+         **아예 검증하지 않는 구간**이 있었습니다(2026-08-27 감사팀 발견).
+         가짜 서버가 실제보다 헐거우면, 테스트는 없는 안전장치를 지키고
+         있다고 착각하게 만듭니다.
+
+         순서도 실제와 같습니다 — 포지션 검사가 잔고 증가·수량 차감보다
+         먼저입니다. 실제 SQL 은 예외가 나면 트랜잭션 전체가 되돌아가므로
+         아이템이 소모되지 않습니다. 여기서도 그 전에 return 합니다. */
+      if (s.hasPosition) return { error: "has_position" };
+      const added = Number(it.effect_value) || 0;
+      s.account.balance += added;
+      /* 지갑에 들어간 금액과 계급에서 빼는 금액이 정확히 같아야 합니다.
+         안 쌓으면 1장당 계급이 정확히 +1000점(상병) 오릅니다. */
+      s.account.recharge_total += added;
       balance = s.account.balance;
     } else if (it.item_type === "account_reset") {
       if (s.hasPosition) return { error: "has_position" };
@@ -204,6 +229,79 @@ console.log("\n  구매 / 사용 시나리오");
   srv3.purchase("p3", 1);
   ok("포지션 보유 중엔 재충전 불가", srv3.use("p3").error === "has_position");
   ok("막힌 뒤 수량 그대로", srv3.items.p3.quantity === 1);
+}
+
+/* =========================================================================
+ * 4-2) 시드 충전권도 포지션 보유 중에는 막힌다 — 2026-08-27 추가
+ * -------------------------------------------------------------------------
+ * 이 묶음이 왜 생겼나
+ *   재충전 이용권(account_reset)·지갑 초기화(claim_daily_recharge) 에는 있던
+ *   "포지션이 있으면 안 됨" 검사가 **시드 충전권에만 없었습니다.**
+ *   위쪽 가짜 서버에도 없어서 테스트가 그 구멍을 못 보고 있었습니다.
+ *   2026-08-27 수리팀이 SQL 을 고쳤고(fix-seed-recharge-guard.sql),
+ *   여기서 가짜 서버를 실제와 맞추고 그 동작을 못 박습니다.
+ *
+ *   ⚠ 이 테스트가 확인하는 것은 **파일에 적힌 SQL** 까지입니다.
+ *     실서버(Supabase)에서 그 파일을 Run 했는지는 여기서 알 수 없습니다.
+ *     Run 은 대표가 직접 합니다.
+ * ======================================================================= */
+{
+  const srv = makeServer({ earned: 5000, products: catalog, hasPosition: true });
+  srv.purchase("p4", 1);
+  const before = srv.account.balance;
+  const r = srv.use("p4");
+  ok("포지션 보유 중엔 시드 충전권도 막힌다", r.error === "has_position", JSON.stringify(r));
+  ok("막혔으면 지갑이 1원도 안 는다", srv.account.balance === before, String(srv.account.balance));
+  ok("막혔으면 아이템이 소모되지 않는다(트랜잭션 되돌림)", srv.items.p4.quantity === 1);
+  ok("막혔으면 사용 기록도 안 남는다", srv.logs.length === 0);
+
+  /* 포지션을 정리하면 그때는 정상적으로 충전됩니다. */
+  srv.hasPosition = false;
+  const r2 = srv.use("p4");
+  ok("포지션을 정리하면 충전된다", !r2.error && srv.account.balance === before + 100000, String(srv.account.balance));
+}
+{
+  /* 계급 부풀림 — 지갑에 들어간 만큼 recharge_total 에 같이 쌓여야
+     계급용 자산(지갑 + 증거금 − recharge_total)이 안 움직입니다. */
+  const srv = makeServer({ earned: 5000, products: catalog });
+  srv.purchase("p4", 2);
+  const 자산 = (a) => a.balance - a.recharge_total;
+  const 전 = 자산(srv.account);
+  srv.use("p4");
+  ok("충전액이 recharge_total 에 같이 쌓인다", srv.account.recharge_total === 100000, String(srv.account.recharge_total));
+  ok("계급용 자산은 한 푼도 안 움직인다 (1장)", 자산(srv.account) === 전, String(자산(srv.account)));
+  srv.use("p4");
+  ok("계급용 자산은 한 푼도 안 움직인다 (2장)", 자산(srv.account) === 전, String(자산(srv.account)));
+  ok("지갑은 실제로 늘어난다 (100,000 → 300,000)", srv.account.balance === 300000, String(srv.account.balance));
+}
+{
+  /* 실제 SQL 봉인 — 가짜 서버만 고치고 SQL 이 되돌아가면 의미가 없습니다.
+     같은 함수가 두 파일에 있어서 한쪽만 고치면 다른 쪽을 나중에 Run 했을 때
+     수리가 조용히 사라집니다. 두 파일을 같이 검사합니다. */
+  const seedBranch = (sql) => {
+    const i = sql.indexOf("if it.item_type = 'seed_recharge' then");
+    const j = sql.indexOf("elsif it.item_type = 'account_reset' then", i);
+    return i >= 0 && j > i ? sql.slice(i, j) : "";
+  };
+  const files = ["supabase/schema-tl-market.sql", "supabase/fix-seed-recharge-guard.sql"];
+  for (const f of files) {
+    const sql = fs.existsSync(path.join(REPO, f)) ? fs.readFileSync(path.join(REPO, f), "utf8") : "";
+    const b = seedBranch(sql);
+    ok(f + " 에 seed_recharge 분기가 있다", b.length > 0);
+    ok(f + " — 포지션 보유 중이면 has_position 예외",
+      /from public\.positions where user_id = uid/.test(b) && /raise exception 'has_position'/.test(b),
+      "이게 없으면 청산 직전에 지갑을 채워 청산가를 흔들 수 있습니다");
+    ok(f + " — 포지션 검사가 잔고 증가보다 먼저",
+      b.indexOf("raise exception 'has_position'") < b.indexOf("balance        = balance + added") ||
+      b.indexOf("raise exception 'has_position'") < b.indexOf("balance = balance + added"),
+      "순서가 뒤집히면 이미 넣고 나서 막는 꼴입니다");
+    ok(f + " — recharge_total 에 같이 쌓는다 (계급 부풀림 방지)",
+      /recharge_total = coalesce\(recharge_total, 0\) \+ added/.test(b));
+  }
+  const canon = fs.readFileSync(path.join(REPO, "supabase/fix-seed-recharge-guard.sql"), "utf8");
+  ok("정본이 어느 파일인지 적혀 있다", /정본/.test(canon) && /schema-tl-market\.sql/.test(canon));
+  ok("두 파일을 같이 고치라는 경고가 남아 있다", /두 파일을 같이/.test(canon));
+  ok("정본에 대량 삭제가 없다", !/\bdelete\s+from\b/i.test(canon.replace(/--.*$/gm, "")) && !/truncate|drop table/i.test(canon.replace(/--.*$/gm, "")));
 }
 
 /* 5) 재고 / 구매 제한 / 판매중지 */
@@ -329,3 +427,5 @@ console.log("\n==========================================================");
 console.log("통과 " + pass + " / 실패 " + fail);
 if (fail === 0) console.log("전체 통과 ✅");
 else { console.log("실패 있음 ❌"); process.exit(1); }
+/* 남은 타이머가 프로세스를 붙들면 뒤 테스트가 통째로 안 돌아갑니다. */
+process.exit(0);
