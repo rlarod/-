@@ -25,11 +25,14 @@
  *
  * ── 정상(늦게 옴)과 진짜 고장을 어떻게 가르나 ─────────────────────────
  *   0~8초    회색 · "시세 받는 중 (n/9)"       ← 실측 범위(3.3~5.2초) 안. 정상
- *   8~15초   금색 · "시세가 늦습니다 · 다시 연결 중"
+ *   8초~     회색 · "이 종목은 지금 체결이 뜸합니다 (n/9)"
  *                                              ← symbol-stream-switch 의
  *                                                SOFT_MS(8000) 과 같은 선
+ *            ⚠ 여기서 금색으로 "다시 연결 중" 이라고 하지 않습니다.
+ *              연결이 진짜 끊기면 6초(STALE_MS)에 stale 로 먼저 잡힙니다.
+ *              자세한 이유와 실측은 refreshChip() 안 주석에 적었습니다.
  *   15초~    js/symbol-stream-switch.js 의 기존 경고창이 이어받습니다
- *            (CHECK_MS 15000). 알림칩은 금색으로 남습니다
+ *            (CHECK_MS 15000). 알림칩은 회색으로 남습니다
  *   30초~    자리표시 막대를 끕니다 (GIVEUP_MS 와 같은 선)
  *   ws:status "stale"(6초 무신호) 은 즉시 금색 고장 문구
  *   ws:status "closed" 는 2.5초 유예 뒤에만 고장 문구
@@ -69,7 +72,7 @@ App.StreamLoadingHint = (function () {
   var C_GOLD = "#F0B429";
 
   /* ── 시각 기준선 (symbol-stream-switch.js 와 같은 선에 맞춥니다) ── */
-  var SLOW_MS = 8000; /* 여기부터 "늦습니다" (SOFT_MS) */
+  var SLOW_MS = 8000; /* 여기부터 "오래 기다리는 중" (SOFT_MS 와 같은 선) */
   var STOP_BAR_MS = 30000; /* 여기서 자리표시 막대를 끕니다 (GIVEUP_MS) */
   var OK_HOLD_MS = 1500; /* "연결됨" 을 보여주는 시간 */
   var CLOSED_GRACE_MS = 2500; /* 봉 간격 바꿀 때 소켓이 잠깐 닫히는 것은 무시 */
@@ -100,7 +103,7 @@ App.StreamLoadingHint = (function () {
   var chipText = null;
 
   var armedAt = 0;
-  var chipState = ""; /* "" | wait | slow | ok | fault */
+  var chipState = ""; /* "" | wait | thin | ok | fault */
   var okTimer = null;
   var slowTimer = null;
   var stopBarTimer = null;
@@ -185,13 +188,12 @@ App.StreamLoadingHint = (function () {
       "#" + CHIP_ID + ".tl-wait .tl-sh-text{color:" + C_SUB + ";}",
       "#" + CHIP_ID + ".tl-ok .tl-sh-dot{background:" + C_UP + ";}",
       "#" + CHIP_ID + ".tl-ok .tl-sh-text{color:" + C_SUB + ";}",
-      "#" + CHIP_ID + ".tl-slow{border-color:" + C_GOLD + ";}",
-      "#" +
-        CHIP_ID +
-        ".tl-slow .tl-sh-dot{background:" +
-        C_GOLD +
-        ";animation:tl-dot-breathe 1.5s ease-in-out infinite;}",
-      "#" + CHIP_ID + ".tl-slow .tl-sh-text{color:" + C_TEXT + ";}",
+      /* 오래 기다리는 중(.tl-thin) — 회색입니다. 금색이 아닙니다.
+         금색은 "연결에 문제가 있다" 는 뜻으로만 씁니다(.tl-fault).
+         칸이 오래 안 차는 것은 그 종목에 체결이 뜸해서지 연결 문제가
+         아니기 때문입니다(아래 [왜 금색을 뗐나] 주석 참고). */
+      "#" + CHIP_ID + ".tl-thin .tl-sh-dot{background:" + C_SUB + ";}",
+      "#" + CHIP_ID + ".tl-thin .tl-sh-text{color:" + C_SUB + ";}",
       "#" + CHIP_ID + ".tl-fault{border-color:" + C_GOLD + ";}",
       "#" + CHIP_ID + ".tl-fault .tl-sh-dot{background:" + C_GOLD + ";}",
       "#" + CHIP_ID + ".tl-fault .tl-sh-text{color:" + C_TEXT + ";}",
@@ -312,11 +314,41 @@ App.StreamLoadingHint = (function () {
       return;
     }
     var done = cells.length - left;
-    var slow = chipState === "slow" || (armedAt && Date.now() - armedAt >= SLOW_MS);
+
+    /* ── [왜 금색을 뗐나] 2026-08-27 ────────────────────────────────
+     * 예전에는 8초가 지나면 금색으로 "시세가 늦습니다 · 다시 연결 중"
+     * 이라고 했습니다. 그런데 연결은 멀쩡한데도 그 문구가 떴습니다.
+     *
+     * 9칸 중 stat-change · stat-high · stat-low · stat-volume 4칸은
+     * @ticker 로만, stat-price 는 @kline 으로만 찹니다. 두 신호는
+     * "체결이 있어야" 옵니다. 300초 실측(2026-08-27 밤) —
+     *     비트코인    @ticker 최대공백  2,021ms  @kline  1,913ms
+     *     나스닥                       8,387ms          9,181ms
+     *     삼성전자                    10,948ms         12,950ms
+     *     SK하이닉스                   6,839ms          7,020ms
+     * 즉 조용한 시간대의 주식 종목은 그냥 8초를 넘깁니다.
+     * 아무 때나 종목을 바꿨을 때 8초를 넘길 확률이 삼성전자 3.27%,
+     * 나스닥 0.77% 였습니다. 연결은 멀쩡한데 "다시 연결 중" 이라고
+     * 말한 것이라, 회원이 잘못된 정보로 판단하게 만듭니다.
+     *
+     * 연결이 살아있다는 증거는 이미 같은 소켓에 있습니다.
+     *   @markPrice@1s 최대공백이 전 종목 1,311ms
+     *   js/websocket.js 는 6초(STALE_MS) 무신호면 ws:status "stale"
+     * 그래서 연결이 진짜 끊기면 6초에 fault 로 먼저 잡힙니다
+     * (fault 가 잡히면 이 함수는 맨 위에서 그냥 돌아갑니다).
+     * 8초 금색은 그 판정과 중복이면서 근거가 없었습니다.
+     *
+     * 지금은 색을 회색 그대로 두고, 사실만 말합니다.
+     * 시간 기준선(SLOW_MS 8초)은 그대로 두었습니다 —
+     * tests/stream-loading-hint-seal.test.js 가 SOFT_MS 와 같은 값인지
+     * 검사하고, "얼마나 오래 기다렸나" 를 가르는 선으로는 여전히 맞습니다.
+     * ------------------------------------------------------------- */
+    var longWait = armedAt && Date.now() - armedAt >= SLOW_MS;
+
     /* 숫자(n/9)를 같이 적습니다 — 멈춰 있는 것과 진행 중인 것을 회원이
        눈으로 구분할 수 있는 유일한 단서입니다. */
-    if (slow) {
-      setChip("slow", "시세가 늦습니다 · 다시 연결 중 (" + done + "/" + cells.length + ")");
+    if (longWait) {
+      setChip("thin", "이 종목은 지금 체결이 뜸합니다 (" + done + "/" + cells.length + ")");
     } else {
       setChip("wait", "시세 받는 중 (" + done + "/" + cells.length + ")");
     }

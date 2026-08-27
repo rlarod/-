@@ -113,7 +113,30 @@ where n.nspname = 'public'
                     'start_new_cycle', 'purchase_tl_market_item')
 order by p.proname;
 
--- (0-5) 참고 — 지갑이 딱 떨어지는 숫자인 회원이 있는지.
+-- (0-5) ★2026-08-27 추가★ 잠금 트리거가 실제로 도는 모드인지.
+--   아무것도 바꾸지 않습니다. 아래 세 칸만 보시면 됩니다.
+--
+--   트리거함수_모드 가
+--     '아직 없음'            → 이 파일을 아직 안 돌리셨습니다. 정상입니다.
+--     '⚠ security definer'  → 잠금이 한 줄도 안 돌고 있습니다. 이 파일을 다시 Run 하세요.
+--     '✅ security invoker'  → 제대로 걸려 있습니다.
+--
+--   지금_current_user 는 SQL 편집기에서 보면 postgres 로 나옵니다.
+--   브라우저에서 오면 authenticated 로 나옵니다 — 그 차이로 갈라냅니다.
+select
+  current_user as 지금_current_user,
+  session_user as 지금_session_user,
+  case
+    when to_regprocedure('public.lock_server_owned_account_fields()') is null
+      then '아직 없음 - 이 파일을 아직 안 돌리셨습니다'
+    when (select p.prosecdef from pg_proc p
+           where p.oid = to_regprocedure('public.lock_server_owned_account_fields()'))
+      then '⚠ security definer - 잠금이 한 줄도 안 돕니다. 이 파일을 다시 Run 하세요'
+    else '✅ security invoker - 제대로 걸려 있습니다'
+  end as 트리거함수_모드;
+
+
+-- (0-6) 참고 — 지갑이 딱 떨어지는 숫자인 회원이 있는지.
 --   조사팀 파일 supabase/조회-잔고출처-2026-08-27.sql 의 블록 7-3 과
 --   겹치는 내용입니다. 그 파일을 이미 돌리셨으면 여기는 건너뛰셔도 됩니다.
 select
@@ -154,10 +177,54 @@ create policy "trading_accounts_update_own" on public.trading_accounts
 --   check_trading_account_update() 가 무엇을 지키는지 서버를 봐야 알 수
 --   있어서, 그것을 고치거나 지우지 않고 ★따로 하나 더★ 답니다.
 --   둘 다 걸려 있어도 서로 방해하지 않습니다.
+-- =========================================================================
+-- ⚠ 2026-08-27 정정 — 이 함수에서 security definer 를 뺐습니다
+-- =========================================================================
+-- 처음에 security definer 로 만들었는데, 그러면 아래 잠금이 ★한 줄도
+-- 안 돕니다★. 오류도 안 나고 [3] 확인 조회에도 '트리거 달림' 으로 나옵니다.
+-- 전형적인 조용한 고장이었습니다. (감사팀 발견 / 본부장 확인)
+--
+-- 왜 안 됐나 —
+--   PostgreSQL 은 security definer 함수 안에서 current_user 를
+--   ★함수 주인★ 으로 바꿉니다. 이 함수 주인은 SQL 편집기에서 만들었으니
+--   postgres 입니다. 그래서
+--       if current_user not in ('authenticated','anon') then return new;
+--   이 ★언제나 참★ 이 되어 곧바로 빠져나갔습니다.
+--
+-- 왜 security invoker 가 맞나 — 세 가지 길이 전부 우리가 원하는 대로 갈립니다.
+--
+--   ① 브라우저가 표를 직접 고칠 때 (js/supabase-sync.js)
+--        PostgREST 는 authenticator 로 접속한 뒤 set role authenticated 를 합니다.
+--        set role 은 current_user 를 바꿉니다 → current_user = 'authenticated'
+--        → 잠금이 돕니다. ★이게 우리가 막으려던 길입니다★
+--
+--   ② 서버 함수 안에서 고칠 때 (use_user_item · claim_daily_recharge 등)
+--        그 함수들이 security definer 라 그 안에서 current_user 는 주인(postgres)
+--        입니다. 트리거가 invoker 면 그 값을 그대로 물려받습니다
+--        → current_user = 'postgres' → 통과. ★무료 충전·아이템이 안 막힙니다★
+--
+--   ③ 대표님이 SQL 편집기에서 고칠 때
+--        current_user = 'postgres' → 통과.
+--
+-- 왜 다른 것을 안 썼나 —
+--   session_user  ✗ PostgREST 는 언제나 authenticator 로 접속하므로
+--                   ①②③ 이 전부 'authenticator' 로 똑같이 나옵니다. 못 가릅니다.
+--   auth.role()   ✗ JWT 의 role 을 읽습니다. ② 도 브라우저가 부른 것이라
+--                   'authenticated' 로 나옵니다 → 무료 충전·아이템이 막힙니다.
+--                   방금 고친 seed_recharge / account_reset 이 그 자리에서 깨집니다.
+--   current_setting('request.jwt.claims') ✗ auth.role() 과 같은 이유.
+--
+-- ⚠ 이 함수는 표를 하나도 안 읽고 안 씁니다. NEW / OLD 만 만집니다.
+--   그래서 security definer 가 없어도 권한 문제가 생기지 않습니다.
+--   (definer 가 필요한 함수는 '남의 표를 대신 건드리는' 함수입니다)
+--
+-- ⚠ 실패해도 열리는 쪽입니다. 혹시 판정이 틀려도 지금보다 나빠지지 않습니다.
+--   맞게 돌고 있는지는 [3] 의 마지막 조회로 확인하실 수 있습니다.
+-- =========================================================================
 create or replace function public.lock_server_owned_account_fields()
 returns trigger
 language plpgsql
-security definer
+-- security definer 를 ★일부러 안 씁니다★. 위 설명을 읽어 주세요.
 set search_path = public
 as $fn$
 begin
@@ -186,6 +253,10 @@ begin
 end;
 $fn$;
 
+-- security invoker 라 부르는 역할에게 실행 권한이 있어야 합니다.
+-- (기본으로 PUBLIC 에 열려 있지만, 서버에서 회수해 둔 경우를 대비해 명시합니다)
+grant execute on function public.lock_server_owned_account_fields() to authenticated, anon;
+
 drop trigger if exists trg_lock_server_owned_account_fields on public.trading_accounts;
 create trigger trg_lock_server_owned_account_fields
   before update on public.trading_accounts
@@ -211,6 +282,24 @@ from pg_trigger
 where tgrelid = 'public.trading_accounts'::regclass
   and not tgisinternal
 order by tgname;
+
+-- ★2026-08-27 추가★ '달려 있다' 와 '실제로 돈다' 는 다릅니다.
+--   security definer 로 달려 있으면 위 조회에는 멀쩡히 나오는데
+--   안은 한 줄도 안 돕니다. 아래가 그것까지 봅니다.
+--   ✅ 가 나와야 끝난 것입니다.
+select
+  case
+    when to_regprocedure('public.lock_server_owned_account_fields()') is null
+      then '⚠ 함수가 없습니다 - [2] 가 안 돌았습니다'
+    when (select p.prosecdef from pg_proc p
+           where p.oid = to_regprocedure('public.lock_server_owned_account_fields()'))
+      then '⚠ security definer - 잠금이 안 돕니다. 이 파일을 다시 Run 하세요'
+    else '✅ security invoker - 잠금이 실제로 돕니다'
+  end as 잠금_상태,
+  (select count(*) from pg_trigger
+    where tgrelid = 'public.trading_accounts'::regclass
+      and tgname = 'trg_lock_server_owned_account_fields'
+      and not tgisinternal) as 트리거_달린수;
 
 
 -- =========================================================================

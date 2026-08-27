@@ -89,6 +89,11 @@ App.StalePriceGuard = (function () {
   var TP_INPUT_ID = "tp-input";               // js/ui.js:106 익절가(TP)
   var SL_INPUT_ID = "sl-input";               // js/ui.js:110 손절가(SL)
 
+  /* 시장가 모드에서 보이는 읽기전용 "주문가격" 칸 (index.html:484).
+     js/order-panel-amitalk.js:107 renderMarketPrice() 만 이 칸에 값을 씁니다. */
+  var MARKET_PRICE_INPUT_ID = "ami-market-price-input";
+  var MARKET_PRICE_PLACEHOLDER = "-";   // index.html:484 의 초기값과 같은 글자
+
   /* 종목이 바뀌면 비우는 칸들 — 셋 다 "가격" 을 넣는 칸이라 종목이 바뀌면 뜻이 없습니다.
      여기 적힌 순서가 그대로 안내 문구에 적히는 순서입니다. */
   var CLEARABLE = [
@@ -112,6 +117,7 @@ App.StalePriceGuard = (function () {
     clearedLimitPrice: 0,// 지정가 주문가격 칸을 비운 횟수
     clearedTp: 0,        // 익절가(TP) 칸을 비운 횟수
     clearedSl: 0,        // 손절가(SL) 칸을 비운 횟수
+    resetMarketPrice: 0, // 시장가 주문가격 칸을 "-" 로 되돌린 횟수
     clearedFields: 0,    // 비운 칸 수 합계
     blockedOrders: 0,    // 막은 주문 수
     blockedMarket: 0,
@@ -201,6 +207,7 @@ App.StalePriceGuard = (function () {
     }
     clearOrderbookPrices();
     clearPriceFields();
+    resetMarketPriceDisplay();
     paint();
   }
 
@@ -311,6 +318,52 @@ App.StalePriceGuard = (function () {
     } finally {
       selfEdit = false;
     }
+  }
+
+  /* ------------------------------------------------------------------
+   * 🔴 [P1 후속2] 시장가 "주문가격" 칸을 "-" 로 되돌립니다
+   *    (2026-08-27 점검팀 라이브 — 고친 세 칸에서 이것만 빠져 있었습니다)
+   * ------------------------------------------------------------------
+   * 위의 CLEARABLE 세 칸과 성격이 다릅니다.
+   *   · 회원이 치는 칸이 아닙니다. readonly 이고(index.html:484)
+   *     js/order-panel-amitalk.js:107 renderMarketPrice() 가 채웁니다.
+   *   · 그 함수는 trading:update 때만 돕니다(:301). 종목을 바꾸면 새 종목의
+   *     첫 틱이 올 때까지 trading:update 가 안 오므로 옛 종목 숫자가 그대로
+   *     화면에 남습니다.
+   *
+   *   라이브 실측(2026-08-27 점검팀) — 옛 값이 남아 있던 시간
+   *     1440  비트코인 → 나스닥      79,475.90 (비트코인)  11,143 ms
+   *     390   삼성전자 → 비트코인       193.34 (삼성전자)   4,058 ms
+   *     360   비트코인 → SK하이닉스  79,716.60 (비트코인)   4,668 ms
+   *
+   *   360 한 화면에 이렇게 같이 보였습니다 —
+   *     주문가격 79,716.60(비트코인) · 매수가격 1,257.07(SK) · 수량단위 주(SK)
+   *
+   * ⚠ 돈에는 안 닿습니다. 그 시간 getSnapshot().currentPrice 가 null 이라
+   *   주문 자체가 막힙니다(위 wrapOrders). 보이는 값만 틀립니다.
+   *   그래도 회원은 그 숫자를 사실로 보고 판단하므로 고칩니다.
+   *
+   * 왜 CLEARABLE 에 안 넣었나 —
+   *   1) 빈 문자열이 아니라 index.html 초기값과 같은 "-" 로 되돌려야 합니다.
+   *      빈 칸으로 두면 "주문가격" 줄이 통째로 비어 보입니다.
+   *   2) "○○ 을(를) 지웠습니다 · 다시 입력해 주세요" 안내가 붙으면 안 됩니다.
+   *      회원이 넣은 값이 아니고, 새 종목 첫 틱에 저절로 다시 채워집니다.
+   *   3) input 이벤트를 쏘지 않습니다. 이 칸을 읽는 곳이 없어서
+   *      (grep: index.html:484 · order-panel-amitalk.js:108 뿐)
+   *      파생값 재계산이 필요 없습니다.
+   *
+   * 되돌아오는 시점 — 새 종목 첫 price:update 가 js/trading.js:93 에서
+   * trading:update 를 쏘고, 그것을 renderMarketPrice() 가 받아 새 값을 넣습니다.
+   * 우리가 따로 되돌릴 필요가 없습니다.
+   * ------------------------------------------------------------------ */
+  function resetMarketPriceDisplay() {
+    var input = el(MARKET_PRICE_INPUT_ID);
+    if (!input) return false;
+    var v = String(input.value === undefined || input.value === null ? "" : input.value);
+    if (v === MARKET_PRICE_PLACEHOLDER) return false;   // 이미 "-" 면 건드리지 않습니다
+    input.value = MARKET_PRICE_PLACEHOLDER;
+    counts.resetMarketPrice++;
+    return true;
   }
 
   function isClearableId(id) {
@@ -592,6 +645,10 @@ App.StalePriceGuard = (function () {
     },
     clearedMessage: clearedMessage,
     noticeLines: noticeLines,
+    getMarketPriceDisplay: function () {
+      var input = el(MARKET_PRICE_INPUT_ID);
+      return input ? String(input.value) : null;
+    },
     _open: open,
     _close: close,
     _reset: function () {

@@ -214,6 +214,7 @@ declare
   start_bal numeric;
   eff jsonb := '{}'::jsonb;
   added numeric;
+  old_bal numeric;   -- account_reset: 되돌리기 '전' 지갑 (무상 지급액 계산용)
 begin
   if uid is null then raise exception 'not_logged_in'; end if;
 
@@ -261,15 +262,50 @@ begin
                               'counted_as_recharge', true);
 
   elsif it.item_type = 'account_reset' then
-    select initial_balance into start_bal from public.trading_accounts where user_id = uid;
+    -- 2026-08-27 추가 - 시드 충전권과 똑같은 구멍이 여기에도 있었습니다.
+    --   balance 를 initial_balance 로 되돌리면서 recharge_total 에는 안 쌓아서,
+    --   손실을 본 상태에서 쓰면 원금이 무상 복구되는데 계급 점수에서는 안 빠집니다.
+    --   → 거래를 한 번도 더 안 하고 계급이 올라갑니다.
     if exists (select 1 from public.positions where user_id = uid) then
       raise exception 'has_position';
     end if;
+
+    -- 위 perform ... for update 로 이미 이 줄을 잠가 두었습니다.
+    select coalesce(balance, 0), coalesce(initial_balance, 0)
+      into old_bal, start_bal
+      from public.trading_accounts where user_id = uid;
+
+    -- ★ 무상으로 받은 금액 = 되돌리기로 '늘어난' 만큼입니다.
+    --   시드 충전권처럼 고정액(effect_value)이 아닙니다.
+    --   account_reset 의 effect_value 는 null 입니다(schema-tl-market.sql:349).
+    --
+    --     손실 중 (지갑 50,000 < 초기 100,000)
+    --        → added = 50,000. 지갑 +50,000, recharge_total +50,000.
+    --          계급자산 = 100,000 - 50,000 = 50,000 → 점수는 손실 그대로 반영
+    --     이익 중 (지갑 150,000 > 초기 100,000)
+    --        → added = 0.   지갑이 오히려 줄어듭니다(회원이 이익을 포기한 것).
+    --          무상으로 받은 게 없으므로 recharge_total 은 안 건드립니다.
+    --          음수를 더하면 계급이 거꾸로 부풀어 오르므로 greatest(0, ...) 입니다.
+    --
+    --   계급 공식(1000 × log2(자산/초기자금)) 은 한 글자도 안 건드립니다.
+    --   '자산' 에서 빼는 항목에 빠져 있던 금액을 채우는 것뿐입니다.
+    added := greatest(0, start_bal - old_bal);
+
     update public.trading_accounts
-       set balance = start_bal, updated_at = now()
+       set balance        = start_bal,
+           recharge_total = coalesce(recharge_total, 0) + added,
+           updated_at     = now()
      where user_id = uid
      returning balance into new_balance;
-    eff := jsonb_build_object('balance', new_balance);
+
+    -- ★ balance_before 를 기록에 남깁니다.
+    --   지금까지의 기록에는 '되돌린 뒤' 잔고만 있어서(effect_data.balance),
+    --   지난 사용분은 얼마가 무상으로 들어갔는지 계산할 방법이 없습니다.
+    --   앞으로 쓴 것은 이 값으로 언제든 대조·소급이 됩니다.
+    eff := jsonb_build_object('balance', new_balance,
+                              'balance_before', old_bal,
+                              'added', added,
+                              'counted_as_recharge', true);
   end if;
   -- leverage_boost / fee_discount / position_peek / liquidation_guard 는
   -- 잔고를 바꾸지 않습니다. 아래 사용 기록만 남기고, 효과는 화면 쪽에서

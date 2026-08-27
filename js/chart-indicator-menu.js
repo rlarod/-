@@ -59,6 +59,19 @@
  *   4) tests/chart-toolbar-seal.test.js 의 가로 막대 준비중 개수 3 -> 4
  *   5) js/chart-indicator-menu.js 파일 삭제
  * 그러면 fx 버튼이 다시 "준비중" 으로 돌아갑니다. 지표 자체는 영향 없습니다.
+ *
+ * ── 2026-08-27 자리 고침 (P2) ─────────────────────────────────────────
+ * 처음 배포(fde463a) 때 목록이 폰에서 화면 밖에서 열렸습니다.
+ *   360x800 — 목록 651~1038, 화면 800, 하단 매수/매도 바 727 → 7줄 중 0줄
+ * 원인은 place() 가 차트 칸(.chart-panel) 높이만 보고 화면을 안 봤기 때문입니다.
+ * 차트 칸이 화면보다 길어서(360 에서 620px 중 188px 만 보임) 칸 안에는
+ * 들어갔지만 화면 밖이었습니다.
+ * 고친 것 — 목록을 position:absolute -> position:fixed 로 바꾸고 화면 기준으로
+ * 잡습니다. 아래가 모자라면 버튼 위로 뒤집고, 양쪽 다 모자라면 몸통만 줄여
+ * 스크롤시키며 "밀면 더 보인다" 안내줄을 켭니다. 스크롤·크기변경 때 다시 잡고,
+ * 버튼이 화면 밖으로 나가면 닫습니다.
+ * 이 부분만 되돌리려면 이 파일을 fde463a 판으로 되돌리면 됩니다
+ * (git checkout fde463a -- js/chart-indicator-menu.js). 다른 파일은 안 건드렸습니다.
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -165,7 +178,7 @@ App.ChartIndicatorMenu = (function () {
     if (document.getElementById(STYLE_ID)) return;
     var P = "#" + PANEL_ID;
     var css =
-      P + "{position:absolute;z-index:40;width:250px;max-width:calc(100% - 12px);" +
+      P + "{position:fixed;z-index:950;width:250px;max-width:calc(100vw - 16px);" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:10px;" +
       "box-shadow:none;overflow:hidden;font-family:inherit;box-sizing:border-box;}" +
       P + "::before{content:\"\";position:absolute;left:0;right:0;top:0;height:1px;" +
@@ -200,7 +213,10 @@ App.ChartIndicatorMenu = (function () {
       P + " .tl-fx-list{overflow-y:auto;overscroll-behavior:contain;}" +
       P + " .tl-fx-list::-webkit-scrollbar{width:3px;}" +
       P + " .tl-fx-list::-webkit-scrollbar-thumb{background:" + C_BORDER + ";border-radius:2px;}" +
-      P + " .tl-fx-list::-webkit-scrollbar-track{background:transparent;}";
+      P + " .tl-fx-list::-webkit-scrollbar-track{background:transparent;}" +
+      /* 잘려서 스크롤될 때만 켜지는 안내줄 — "밀 수 있다" 를 알려줍니다 */
+      P + " .tl-fx-hint{display:none;padding:6px 12px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:10px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
     var st = document.createElement("style");
     st.id = STYLE_ID;
     st.textContent = css;
@@ -239,17 +255,12 @@ App.ChartIndicatorMenu = (function () {
     injectStyle();
     var h = host();
     if (!h) return null;
-    /* style.css 를 고치지 않고 이 요소에만 기준점을 줍니다
-       (js/chart-indicators.js 가 .chart-wrap 에 하는 것과 같은 방식) */
-    if (!h.style.position) {
-      var cs = null;
-      try {
-        cs = window.getComputedStyle(h);
-      } catch (e) {
-        cs = null;
-      }
-      if (!cs || cs.position === "static") h.style.position = "relative";
-    }
+    /* 자리는 position:fixed 로 화면(viewport) 기준으로 잡습니다.
+       그래서 .chart-panel 에 기준점(position:relative)을 심지 않습니다.
+       — 차트 칸은 폰에서 화면보다 훨씬 길어서(360 에서 620px, 화면에 보이는 건
+         188px 뿐) 칸 기준으로 잡으면 목록이 화면 밖에서 열립니다.
+       DOM 위치는 그대로 .chart-panel 안에 둡니다. 전체화면(requestFullscreen)이
+       .chart-panel 에 걸리기 때문에, 밖으로 빼면 전체화면에서 안 보입니다. */
 
     var p = document.createElement("div");
     p.id = PANEL_ID;
@@ -321,6 +332,12 @@ App.ChartIndicatorMenu = (function () {
     });
     p.appendChild(list);
 
+    /* 다 안 들어갈 때만 켜지는 안내줄 — place() 가 켜고 끕니다 */
+    var hint = document.createElement("div");
+    hint.className = "tl-fx-hint";
+    hint.textContent = "목록을 위아래로 밀면 나머지가 보입니다";
+    p.appendChild(hint);
+
     var foot = document.createElement("div");
     foot.className = "tl-fx-foot";
     p.appendChild(foot);
@@ -330,58 +347,163 @@ App.ChartIndicatorMenu = (function () {
   }
 
   /* ---------------------------------------------------------------------
-   * 자리 잡기 — fx 버튼 바로 아래. 좁은 화면에서 오른쪽으로 넘치면
-   * 안쪽으로 당깁니다 (360 에서 잘리지 않게).
+   * 자리 잡기 — 화면(viewport) 기준입니다.
+   *
+   * 왜 바꿨나 (2026-08-27) — 처음엔 차트 칸(.chart-panel) 안에서만 가뒀습니다.
+   * 그런데 차트 칸이 화면보다 훨씬 길어서 목록이 화면 아래에서 열렸습니다.
+   *   360x800 실측 — 차트 칸 539~1159(620px), 화면에 보이는 건 539~727 뿐
+   *   (727 부터는 하단 고정 매수/매도 바). fx 버튼 아래끝 590,
+   *   지표 막대 아래끝 647 → 목록 위끝 651, 목록 높이 387 → 아래끝 1038.
+   *   화면 밖 238px, 하단 바까지 치면 7줄 중 0줄이 보였습니다.
+   *
+   * 그래서 세 가지를 봅니다.
+   *   1) 화면 위아래 (innerHeight)
+   *   2) 하단 고정 매수/매도 바(.tl-order-bar) — 폰에서만 나옵니다
+   *   3) 버튼 아래에 자리가 모자라면 버튼 위로 뒤집어 엽니다
+   * 위아래 어느 쪽으로도 다 안 들어가면 넓은 쪽에 붙이고 목록 몸통만
+   * 줄여서 스크롤시킵니다. 이때 "밀면 더 보인다" 안내줄을 켭니다.
+   * 줄이 7개에서 9개로 늘어나도 매번 다시 재기 때문에 그대로 동작합니다.
    * ------------------------------------------------------------------- */
+  var EDGE = 8; /* 화면 가장자리에서 띄우는 여백 */
+
+  function vpW() {
+    return window.innerWidth || document.documentElement.clientWidth || 0;
+  }
+  function vpH() {
+    return window.innerHeight || document.documentElement.clientHeight || 0;
+  }
+
+  function fullscreenOn() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  /* 목록이 내려갈 수 있는 화면상의 마지노선.
+     폰의 하단 고정 매수/매도 바 위로는 안 내려갑니다.
+     전체화면일 때는 그 바가 화면에 안 그려지므로 세지 않습니다. */
+  function floorY() {
+    var lim = vpH() - EDGE;
+    if (fullscreenOn()) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim;
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - EDGE < lim) lim = r.top - EDGE;
+    return lim;
+  }
+
   function place() {
     if (!panel) return;
-    var h = host();
-    if (!h || !h.getBoundingClientRect) return;
-    var hr = h.getBoundingClientRect();
-    var top = 8;
-    var left = 8;
-    if (anchorBtn && anchorBtn.getBoundingClientRect) {
-      var br = anchorBtn.getBoundingClientRect();
-      /* 버튼 아래 4px — 바이낸스 실측(버튼 아래끝 236 -> 목록 위끝 240)과 같습니다 */
-      top = br.bottom - hr.top + 4;
-      /* 좌우는 버튼 한가운데 — 바이낸스도 가운데에 맞춥니다
-         (실측: 버튼 가운데 353, 목록 가운데 (285+421)/2 = 353) */
-      left = (br.left + br.right) / 2 - hr.left - (panel.offsetWidth || 250) / 2;
-    }
-    var w = panel.offsetWidth || 250;
-    var max = hr.width - w - 6;
-    if (left > max) left = max;
-    if (left < 6) left = 6;
-    if (top < 4) top = 4;
+    var listEl = panel.querySelector(".tl-fx-list");
+    var hintEl = panel.querySelector(".tl-fx-hint");
 
-    /* ── 이미 있는 지표 막대를 가리지 않습니다 ──────────────────────────
-     * 차트 왼쪽 위 작은 글자 줄(.tl-ind-bar)은 "지금 무엇이 켜져 있나" 를
-     * 보여주는 자리입니다. 목록이 그 위를 덮으면 켜고 끄는 동안 결과가
-     * 안 보입니다. 그래서 그 줄 아래에서 시작합니다.
-     * 줄이 여러 줄로 접히는 좁은 화면도 실제 높이를 재서 따라갑니다.
-     * ----------------------------------------------------------------- */
+    /* 잰 값이 지난번 자르기에 물들지 않게 원래 크기부터 되돌립니다 */
+    if (listEl) listEl.style.maxHeight = "";
+    if (hintEl) hintEl.style.display = "none";
+
+    var TOP = EDGE;
+    var BOT = floorY();
+    var w = panel.offsetWidth || 250;
+    var natural = panel.offsetHeight || 0;
+
+    var br = null;
+    if (anchorBtn && anchorBtn.getBoundingClientRect) {
+      var b = anchorBtn.getBoundingClientRect();
+      if (b.width > 0 || b.height > 0) br = b;
+    }
+
+    /* ── 좌우 ── 버튼 한가운데. 바이낸스도 가운데에 맞춥니다
+       (실측: 버튼 가운데 353, 목록 가운데 (285+421)/2 = 353) */
+    var left = br ? (br.left + br.right) / 2 - w / 2 : EDGE;
+    var maxLeft = vpW() - w - EDGE;
+    if (left > maxLeft) left = maxLeft;
+    if (left < EDGE) left = EDGE;
+
+    /* ── 아래로 열 때의 시작점 ── 버튼 아래 4px
+       (바이낸스 실측: 버튼 아래끝 236 -> 목록 위끝 240) */
+    var below = br ? br.bottom + 4 : TOP;
+
+    /* 이미 있는 지표 막대(.tl-ind-bar)는 "지금 무엇이 켜져 있나" 를 보여주는
+       자리라 덮지 않습니다. 아래로 열 때만 해당됩니다. */
     var indBar = document.querySelector(".tl-ind-bar");
     if (indBar && indBar.getBoundingClientRect) {
       var ir = indBar.getBoundingClientRect();
-      if (ir.width > 0 && ir.height > 0) {
-        var indBottom = ir.bottom - hr.top + 4;
-        var xHit = left < ir.right - hr.left && left + w > ir.left - hr.left;
-        if (xHit && top < indBottom) top = indBottom;
+      if (ir.width > 0 && ir.height > 0 && left < ir.right && left + w > ir.left && below < ir.bottom + 4) {
+        below = ir.bottom + 4;
       }
     }
 
-    /* 차트 칸 아래로 넘치면 목록 몸통만 줄여서 안에 넣습니다 */
-    var listEl = panel.querySelector(".tl-fx-list");
-    if (listEl) {
-      var room = hr.height - top - 8;
-      var chrome = panel.offsetHeight - listEl.offsetHeight;
-      var avail = room - chrome;
-      if (avail > 60 && listEl.offsetHeight > avail) listEl.style.maxHeight = Math.round(avail) + "px";
-      else listEl.style.maxHeight = "";
+    var aboveEnd = br ? br.top - 4 : TOP; /* 위로 열 때 목록의 아래끝 */
+
+    /* 버튼 자체가 화면 밖(스크롤로 아래에 있거나 하단 바에 가려짐)일 수 있습니다.
+       그때 위쪽 자리를 실제보다 넓게 잡으면 목록이 다시 화면 밖으로 나갑니다.
+       그래서 잴 수 있는 자리를 화면 안으로 먼저 잘라둡니다. */
+    if (aboveEnd > BOT) aboveEnd = BOT;
+    if (aboveEnd < TOP) aboveEnd = TOP;
+    if (below < TOP) below = TOP;
+
+    var roomBelow = BOT - below;
+    var roomAbove = aboveEnd - TOP;
+
+    var top;
+    var cap = 0;
+    if (roomBelow >= natural) {
+      top = below;
+    } else if (roomAbove >= natural) {
+      top = aboveEnd - natural;
+    } else if (roomAbove > roomBelow) {
+      cap = roomAbove;
+      top = TOP;
+    } else {
+      cap = roomBelow;
+      top = below;
     }
+
+    /* 위아래 어디에도 다 안 들어갈 때 — 몸통만 줄이고 안내줄을 켭니다 */
+    if (cap > 0 && listEl) {
+      if (hintEl) hintEl.style.display = "block";
+      var chrome = panel.offsetHeight - listEl.offsetHeight; /* 머리 + 안내 + 발 */
+      var avail = Math.floor(cap - chrome);
+      if (avail < 38) avail = 38; /* 최소 한 줄은 보이게 */
+      listEl.style.maxHeight = avail + "px";
+      if (top === TOP && br) top = aboveEnd - panel.offsetHeight; /* 위로 열었으면 아래끝을 버튼에 붙임 */
+    }
+
+    /* 마지막 안전장치 — 그래도 넘치면 화면 안으로 밀어 넣습니다 */
+    var hNow = panel.offsetHeight;
+    if (top + hNow > BOT) top = BOT - hNow;
+    if (top < TOP) top = TOP;
 
     panel.style.top = Math.round(top) + "px";
     panel.style.left = Math.round(left) + "px";
+  }
+
+  /* 스크롤·크기변경 때 다시 잡습니다. position:fixed 라 페이지가 움직이면
+     버튼만 따로 움직이기 때문입니다. 프레임당 한 번만 계산합니다. */
+  var rafId = 0;
+  function replaceSoon() {
+    if (!panel) return;
+    if (rafId) return;
+    rafId = window.requestAnimationFrame
+      ? window.requestAnimationFrame(function () {
+          rafId = 0;
+          if (!panel) return;
+          /* 버튼이 화면 밖으로 완전히 나가면 닫습니다 */
+          if (anchorBtn && anchorBtn.getBoundingClientRect) {
+            var r = anchorBtn.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > vpH()) {
+              close();
+              return;
+            }
+          }
+          place();
+        })
+      : (place(), 0);
   }
 
   function onDocDown(ev) {
@@ -402,11 +524,13 @@ App.ChartIndicatorMenu = (function () {
     if (on) {
       document.addEventListener("mousedown", onDocDown, true);
       document.addEventListener("keydown", onKey, true);
-      window.addEventListener("resize", place);
+      window.addEventListener("resize", replaceSoon);
+      window.addEventListener("scroll", replaceSoon, true);
     } else {
       document.removeEventListener("mousedown", onDocDown, true);
       document.removeEventListener("keydown", onKey, true);
-      window.removeEventListener("resize", place);
+      window.removeEventListener("resize", replaceSoon);
+      window.removeEventListener("scroll", replaceSoon, true);
     }
   }
 

@@ -3,6 +3,14 @@
 --   시드 충전권(seed_recharge) 두 가지를 고칩니다.
 --     (1) 포지션을 들고 있어도 지갑이 늘어나던 것을 막습니다
 --     (2) 충전받은 돈을 recharge_total 에 쌓아 계급이 부풀지 않게 합니다
+--
+--   그리고 2026-08-27 추가 —
+--   재충전 이용권(account_reset) 에도 ★똑같은 (2) 구멍★ 이 있었습니다.
+--     지갑을 초기자금으로 되돌리면서 recharge_total 에는 안 쌓았습니다.
+--     손실 중에 쓰면 원금이 무상 복구되는데 계급 점수에서는 안 빠져서,
+--     거래를 한 번도 더 안 하고 계급이 올라갔습니다.
+--   → [4] 의 함수에서 같이 고칩니다.
+--   ⚠ 지난 사용분은 소급 못 합니다. 이유는 [1-b] 에 적었습니다.
 -- =========================================================================
 -- 이 파일이 use_user_item() 의 ★정본★ 입니다 (2026-08-27 부터).
 --   supabase/schema-tl-market.sql 안에도 같은 함수가 있습니다.
@@ -85,13 +93,32 @@ where item_type in ('seed_recharge', 'account_reset')
 order by sort_order;
 
 
--- 지금까지 시드 충전권이 실제로 몇 번 쓰였는지.
+-- 지금까지 두 상품이 실제로 몇 번 쓰였는지.
+--   effect_value 는 seed_recharge 만 값이 있습니다(100,000).
+--   account_reset 은 null 이라 합계가 0 으로 나옵니다 — 고장이 아닙니다.
 select
-  count(*)                                  as 사용_건수,
-  count(distinct user_id)                   as 사용한_회원수,
-  coalesce(sum(coalesce(effect_value, 0)), 0) as 지급된_총액_USDT
+  item_type                                   as 상품종류,
+  count(*)                                    as 사용_건수,
+  count(distinct user_id)                     as 사용한_회원수,
+  coalesce(sum(coalesce(effect_value, 0)), 0) as 기록된_효과값_합
 from public.item_usage_logs
-where item_type = 'seed_recharge';
+where item_type in ('seed_recharge', 'account_reset')
+group by item_type
+order by item_type;
+
+
+-- ★ 대표님은 이 한 줄만 보시면 됩니다.
+--   재충전 이용권(account_reset) 의 지난 사용분은 ★소급 보정을 못 합니다★.
+--   이유는 아래 [1-b] 에 적어 두었습니다. 0 건이면 아무 문제가 없습니다.
+select
+  count(*) as 재충전이용권_지난사용건수,
+  count(distinct user_id) as 그_회원수,
+  case when count(*) = 0
+       then 'OK - 지난 사용분이 없습니다. 소급 보정할 것이 없고 계급도 아무도 안 바뀝니다.'
+       else '주의 - 지난 사용분이 있습니다. 금액을 알 방법이 없어 소급을 못 합니다. [1-b] 를 읽어 주세요.'
+  end as 판정
+from public.item_usage_logs
+where item_type = 'account_reset';
 
 
 -- =========================================================================
@@ -177,6 +204,49 @@ order by 내려가는_점수 desc;
 
 
 -- =========================================================================
+-- [1-b] 재충전 이용권(account_reset) — 지난 사용분은 소급 못 합니다
+--       (읽기 전용 — 아무것도 바뀌지 않습니다)
+-- =========================================================================
+-- 앞으로 쓰는 것은 [4] 의 새 함수가 제대로 처리합니다. 여기는 ★이미 쓴 것★ 이야기입니다.
+--
+-- 왜 못 하나 — 기록에 '되돌리기 전 지갑' 이 없습니다.
+--   옛 함수는 이렇게만 남겼습니다:
+--       eff := jsonb_build_object('balance', new_balance);   ← 되돌린 '뒤' 값뿐
+--   무상으로 들어간 금액은 (초기자금 − 되돌리기 전 지갑) 인데,
+--   '되돌리기 전 지갑' 이 어디에도 안 남아 있습니다.
+--   effect_value 도 못 씁니다 — account_reset 은 null 입니다(schema-tl-market.sql:349).
+--
+-- 거래기록으로 되짚어 계산할 수도 있지만 ★추측이 됩니다★.
+--   수수료·펀딩비·무료충전·다른 아이템이 같은 잔고를 건드려서
+--   그 시점 잔고를 정확히 복원할 수 없습니다.
+--   시드 충전권 소급([3])은 금액이 기록에 그대로 있어서 추측이 하나도 없었습니다.
+--   여기는 다릅니다. 그래서 ★아무것도 안 바꿉니다★.
+--
+-- 대신 [4] 의 새 함수가 앞으로는 balance_before 를 남깁니다.
+-- 그 뒤에 쓴 것은 언제든 대조·소급이 됩니다.
+--
+-- 아래 표가 비어 있으면 → 신경 쓰실 것이 없습니다. 그냥 계속 Run 하세요.
+-- 아래 표에 줄이 나오면 → 그 줄을 본부장에게 알려 주세요. 대표님 결정 사항입니다.
+--   (그냥 두거나 / 그 회원만 손으로 정하거나 — 둘 중 하나입니다)
+select
+  coalesce(p.nickname, '(이름없음)')      as 회원,
+  l.used_at                               as 쓴시각,
+  round(coalesce((l.effect_data->>'balance')::numeric, 0)) as 되돌린뒤_지갑,
+  case when (l.effect_data->>'balance_before') is not null
+       then round((l.effect_data->>'balance_before')::numeric)::text
+       else '기록없음'
+  end                                     as 되돌리기전_지갑,
+  case when (l.effect_data->>'balance_before') is not null
+       then '새 함수로 쓴 것 - 소급 가능'
+       else '옛 함수로 쓴 것 - 금액을 알 수 없음'
+  end                                     as 상태
+from public.item_usage_logs l
+left join public.profiles p on p.id = l.user_id
+where l.item_type = 'account_reset'
+order by l.used_at desc;
+
+
+-- =========================================================================
 -- [2] 백업표  (여기서부터 실제로 바뀝니다)
 -- =========================================================================
 -- 소급 보정을 누구에게 얼마나 했는지 남깁니다.
@@ -239,6 +309,7 @@ declare
   start_bal numeric;
   eff jsonb := '{}'::jsonb;
   added numeric;
+  old_bal numeric;   -- account_reset: 되돌리기 '전' 지갑 (무상 지급액 계산용)
 begin
   if uid is null then raise exception 'not_logged_in'; end if;
 
@@ -286,15 +357,50 @@ begin
                               'counted_as_recharge', true);
 
   elsif it.item_type = 'account_reset' then
-    select initial_balance into start_bal from public.trading_accounts where user_id = uid;
+    -- 2026-08-27 추가 - 시드 충전권과 똑같은 구멍이 여기에도 있었습니다.
+    --   balance 를 initial_balance 로 되돌리면서 recharge_total 에는 안 쌓아서,
+    --   손실을 본 상태에서 쓰면 원금이 무상 복구되는데 계급 점수에서는 안 빠집니다.
+    --   → 거래를 한 번도 더 안 하고 계급이 올라갑니다.
     if exists (select 1 from public.positions where user_id = uid) then
       raise exception 'has_position';
     end if;
+
+    -- 위 perform ... for update 로 이미 이 줄을 잠가 두었습니다.
+    select coalesce(balance, 0), coalesce(initial_balance, 0)
+      into old_bal, start_bal
+      from public.trading_accounts where user_id = uid;
+
+    -- ★ 무상으로 받은 금액 = 되돌리기로 '늘어난' 만큼입니다.
+    --   시드 충전권처럼 고정액(effect_value)이 아닙니다.
+    --   account_reset 의 effect_value 는 null 입니다(schema-tl-market.sql:349).
+    --
+    --     손실 중 (지갑 50,000 < 초기 100,000)
+    --        → added = 50,000. 지갑 +50,000, recharge_total +50,000.
+    --          계급자산 = 100,000 - 50,000 = 50,000 → 점수는 손실 그대로 반영
+    --     이익 중 (지갑 150,000 > 초기 100,000)
+    --        → added = 0.   지갑이 오히려 줄어듭니다(회원이 이익을 포기한 것).
+    --          무상으로 받은 게 없으므로 recharge_total 은 안 건드립니다.
+    --          음수를 더하면 계급이 거꾸로 부풀어 오르므로 greatest(0, ...) 입니다.
+    --
+    --   계급 공식(1000 × log2(자산/초기자금)) 은 한 글자도 안 건드립니다.
+    --   '자산' 에서 빼는 항목에 빠져 있던 금액을 채우는 것뿐입니다.
+    added := greatest(0, start_bal - old_bal);
+
     update public.trading_accounts
-       set balance = start_bal, updated_at = now()
+       set balance        = start_bal,
+           recharge_total = coalesce(recharge_total, 0) + added,
+           updated_at     = now()
      where user_id = uid
      returning balance into new_balance;
-    eff := jsonb_build_object('balance', new_balance);
+
+    -- ★ balance_before 를 기록에 남깁니다.
+    --   지금까지의 기록에는 '되돌린 뒤' 잔고만 있어서(effect_data.balance),
+    --   지난 사용분은 얼마가 무상으로 들어갔는지 계산할 방법이 없습니다.
+    --   앞으로 쓴 것은 이 값으로 언제든 대조·소급이 됩니다.
+    eff := jsonb_build_object('balance', new_balance,
+                              'balance_before', old_bal,
+                              'added', added,
+                              'counted_as_recharge', true);
   end if;
   -- leverage_boost / fee_discount / position_peek / liquidation_guard 는
   -- 잔고를 바꾸지 않습니다. 아래 사용 기록만 남기고, 효과는 화면 쪽에서
@@ -383,8 +489,24 @@ order by 계급점수 desc;
 -- (3) 함수를 옛 동작으로 되돌립니다
 --   git 에서 옛 파일을 꺼내 그 안의 use_user_item 만 Run 하면 됩니다.
 --     git show <이_커밋>^:supabase/schema-tl-market.sql
+--   이 한 번으로 seed_recharge · account_reset 두 수리가 같이 되돌아갑니다
+--   (같은 함수 안이라 따로 못 나눕니다).
 --
--- (3) 을 되돌리면 (1)(2) 두 문제가 그대로 되살아납니다.
+-- (4) 재충전 이용권으로 쌓인 recharge_total 만 따로 되돌리려면
+--   [4] 의 새 함수가 남긴 기록으로 정확히 계산됩니다(추측 없음).
+--   (앞의 -- 를 지우고 실행하세요)
+--   update public.trading_accounts ta
+--      set recharge_total = greatest(0, coalesce(ta.recharge_total, 0) - x.합계),
+--          updated_at = now()
+--     from (select l.user_id,
+--                  sum((l.effect_data->>'added')::numeric) as 합계
+--             from public.item_usage_logs l
+--            where l.item_type = 'account_reset'
+--              and (l.effect_data->>'added') is not null
+--            group by l.user_id) x
+--    where ta.user_id = x.user_id;
+--
+-- (3) 을 되돌리면 세 문제가 그대로 되살아납니다.
 -- 보통은 위 (1)(2) 만 되돌리면 충분합니다
 -- (계급은 원위치, 앞으로는 정상 적립).
 -- =========================================================================

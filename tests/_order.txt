@@ -88,6 +88,7 @@ tests/notices.test.js
 tests/chart-indicators.test.js
 tests/chart-drawings.test.js
 tests/sql-on-conflict-guard.test.js
+tests/item-recharge-total-guard.test.js
 tests/guest-balance-leak.test.js
 tests/tl-grant-formula-seal.test.js
 tests/mypage-value-fit.test.js
@@ -122,4 +123,7 @@ tests/html-assets-tracked.test.js
 tests/forced-liquidation-wipeout-seal.test.js
 tests/order-sheet-mobile-seal.test.js
 tests/stale-notice-visible.test.js
+tests/stale-market-price-display.test.js
 tests/funding-symbol-stamp.test.js
+tests/orderbook-click-order-seal.test.js
+tests/supabase-client-seal.test.js
