@@ -226,13 +226,16 @@ App.TradeEventsChat = (function () {
     // 금액도 원화로 — 채팅은 사람이 읽는 문장이라 익숙한 단위가 낫습니다.
     // 환율은 App.Config.USD_KRW 하나만 씁니다(다른 곳에 또 적지 않음).
     const amountText = formatKrwSigned(t.pnl);
+    // 종목 이름도 종목 규격표에서 — 코인은 "BTC", 주식·지수는 "삼성전자" 처럼 나옵니다.
+    // ⚠ 이미 서버에 문자열로 저장된 옛 메시지는 고치지 않습니다. 앞으로 만들어지는 문구만입니다.
+    const symLabel = App.Utils && App.Utils.symbolLabel ? App.Utils.symbolLabel(t.symbol) : "BTC";
     if (t.reason === "강제청산") {
-      return nickname + "님의 BTC " + sideLabel + " 포지션이 강제청산되었습니다 (" + amountText + ")";
+      return nickname + "님의 " + symLabel + " " + sideLabel + " 포지션이 강제청산되었습니다 (" + amountText + ")";
     }
     if (t.pnl >= 0) {
-      return nickname + "님이 BTC " + sideLabel + " 포지션을 " + amountText + " 익절했습니다";
+      return nickname + "님이 " + symLabel + " " + sideLabel + " 포지션을 " + amountText + " 익절했습니다";
     }
-    return nickname + "님이 BTC " + sideLabel + " 포지션을 " + amountText + " 손절했습니다";
+    return nickname + "님이 " + symLabel + " " + sideLabel + " 포지션을 " + amountText + " 손절했습니다";
   }
 
   function init() {

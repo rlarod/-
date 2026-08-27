@@ -603,7 +603,9 @@ App.MarketWar = (function () {
   };
   function logFeed(isBuy, key, qty) {
     const label = FEED_LABEL[key] || key;
-    const suffix = qty ? " (" + qty.toFixed(3) + " BTC)" : "";
+    // 단위 이름만 종목 규격표에서 읽습니다. 자릿수(3)는 이 피드 전용 축약 표기라 그대로입니다.
+    const unit = App.Utils && App.Utils.qtyUnit ? App.Utils.qtyUnit() : "BTC";
+    const suffix = qty ? " (" + qty.toFixed(3) + " " + unit + ")" : "";
     feedItems.unshift({ time: Date.now(), isBuy, text: (isBuy ? "BUY " : "SELL ") + label + suffix });
     if (feedItems.length > FEED_MAX_ITEMS) feedItems.length = FEED_MAX_ITEMS;
     renderFeedDom();

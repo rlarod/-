@@ -59,9 +59,57 @@ App.Utils = (function () {
     return fmt(n);
   }
 
-  function formatQty(n) {
+  /* ---------------- 종목별 표시 이름 ----------------
+   * 다종목(나스닥·삼성전자·SK하이닉스) 대비. 수량 뒤에 붙는 단위 이름을
+   * 종목 규격표(App.SymbolRegistry)에서 읽어옵니다.
+   *
+   * ⚠ 자릿수는 종목별로 나누지 않습니다 — 대표 지시(2026-08-27)
+   *   "매수하는 단위도 비트코인이랑 똑같은 시스템으로 해".
+   *   그래서 QTY_DECIMALS 는 네 종목 모두 6 고정이고, 규격표의
+   *   spec.qtyDecimals 는 일부러 읽지 않습니다. 바뀌는 건 "이름" 하나뿐입니다.
+   *
+   * 읽는 곳 — App.SymbolRegistry.getSpec(symbol).unit (수리팀 규격표와 같은 이름)
+   * 규격표가 없거나 모르는 종목이면 지금까지의 동작("BTC")으로 그대로 떨어집니다.
+   */
+  const QTY_DECIMALS = 6;
+  const UNIT_FALLBACK = "BTC";
+
+  function activeSymbolOf(symbol) {
+    if (symbol) return symbol;
+    return App.Config && App.Config.getActiveSymbol ? App.Config.getActiveSymbol() : "";
+  }
+
+  // 수량 뒤에 붙는 단위 이름. 예) "BTC"
+  function qtyUnit(symbol) {
+    const reg = App.SymbolRegistry;
+    if (reg && typeof reg.getSpec === "function") {
+      const spec = reg.getSpec(activeSymbolOf(symbol));
+      if (spec && typeof spec.unit === "string" && spec.unit) return spec.unit;
+    }
+    return UNIT_FALLBACK;
+  }
+
+  // 문장 안에서 종목을 가리키는 이름. 예) "BTC 매수 포지션" / "삼성전자 매수 포지션"
+  // 코인은 단위 이름이 곧 통용 코드(BTC)라 그대로 쓰고, 주식·지수는 종목명을 씁니다
+  // ("주 매수 포지션"은 말이 안 되므로).
+  function symbolLabel(symbol) {
+    const reg = App.SymbolRegistry;
+    const sym = activeSymbolOf(symbol);
+    if (reg && typeof reg.getBySymbol === "function") {
+      const meta = reg.getBySymbol(sym);
+      if (meta && meta.type !== "crypto" && meta.name) return meta.name;
+      if (meta) return qtyUnit(sym);
+    }
+    return UNIT_FALLBACK;
+  }
+
+  function formatQty(n, symbol) {
     if (n === null || n === undefined || isNaN(n)) return "-";
-    return n.toLocaleString("ko-KR", { minimumFractionDigits: 6, maximumFractionDigits: 6 }) + " BTC";
+    return (
+      n.toLocaleString("ko-KR", { minimumFractionDigits: QTY_DECIMALS, maximumFractionDigits: QTY_DECIMALS }) +
+      " " +
+      qtyUnit(symbol)
+    );
   }
 
   function nowStr() {
@@ -80,6 +128,9 @@ App.Utils = (function () {
     formatPercent,
     formatVolume,
     formatQty,
+    qtyUnit,
+    symbolLabel,
+    QTY_DECIMALS,
     nowStr,
   };
 })();

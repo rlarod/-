@@ -129,6 +129,11 @@ App.QtyPriceOrder = (function () {
     if (dom.priceInput) dom.priceInput.addEventListener("input", syncMargin);
   }
 
+  // 수량 뒤 단위 이름. App.Utils가 없던 시절 동작("BTC")으로 안전하게 떨어집니다.
+  function unitLabel() {
+    return App.Utils && App.Utils.qtyUnit ? App.Utils.qtyUnit() : "BTC";
+  }
+
   function injectQtyField() {
     const anchor = el("qty-price-order-anchor");
     if (!anchor) return;
@@ -137,7 +142,9 @@ App.QtyPriceOrder = (function () {
       '<div class="field-label"><span>주문수량</span></div>' +
       '<div class="margin-input-wrap">' +
       '<input type="text" inputmode="decimal" id="order-qty-input" placeholder="0.000000">' +
-      "<span>BTC</span>" +
+      // 단위 이름은 종목 규격표에서 읽습니다(App.Utils.qtyUnit → SymbolRegistry.getSpec().unit).
+      // 자릿수는 종목과 무관하게 6자리 고정이라 placeholder 는 그대로입니다.
+      '<span id="order-qty-unit">' + unitLabel() + "</span>" +
       "</div>" +
       '<div class="chip-row" id="qty-percent-row">' +
       '<div class="chip" data-pct="10">10%</div>' +
