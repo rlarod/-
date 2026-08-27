@@ -11,9 +11,19 @@
  *   · 도구 막대 접기·펴기
  *   · 브라우저 저장 — 새로고침해도 남습니다 (App.Storage)
  *
- * 자리만 잡아 둔 것 (2차)
- *   세로 막대 — 여러 수평선(피보나치) / 파동 / 여러선 / 브러시 / 표정 / 자 / 돋보기
- *   가로 막대 — 봉 종류 / fx 지표 / 알람 / 육각형 / 전체화면 / 카메라
+ * 2차(2026-08-26)에서 연 것 — 준비중 13개 중 4개
+ *   · 피보나치 되돌림 (세로 막대)
+ *   · 자 — 두 점 사이 몇 % 움직였는지 (세로 막대)
+ *   · 전체화면 (가로 막대)
+ *   · 카메라 — 차트를 그림 파일로 (가로 막대)
+ *   왜 이 넷인가 — 바이낸스 선물 차트에서 실제로 있는 도구이고, 회원이
+ *   자주 쓰는 순서로 골랐습니다. 전체화면은 차트를 크게 보는 기본 동작이고,
+ *   카메라는 게시판·대화방에 자랑하려고 찍는 것이며, 자와 피보나치는
+ *   되돌림·목표가를 재는 데 씁니다. 만들기 쉬운 순서로 고르지 않았습니다.
+ *
+ * 아직 자리만 잡아 둔 것 (9개)
+ *   세로 막대 — 파동 / 여러선 / 브러시 / 표정 / 돋보기
+ *   가로 막대 — 봉 종류 / fx 지표 / 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
  *
@@ -58,7 +68,24 @@
  *                   (시간에 매달린 그림이라 1분봉에 그은 추세선을 1일봉에
  *                    그대로 옮기면 점 하나로 뭉개집니다 — 그래서 나눴습니다)
  *
- * ── 되돌리기 ──────────────────────────────────────────────────────────
+ * ── 2차만 되돌리려면 ──────────────────────────────────────────────────
+ *   이 파일 안에서 네 줄만 false 로 바꾸면 다시 "준비중" 으로 돌아갑니다.
+ *   (LEFT_TOOLS 의 fib · ruler, TOP_TOOLS 의 fullscreen · camera 의 ready)
+ *   그리고 READY_TOOLS 에서 fib · ruler 를 빼면 자판·저장까지 완전히 닫힙니다.
+ *   같이 되돌릴 것 — tests/chart-toolbar-seal.test.js 의 준비중 개수(5/4 -> 7/6),
+ *   tests/chart-drawings.test.js 의 readyLeft 문자열.
+ *   회원이 이미 그어 둔 피보나치·자는 저장에 남지만 그리지 않습니다(조용히 무시).
+ *
+ * ── 2026-08-27 에 더 손본 것(둘 다 피보나치 라벨 관련) ────────────────
+ *   (1) 라벨 글자 모양을 바이낸스와 같게 — fibLabel() 한 함수.
+ *       예전 모양으로 돌리려면 fibLabel 의 본문을
+ *       fibName(level) + "  " + priceText 로 바꾸고,
+ *       tests/chart-drawings.test.js 의 "피보나치 라벨" 두 줄을 지우면 됩니다.
+ *   (2) 라벨이 겹칠 때 건너뛰기 — LABEL_GAP(14). 0 으로 두면 예전처럼
+ *       일곱 줄을 다 적습니다(360 에서는 서로 겹쳐 못 읽습니다).
+ *   선은 어느 쪽이든 일곱 개 다 그립니다. 저장한 자료는 건드리지 않습니다.
+ *
+ * ── 되돌리기(4단계까지 통째로) ────────────────────────────────────────
  *   1) index.html 의 <script src="js/chart-drawings.js"></script> 한 줄 삭제
  *   2) package.json 의 tests/chart-drawings.test.js 한 토막 삭제
  *   3) js/chart-drawings.js, tests/chart-drawings.test.js 파일 삭제
@@ -90,6 +117,15 @@ App.ChartDrawings = (function () {
   var C_BORDER = "#1D273B";
   var C_TEXT = "#E7ECF5";
   var C_MUTED = "#838DA4";
+  /* 골드 딱지 위에 얹는 어두운 글자 — "밝은 배경에는 어두운 글자" 규칙 */
+  var C_INK = "#0A0F1C";
+  /* 전체화면 바탕 · 저장한 그림의 바탕 (확정 팔레트의 배경색) */
+  var C_PAGE = "#0A0F1C";
+  /* 자(측정) 상자 안쪽 — 포인트색을 10% 만 깔았습니다.
+     바이낸스는 오를 때 초록 / 내릴 때 빨강으로 칠하지만, 우리는 그 두 색을
+     손익 전용으로 못 박아 두었습니다(청산가 선이 하락색을 씁니다).
+     그래서 방향은 색이 아니라 화살표와 +/- 부호로 알립니다. */
+  var FILL_DRAW = "rgba(240,180,41,0.10)";
 
   var LINE_WIDTH = 1;
   var HIT_PX = 7; /* 이 거리 안에서 누르면 그 그림을 고른 것으로 봅니다 */
@@ -109,7 +145,7 @@ App.ChartDrawings = (function () {
     { k: "sep1", sep: true },
     { k: "trend", icon: "tlc-i-trendline", label: "추세선", ready: true },
     { k: "hline", icon: "tlc-i-hline", label: "수평선", ready: true },
-    { k: "fib", icon: "tlc-i-fib", label: "여러 수평선(피보나치)", ready: false },
+    { k: "fib", icon: "tlc-i-fib", label: "피보나치 되돌림", ready: true },
     { k: "wave", icon: "tlc-i-wave", label: "파동", ready: false },
     { k: "channel", icon: "tlc-i-channel", label: "여러선", ready: false },
     { k: "brush", icon: "tlc-i-brush", label: "브러시", ready: false },
@@ -117,7 +153,7 @@ App.ChartDrawings = (function () {
     { k: "text", icon: "tlc-i-text", label: "텍스트", ready: true },
     { k: "face", icon: "tlc-i-face", label: "표정", ready: false },
     { k: "sep3", sep: true },
-    { k: "ruler", icon: "tlc-i-ruler", label: "자", ready: false },
+    { k: "ruler", icon: "tlc-i-ruler", label: "자 (두 점 사이 측정)", ready: true },
     { k: "zoom", icon: "tlc-i-zoom", label: "돋보기", ready: false }
   ];
 
@@ -129,12 +165,28 @@ App.ChartDrawings = (function () {
     { k: "alert", icon: "tlc-i-alarm", label: "알람", ready: false },
     { k: "hex", icon: "tlc-i-hexagon", label: "육각형", ready: false },
     { k: "spacer", spacer: true },
-    { k: "fullscreen", icon: "tlc-i-fullscreen", label: "전체화면", ready: false },
-    { k: "camera", icon: "tlc-i-camera", label: "카메라", ready: false }
+    { k: "fullscreen", icon: "tlc-i-fullscreen", label: "전체화면", ready: true },
+    { k: "camera", icon: "tlc-i-camera", label: "카메라 (차트 그림 저장)", ready: true }
   ];
 
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
-  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1 };
+  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1 };
+
+  /* 두 점을 찍어 만드는 도구 — 한 번 찍고 두 번째에 완성됩니다 */
+  var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
+
+  /* 피보나치 되돌림 눈금 — 바이낸스 선물(트레이딩뷰 모드) 기본값 그대로입니다.
+     2026-08-26 실측(binance.com/en/futures/BTCUSDT, 1440px, Trading View 모드):
+       눈금 0 / 0.236 / 0.382 / 0.5 / 0.618 / 0.786 / 1
+       라벨 "0.236 (75,314.00)" — 눈금 다음에 그 자리의 가격
+       선은 찍은 두 점 사이에만 긋고 오른쪽으로 늘리지 않습니다
+       0 은 나중에 찍은 점, 1 은 먼저 찍은 점 (아래 fibPrice 와 같습니다) */
+  var FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+
+  /* 피보나치 눈금 글자끼리 이만큼은 떨어져 있어야 적습니다 (2026-08-27).
+     글자 크기 12px + 위아래 1px = 14px 이면 서로 닿습니다. 360 폰에서 실제로
+     네 줄이 겹쳐 못 읽었습니다. 이보다 좁으면 그 줄의 글자는 건너뜁니다. */
+  var LABEL_GAP = 14;
 
   /* ---------------- 상태 ---------------- */
   var chart = null;
@@ -186,6 +238,55 @@ App.ChartDrawings = (function () {
   function newId() {
     seq++;
     return "d" + Date.now().toString(36) + seq.toString(36);
+  }
+
+  /* ---------------------------------------------------------------------
+   * 표시 통화(달러/원)를 따라가는 가격 글자.
+   * 캔들 값은 언제나 USDT 인데 회원이 보는 통화는 사람마다 다르고 도중에
+   * 바뀝니다. 우리가 환율을 다시 계산하지 않고 App.Utils 에 그대로 맡깁니다
+   * (계산이 두 벌이 되면 어긋납니다). 통화가 바뀌면 currency:change 를 받아
+   * 다시 그립니다.
+   * ------------------------------------------------------------------- */
+  function fmtPrice(usd) {
+    try {
+      if (App.Utils && typeof App.Utils.formatCurrencyPlain === "function") {
+        return App.Utils.formatCurrencyPlain(usd);
+      }
+    } catch (e) {
+      /* 아래 기본 표기로 */
+    }
+    return String(Math.round(usd * 100) / 100);
+  }
+
+  /** 걸린 시간을 사람 말로 (바이낸스는 "33 bars, 33d" 로 적습니다) */
+  function fmtSpan(sec) {
+    var v = Math.abs(Math.round(sec));
+    var d = Math.floor(v / 86400);
+    var h = Math.floor((v % 86400) / 3600);
+    var m = Math.floor((v % 3600) / 60);
+    if (d) return d + "일" + (h ? " " + h + "시간" : "");
+    if (h) return h + "시간" + (m ? " " + m + "분" : "");
+    return m + "분";
+  }
+
+  /** 눈금 이름 — 0.500 이 아니라 0.5 로 */
+  function fibName(level) {
+    return level.toFixed(3).replace(/0+$/, "").replace(/[.]$/, "");
+  }
+
+  /** 그 눈금의 가격. 0 = 나중에 찍은 점, 1 = 먼저 찍은 점 (바이낸스와 같습니다) */
+  function fibPrice(shape, level) {
+    return shape.p2 + (shape.p1 - shape.p2) * level;
+  }
+
+  /* 눈금 라벨 — 바이낸스와 글자 모양까지 같게 (2026-08-27)
+     바이낸스 실측: `0.236 (75,314.00)` — 눈금, 한 칸, 괄호 안에 그 자리의 가격.
+     shots/bnf-fib-crop.png 에 그대로 찍혀 있습니다.
+     처음(2026-08-26)에는 괄호 없이 두 칸을 띄웠는데, 바이낸스와 나란히 놓고
+     보니 다르게 읽혀서 괄호로 맞췄습니다. 가격은 회원이 보는 통화를
+     따라갑니다(원으로 보는 회원은 `0.236 (118,133,215원)`). */
+  function fibLabel(level, priceText) {
+    return fibName(level) + " (" + priceText + ")";
   }
 
   /* =====================================================================
@@ -368,68 +469,210 @@ App.ChartDrawings = (function () {
     ctx.fillRect(x - 2.5, y - 2.5, 5, 5);
   }
 
+  /* ---------------------------------------------------------------------
+   * 골드 딱지 — 밝은 바탕에 어두운 글자 (확정 팔레트 규칙)
+   * 바이낸스는 파란 딱지(#2962FF, 글자 #FAFBFF)를 쓰는데, 그 파랑은 우리
+   * 팔레트에 없어서 포인트색으로 대신했습니다. 자리·크기는 같습니다.
+   * ------------------------------------------------------------------- */
+  function chipText(ctx, x, y, lines, center) {
+    var padX = 5;
+    var lh = 14;
+    var w = 0;
+    var i;
+    ctx.font = textFont();
+    ctx.textBaseline = "middle";
+    for (i = 0; i < lines.length; i++) w = Math.max(w, ctx.measureText(lines[i]).width);
+    var bw = Math.round(w + padX * 2);
+    var bh = lines.length * lh + 6;
+    var bx = Math.round(center ? x - bw / 2 : x);
+    var by = Math.round(y - bh);
+    ctx.fillStyle = COLOR_DRAW;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = C_INK;
+    for (i = 0; i < lines.length; i++) ctx.fillText(lines[i], bx + padX, by + 3 + lh * i + lh / 2);
+  }
+
+  /* ---------------- 피보나치 되돌림 ---------------- */
+  function drawFib(ctx, s, on, preview) {
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    var y1 = priceToY(s.p1);
+    var y2 = priceToY(s.p2);
+    if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var left = Math.min(x1, x2);
+    var right = Math.max(x1, x2);
+    var i;
+    var lastLabelY = null;
+
+    /* 두 점을 잇는 안내선 — 바이낸스도 점선으로 그립니다 */
+    ctx.strokeStyle = color;
+    ctx.lineWidth = LINE_WIDTH;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    for (i = 0; i < FIB_LEVELS.length; i++) {
+      var level = FIB_LEVELS[i];
+      var price = fibPrice(s, level);
+      var y = priceToY(price);
+      if (y === null) continue;
+      var edge = level === 0 || level === 1; /* 양 끝 두 줄만 실선 */
+      ctx.strokeStyle = color;
+      ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+      ctx.setLineDash(edge ? [] : [4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+      if (preview) continue;
+      /* 라벨이 서로 겹치면 아래 것만 남깁니다 (2026-08-27, 360 에서 확인)
+         짧게 그은 피보나치는 눈금 7개가 좁게 몰려서, 360 폰에서 글자 네 줄이
+         서로 걸쳐 하나도 못 읽는 상태가 됐습니다(실측 — 줄 간격 14px 에
+         글자 높이 12px). 바이낸스는 화면이 넓어 이 일이 잘 안 생깁니다.
+         선은 7개 다 그대로 긋고, 읽을 수 없게 겹치는 글자만 뺍니다. */
+      if (lastLabelY !== null && Math.abs(y - lastLabelY) < LABEL_GAP) continue;
+      lastLabelY = y;
+      /* 라벨은 선 왼쪽 끝 위. 자리가 모자라면(원화는 글자가 깁니다) 안쪽으로 넣습니다 */
+      ctx.font = textFont();
+      ctx.textBaseline = "bottom";
+      var txt = fibLabel(level, fmtPrice(price));
+      var tw = ctx.measureText(txt).width;
+      var tx = left - tw - 4;
+      if (tx < 2) tx = left + 4;
+      ctx.fillStyle = color;
+      ctx.fillText(txt, tx, y - 2);
+    }
+    ctx.setLineDash([]);
+    if (on) {
+      handle(ctx, x1, y1);
+      handle(ctx, x2, y2);
+    }
+  }
+
+  /* ---------------- 자(측정) ----------------
+   * 바이낸스 실측(2026-08-26): 두 점 사이를 상자로 덮고 그 위에 딱지를 얹어
+   *   "14,629.50 (23.88%)" / "33 bars, 33d" / "Vol 4.9M" 세 줄을 적습니다.
+   * 우리는 앞의 두 줄을 그대로 씁니다. 거래량 줄은 넣지 않았습니다 — 캔들
+   * 시리즈에는 거래량이 없고(따로 있는 시리즈입니다) 없는 값을 지어내지
+   * 않으려고 뺐습니다.
+   * ------------------------------------------------------------------- */
+  function drawRuler(ctx, s, on, preview) {
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    var y1 = priceToY(s.p1);
+    var y2 = priceToY(s.p2);
+    if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var l = Math.min(x1, x2);
+    var r = Math.max(x1, x2);
+    var t = Math.min(y1, y2);
+    var b = Math.max(y1, y2);
+
+    ctx.fillStyle = FILL_DRAW;
+    ctx.fillRect(l, t, r - l, b - t);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+    ctx.setLineDash(preview ? [4, 4] : []);
+    ctx.strokeRect(l + 0.5, t + 0.5, Math.max(0, r - l - 1), Math.max(0, b - t - 1));
+    ctx.setLineDash([]);
+
+    /* 가운데 화살표 — 어느 쪽으로 움직였는지 (색으로 알리지 않습니다) */
+    var cx = Math.round((l + r) / 2);
+    var up = y2 <= y1 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(cx, y1);
+    ctx.lineTo(cx, y2);
+    ctx.moveTo(cx - 4, y2 + up * 6);
+    ctx.lineTo(cx, y2);
+    ctx.lineTo(cx + 4, y2 + up * 6);
+    ctx.stroke();
+
+    var diff = s.p2 - s.p1;
+    var pct = s.p1 ? (diff / s.p1) * 100 : 0;
+    var sign = diff >= 0 ? "+" : "-";
+    var bars = meta.bar ? Math.abs(Math.round((s.t2 - s.t1) / meta.bar)) : 0;
+    chipText(
+      ctx,
+      cx,
+      t - 4,
+      [sign + fmtPrice(Math.abs(diff)) + "  (" + sign + Math.abs(pct).toFixed(2) + "%)",
+        bars + "봉 · " + fmtSpan(s.t2 - s.t1)],
+      true
+    );
+    if (on) {
+      handle(ctx, x1, y1);
+      handle(ctx, x2, y2);
+    }
+  }
+
+  /* ---------------- 그림 하나 ---------------- */
+  function drawOne(ctx, s, on, preview) {
+    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+
+    if (s.type === "trend") {
+      var x1 = timeToX(s.t1);
+      var x2 = timeToX(s.t2);
+      var y1 = priceToY(s.p1);
+      var y2 = priceToY(s.p2);
+      if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+      ctx.setLineDash(preview ? [4, 4] : []);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (on) {
+        handle(ctx, x1, y1);
+        handle(ctx, x2, y2);
+      }
+      return;
+    }
+
+    if (s.type === "text") {
+      var tx = timeToX(s.t);
+      var ty = priceToY(s.p);
+      if (tx === null || ty === null) return;
+      ctx.fillStyle = color;
+      ctx.font = textFont();
+      ctx.textBaseline = "middle";
+      ctx.fillText(s.s, tx + 5, ty);
+      if (on) {
+        var w = ctx.measureText(s.s).width;
+        ctx.strokeStyle = COLOR_SELECTED;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(tx + 2, ty - 9, w + 6, 18);
+        ctx.setLineDash([]);
+      }
+      return;
+    }
+
+    if (s.type === "fib") {
+      drawFib(ctx, s, on, preview);
+      return;
+    }
+    if (s.type === "ruler") drawRuler(ctx, s, on, preview);
+  }
+
   function drawShapes(ctx) {
     var list = shapes();
     var i;
 
     for (i = 0; i < list.length; i++) {
-      var s = list[i];
-      var on = !!(selected && selected.kind === "shape" && selected.id === s.id);
-      var color = on ? COLOR_SELECTED : COLOR_DRAW;
-
-      if (s.type === "trend") {
-        var x1 = timeToX(s.t1);
-        var x2 = timeToX(s.t2);
-        var y1 = priceToY(s.p1);
-        var y2 = priceToY(s.p2);
-        if (x1 === null || x2 === null || y1 === null || y2 === null) continue;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        if (on) {
-          handle(ctx, x1, y1);
-          handle(ctx, x2, y2);
-        }
-      } else if (s.type === "text") {
-        var tx = timeToX(s.t);
-        var ty = priceToY(s.p);
-        if (tx === null || ty === null) continue;
-        ctx.fillStyle = color;
-        ctx.font = textFont();
-        ctx.textBaseline = "middle";
-        ctx.fillText(s.s, tx + 5, ty);
-        if (on) {
-          var w = ctx.measureText(s.s).width;
-          ctx.strokeStyle = COLOR_SELECTED;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([3, 3]);
-          ctx.strokeRect(tx + 2, ty - 9, w + 6, 18);
-          ctx.setLineDash([]);
-        }
-      }
+      drawOne(ctx, list[i], !!(selected && selected.kind === "shape" && selected.id === list[i].id), false);
     }
 
-    /* 추세선을 긋는 중이면 미리보기(점선) */
-    if (pending && hover) {
+    /* 두 점 도구를 긋는 중이면 미리보기 */
+    if (pending && hover && TWO_POINT[tool]) {
+      drawOne(ctx, { type: tool, t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
       var ax = timeToX(pending.t);
       var ay = priceToY(pending.p);
-      var bx = timeToX(hover.t);
-      var by = priceToY(hover.p);
-      if (ax !== null && ay !== null && bx !== null && by !== null) {
-        ctx.strokeStyle = COLOR_DRAW;
-        ctx.lineWidth = LINE_WIDTH;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        handle(ctx, ax, ay);
-      }
+      if (ax !== null && ay !== null) handle(ctx, ax, ay);
     }
   }
 
@@ -592,6 +835,36 @@ App.ChartDrawings = (function () {
           bestD = 0;
           best = { kind: "shape", id: s.id };
         }
+      } else if (s.type === "fib" || s.type === "ruler") {
+        /* 피보나치는 눈금 줄 중 가장 가까운 것, 자는 상자 네 변 중 가장 가까운 것 */
+        var ax = timeToX(s.t1);
+        var bx = timeToX(s.t2);
+        var ay = priceToY(s.p1);
+        var by = priceToY(s.p2);
+        if (ax === null || bx === null || ay === null || by === null) continue;
+        var lo = Math.min(ax, bx);
+        var hi = Math.max(ax, bx);
+        var dm = HIT_PX + 1;
+        if (s.type === "fib") {
+          for (var k = 0; k < FIB_LEVELS.length; k++) {
+            var fy = priceToY(fibPrice(s, FIB_LEVELS[k]));
+            if (fy === null) continue;
+            dm = Math.min(dm, distToSegment(x, y, lo, fy, hi, fy));
+          }
+        } else {
+          var rt = Math.min(ay, by);
+          var rb = Math.max(ay, by);
+          dm = Math.min(
+            distToSegment(x, y, lo, rt, hi, rt),
+            distToSegment(x, y, lo, rb, hi, rb),
+            distToSegment(x, y, lo, rt, lo, rb),
+            distToSegment(x, y, hi, rt, hi, rb)
+          );
+        }
+        if (dm < bestD) {
+          bestD = dm;
+          best = { kind: "shape", id: s.id };
+        }
       }
     }
 
@@ -661,13 +934,16 @@ App.ChartDrawings = (function () {
 
     if (time === null) return;
 
-    if (tool === "trend") {
+    /* 추세선 · 피보나치 · 자 — 전부 두 점을 찍어 만듭니다.
+       폰에서도 그대로 됩니다(톡 두 번). 손가락으로 끄는 동안은 차트가
+       움직이므로, 끌기가 아니라 "톡 두 번"으로 만들게 두었습니다. */
+    if (TWO_POINT[tool]) {
       if (!pending) {
         pending = { t: time, p: price };
         hover = { t: time, p: price };
         repaint();
       } else {
-        shapes().push({ id: newId(), type: "trend", t1: pending.t, p1: pending.p, t2: time, p2: price });
+        shapes().push({ id: newId(), type: tool, t1: pending.t, p1: pending.p, t2: time, p2: price });
         pending = null;
         hover = null;
         saveStore();
@@ -749,10 +1025,9 @@ App.ChartDrawings = (function () {
   function setTool(name) {
     if (!READY_TOOLS[name]) return;
     tool = name;
-    if (name !== "trend") {
-      pending = null;
-      hover = null;
-    }
+    /* 도구를 바꾸면 긋다 만 것은 버립니다 (추세선을 찍다가 자로 바꾸는 경우) */
+    pending = null;
+    hover = null;
     if (name !== "cursor") setSelected(null);
     closeTextInput();
     paintButtons();
@@ -861,7 +1136,15 @@ App.ChartDrawings = (function () {
       setTool(def.k);
       return;
     }
-    if (def.k === "expand") toggleRail();
+    if (def.k === "expand") {
+      toggleRail();
+      return;
+    }
+    if (def.k === "fullscreen") {
+      toggleFullscreen();
+      return;
+    }
+    if (def.k === "camera") saveImage();
   }
 
   /* ---------------- 세로 막대 접기/펴기 ----------------
@@ -886,6 +1169,165 @@ App.ChartDrawings = (function () {
     applyRail();
   }
 
+  /* =====================================================================
+   * 전체화면 — 차트 칸만 화면 가득
+   * ---------------------------------------------------------------------
+   * 바이낸스는 차트 머리줄 오른쪽 끝에 이 버튼을 둡니다(2026-08-26 실측,
+   * Chart 탭 오른쪽 위). 우리 가로 막대도 오른쪽 끝이라 자리가 같습니다.
+   *
+   * 두 가지를 겹쳐 씁니다.
+   *   1) 브라우저 전체화면(requestFullscreen) — 주소창까지 사라집니다
+   *   2) 우리가 화면 전체를 덮는 방식 — 1) 이 안 되는 곳을 위한 것입니다
+   *      (아이폰 사파리는 div 를 전체화면으로 만들지 못합니다)
+   * 어느 쪽이든 차트 칸이 커집니다. 크기는 우리가 만지지 않습니다 —
+   * chart.js 가 autoSize 로 만들어 두어서 칸이 커지면 라이브러리가 스스로
+   * 다시 그립니다(js/chart.js:187).
+   * ===================================================================== */
+  var fullOn = false;
+
+  function applyFull(on) {
+    fullOn = !!on;
+    if (panel) {
+      if (fullOn) panel.setAttribute("data-tlc-full", "1");
+      else panel.removeAttribute("data-tlc-full");
+    }
+    paintButtons();
+  }
+
+  function exitNativeFull() {
+    try {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch (e) {
+      /* 이미 나와 있으면 무시 */
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!panel) return;
+    injectStyle();
+    if (fullOn) {
+      applyFull(false);
+      exitNativeFull();
+      return;
+    }
+    applyFull(true);
+    try {
+      var r = null;
+      if (panel.requestFullscreen) r = panel.requestFullscreen();
+      else if (panel.webkitRequestFullscreen) r = panel.webkitRequestFullscreen();
+      if (r && typeof r.catch === "function") r.catch(function () {
+        /* 브라우저가 거절해도 우리 방식으로 이미 커져 있습니다 */
+      });
+    } catch (e) {
+      /* 위와 같습니다 */
+    }
+    toast("전체화면 — 다시 누르거나 Esc 로 돌아옵니다");
+  }
+
+  /** 브라우저 쪽에서 빠져나왔을 때(Esc 등) 우리 상태를 맞춥니다 */
+  function onFullChange() {
+    var el = document.fullscreenElement || document.webkitFullscreenElement || null;
+    if (!el && fullOn) applyFull(false);
+  }
+
+  /* =====================================================================
+   * 카메라 — 지금 차트를 그림 파일로
+   * ---------------------------------------------------------------------
+   * 라이브러리 공개 API chart.takeScreenshot() 이 차트 화면을 캔버스로
+   * 내줍니다. 지표·보조지표 칸도 같은 차트의 칸(pane)이라 함께 담깁니다.
+   * 아래쪽에 종목·봉 간격·시각 한 줄을 붙여 내려받게 합니다(게시판이나
+   * 대화방에 올렸을 때 언제 것인지 알 수 있어야 합니다).
+   * 색은 확정 팔레트만 씁니다.
+   * ===================================================================== */
+  function stamp(d) {
+    function p2(v) {
+      return (v < 10 ? "0" : "") + v;
+    }
+    return (
+      d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()) +
+      " " + p2(d.getHours()) + ":" + p2(d.getMinutes())
+    );
+  }
+
+  function fileStamp(d) {
+    return stamp(d).replace(/[-: ]/g, "").slice(0, 13);
+  }
+
+  function download(url, name) {
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 0);
+  }
+
+  function saveImage() {
+    if (!chart || typeof chart.takeScreenshot !== "function") {
+      toast("이 브라우저에서는 그림 저장이 안 됩니다");
+      return;
+    }
+    var src = null;
+    try {
+      src = chart.takeScreenshot();
+    } catch (e) {
+      src = null;
+    }
+    if (!src || !src.width) {
+      toast("차트 그림을 만들지 못했습니다");
+      return;
+    }
+
+    var pad = 6;
+    var foot = 24;
+    var out = document.createElement("canvas");
+    out.width = src.width + pad * 2;
+    out.height = src.height + pad * 2 + foot;
+    var g = out.getContext("2d");
+    if (!g) {
+      toast("차트 그림을 만들지 못했습니다");
+      return;
+    }
+    var now = new Date();
+    g.fillStyle = C_PAGE;
+    g.fillRect(0, 0, out.width, out.height);
+    g.drawImage(src, pad, pad);
+    g.font = textFont();
+    g.textBaseline = "middle";
+    g.fillStyle = C_TEXT;
+    g.fillText(sym() + "  " + iv(), pad + 2, src.height + pad * 2 + foot / 2);
+    g.fillStyle = C_MUTED;
+    var right = stamp(now);
+    g.fillText(right, out.width - pad - 2 - g.measureText(right).width, src.height + pad * 2 + foot / 2);
+
+    var name = "TL_" + sym() + "_" + iv() + "_" + fileStamp(now) + ".png";
+    try {
+      if (out.toBlob) {
+        out.toBlob(function (blob) {
+          if (!blob) {
+            toast("차트 그림을 만들지 못했습니다");
+            return;
+          }
+          var url = URL.createObjectURL(blob);
+          download(url, name);
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 5000);
+          toast("차트 그림을 내려받았습니다");
+        }, "image/png");
+      } else {
+        download(out.toDataURL("image/png"), name);
+        toast("차트 그림을 내려받았습니다");
+      }
+    } catch (e) {
+      toast("차트 그림을 내려받지 못했습니다");
+    }
+  }
+
   function paintButtons() {
     if (!els.rail) return;
     var btns = els.rail.querySelectorAll(".tlc-btn[data-kind=tool]");
@@ -895,6 +1337,8 @@ App.ChartDrawings = (function () {
     }
     var ex = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=expand]") : null;
     if (ex) ex.setAttribute("aria-pressed", railOpen() ? "true" : "false");
+    var fs = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=fullscreen]") : null;
+    if (fs) fs.setAttribute("aria-pressed", fullOn ? "true" : "false");
   }
 
   /* ---------------- 아이콘 스프라이트 ----------------
@@ -957,7 +1401,13 @@ App.ChartDrawings = (function () {
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";border-radius:6px;" +
       "padding:3px 10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
-      "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}";
+      "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}" +
+      /* 전체화면 — css/chart-toolbar.css 와 style.css 는 한 글자도 안 고쳤습니다.
+         이 규칙은 data-tlc-full 이 붙었을 때만 걸립니다(평소엔 아무 영향 없음). */
+      ".chart-panel[data-tlc-full=\"1\"]{position:fixed;left:0;top:0;right:0;bottom:0;width:100vw;" +
+      "height:100vh;max-height:100vh;z-index:1600;margin:0;border-radius:0;background:" + C_PAGE + ";}" +
+      ".chart-panel[data-tlc-full=\"1\"] .chart-wrap{min-height:0;}" +
+      ".chart-panel[data-tlc-full=\"1\"] .chart-container{height:100%;min-height:0;}";
     var st = document.createElement("style");
     st.id = "chart-drawings-style";
     st.textContent = css;
@@ -1124,6 +1574,12 @@ App.ChartDrawings = (function () {
     var t = ev.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     if (ev.key === "Escape") {
+      /* 브라우저 전체화면일 때의 Esc 는 브라우저가 먼저 먹습니다(이 줄까지
+         오지 않습니다). 우리 방식으로 덮고 있을 때만 여기서 빠져나옵니다. */
+      if (fullOn) {
+        toggleFullscreen();
+        return;
+      }
       if (pending) {
         pending = null;
         hover = null;
@@ -1194,9 +1650,15 @@ App.ChartDrawings = (function () {
       if (!store || !store.ui || typeof store.ui.rail !== "boolean") applyRail();
     });
 
+    document.addEventListener("fullscreenchange", onFullChange);
+    document.addEventListener("webkitfullscreenchange", onFullChange);
+
     if (App.Bus && typeof App.Bus.on === "function") {
       App.Bus.on("symbol:change", rescope);
       App.Bus.on("interval:change", rescope);
+      /* 원화로 보는 회원이 있습니다. 통화가 바뀌면 피보나치·자의 글자도
+         같이 바뀌어야 합니다(수평선은 가격축 라벨이라 chart.js 가 합니다). */
+      App.Bus.on("currency:change", repaint);
     }
     return true;
   }
@@ -1231,6 +1693,11 @@ App.ChartDrawings = (function () {
     clearAll: clearAll,
     toggleRail: toggleRail,
     isRailOpen: railOpen,
+    toggleFullscreen: toggleFullscreen,
+    isFullscreen: function () {
+      return fullOn;
+    },
+    saveImage: saveImage,
     /* 확인용 */
     getDrawings: function () {
       return { hlines: hlines().slice(), shapes: shapes().slice() };
@@ -1255,7 +1722,13 @@ App.ChartDrawings = (function () {
     },
     /* 계산부 — 테스트에서 그대로 씁니다 */
     distToSegment: distToSegment,
-    TOOLS: { left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS },
+    fibPrice: fibPrice,
+    fibName: fibName,
+    fibLabel: fibLabel,
+    LABEL_GAP: LABEL_GAP,
+    fmtSpan: fmtSpan,
+    FIB_LEVELS: FIB_LEVELS,
+    TOOLS: { left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS, twoPoint: TWO_POINT },
     COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED },
     STORAGE_KEY: STORAGE_KEY
   };
