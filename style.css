@@ -874,11 +874,24 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   background:var(--surface);border:1px solid var(--border);border-radius:3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.12);
 }
+/* 2026-08-27 — 로그인 첫 화면 타일.
+   (1) 원래 conic-gradient(골드→남색→골드) 였습니다. 확정 지침의
+       "그라디언트를 쓰지 않는다" 위반이라 골드 단색으로 바꿨습니다.
+   (2) 글자색이 #fff 였습니다. 골드(#F0B429) 위 흰 글자는 확정 지침의
+       "밝은 배경에는 어두운 글자" 위반이고, 실제로 골드 구간에서 글자가 배경에 묻혔습니다.
+       배경색(#0A0F1C = var(--bg))을 글자색으로 씁니다.
+   (3) 그림자는 넣지 않습니다(확정 지침). 골드 위에서는 흰색 3% inset 선도
+       눈에 안 보여 규칙만 늘어나므로 아예 두지 않았습니다.
+   되돌리려면 아래 background / font 두 줄을 이렇게 되돌리면 됩니다:
+     background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
+     font-family:var(--mono);font-weight:700;color:#fff;font-size:34px;
+   (타일 안의 글자는 index.html 의 .auth-mark 한 줄입니다) */
 .auth-mark{
   width:52px;height:52px;margin:0 auto 14px;border-radius:3px;
-  background:conic-gradient(from 220deg,var(--gold),#123D8F 40%,var(--gold));
+  background:var(--gold);
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-weight:700;color:#fff;font-size:34px;
+  font-family:var(--sans);font-weight:800;color:var(--bg);
+  font-size:24px;letter-spacing:-0.01em;
 }
 /* 31px -> 24px (2026-08-27)
    문구가 "BTCUSDT 모의투자"(9자) 에서 "모의투자 트레이딩 리그"(12자) 로 길어지면서

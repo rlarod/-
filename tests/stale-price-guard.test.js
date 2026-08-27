@@ -128,6 +128,34 @@ function 지정가칸만들기(win) {
   return win.document.getElementById("limit-price-input");
 }
 
+/* 익절가(TP)·손절가(SL) 칸도 js/ui.js:99-112 가 init() 에서 만듭니다.
+   수정 금지 파일이라 여기서 태우지 않고 같은 마크업을 심어 대신합니다. */
+function TPSL칸만들기(win) {
+  const anchor = win.document.getElementById("order-err");
+  if (!anchor || !anchor.parentNode) return null;
+  const row = win.document.createElement("div");
+  row.className = "tp-sl-row";
+  row.innerHTML =
+    '<div class="field"><div class="field-label"><span>익절가(TP)</span></div>' +
+    '<div class="margin-input-wrap">' +
+    '<input type="text" inputmode="numeric" id="tp-input" placeholder="익절가(TP)">' +
+    '<span id="tp-unit-label">USDT</span></div></div>' +
+    '<div class="field"><div class="field-label"><span>손절가(SL)</span></div>' +
+    '<div class="margin-input-wrap">' +
+    '<input type="text" inputmode="numeric" id="sl-input" placeholder="손절가(SL)">' +
+    '<span id="sl-unit-label">USDT</span></div></div>';
+  anchor.parentNode.insertBefore(row, anchor);
+  return { tp: win.document.getElementById("tp-input"), sl: win.document.getElementById("sl-input") };
+}
+
+/* js/ui.js:698-699 getOptionalPrice 와 같은 판정 (빈 칸이거나 이상값이면 null) */
+function 칸값(input) {
+  const v = String(input.value || "").trim();
+  if (!v) return null;
+  const n = parseFloat(v.replace(/,/g, ""));
+  return isFinite(n) && n > 0 ? n : null;
+}
+
 /* 종목 전환을 코드로 재현합니다 — js/symbol-stream-switch.js 가 하는 그 방송 */
 function 전환(App, to) {
   const from = App.Config.getActiveSymbol();
@@ -474,6 +502,144 @@ section("[8-2] 지정가 주문가격 칸");
   전환(e.App, "SAMSUNGUSDT");
   ok("칸이 원래 비어 있었으면 '지웠다' 안내를 안 띄운다", e.App.StalePriceGuard.getClearedPrice() === null);
   ok("비운 횟수도 안 늘어난다", e.App.StalePriceGuard.getCounts().clearedLimitPrice === 0, String(e.App.StalePriceGuard.getCounts().clearedLimitPrice));
+}
+
+/* =========================================================================
+ * [8-4] 🔴 익절가(TP)·손절가(SL) 칸 — 옛 종목 가격이 남으면 안 됩니다
+ * =========================================================================
+ * [P2 조용한 고장] 2026-08-27 본부장 배정.
+ *
+ *   비트코인(78,758) 화면에서 TP 78,900 / SL 78,600 을 채워두고
+ *   SK하이닉스로 전환 → 매수
+ *       진입가  1,253.2   (정상)
+ *       tp      78,900    ← 남습니다. 롱인데 실제가 1,253 이라 영영 도달 못 함
+ *       sl      null      ← 방향이 안 맞아 걸러집니다
+ *
+ * 즉시 청산은 안 납니다. 대신 "익절을 걸어뒀는데 영영 안 걸리는" 조용한
+ * 고장이 남습니다. 회원은 익절이 걸려 있다고 믿고 판단합니다.
+ * ========================================================================= */
+section("[8-4] 익절가(TP)·손절가(SL) 칸");
+{
+  /* --- (1) 막는 것이 없으면 어떻게 되는가 = 이 P2 의 실체 --- */
+  const 없이 = boot({ without: ["js/stale-price-guard.js"] });
+  const f0 = TPSL칸만들기(없이.win);
+  없이.App.Config.getActiveSymbol = function () { return "BTCUSDT"; };
+  시세(없이.App, "BTCUSDT", 78758);
+  없이.App.Trading.setLeverage(10);
+  f0.tp.value = "78900";
+  f0.sl.value = "78600";
+  전환(없이.App, "SKHYNIXUSDT");
+  시세(없이.App, "SKHYNIXUSDT", 1253.2);
+  ok("막는 것이 없으면 TP 칸에 옛 종목 가격이 남는다", f0.tp.value === "78900", f0.tp.value);
+  ok("막는 것이 없으면 SL 칸에도 남는다", f0.sl.value === "78600", f0.sl.value);
+  const r0 = 없이.App.Trading.openPosition("long", 1000, 칸값(f0.tp), 칸값(f0.sl));
+  const p0 = 없이.App.Trading.getSnapshot().position;
+  ok("주문 자체는 정상 진입가로 들어간다 (즉시 청산이 아니다)",
+    r0.ok === true && p0 && p0.entry === 1253.2, p0 ? String(p0.entry) : JSON.stringify(r0));
+  ok("⭐ 그런데 tp 에 옛 종목 가격이 그대로 걸린다", p0 && p0.tp === 78900, p0 ? String(p0.tp) : "-");
+  ok("sl 은 방향이 안 맞아 걸러진다", p0 && p0.sl === null, p0 ? String(p0.sl) : "-");
+  if (p0 && p0.tp) {
+    console.log("      └ 진입 " + p0.entry + " · tp " + p0.tp + " = 실제가의 " +
+      (p0.tp / p0.entry).toFixed(1) + "배. 롱이라 영영 도달 못 하는 죽은 익절입니다");
+  }
+
+  /* --- (2) 고친 뒤 — 네 종목 전부 두 칸이 비워집니다 --- */
+  네종목.forEach(function (목적지) {
+    const to = 목적지[0];
+    const 출발 = 네종목.find((x) => x[0] !== to);
+    const { App, win } = boot();
+    const f = TPSL칸만들기(win);
+    if (!f) { ok(to + " — TP/SL 칸을 만들었다", false, "#order-err 가 없습니다"); return; }
+    App.Config.getActiveSymbol = function () { return 출발[0]; };
+    시세(App, 출발[0], 출발[1]);
+    f.tp.value = String(출발[1] * 1.01);
+    f.sl.value = String(출발[1] * 0.99);
+    전환(App, to);
+    ok(to + " — 전환하면 TP 칸이 비워진다", f.tp.value === "", "남은 값: " + f.tp.value);
+    ok(to + " — 전환하면 SL 칸이 비워진다", f.sl.value === "", "남은 값: " + f.sl.value);
+    ok(to + " — 무엇을 지웠는지 기억한다",
+      App.StalePriceGuard.getClearedTp() !== null && App.StalePriceGuard.getClearedSl() !== null,
+      String(App.StalePriceGuard.getClearedTp()) + " / " + String(App.StalePriceGuard.getClearedSl()));
+  });
+
+  /* --- (3) 고친 뒤에는 죽은 익절이 안 걸린다 --- */
+  const c = boot();
+  const fc = TPSL칸만들기(c.win);
+  c.App.Config.getActiveSymbol = function () { return "BTCUSDT"; };
+  시세(c.App, "BTCUSDT", 78758);
+  c.App.Trading.setLeverage(10);
+  fc.tp.value = "78900";
+  fc.sl.value = "78600";
+  전환(c.App, "SKHYNIXUSDT");
+  시세(c.App, "SKHYNIXUSDT", 1253.2);
+  const rc = c.App.Trading.openPosition("long", 1000, 칸값(fc.tp), 칸값(fc.sl));
+  const pc = c.App.Trading.getSnapshot().position;
+  ok("⭐ 고친 뒤에는 tp 가 안 걸린다", pc && pc.tp === null, pc ? String(pc.tp) : JSON.stringify(rc));
+  ok("진입가는 그대로 정상이다", pc && pc.entry === 1253.2, pc ? String(pc.entry) : "-");
+
+  /* --- (4) ⛔ 조용히 지우지 않는다 --- */
+  const { App, win } = boot();
+  const f = TPSL칸만들기(win);
+  const notice = () => win.document.getElementById(App.StalePriceGuard.NOTICE_ID);
+  App.Config.getActiveSymbol = function () { return "BTCUSDT"; };
+  시세(App, "BTCUSDT", 78758);
+  f.tp.value = "78900";
+  f.sl.value = "78600";
+  전환(App, "SKHYNIXUSDT");
+  ok("왜 비었는지 안내가 나온다", notice() && notice().style.display !== "none");
+  ok("익절가라고 적힌다", notice().textContent.indexOf("익절가(TP) 78900") >= 0, notice().textContent);
+  ok("손절가도 같이 적힌다", notice().textContent.indexOf("손절가(SL) 78600") >= 0, notice().textContent);
+  ok("바뀐 종목 이름이 한글로 나온다", notice().textContent.indexOf("SK하이닉스") >= 0, notice().textContent);
+  console.log("      └ 회원이 보는 문구: " + notice().textContent);
+
+  /* --- (5) 시세가 와서 잠금이 풀려도 안내는 남는다 --- */
+  시세(App, "SKHYNIXUSDT", 1253.2);
+  ok("잠금은 풀린다", App.StalePriceGuard.isStale() === false);
+  ok("칸이 왜 비었는지는 계속 보인다",
+    notice().style.display !== "none" && notice().textContent.indexOf("익절가") >= 0, notice().textContent);
+
+  /* --- (6) 다시 입력하면 그 칸 안내만 사라진다 --- */
+  f.tp.value = "1300";
+  f.tp.dispatchEvent(new win.Event("input", { bubbles: true }));
+  ok("TP 를 다시 넣으면 TP 안내가 사라진다", notice().textContent.indexOf("익절가") < 0, notice().textContent);
+  ok("⭐ 아직 안 채운 SL 안내는 남는다", notice().textContent.indexOf("손절가(SL) 78600") >= 0, notice().textContent);
+  ok("다시 넣은 값은 그대로 남는다", f.tp.value === "1300", f.tp.value);
+  f.sl.value = "1200";
+  f.sl.dispatchEvent(new win.Event("input", { bubbles: true }));
+  ok("둘 다 채우면 안내가 완전히 사라진다", notice().style.display === "none", notice().textContent);
+
+  /* --- (7) 호가창을 눌러 TP 를 채우는 경로도 같은 문을 지납니다 --- */
+  const obSrc = read("js/orderbook.js");
+  ok("호가창 클릭은 tp-input 을 채우고 input 을 쏜다 (js/orderbook.js:242)",
+    obSrc.indexOf('el("tp-input")') >= 0 && obSrc.indexOf('tpInput.dispatchEvent(new Event("input", { bubbles: true }))') >= 0);
+
+  /* --- (8) 빈 칸이면 아무 일도 안 한다 --- */
+  const e = boot();
+  TPSL칸만들기(e.win);
+  e.App.Config.getActiveSymbol = function () { return "BTCUSDT"; };
+  시세(e.App, "BTCUSDT", 78758);
+  전환(e.App, "SAMSUNGUSDT");
+  ok("칸이 원래 비어 있었으면 지웠다는 안내를 안 띄운다",
+    e.App.StalePriceGuard.getClearedTp() === null && e.App.StalePriceGuard.getClearedSl() === null);
+  ok("비운 횟수도 안 늘어난다", e.App.StalePriceGuard.getCounts().clearedFields === 0,
+    String(e.App.StalePriceGuard.getCounts().clearedFields));
+
+  /* --- (9) 세 칸이 다 차 있으면 한 줄로 모아서 보여준다 --- */
+  const g = boot();
+  const gl = 지정가칸만들기(g.win);
+  const gf = TPSL칸만들기(g.win);
+  g.App.Config.getActiveSymbol = function () { return "BTCUSDT"; };
+  시세(g.App, "BTCUSDT", 78758);
+  gl.value = "78758"; gf.tp.value = "78900"; gf.sl.value = "78600";
+  전환(g.App, "SKHYNIXUSDT");
+  ok("세 칸이 다 비워진다", gl.value === "" && gf.tp.value === "" && gf.sl.value === "",
+    gl.value + " / " + gf.tp.value + " / " + gf.sl.value);
+  ok("세 칸이 순서대로 한 줄에 적힌다",
+    g.App.StalePriceGuard.clearedMessage().indexOf("주문가격 78758 · 익절가(TP) 78900 · 손절가(SL) 78600") >= 0,
+    g.App.StalePriceGuard.clearedMessage());
+  ok("비운 칸 수를 센다", g.App.StalePriceGuard.getCounts().clearedFields === 3,
+    String(g.App.StalePriceGuard.getCounts().clearedFields));
+  console.log("      └ 세 칸 다 찼을 때: " + g.App.StalePriceGuard.clearedMessage());
 }
 
 /* =========================================================================

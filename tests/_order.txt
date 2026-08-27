@@ -114,3 +114,5 @@ tests/order-symbol-row-ind-bar-seal.test.js
 tests/multi-symbol-view.test.js
 tests/stale-price-guard.test.js
 tests/chart-position-symbol.test.js
+tests/stream-loading-hint-seal.test.js
+tests/order-lock-notice-seal.test.js

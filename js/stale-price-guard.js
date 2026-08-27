@@ -48,6 +48,16 @@
  *   (js/orderbook.js:241 도 같은 값을 읽지만 if (!row.dataset.price) return 으로
  *    안전하게 빠져나갑니다 — 조사팀 코드 확인.)
  *
+ * ── 종목이 바뀌면 "가격을 적는 칸" 세 개를 비웁니다 ──────────────────────
+ *   주문가격(지정가) · 익절가(TP) · 손절가(SL).
+ *   셋 다 옛 종목 가격이 남으면 회원이 잘못된 정보로 판단하게 됩니다.
+ *     주문가격  옛 가격 그대로 체결됩니다 (js/trading.js:279)      → 돈이 나감  [P1]
+ *     익절가    영영 도달 못 하는 값이 걸립니다                     → 조용한 고장 [P2]
+ *     손절가    방향이 안 맞아 걸러집니다(js/tpsl-guard.js) — 하지만
+ *               회원 화면에는 남아 있어 "걸어뒀다" 고 믿게 됩니다   → 조용한 고장 [P2]
+ *   회원이 직접 친 값이라도 비웁니다. 종목이 바뀌면 그 숫자는 뜻이 없습니다.
+ *   ⛔ 조용히 지우지 않습니다 — 무엇을 왜 지웠는지 안내 칸에 한 줄로 남깁니다.
+ *
  * ── ⛔ 조용히 막지 않습니다 ──────────────────────────────────────────────
  *   조용히 막으면 새로운 조용한 고장이 됩니다. 세 가지를 같이 합니다.
  *     · 매수/매도 버튼을 못 누르게 하고
@@ -76,19 +86,33 @@ App.StalePriceGuard = (function () {
 
   var NOTICE_ID = "stale-price-notice";
   var LIMIT_INPUT_ID = "limit-price-input";   // js/ui.js:91 이 만드는 지정가 주문가격 칸
+  var TP_INPUT_ID = "tp-input";               // js/ui.js:106 익절가(TP)
+  var SL_INPUT_ID = "sl-input";               // js/ui.js:110 손절가(SL)
+
+  /* 종목이 바뀌면 비우는 칸들 — 셋 다 "가격" 을 넣는 칸이라 종목이 바뀌면 뜻이 없습니다.
+     여기 적힌 순서가 그대로 안내 문구에 적히는 순서입니다. */
+  var CLEARABLE = [
+    { id: LIMIT_INPUT_ID, label: "주문가격",   counter: "clearedLimitPrice" },
+    { id: TP_INPUT_ID,    label: "익절가(TP)", counter: "clearedTp" },
+    { id: SL_INPUT_ID,    label: "손절가(SL)", counter: "clearedSl" }
+  ];
 
   var stale = false;        // 지금 "새 종목 시세를 기다리는 중" 인가
   var waitingFor = null;    // 무슨 종목의 첫 틱을 기다리는가
   var since = 0;
 
-  /* 종목이 바뀌어 우리가 지운 주문가격. 회원이 다시 입력할 때까지 안내를 띄웁니다. */
-  var clearedPrice = null;
+  /* 종목이 바뀌어 우리가 비운 값들 [{id,label,value}].
+     회원이 그 칸에 다시 입력할 때까지 안내가 남습니다. */
+  var cleared = [];
   var clearedFor = null;
   var selfEdit = false;   // 우리가 낸 input 이벤트를 우리가 다시 듣지 않게
 
   var counts = {
     windows: 0,          // 창이 열린 횟수
     clearedLimitPrice: 0,// 지정가 주문가격 칸을 비운 횟수
+    clearedTp: 0,        // 익절가(TP) 칸을 비운 횟수
+    clearedSl: 0,        // 손절가(SL) 칸을 비운 횟수
+    clearedFields: 0,    // 비운 칸 수 합계
     blockedOrders: 0,    // 막은 주문 수
     blockedMarket: 0,
     blockedLimit: 0,
@@ -121,11 +145,29 @@ App.StalePriceGuard = (function () {
     return symbolName(waitingFor) + " 시세를 받는 중입니다. 잠시 뒤에 주문할 수 있습니다.";
   }
 
-  /* 지정가 칸을 비운 이유. 회원이 다시 입력할 때까지 남습니다. */
+  /* 칸을 비운 이유. 회원이 그 칸에 다시 입력할 때까지 남습니다.
+     여러 칸을 비웠으면 한 줄에 모아 적습니다 — 안내가 세 줄로 늘어나지 않게. */
   function clearedMessage() {
-    if (clearedPrice === null) return "";
-    return "종목이 " + symbolName(clearedFor) + " 로 바뀌어 주문가격 " + clearedPrice +
+    if (cleared.length === 0) return "";
+    var parts = [];
+    for (var i = 0; i < cleared.length; i++) parts.push(cleared[i].label + " " + cleared[i].value);
+    return "종목이 " + symbolName(clearedFor) + " 로 바뀌어 " + parts.join(" · ") +
       " 을(를) 지웠습니다. 새 종목 가격으로 다시 입력해 주세요.";
+  }
+
+  function clearedValueOf(id) {
+    for (var i = 0; i < cleared.length; i++) if (cleared[i].id === id) return cleared[i].value;
+    return null;
+  }
+
+  /* 회원이 그 칸을 다시 채웠으면 안내에서 뺍니다. */
+  function forgetCleared(id) {
+    var before = cleared.length;
+    var out = [];
+    for (var i = 0; i < cleared.length; i++) if (cleared[i].id !== id) out.push(cleared[i]);
+    cleared = out;
+    if (cleared.length === 0) clearedFor = null;
+    return cleared.length !== before;
   }
 
   /* 안내 칸에 지금 보여줄 줄들 */
@@ -158,7 +200,7 @@ App.StalePriceGuard = (function () {
       counts.windows++;
     }
     clearOrderbookPrices();
-    clearLimitPrice();
+    clearPriceFields();
     paint();
   }
 
@@ -222,16 +264,40 @@ App.StalePriceGuard = (function () {
    * 그래서 종목이 바뀌면 그 칸을 비웁니다. 회원이 직접 친 값이라도 종목이
    * 바뀌면 의미가 없으므로 비우는 것이 맞습니다.
    * ⛔ 조용히 지우지 않습니다 — 무엇을 왜 지웠는지 안내 칸에 남깁니다.
+   *
+   * ------------------------------------------------------------------
+   * 🔴 [P2 조용한 고장] 익절가(TP)·손절가(SL) 칸도 같이 비웁니다
+   *    (2026-08-27, 본부장 배정)
+   * ------------------------------------------------------------------
+   * 지정가 칸과 정확히 같은 자리입니다. 다만 터지는 모양이 다릅니다.
+   *
+   *   비트코인(78,758) 화면에서 TP 78,900 / SL 78,600 을 채워두고
+   *   SK하이닉스로 전환 → 매수
+   *       진입가  1,253.2   (정상 — 위의 잠금이 옛 가격을 막습니다)
+   *       tp      78,900    ← 남습니다. 롱인데 실제가 1,253 이라 영영 도달 못 함
+   *       sl      null      ← js/tpsl-guard.js + js/trading.js 가 방향으로 걸러냄
+   *
+   * 즉시 청산이 나지는 않습니다. 대신 "익절을 걸어뒀는데 영영 안 걸리는"
+   * 조용한 고장이 남습니다. 회원은 익절이 걸려 있다고 믿고 판단합니다.
+   * (화면에도 tp 78,900 이 그대로 보입니다 — 고장인 줄 모릅니다.)
+   *
+   * 세 칸을 같은 규칙으로 다룹니다 — CLEARABLE 목록 하나로 묶었습니다.
    * ------------------------------------------------------------------ */
-  function clearLimitPrice() {
-    var input = el(LIMIT_INPUT_ID);
+  function clearPriceFields() {
+    for (var i = 0; i < CLEARABLE.length; i++) clearOneField(CLEARABLE[i]);
+  }
+
+  function clearOneField(spec) {
+    var input = el(spec.id);
     if (!input) return;
     var v = String(input.value === undefined || input.value === null ? "" : input.value).trim();
     if (!v) return;
 
-    clearedPrice = v;
+    forgetCleared(spec.id);            // 같은 칸이면 마지막 값만 기억합니다
+    cleared.push({ id: spec.id, label: spec.label, value: v });
     clearedFor = waitingFor;
-    counts.clearedLimitPrice++;
+    counts[spec.counter]++;
+    counts.clearedFields++;
     selfEdit = true;
     try {
       input.value = "";
@@ -247,14 +313,19 @@ App.StalePriceGuard = (function () {
     }
   }
 
-  /* 회원이 다시 입력하면 안내를 거둡니다. */
+  function isClearableId(id) {
+    for (var i = 0; i < CLEARABLE.length; i++) if (CLEARABLE[i].id === id) return true;
+    return false;
+  }
+
+  /* 회원이 그 칸에 다시 입력하면 그 칸 안내만 거둡니다.
+     (호가창을 눌러 TP 를 채우는 경로도 여기로 옵니다 — js/orderbook.js:242 가
+      같은 input 이벤트를 bubbles 로 쏩니다.) */
   function onAnyInput(e) {
     if (selfEdit) return;
     var t = e && e.target;
-    if (!t || t.id !== LIMIT_INPUT_ID) return;
-    if (clearedPrice === null) return;
-    clearedPrice = null;
-    clearedFor = null;
+    if (!t || !t.id || !isClearableId(t.id)) return;
+    if (!forgetCleared(t.id)) return;
     paint();
   }
 
@@ -443,7 +514,16 @@ App.StalePriceGuard = (function () {
       return o;
     },
     getElapsedMs: function () { return stale ? Date.now() - since : 0; },
-    getClearedPrice: function () { return clearedPrice; },
+    getClearedPrice: function () { return clearedValueOf(LIMIT_INPUT_ID); },
+    getClearedTp: function () { return clearedValueOf(TP_INPUT_ID); },
+    getClearedSl: function () { return clearedValueOf(SL_INPUT_ID); },
+    getCleared: function () {
+      var out = [];
+      for (var i = 0; i < cleared.length; i++) {
+        out.push({ id: cleared[i].id, label: cleared[i].label, value: cleared[i].value });
+      }
+      return out;
+    },
     clearedMessage: clearedMessage,
     noticeLines: noticeLines,
     _open: open,
@@ -451,7 +531,7 @@ App.StalePriceGuard = (function () {
     _reset: function () {
       stale = false;
       waitingFor = null;
-      clearedPrice = null;
+      cleared = [];
       clearedFor = null;
       for (var k in counts) if (Object.prototype.hasOwnProperty.call(counts, k)) counts[k] = 0;
       unlockButtons();
