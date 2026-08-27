@@ -29,7 +29,14 @@ App.ObHeaderCurrency = (function () {
   "use strict";
 
   /* 통화 코드 → 머리글에 쓸 단위 이름.
-     KRW 값은 formatCurrencyPlain 이 "…원" 으로 찍으므로 머리글도 `원` 으로 맞춥니다. */
+     여기는 **라벨** 자리라 통화의 "이름"(원 / USDT)을 씁니다.
+     값 자리는 통화 "기호"(₩ / 없음)를 씁니다 — js/utils.js formatCurrencyPlain.
+     2026-08-28 디자인팀이 정한 규칙 한 줄:
+       라벨(열 머리글·입력칸 단위) = 이름   가격(원) · 가격(USDT) · 증거금 … 원
+       값(숫자에 붙는 표기)        = 기호   ₩120,258,450 · $79,458.20
+     라벨을 "₩" 로 바꾸지 않는 이유 — 주문 패널 입력칸 단위 라벨을 그리는
+     js/ui.js:51 currencyUnitLabel() 이 "원" 을 쓰는데 **수정 금지 파일**이라
+     바꿀 수 없습니다. 머리글만 ₩ 로 바꾸면 라벨끼리 또 어긋납니다. */
   var UNIT = { KRW: "원", USDT: "USDT" };
 
   var headEl = null;

@@ -32,12 +32,18 @@ App.OrderInfoPanel = (function () {
 
   // 개미톡식 표기 — 통화기호 없이 숫자만. 내부 값은 항상 USDT이므로
   // App.Utils.formatCurrencyPlain과 동일한 방식으로 표시 통화만 반영합니다.
+  //
+  // 2026-08-28 디자인팀 — 원화일 때 단위가 아예 없어서(예: "120,317,550")
+  // 같은 화면의 시세 바("₩120,317,550")·호가창과 세 번째로 다른 표기였습니다.
+  // formatCurrencyPlain 과 같은 규칙("₩ 앞")으로 맞춥니다. USDT 는 종전대로
+  // 기호 없이 숫자만 씁니다(머리글·라벨이 USDT 를 말해 줍니다).
+  // 되돌리려면 아래 KRW 줄에서 `"₩" +` 만 지우면 됩니다.
   function plain(value, digits) {
     if (value === null || value === undefined || isNaN(value)) return "-";
     if (value === 0) return "0"; // 개미톡은 0일 때 "0.0000"이 아니라 "0"으로 표시
     const cur = App.Config.getDisplayCurrency();
     if (cur === "KRW") {
-      return Math.round(value * App.Config.USD_KRW).toLocaleString("ko-KR");
+      return "₩" + Math.round(value * App.Config.USD_KRW).toLocaleString("ko-KR");
     }
     return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }

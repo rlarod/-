@@ -118,14 +118,20 @@ let liveOk = false;
   ok("KRW 로 바꾸면 머리글이 '가격(원)' 이 된다", krwHead === "가격(원)", "지금: " + krwHead);
   liveOk = krwHead === "가격(원)";
 
-  /* 값 쪽과 단위가 일치하는지 — utils.formatCurrencyPlain 이 '원' 을 붙입니다 */
+  /* 2026-08-28 디자인팀 — 표기 규칙을 한 줄로 정했습니다.
+       라벨(열 머리글) = 통화 이름   가격(원) / 가격(USDT)
+       값             = 통화 기호   ₩112,261,650 / 79,458.20
+     그래서 머리글은 '원', 값은 '₩' 입니다. 둘 다 같은 통화를 가리킵니다.
+     검사하는 것은 그대로 — **값이 원화라는 걸 알 수 있는가**. */
   const sample = h.App.Utils.formatCurrencyPlain(74841.1);
-  ok("같은 통화에서 값도 '원' 으로 찍힌다(머리글과 단위 일치)", /원$/.test(sample), "값 예: " + sample);
+  ok("같은 통화에서 값에 '₩' 가 앞에 붙는다", /^₩/.test(sample), "값 예: " + sample);
+  ok("값에 '원' 이 뒤에 또 붙지 않는다(표기가 두 방식으로 섞이면 안 됩니다)",
+    !/원$/.test(sample), "값 예: " + sample);
 
   h.App.Config.setDisplayCurrency("USDT");
   ok("USDT 로 되돌리면 머리글도 원복된다", h.head() === "가격(USDT)", "지금: " + h.head());
   const sample2 = h.App.Utils.formatCurrencyPlain(74841.1);
-  ok("되돌린 뒤 값에는 '원' 이 없다", !/원$/.test(sample2), "값 예: " + sample2);
+  ok("되돌린 뒤 값에는 원화 표기가 없다", !/원$/.test(sample2) && !/₩/.test(sample2), "값 예: " + sample2);
 
   /* 왕복을 여러 번 해도 안정적인가 */
   let stable = true;
@@ -188,7 +194,7 @@ console.log("\n[돌연변이] 모듈을 떼면 정말 옛 버그가 되살아나
   before.App.Config.setDisplayCurrency("KRW");
   const stuck = before.head();
   ok("→ 모듈 없이 KRW 로 바꾸면 머리글이 '가격(USDT)' 로 멈춘다(= 옛 버그)", stuck === "가격(USDT)", "지금: " + stuck);
-  ok("→ 값은 원화로 바뀌어 있다(머리글만 어긋난 상태)", /원$/.test(before.App.Utils.formatCurrencyPlain(74841.1)));
+  ok("→ 값은 원화로 바뀌어 있다(머리글만 어긋난 상태)", /^₩/.test(before.App.Utils.formatCurrencyPlain(74841.1)));
   ok("→ 고친 뒤와 결과가 다르다(= 검사가 진짜다)", liveOk && stuck !== "가격(원)");
 
   /* (나) currency:change 구독만 떼어낸 돌연변이 */

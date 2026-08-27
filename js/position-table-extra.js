@@ -72,8 +72,12 @@ App.PositionTableExtra = (function () {
     // 억/만 단위로 줄여 표시해 글자를 키울 여유를 만듭니다.
     const krwNum = Math.round(usd * App.Config.USD_KRW);
     const krwSign = sign && krwNum > 0 ? "+" : "";
-    const krwFull = krwSign + krwNum.toLocaleString("ko-KR") + "원";
-    const krwShort = "≈" + krwSign + shortKrw(krwNum) + "원";
+    /* 2026-08-28 디자인팀 — 원화 "값" 은 기호를 앞에 붙입니다(₩120,317,550).
+       위 fmt()/App.Utils.formatCurrencyPlain 과 같은 규칙이라 같은 표 안에서
+       진입가와 금액이 같은 모양이 됩니다. 축약형도 "$3.08M" 과 같은 꼴로
+       "₩3.08억" 이 됩니다. 되돌리려면 `"₩" +` 를 빼고 뒤에 + "원" 을 붙입니다. */
+    const krwFull = krwSign + "₩" + krwNum.toLocaleString("ko-KR");
+    const krwShort = "≈" + krwSign + "₩" + shortKrw(krwNum);
 
     // 원화 모드: 원화가 주(主), USDT가 보조
     if (krwMode) return { usdt: krwFull, krw: "≈" + usdt };

@@ -288,12 +288,17 @@ function 띄우기(opts) {
   usdt.App.OrderbookMarkPrice.init();
   usdt.App.Bus.emit("funding:update", { symbol: "BTCUSDT", markPrice: 62345.678 });
   ok("USDT 일 때 '62,345.68' 로 적힌다", usdt.글자() === "62,345.68", "실제: '" + usdt.글자() + "'");
-  ok("USDT 일 때 '원' 이 안 붙는다", usdt.글자().indexOf("원") < 0, "실제: '" + usdt.글자() + "'");
+  ok("USDT 일 때 원화 표기가 안 붙는다",
+    usdt.글자().indexOf("원") < 0 && usdt.글자().indexOf("₩") < 0, "실제: '" + usdt.글자() + "'");
 
   const krw = 띄우기({ 통화: "KRW" });
   krw.App.OrderbookMarkPrice.init();
   krw.App.Bus.emit("funding:update", { symbol: "BTCUSDT", markPrice: 62345.678 });
-  ok("KRW 일 때 '원' 이 붙는다", /원$/.test(krw.글자()), "실제: '" + krw.글자() + "'");
+  /* 2026-08-28 디자인팀 — 원화 표기를 "₩ 앞" 하나로 통일했습니다(전에는 "…원").
+     검사 내용은 같습니다 — 원화일 때 원화 표기가 붙는가. */
+  ok("KRW 일 때 '₩' 가 붙는다", /^₩/.test(krw.글자()), "실제: '" + krw.글자() + "'");
+  ok("KRW 일 때 '원' 이 뒤에 남지 않는다(두 방식이 섞이면 안 됩니다)",
+    !/원$/.test(krw.글자()), "실제: '" + krw.글자() + "'");
   ok("KRW 일 때 달러 기호가 안 붙는다", krw.글자().indexOf("$") < 0, "실제: '" + krw.글자() + "'");
   ok("USDT 표기와 KRW 표기가 서로 다르다", usdt.글자() !== krw.글자(),
     "같으면 통화 전환이 이 줄에 안 먹은 것입니다");

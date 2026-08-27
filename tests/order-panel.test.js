@@ -609,8 +609,12 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     App.PositionTableExtra.renderForTest();
     const entry = doc.getElementById("pos-entry").textContent;
     const notional = doc.getElementById("pos-notional").querySelector(".pos-money-usdt").textContent;
-    ok(/원$/.test(entry), "원화 모드에서 진입가는 원화: " + entry);
-    ok(/원$/.test(notional), "원화 모드에서 금액도 원화여야 함(단위 혼용 방지): " + notional);
+    /* 2026-08-28 디자인팀 — 원화 표기를 "₩ 앞" 하나로 통일했습니다(전에는 "…원").
+       검사 내용은 그대로입니다 — 진입가와 금액이 **같은 단위**로 찍히는가. */
+    ok(/^₩/.test(entry), "원화 모드에서 진입가는 원화: " + entry);
+    ok(/^₩/.test(notional), "원화 모드에서 금액도 원화여야 함(단위 혼용 방지): " + notional);
+    ok(!/원$/.test(entry) && !/원$/.test(notional),
+      "표기가 '₩ 앞' 과 '원 뒤' 두 방식으로 섞이면 안 됩니다: " + entry + " / " + notional);
 
     App.Config.setDisplayCurrency("USDT");
   });
@@ -626,7 +630,11 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
     const krw = cell.querySelector(".pos-money-krw");
     ok(usdt && /USDT$/.test(usdt.textContent), "USDT 줄 필요");
     // 원화는 자릿수가 길어 억/만 단위로 줄여 표시합니다
-    ok(krw && /원$/.test(krw.textContent), "원화 줄 필요");
+    /* 2026-08-28 디자인팀 — 원화 "값" 은 기호를 앞에 붙입니다("₩3.08억").
+       "$3.08M" 과 같은 꼴입니다. 검사 내용은 그대로 — 원화 줄이 있는가. */
+    ok(krw && krw.textContent.indexOf("₩") >= 0, "원화 줄 필요: " + (krw && krw.textContent));
+    ok(krw && !/원$/.test(krw.textContent),
+      "'"+"₩ 앞' 과 '원 뒤' 가 섞이면 안 됨: " + (krw && krw.textContent));
     ok(/[억만]|\d/.test(krw.textContent), "원화 값 필요");
 
     // 환율을 다른 곳에 또 적으면 어긋납니다

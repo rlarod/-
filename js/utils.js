@@ -32,13 +32,36 @@ App.Utils = (function () {
     return sign + formatCurrency(usdValue);
   }
 
-  // 통화 기호 없이 숫자만 (표 안에서 열 헤더에 단위를 따로 표시할 때 사용)
+  /* 통화 기호 없이 숫자만 (표 안에서 열 헤더에 단위를 따로 표시할 때 사용).
+   *
+   * ── 원화 표기는 "₩ 앞" 입니다   2026-08-28 디자인팀 ──────────────────────
+   * 왜 바꿨나 — 한 화면에 두 방식이 섞여 있었습니다 (1920 실측).
+   *   시세 바 현재가   ₩120,317,550     ← 기호가 앞
+   *   차트 가격축      121,200,000원      ← 단위가 뒤
+   *   호가창 행/머리글  120,258,450원 · 가격(원)
+   *   주문가격 칸      120,257,550원
+   *
+   * 왜 "₩ 앞" 으로 골랐나
+   *   1) 이미 집의 기준입니다 — 바로 위 formatCurrency 가 "₩" 를 앞에 붙이고,
+   *      tests/currency-toggle-seal.test.js [8] 이 시세 바 마크가격을
+   *      "₩ / $ 를 앞에" 로 봉인해 두었습니다. "원 뒤" 로 통일하면 그 봉인과
+   *      시세 바 배포분(8f27ad7)을 거꾸로 되돌려야 해서 되돌리는 양이 더 큽니다.
+   *   2) 더 좁습니다 — "원" 은 한글 전각 글리프라 자리를 많이 먹습니다.
+   *      1440 호가창 가격칸 실측 (600 16px Noto Sans KR / 칸 폭 108.20px)
+   *        "120,666,450원"   110.11px  →  1.91px 넘침
+   *        "₩120,666,450"   104.80px  →  3.40px 여유   (한 줄당 5.31px 절약)
+   *   3) 숫자가 오른쪽 끝에 붙어 자릿수가 세로로 정렬됩니다.
+   *
+   * 값은 한 글자도 바뀌지 않습니다 — 표기가 붙는 자리만 옆으로 옮깁니다.
+   * 되돌리려면 아래 return 을 `... .toLocaleString("ko-KR") + "원"` 으로 되돌리고,
+   * js/ob-header-currency.js 의 UNIT.KRW 를 "원" 으로 같이 되돌리면 됩니다.
+   */
   function formatCurrencyPlain(usdValue) {
     if (usdValue === null || usdValue === undefined || isNaN(usdValue)) return "-";
     const cur = App.Config.getDisplayCurrency();
     if (cur === "KRW") {
-      // 숫자만 있으면 어떤 통화인지 알 수 없어 "원"을 붙입니다.
-      return Math.round(usdValue * App.Config.USD_KRW).toLocaleString("ko-KR") + "원";
+      // 숫자만 있으면 어떤 통화인지 알 수 없어 원화 기호를 앞에 붙입니다.
+      return "₩" + Math.round(usdValue * App.Config.USD_KRW).toLocaleString("ko-KR");
     }
     return usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }

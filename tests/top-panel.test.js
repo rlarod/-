@@ -946,13 +946,17 @@ section("[5] 기존 기능 보존");
     eq(all.length, titles.length, "검색어를 지우면 전체가 보여야 함");
   });
 
-  t("원화 표시에 '원'이 붙음", () => {
+  /* 2026-08-28 디자인팀 — 원화 표기를 "₩ 앞" 하나로 통일했습니다(전에는 "…원").
+     검사 내용은 그대로입니다 — 원화일 때 통화를 알 수 있는 표기가 붙는가. */
+  t("원화 표시에 '₩' 가 붙음", () => {
     const { App } = boot({ nickname: "홍길동" });
     App.Config.setDisplayCurrency("KRW");
     const krw = App.Utils.formatCurrencyPlain(100000);
-    ok(/원$/.test(krw), "원화인데 단위가 없으면 어떤 통화인지 알 수 없음: " + krw);
+    ok(/^₩/.test(krw), "원화인데 단위가 없으면 어떤 통화인지 알 수 없음: " + krw);
+    ok(!/원$/.test(krw), "'₩ 앞' 과 '원 뒤' 가 섞이면 안 됨: " + krw);
     App.Config.setDisplayCurrency("USDT");
-    ok(!/원$/.test(App.Utils.formatCurrencyPlain(100000)), "USDT에는 원이 붙으면 안 됨");
+    const usdt = App.Utils.formatCurrencyPlain(100000);
+    ok(!/원$/.test(usdt) && !/₩/.test(usdt), "USDT에는 원화 표기가 붙으면 안 됨: " + usdt);
   });
 
   t("다크모드 버튼은 헤더 우측에만 있음", () => {

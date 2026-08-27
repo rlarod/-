@@ -52,7 +52,9 @@ App.OrderFeePreview = (function () {
     return document.getElementById(id);
   }
 
-  /* order-info-panel.js 와 같은 표기 규칙을 씁니다(통화기호 없이 숫자만). */
+  /* order-info-panel.js 와 같은 표기 규칙을 씁니다.
+     2026-08-28 디자인팀 — 원화는 "₩" 를 앞에, USDT 는 기호 없이 숫자만.
+     되돌리려면 아래 KRW 줄에서 `"₩" +` 만 지우면 됩니다. */
   function plain(value, digits) {
     if (value === null || value === undefined || isNaN(value)) return "-";
     if (value === 0) return "0";
@@ -60,7 +62,7 @@ App.OrderFeePreview = (function () {
       return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
     if (App.Config.getDisplayCurrency() === "KRW") {
-      return Math.round(value * App.Config.USD_KRW).toLocaleString("ko-KR");
+      return "₩" + Math.round(value * App.Config.USD_KRW).toLocaleString("ko-KR");
     }
     return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
