@@ -367,13 +367,24 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  * 3차(2026-08-27) 에서 하나 더 열었습니다.
  *   가로 : fx 지표(fx)                               4 -> 3
  *   지표 계산·그리기가 이미 다 되어 있는데 켜는 자리가 없어서 잠겨 있던 것입니다.
+ * 4차(2026-08-27) — 세로 : 돋보기(zoom)              5 -> 4
+ * 5차(2026-08-28) — 세로 : 브러시(brush)             4 -> 3
+ *   끌어서 자유롭게 긋습니다. 남은 준비중은 세로 파동·여러선·표정 셋입니다.
+ *   ⚠ 숫자를 낮춘 것이 아니라 "지금 잠겨 있는 개수" 로 맞춘 것입니다.
+ *     아래 클릭 검사도 brush -> wave 로 옮겼습니다(brush 는 이제 열립니다).
  * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
  * 검사를 지우지 마세요 — "준비중이라 써 놓고 실제로 열리는" 모순을 막는 그물입니다. */
-ok("세로 막대 준비중이 4개다 (2026-08-27 돋보기를 열어 5 -> 4)",
-  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 4,
+ok("세로 막대 준비중이 3개다 (2026-08-28 브러시를 열어 4 -> 3 / 남은 것 파동·여러선·표정)",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
   "지금 " + railBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
+/* 남은 준비중이 "그 셋" 인지까지 봅니다 — 개수만 세면 엉뚱한 도구가 잠겨도
+   숫자만 맞아 통과합니다(예: brush 를 열면서 ruler 를 잠근 경우). 2026-08-28 추가 */
+ok("남은 세로 준비중이 파동·여러선·표정 셋 그대로다",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).sort().join(",")
+    === "channel,face,wave",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).join(","));
 ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
   barBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
   "지금 " + barBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
@@ -411,8 +422,8 @@ ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
   ok("준비중 버튼이 켜진 것처럼(aria-pressed=true) 보이지 않는다", bad.length === 0, bad.join(","));
 }
 
-/* 되는 도구는 잠기면 안 됩니다 */
-["cursor", "trend", "hline", "text", "fib", "ruler"].forEach(function (k) {
+/* 되는 도구는 잠기면 안 됩니다 (2026-08-27 zoom · 2026-08-28 brush 추가) */
+["cursor", "trend", "hline", "text", "fib", "ruler", "zoom", "brush"].forEach(function (k) {
   const b = railBtns.filter((x) => x.getAttribute("data-tlc") === k)[0];
   ok("되는 도구 " + k + " 는 잠겨 있지 않다",
     !!b && !b.hasAttribute("disabled") && !b.hasAttribute("data-soon"));
@@ -441,10 +452,17 @@ function click(btn) {
   btn.dispatchEvent(new A.win.MouseEvent("click", { bubbles: true, cancelable: true }));
 }
 {
+  /* 2026-08-28 — 여기서 누르던 brush 가 열렸습니다. 아직 안 연 파동(wave)으로
+     옮겼습니다. 검사는 그대로입니다 — 잠긴 버튼은 눌러도 아무 일이 없어야 합니다. */
   A.M.setTool("cursor");
+  const wave = railBtns.filter((x) => x.getAttribute("data-tlc") === "wave")[0];
+  click(wave);
+  ok("준비중 버튼(파동)을 실제로 눌러도 아무 일이 없다", A.M.getTool() === "cursor", A.M.getTool());
+  /* 반대로 브러시는 눌러서 켜져야 합니다 (열어 놓고 안 켜지면 조용한 고장) */
   const brush = railBtns.filter((x) => x.getAttribute("data-tlc") === "brush")[0];
   click(brush);
-  ok("준비중 버튼을 실제로 눌러도 아무 일이 없다", A.M.getTool() === "cursor", A.M.getTool());
+  ok("브러시 버튼을 누르면 브러시가 켜진다 (2026-08-28)", A.M.getTool() === "brush", A.M.getTool());
+  A.M.setTool("cursor");
 }
 {
   const hline = railBtns.filter((x) => x.getAttribute("data-tlc") === "hline")[0];

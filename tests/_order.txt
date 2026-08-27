@@ -144,3 +144,6 @@ tests/signup-insert-guard.test.js
 tests/chart-indicator-menu-seal.test.js
 tests/order-pressure-unknown.test.js
 tests/chart-attr-logo-seal.test.js
+tests/chart-brush-seal.test.js
+tests/chart-chip-nowrap-seal.test.js
+tests/order-pressure-stale-seal.test.js

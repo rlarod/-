@@ -32,8 +32,17 @@
  *   zoom 을 빼고, tests/chart-toolbar-seal.test.js 의 세로 준비중 4 -> 5,
  *   tests/chart-drawings.test.js 의 readyLeft 에서 ,zoom 을 지웁니다.
  *
- * 아직 자리만 잡아 둔 것 (7개)
- *   세로 막대 — 파동 / 여러선 / 브러시 / 표정
+ * 5차(2026-08-28)에서 연 것 — 브러시 (세로 막대)
+ *   끌어서 자유롭게 긋습니다. 종목 + 봉 간격별로 저장되고 새로고침해도
+ *   남습니다. 브러시를 켜 둔 동안에는 차트 끌기·확대를 잠그고(안 그러면
+ *   그리는 대신 차트가 끌려갑니다) 폰에서 페이지가 같이 스크롤되지 않게
+ *   touch-action:none 을 겁니다. 끄면 둘 다 원래대로 되돌립니다.
+ *   왼쪽 아래 칩이 "브러시 · 획 n / 되돌리기 / 끝내기" 로 바뀝니다.
+ *   되돌리려면 — LEFT_TOOLS 의 brush ready 를 false, READY_TOOLS 에서
+ *   brush 를 빼면 끝입니다(나머지 코드는 tool 이 "brush" 일 때만 돕니다).
+ *
+ * 아직 자리만 잡아 둔 것 (6개)
+ *   세로 막대 — 파동 / 여러선 / 표정
  *   가로 막대 — 봉 종류 / 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
@@ -141,6 +150,18 @@ App.ChartDrawings = (function () {
   var LINE_WIDTH = 1;
   var HIT_PX = 7; /* 이 거리 안에서 누르면 그 그림을 고른 것으로 봅니다 */
 
+  /* ---------------- 브러시 (5차 2026-08-28) ----------------
+   * 굵기 2px — 바이낸스(트레이딩뷰 모드) 브러시 기본값과 같습니다.
+   *   실측 2026-08-26 shots/bnf-tv-1440.png 의 도구 설정칸 "2".
+   * BRUSH_MIN_PX  이만큼 움직여야 점을 하나 더 찍습니다. 손이 떨리는 만큼
+   *               전부 찍으면 한 획이 수천 점이 되어 저장이 커집니다.
+   * BRUSH_MAX_PTS 한 획의 점 상한. 넘으면 더 안 찍고 그리기만 이어갑니다
+   *               (획이 끊기면 회원이 고장으로 봅니다).
+   * ------------------------------------------------------- */
+  var BRUSH_WIDTH = 2;
+  var BRUSH_MIN_PX = 2.5;
+  var BRUSH_MAX_PTS = 600;
+
   var STORAGE_KEY = "chart-drawings";
   var STORE_VERSION = 1;
   var SPRITE_URL = "assets/icons/chart-tools.svg";
@@ -159,7 +180,9 @@ App.ChartDrawings = (function () {
     { k: "fib", icon: "tlc-i-fib", label: "피보나치 되돌림", ready: true },
     { k: "wave", icon: "tlc-i-wave", label: "파동", ready: false },
     { k: "channel", icon: "tlc-i-channel", label: "여러선", ready: false },
-    { k: "brush", icon: "tlc-i-brush", label: "브러시", ready: false },
+    /* 5차(2026-08-28) — 브러시를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
+       (같이 되돌릴 것 — READY_TOOLS 의 brush) */
+    { k: "brush", icon: "tlc-i-brush", label: "브러시 (끌어서 자유롭게)", ready: true },
     { k: "sep2", sep: true },
     { k: "text", icon: "tlc-i-text", label: "텍스트", ready: true },
     { k: "face", icon: "tlc-i-face", label: "표정", ready: false },
@@ -185,7 +208,7 @@ App.ChartDrawings = (function () {
   ];
 
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
-  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1 };
+  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1 };
 
   /* 두 점을 찍어 "그림으로 남는" 도구 — 저장되고 나중에 다시 그려집니다 */
   var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
@@ -219,6 +242,9 @@ App.ChartDrawings = (function () {
   var store = null; /* { v, ui:{rail}, bySymbol:{ SYM:{ hlines:[], byInterval:{ IV:[] } } } } */
 
   var pending = null; /* 추세선 첫 점 {t,p} */
+  var stroke = null; /* 브러시로 지금 긋고 있는 획 { pts:[{t,p}], lastX, lastY } */
+  var brushSaved = null; /* 브러시를 켜기 전 차트 옵션 (끌어 옮기기/확대) */
+  var brushTouch = null; /* 브러시를 켜기 전 컨테이너의 touch-action */
   var hover = null; /* 미리보기용 현재 위치 {t,p} */
   var selected = null; /* { kind:"hline"|"shape", id } */
 
@@ -662,6 +688,69 @@ App.ChartDrawings = (function () {
     if (bars > 0) chipText(ctx, Math.round((l + r) / 2), 20, [bars + "봉"], true);
   }
 
+  /* ---------------- 브러시 한 획 ----------------
+   * 점을 시각·가격으로 저장해 두었으므로, 차트를 옮기거나 확대해도 봉에
+   * 붙어서 같이 움직입니다(화면 좌표로 저장하면 어긋납니다).
+   * 화면 밖으로 완전히 벗어난 획은 선을 긋지 않고 건너뜁니다.
+   * ------------------------------------------------------- */
+  function drawBrush(ctx, s, on, preview) {
+    var pts = s.pts;
+    if (!pts || pts.length < 2) return;
+    var i;
+    var xs = [];
+    var ys = [];
+    var minX = Infinity;
+    var maxX = -Infinity;
+    for (i = 0; i < pts.length; i++) {
+      var x = timeToX(pts[i].t);
+      var y = priceToY(pts[i].p);
+      xs.push(x);
+      ys.push(y);
+      if (x !== null) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+      }
+    }
+    if (minX === Infinity) return;
+    /* 판 밖으로 완전히 나간 획은 그리지 않습니다 */
+    var w = 0;
+    try {
+      w = chart ? chart.timeScale().width() : 0;
+    } catch (e) {
+      w = 0;
+    }
+    if (w && (maxX < -8 || minX > w + 8)) return;
+
+    ctx.strokeStyle = on ? COLOR_SELECTED : COLOR_DRAW;
+    ctx.lineWidth = on ? BRUSH_WIDTH + 1 : BRUSH_WIDTH;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.setLineDash(preview ? [] : []);
+    ctx.beginPath();
+    var started = false;
+    for (i = 0; i < pts.length; i++) {
+      if (xs[i] === null || ys[i] === null) {
+        started = false;
+        continue;
+      }
+      if (!started) {
+        ctx.moveTo(xs[i], ys[i]);
+        started = true;
+      } else {
+        ctx.lineTo(xs[i], ys[i]);
+      }
+    }
+    ctx.stroke();
+    ctx.lineWidth = LINE_WIDTH;
+    ctx.lineJoin = "miter";
+    ctx.lineCap = "butt";
+    if (on) {
+      if (xs[0] !== null && ys[0] !== null) handle(ctx, xs[0], ys[0]);
+      var last = pts.length - 1;
+      if (xs[last] !== null && ys[last] !== null) handle(ctx, xs[last], ys[last]);
+    }
+  }
+
   /* ---------------- 그림 하나 ---------------- */
   function drawOne(ctx, s, on, preview) {
     var color = on ? COLOR_SELECTED : COLOR_DRAW;
@@ -706,6 +795,10 @@ App.ChartDrawings = (function () {
       return;
     }
 
+    if (s.type === "brush") {
+      drawBrush(ctx, s, on, preview);
+      return;
+    }
     if (s.type === "fib") {
       drawFib(ctx, s, on, preview);
       return;
@@ -725,6 +818,11 @@ App.ChartDrawings = (function () {
       drawOne(ctx, list[i], !!(selected && selected.kind === "shape" && selected.id === list[i].id), false);
     }
 
+    /* 브러시로 지금 긋고 있는 획 — 손을 떼기 전에도 보여야 합니다 */
+    if (stroke && stroke.pts.length > 1) {
+      drawOne(ctx, { type: "brush", pts: stroke.pts }, false, true);
+    }
+
     /* 두 점 도구를 긋는 중이면 미리보기 */
     if (pending && hover && TWO_TAP[tool]) {
       drawOne(ctx, { type: tool, t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
@@ -738,7 +836,7 @@ App.ChartDrawings = (function () {
     /* 그릴 것이 없으면 여기서 끝 — 계산을 하지 않습니다 */
     if (!series) return;
     var list = shapes();
-    if ((!list || !list.length) && !pending) {
+    if ((!list || !list.length) && !pending && !stroke) {
       perf.skipped++;
       return;
     }
@@ -893,6 +991,24 @@ App.ChartDrawings = (function () {
         if (x >= tx && x <= tx + w && Math.abs(y - ty) <= 10) {
           bestD = 0;
           best = { kind: "shape", id: s.id };
+        }
+      } else if (s.type === "brush") {
+        var bp = s.pts;
+        if (!bp || bp.length < 2) continue;
+        var px = null;
+        var py = null;
+        for (var q = 0; q < bp.length; q++) {
+          var qx = timeToX(bp[q].t);
+          var qy = priceToY(bp[q].p);
+          if (qx !== null && qy !== null && px !== null && py !== null) {
+            var bd = distToSegment(x, y, px, py, qx, qy);
+            if (bd < bestD) {
+              bestD = bd;
+              best = { kind: "shape", id: s.id };
+            }
+          }
+          px = qx;
+          py = qy;
         }
       } else if (s.type === "fib" || s.type === "ruler") {
         /* 피보나치는 눈금 줄 중 가장 가까운 것, 자는 상자 네 변 중 가장 가까운 것 */
@@ -1223,11 +1339,233 @@ App.ChartDrawings = (function () {
     selected = null;
     pending = null;
     hover = null;
+    cancelStroke();
     saveStore();
     clearPriceLines();
     paintButtons();
     paintChip();
     repaint();
+  }
+
+  /* =====================================================================
+   * 브러시 — 끌어서 자유롭게 (5차 2026-08-28)
+   * ---------------------------------------------------------------------
+   * 다른 도구는 전부 "톡 두 번" 이라 라이브러리의 subscribeClick 으로
+   * 충분했는데, 브러시만은 끄는 동안의 자취가 필요해서 포인터 이벤트를
+   * 직접 받습니다. 그래서 두 가지를 같이 해야 합니다.
+   *
+   *   ① 차트가 같이 끌려가지 않게  chart.applyOptions({handleScroll:false,
+   *      handleScale:false})  — 라이브러리 공개 API 입니다. 브러시를 끄면
+   *      켜기 전 값으로 되돌립니다(우리가 true 로 덮어쓰지 않습니다).
+   *   ② 폰에서 페이지가 같이 스크롤되지 않게  touch-action:none
+   *      — 이것만은 CSS 로 막아야 합니다. preventDefault 만으로는
+   *        브라우저가 이미 스크롤을 시작한 뒤라 늦습니다.
+   *      브러시를 끄면 원래 값으로 되돌립니다.
+   *
+   * 좌표 — 캔들 판(첫 번째 canvas)의 왼쪽 위가 (0,0) 입니다. 글자 입력칸이
+   * 쓰는 paneOrigin() 과 같은 기준입니다(2026-08-28 실측: 차트칸 기준
+   * (287,429) 를 누르면 판 기준 (285,420) — canvas 가 (2,9) 에 놓여 있음).
+   *
+   * 저장 — 점을 "시각·가격" 으로 남깁니다. 그래서 차트를 옮기거나 확대해도
+   * 봉에 붙어 따라옵니다. 종목 + 봉 간격별로 나뉘어 저장됩니다(추세선과 같은
+   * 칸입니다 — 1분봉에 그린 낙서가 1일봉에서 점 하나로 뭉개지지 않게).
+   * ===================================================================== */
+  function paneRect() {
+    try {
+      var cv = container ? container.querySelector("canvas") : null;
+      return cv ? cv.getBoundingClientRect() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 판 위의 x 를 시각으로. 봉에 딱 맞추지 않습니다(맞추면 획이 계단이 됩니다) */
+  function xToTime(x) {
+    if (!chart) return null;
+    refreshMeta(false);
+    if (meta.first === null || !meta.bar) return null;
+    var lg;
+    try {
+      lg = chart.timeScale().coordinateToLogical(x);
+    } catch (e) {
+      return null;
+    }
+    if (lg === null || lg === undefined) return null;
+    return meta.first + lg * meta.bar;
+  }
+
+  function evPoint(ev) {
+    var r = paneRect();
+    if (!r || !r.width || !r.height) return null;
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top, w: r.width, h: r.height };
+  }
+
+  var strokeRaf = 0;
+  function strokeRepaint() {
+    if (strokeRaf) return;
+    if (!window.requestAnimationFrame) {
+      repaint();
+      return;
+    }
+    strokeRaf = window.requestAnimationFrame(function () {
+      strokeRaf = 0;
+      repaint();
+    });
+  }
+
+  function cancelStroke() {
+    if (!stroke) return;
+    stroke = null;
+    detachStrokeMoves();
+    repaint();
+  }
+
+  function onBrushDown(ev) {
+    if (tool !== "brush") return;
+    if (typeof ev.button === "number" && ev.button > 0) return; /* 오른쪽 버튼은 무시 */
+    var pt = evPoint(ev);
+    if (!pt) return;
+    if (pt.x < 0 || pt.y < 0 || pt.x > pt.w || pt.y > pt.h) return; /* 가격축·시간축은 그대로 둡니다 */
+    var t = xToTime(pt.x);
+    var pr = yToPrice(pt.y);
+    if (t === null || pr === null) return;
+    stroke = { pts: [{ t: t, p: pr }], lastX: pt.x, lastY: pt.y };
+    attachStrokeMoves();
+    if (ev.cancelable) ev.preventDefault();
+    ev.stopPropagation();
+    strokeRepaint();
+  }
+
+  function onBrushMove(ev) {
+    if (!stroke) return;
+    var pt = evPoint(ev);
+    if (!pt) return;
+    var x = Math.max(0, Math.min(pt.w, pt.x));
+    var y = Math.max(0, Math.min(pt.h, pt.y));
+    var dx = x - stroke.lastX;
+    var dy = y - stroke.lastY;
+    if (dx * dx + dy * dy < BRUSH_MIN_PX * BRUSH_MIN_PX) return;
+    stroke.lastX = x;
+    stroke.lastY = y;
+    if (stroke.pts.length < BRUSH_MAX_PTS) {
+      var t = xToTime(x);
+      var pr = yToPrice(y);
+      if (t !== null && pr !== null) stroke.pts.push({ t: t, p: pr });
+    }
+    if (ev.cancelable) ev.preventDefault();
+    strokeRepaint();
+  }
+
+  function onBrushUp(ev) {
+    if (!stroke) return;
+    var pts = stroke.pts;
+    stroke = null;
+    detachStrokeMoves();
+    if (ev && ev.cancelable) ev.preventDefault();
+    if (pts.length < 2) {
+      repaint();
+      toast("조금 더 길게 끌어주세요");
+      return;
+    }
+    shapes().push({ id: newId(), type: "brush", pts: pts });
+    saveStore();
+    paintChip();
+    repaint();
+    toast(pts.length + "점짜리 획을 그렸습니다");
+  }
+
+  var strokeMovesOn = false;
+  function attachStrokeMoves() {
+    if (strokeMovesOn) return;
+    strokeMovesOn = true;
+    window.addEventListener("pointermove", onBrushMove, true);
+    window.addEventListener("pointerup", onBrushUp, true);
+    window.addEventListener("pointercancel", onBrushUp, true);
+  }
+  function detachStrokeMoves() {
+    if (!strokeMovesOn) return;
+    strokeMovesOn = false;
+    window.removeEventListener("pointermove", onBrushMove, true);
+    window.removeEventListener("pointerup", onBrushUp, true);
+    window.removeEventListener("pointercancel", onBrushUp, true);
+  }
+
+  /** 옵션 값을 통째로 베낍니다 (true/false 이거나 잔가지가 있는 객체입니다) */
+  function copyOpt(v) {
+    if (v === null || typeof v !== "object") return v;
+    var out = {};
+    for (var k in v) {
+      if (Object.prototype.hasOwnProperty.call(v, k)) out[k] = copyOpt(v[k]);
+    }
+    return out;
+  }
+
+  /** 브러시를 켜는 동안만 차트 끌기·페이지 스크롤을 멈춥니다 */
+  function applyBrushMode(on) {
+    if (!chart || !container) return;
+    if (on) {
+      if (brushSaved) return;
+      var saved = { handleScroll: undefined, handleScale: undefined };
+      try {
+        var co = chart.options();
+        /* 반드시 베껴 두어야 합니다. chart.options() 가 주는 것은 차트가
+           들고 있는 그 객체 자체라, applyOptions 로 false 를 걸면 우리가
+           들고 있던 "원래 값" 까지 같이 false 로 바뀝니다. 그러면 되돌릴 때
+           false 를 다시 써 넣게 되어, 브러시를 한 번 쓰고 나면 차트를 영영
+           못 끄는 조용한 고장이 납니다(2026-08-28 실측으로 잡았습니다). */
+        saved.handleScroll = copyOpt(co.handleScroll);
+        saved.handleScale = copyOpt(co.handleScale);
+      } catch (e) {
+        /* 못 읽으면 기본값(true)으로 되돌립니다 */
+      }
+      brushSaved = saved;
+      try {
+        chart.applyOptions({ handleScroll: false, handleScale: false });
+      } catch (e) {
+        /* 무시 — 못 막아도 그리기는 됩니다 */
+      }
+      brushTouch = container.style.touchAction || "";
+      container.style.touchAction = "none";
+      return;
+    }
+    if (!brushSaved) return;
+    try {
+      chart.applyOptions({
+        handleScroll: brushSaved.handleScroll === undefined ? true : brushSaved.handleScroll,
+        handleScale: brushSaved.handleScale === undefined ? true : brushSaved.handleScale
+      });
+    } catch (e) {
+      /* 무시 */
+    }
+    container.style.touchAction = brushTouch || "";
+    brushSaved = null;
+    brushTouch = null;
+  }
+
+  /** 마지막 획 하나만 되돌립니다 (브러시를 켜 둔 동안 칩의 첫 단추) */
+  function undoLastStroke() {
+    var ss = shapes();
+    for (var i = ss.length - 1; i >= 0; i--) {
+      if (ss[i].type === "brush") {
+        if (selected && selected.kind === "shape" && selected.id === ss[i].id) selected = null;
+        ss.splice(i, 1);
+        saveStore();
+        paintButtons();
+        paintChip();
+        repaint();
+        toast("한 획 되돌렸습니다");
+        return true;
+      }
+    }
+    toast("되돌릴 획이 없습니다");
+    return false;
+  }
+
+  function brushCount() {
+    var ss = shapes();
+    var n = 0;
+    for (var i = 0; i < ss.length; i++) if (ss[i].type === "brush") n++;
+    return n;
   }
 
   /* =====================================================================
@@ -1239,9 +1577,13 @@ App.ChartDrawings = (function () {
     /* 도구를 바꾸면 긋다 만 것은 버립니다 (추세선을 찍다가 자로 바꾸는 경우) */
     pending = null;
     hover = null;
+    cancelStroke();
+    /* 브러시일 때만 차트 끌기·페이지 스크롤을 멈춥니다(끄면 되돌립니다) */
+    applyBrushMode(name === "brush");
     if (name !== "cursor") setSelected(null);
     closeTextInput();
     paintButtons();
+    paintChip();
     repaint();
   }
 
@@ -1616,7 +1958,12 @@ App.ChartDrawings = (function () {
   function injectStyle() {
     if (document.getElementById("chart-drawings-style")) return;
     var css =
-      ".tl-draw-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;" +
+      /* white-space:nowrap 는 꼭 있어야 합니다 — 없으면 화면 폭이 줄었을 때
+         position:fixed 칩이 (화면폭 - left) 만큼으로 눌려 두 줄로 접히고,
+         그 접힌 폭을 placeChips() 가 다시 읽어 자리를 잡아 오른쪽 끝에
+         달라붙습니다(스스로 되풀이됨). 2026-08-28 360px 실측.
+         되돌리려면 두 곳의 white-space:nowrap; 만 지우면 됩니다. */
+      ".tl-draw-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
       "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
       ".tl-draw-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
@@ -1625,7 +1972,7 @@ App.ChartDrawings = (function () {
       ".tl-draw-chip button[data-dim=1]{color:" + C_MUTED + ";}" +
       ".tl-draw-chip button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
       /* 확대 되돌리기 칩 — "그린 것" 칩과 같은 생김새, 자리만 오른쪽 아래 */
-      ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;" +
+      ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
       "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
       ".tl-zoom-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
@@ -1795,12 +2142,23 @@ App.ChartDrawings = (function () {
         toast("모두 지웠습니다");
         return;
       }
+      /* 브러시를 켜 둔 동안은 "되돌리기" 입니다 — 폰에서 가는 획을
+         손가락으로 골라 지우기가 어려워서 마지막 획을 바로 무릅니다 */
+      if (tool === "brush") {
+        undoLastStroke();
+        return;
+      }
       removeSelected();
     });
     b2.addEventListener("click", function () {
       if (askingClear) {
         askingClear = false;
         paintChip();
+        return;
+      }
+      if (tool === "brush") {
+        setTool("cursor");
+        toast("브러시를 껐습니다");
         return;
       }
       askingClear = true;
@@ -1819,13 +2177,26 @@ App.ChartDrawings = (function () {
   function paintChip() {
     if (!els.chip) return;
     var n = countAll();
-    if (!n) {
+    if (!n && tool !== "brush") {
       askingClear = false;
       els.chip.style.display = "none";
       return;
     }
     els.chip.style.display = "flex";
     placeSoon();
+    /* 브러시를 켜 둔 동안 — 되돌리기 · 끝내기.
+       "끝내기" 가 있어야 폰에서 차트를 다시 끌 수 있습니다(브러시 중에는
+       차트 끌기를 꺼 두기 때문입니다). */
+    if (tool === "brush" && !askingClear) {
+      els.chipLabel.textContent = "브러시 · 획 " + brushCount();
+      els.chipBtn1.textContent = "되돌리기";
+      els.chipBtn1.className = "";
+      if (brushCount()) els.chipBtn1.removeAttribute("data-dim");
+      else els.chipBtn1.setAttribute("data-dim", "1");
+      els.chipBtn2.textContent = "끝내기";
+      els.chipBtn2.className = "on";
+      return;
+    }
     if (askingClear) {
       els.chipLabel.textContent = "정말 모두 지울까요";
       els.chipBtn1.textContent = "지우기";
@@ -1963,6 +2334,7 @@ App.ChartDrawings = (function () {
     selected = null;
     pending = null;
     hover = null;
+    cancelStroke();
     askingClear = false;
     /* 봉 간격이 바뀌면 논리 번호의 뜻이 달라집니다(1분봉 300번째 != 1일봉 300번째).
        js/chart.js 가 새로 불러온 뒤 fitContent() 를 하므로 기록만 비웁니다. */
@@ -2000,6 +2372,13 @@ App.ChartDrawings = (function () {
       chart.subscribeCrosshairMove(onCrosshairMove);
     } catch (e) {
       console.warn("[chart-drawings.js] 누르는 것을 받지 못했습니다:", e);
+    }
+    /* 브러시만 포인터를 직접 받습니다. 잡는 단계(capture)로 받아 차트가
+       같이 끌려가지 않게 합니다. 브러시가 아니면 첫 줄에서 바로 돌아갑니다. */
+    try {
+      container.addEventListener("pointerdown", onBrushDown, true);
+    } catch (e) {
+      console.warn("[chart-drawings.js] 브러시를 붙이지 못했습니다:", e);
     }
 
     refreshMeta(true);
@@ -2066,6 +2445,14 @@ App.ChartDrawings = (function () {
     zoomTo: zoomTo,
     zoomBack: zoomBack,
     zoomReset: zoomReset,
+    undoLastStroke: undoLastStroke,
+    getBrushCount: brushCount,
+    isBrushMode: function () {
+      return !!brushSaved;
+    },
+    BRUSH_WIDTH: BRUSH_WIDTH,
+    BRUSH_MIN_PX: BRUSH_MIN_PX,
+    BRUSH_MAX_PTS: BRUSH_MAX_PTS,
     getZoomUndoDepth: function () {
       return zoomUndo.length;
     },

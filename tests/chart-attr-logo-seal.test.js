@@ -282,6 +282,92 @@ section("[4] 실제 동작 — 링크는 그대로, 자리만 옮긴다");
 }
 
 /* =========================================================================
+ * [4-2] 실측값이 틀렸더라도 계산식은 지킨다 (2026-08-28 기록팀 보강)
+ *
+ *   [4] 에 심은 29px(띠 높이) · 75px(빈 칸)은 js/chart-attr-logo.js 주석에
+ *   적힌 2026-08-27 실측값을 그대로 옮긴 것이고, 285px(캔들 칸)은 360 - 75 로
+ *   계산해 넣은 값입니다. 차트팀이 라이브에서 다시 재지는 못했습니다.
+ *
+ *   그래서 이 한 벌만 봉인하면, 나중에 그 실측이 틀린 것으로 밝혀지는 순간
+ *   -24 / 305 라는 숫자도 같이 뜻을 잃습니다.
+ *
+ *   여기서는 **입력을 바꿔 가며 계산식 자체**를 봅니다.
+ *       세로 : bottom = -round((띠높이 - 19) / 2 + 19)   ← 띠의 세로 가운데
+ *       가로 : left   = round(캔들칸폭 + (빈칸 - 35) / 2) ← 빈 칸의 가로 가운데
+ *              단, 빈 칸이 41px(35+6) 보다 좁으면 욕심내지 않고 8px
+ *   실측이 다른 값으로 바뀌어도 이 관계는 그대로여야 합니다.
+ *   ⚠ 여기 숫자들은 "화면에서 잰 값" 이 아닙니다. 계산식을 확인하려고
+ *     제가 넣은 입력입니다. 라이브 실측으로 읽지 마세요.
+ * ===================================================================== */
+section("[4-2] 계산식 — 입력을 바꿔도 가운데에 놓는다");
+{
+  function 자리(띠높이, 빈칸, 캔들칸) {
+    const HTML =
+      "<!doctype html><html><head></head><body>" +
+      '<div class="tv-lightweight-charts"><table>' +
+      '<tr><td id="host"><a id="tv-attr-logo" ' +
+      'href="https://www.tradingview.com/?utm_medium=lwc-link" ' +
+      'title="Charting by TradingView"></a></td><td id="pane-axis"></td></tr>' +
+      '<tr id="axis-row"><td id="axis-left"></td><td id="corner"></td></tr>' +
+      "</table></div></body></html>";
+    const dom = new JSDOM(HTML, {
+      runScripts: "outside-only", pretendToBeVisual: true, url: "https://example.test/",
+    });
+    const win = dom.window;
+    const doc = win.document;
+    const 심기 = (id, w, h) => {
+      doc.getElementById(id).getBoundingClientRect = () =>
+        ({ width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0 });
+    };
+    심기("host", 캔들칸, 300);
+    심기("axis-row", 캔들칸 + 빈칸, 띠높이);
+    심기("corner", 빈칸, 띠높이);
+    심기("axis-left", 캔들칸, 띠높이);
+    win.eval(모듈);
+    const M = win.App.ChartAttrLogo;
+    M.apply();
+    const r = { bottom: M.getBottom(), left: M.getLeft() };
+    win.close();
+    return r;
+  }
+
+  /* 데스크톱 쪽 — 띠가 두꺼워지면 마크도 그만큼 내려가야 합니다 */
+  const a = 자리(47, 60, 1860);
+  ok("띠 47px 이면 bottom 이 -33 이다 (띠 가운데)", a.bottom === -33, String(a.bottom));
+  ok("빈 칸 60px · 캔들칸 1860px 이면 left 가 1873 이다 (빈 칸 가운데)",
+    a.left === 1873, String(a.left));
+
+  /* 태블릿 쪽 */
+  const b = 자리(33, 68, 700);
+  ok("띠 33px 이면 bottom 이 -26 이다", b.bottom === -26, String(b.bottom));
+  ok("빈 칸 68px · 캔들칸 700px 이면 left 가 717 이다", b.left === 717, String(b.left));
+
+  /* 띠가 두꺼울수록 더 깊이 내려가야 합니다 (부호가 뒤집히면 화면 위로 튑니다) */
+  ok("띠가 두꺼울수록 bottom 이 더 작아진다 (더 깊이 내려간다)",
+    자리(47, 60, 1860).bottom < 자리(29, 75, 285).bottom,
+    자리(47, 60, 1860).bottom + " vs " + 자리(29, 75, 285).bottom);
+  ok("bottom 은 언제나 음수다 (양수면 마크가 차트 안으로 올라옵니다)",
+    자리(29, 75, 285).bottom < 0 && 자리(47, 60, 1860).bottom < 0);
+
+  /* 좁은 빈 칸 — 물러서는 경계 (35 + 6 = 41) */
+  ok("빈 칸이 41px 이면 아직 빈 칸에 놓는다 (경계 안쪽)",
+    자리(29, 41, 285).left === 288, String(자리(29, 41, 285).left));
+  ok("빈 칸이 40px 이면 원래 왼쪽 8px 로 물러선다 (경계 바깥)",
+    자리(29, 40, 285).left === 8, String(자리(29, 40, 285).left));
+
+  /* 마크(35px)가 빈 칸 밖으로 삐져나오지 않는지 — 겹침을 숫자로 봅니다.
+     차트팀이 라이브에서 겹침을 못 쟀다고 했습니다. 화면 대신 계산으로 봅니다. */
+  [[29, 75, 285], [47, 60, 1860], [33, 68, 700]].forEach(function (c) {
+    const r = 자리(c[0], c[1], c[2]);
+    const 왼쪽여유 = r.left - c[2];
+    const 오른쪽여유 = c[2] + c[1] - (r.left + 35);
+    ok("띠" + c[0] + " 빈칸" + c[1] + " — 마크가 빈 칸 안에 들어간다 (좌 " +
+      왼쪽여유 + "px / 우 " + 오른쪽여유 + "px)",
+      왼쪽여유 >= 0 && 오른쪽여유 >= 0, JSON.stringify(r));
+  });
+}
+
+/* =========================================================================
  * [5] 실행 목록 등록
  * ===================================================================== */
 section("[5] 실행 목록 등록");
