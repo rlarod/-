@@ -122,6 +122,8 @@ tests/seed-recharge-guard.test.js
 tests/html-assets-tracked.test.js
 tests/docs-sql-tracked.test.js
 tests/orderbook-mark-price-seal.test.js
+tests/ticker-board-seal.test.js
+tests/stat-volume-unit-seal.test.js
 tests/currency-toggle-seal.test.js
 tests/chart-symbol-switch-seal.test.js
 tests/trades-fit-seal.test.js
