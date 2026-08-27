@@ -217,3 +217,50 @@ order by 닉네임;
 --   [5] 에서 trades_거래수 가 0 인데 채팅_청산알림수 가 8 이면
 --       -> 거래가 서버에 저장되지 않고 있는 것입니다. 이건 큰 건입니다.
 -- =========================================================================
+
+
+-- =========================================================================
+-- ★2026-08-27 추가★ [7] 회원은 4명인데 랭킹에는 3명 - 누가 빠졌나
+-- =========================================================================
+-- ⛔ 여기도 읽기만 합니다.
+--
+-- 왜 붙였나
+--   위 [1]~[5] 는 전부 trading_accounts 를 ★inner join★ 으로 씁니다.
+--   그래서 '지갑 줄 자체가 없는 회원' 은 이 조회들에도 안 나옵니다.
+--   랭킹 뷰(leaderboard)도 같은 inner join 이라 똑같이 빠집니다.
+--
+--   js/auth.js:317 이 가입할 때 trading_accounts 를 만드는데,
+--   실패해도 ★console.warn 만 남기고 그냥 넘어갑니다★ (js/auth.js:323).
+--   그래서 profiles 는 만들어졌는데 지갑 줄만 없는 회원이 생길 수 있습니다.
+--   백로그 TL-010 의 곁가지("김갱TV 가 랭킹에 없음")가 이것일 수 있습니다.
+select
+  p.nickname                                       as 닉네임,
+  case when ta.user_id is null
+       then '★지갑 줄 없음 - 랭킹에서 통째로 빠집니다★'
+       else 'OK 지갑 줄 있음' end                   as 상태,
+  round(coalesce(ta.initial_balance, 0))           as 기준자본,
+  round(coalesce(ta.balance, 0))                   as 지갑,
+  round(coalesce(ta.realized_pnl, 0))              as 확정손익,
+  (select count(*) from public.trades t where t.user_id = p.id) as 거래수,
+  to_char(p.created_at at time zone 'Asia/Seoul',
+          'MM-DD HH24:MI')                         as 가입시각
+from public.profiles p
+left join public.trading_accounts ta on ta.user_id = p.id
+order by (ta.user_id is null) desc, p.created_at;
+
+-- 숫자로 한 줄.
+select
+  (select count(*) from public.profiles)                     as 회원수,
+  (select count(*) from public.trading_accounts)             as 지갑줄수,
+  (select count(*) from public.leaderboard)                  as 랭킹에_나오는수,
+  (select count(*) from public.profiles p
+     where not exists (select 1 from public.trading_accounts ta
+                        where ta.user_id = p.id))            as 지갑줄_없는회원;
+
+-- 읽는 법
+--   '지갑줄_없는회원' 이 0 이면 -> 4명 중 1명이 빠진 이유는 다른 데 있습니다.
+--                                  (닉네임 중복·profiles 자체가 없음 등)
+--   0 이 아니면                -> 그 회원은 가입 때 지갑 만들기가 실패한 것입니다.
+--                                  거래를 한 번 하면 js/supabase-sync.js 의
+--                                  upsert 가 줄을 만들어 주므로 그때 복구됩니다.
+-- =========================================================================
