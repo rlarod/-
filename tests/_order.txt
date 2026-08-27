@@ -138,3 +138,5 @@ tests/supabase-client-seal.test.js
 tests/funding-qty-symbol.test.js
 tests/interval-native-truth.test.js
 tests/leverage-engine-cap.test.js
+tests/symbol-guard-emit-view.test.js
+tests/boot-once.test.js

@@ -1353,5 +1353,20 @@
      자리를 차지하지 않는 덮개라(position:absolute) 주문창 높이는 그대로입니다.
      스스로 켜지므로 main.js 에 등록하지 않습니다. 이 한 줄만 지우면 덮개가 사라집니다. -->
 <script src="js/order-lock-notice.js"></script>
+
+<!-- ===== 방송 동안 종목 바꿔치기 풀기 (2026-08-28) =====
+     js/symbol-guard.js 가 거래엔진 핸들러가 도는 동안만 getActiveSymbol() 을
+     "포지션 종목" 으로 바꿔치기합니다(강제청산·TP·SL·펀딩이 멈추는 것을 막는
+     P1 장치라 없앨 수 없습니다). 그런데 그 안에서 js/trading.js:93 이
+     App.Bus.emit("trading:update") 를 부르고, emit 이 구독자를 그 자리에서
+     동기로 부르기 때문에 구독자 20여 곳이 전부 바꿔치기된 값을 읽었습니다.
+     실측(80틱) — 구독자가 본 종목 80/80 이 포지션 종목,
+     주문 잠금 덮개 표시 0회 / 숨김 80회.
+     이 파일은 "방송이 도는 동안만" 바꿔치기를 풀고 끝나면 도로 씌웁니다.
+     엔진은 방송보다 앞에서 값을 읽으므로(trading.js:89 · :368) 영향이 없습니다.
+     ⚠ 반드시 js/symbol-guard.js(1216행) 뒤여야 합니다 — emit 감싸기가
+     그쪽보다 바깥에 있어야 합니다.
+     스스로 켜지므로 main.js 에 등록하지 않습니다. 이 한 줄만 지우면 원래대로. -->
+<script src="js/symbol-guard-emit-view.js"></script>
 </body>
 </html>

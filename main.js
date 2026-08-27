@@ -62,7 +62,63 @@
    * Trading/UI가 초기 상태를 읽고, 마지막으로 WS를 열어야
    * 모든 구독자가 준비된 상태에서 첫 tick부터 놓치지 않고 반영됩니다.
    * ------------------------------------------------ */
+  /* ---------------- 부팅은 딱 한 번 (2026-08-28) ----------------
+   * P1 — 두 번 부팅되면 회원 돈이 두 번 나갑니다.
+   *
+   * 실측(재현기, 네트워크 0) — 10배 롱 진입 뒤 "절반만 닫기" 를 한 번 누름
+   *      한 번 부팅  구독자 price:update 3 / trading:update 4
+   *                  closedTrades 1건 · 닫힌비율 50% · 잔고 99,492.55
+   *      두 번 부팅  구독자 price:update 6 / trading:update 7
+   *                  closedTrades 2건 · 닫힌비율 75% · 잔고 99,741.32
+   *
+   * 왜 두 배가 되나 — js/ui.js:747 injectDynamicUI() 가 멱등이라 DOM 을
+   * 다시 만들지 않습니다. 그래서 두 번째 bindOrderPanel() 이 "같은 노드" 에
+   * 리스너를 하나 더 붙입니다. js/ui.js:658 의 것은 화살표 함수라
+   * 브라우저의 "같은 리스너 중복 등록 무시" 도 안 걸립니다.
+   * 회원은 절반만 닫았다고 믿는데 거래내역에 모르는 청산이 한 줄 더 생기고,
+   * 오류는 하나도 안 뜹니다(전형적인 조용한 고장).
+   *
+   * ⛔ js/ui.js 는 수정 금지 파일입니다. 그리고 같은 문제가 20여 모듈에
+   *    똑같이 있어서 한 곳만 막아도 나머지가 남습니다. 그래서 근본 원인인
+   *    "두 번 부팅" 자체를 여기 한 곳에서 막습니다.
+   *
+   * 부팅을 부르는 길이 셋입니다 — 셋이 서로 다른 변수를 봅니다.
+   *   ① js/auth.js:43   let booted        (로그인 성공 → bootOnce)
+   *   ② js/guest-access.js:121 var bootCalled  (비회원 · 세션복구 지연 재방문)
+   *   ③ main.js start()  App.Auth 가 없을 때 boot() 직접 호출
+   *      (Supabase 라이브러리 로드 실패)
+   * ①②는 App.bootApp 을 통하지만 ③은 boot() 를 바로 부릅니다.
+   * 그래서 App.bootApp 이 아니라 boot() 에 자물쇠를 겁니다 — 셋 다 지나갑니다.
+   * ------------------------------------------------------------- */
+  let bootDone = false;
+  let bootPromise = null;
+
+  /* 누가 두 번 불렀는지 나중에 잡을 수 있게 부른 자리를 남깁니다. */
+  function calledFrom() {
+    try {
+      const lines = String(new Error().stack || "").split("\n").slice(2, 6);
+      return lines.map((l) => l.trim()).join(" ← ") || "(호출 위치를 못 읽었습니다)";
+    } catch (e) {
+      return "(호출 위치를 못 읽었습니다)";
+    }
+  }
+
   function boot() {
+    if (bootDone) {
+      /* 조용히 넘기지 않습니다 — 두 번 부르는 길이 남아 있다는 뜻이라
+         콘솔에 어디서 불렀는지 그대로 남깁니다. */
+      console.warn(
+        "[main.js] 이미 부팅했습니다 — 두 번째 부팅을 건너뜁니다.\n" +
+        "  (그냥 두면 주문창 리스너가 두 겹이 되어 '절반만 닫기' 가 3/4 을 닫습니다)\n" +
+        "  부른 곳: " + calledFrom()
+      );
+      return;
+    }
+    bootDone = true;
+    bootModules();
+  }
+
+  function bootModules() {
     const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "TradesFit", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "Trading", "OrderInfoPanel", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
       ⚡ 알림 띠를 없애고 알림을 다시 채팅에 보이게 했습니다.
       되살리려면 이 주석을 풀고 index.html 의 <script src="js/chat-split.js"> 도 푸세요. */
@@ -100,14 +156,28 @@
   // 확인해야 하기 때문입니다(관리자가 "전체 시즌 초기화"를 실행한 경우).
   // auth.js는 이 변경을 몰라도 됩니다 — 여전히 App.bootApp()만 호출하면 됩니다.
   App.bootApp = async function () {
-    if (App.Season && typeof App.Season.checkAndReset === "function") {
-      try {
-        await App.Season.checkAndReset();
-      } catch (err) {
-        console.warn("[main.js] 시즌 체크 실패(기존 로컬 데이터 유지하고 계속 진행):", err);
-      }
+    /* 두 번째로 부른 쪽도 "부팅이 끝났다" 를 기대합니다. 그래서 그냥 돌려보내지
+       않고 첫 번째가 만든 약속을 그대로 돌려줍니다 — 첫 부팅이 아직
+       App.Season.checkAndReset() 을 기다리는 중이라면, 두 번째로 부른 쪽도
+       진짜로 끝날 때까지 같이 기다립니다(먼저 다음 일로 넘어가지 않습니다). */
+    if (bootPromise) {
+      console.warn(
+        "[main.js] App.bootApp() 이 두 번 불렸습니다 — 첫 부팅이 끝날 때까지 같이 기다립니다(다시 부팅하지 않습니다).\n" +
+        "  부른 곳: " + calledFrom()
+      );
+      return bootPromise;
     }
-    boot();
+    bootPromise = (async function () {
+      if (App.Season && typeof App.Season.checkAndReset === "function") {
+        try {
+          await App.Season.checkAndReset();
+        } catch (err) {
+          console.warn("[main.js] 시즌 체크 실패(기존 로컬 데이터 유지하고 계속 진행):", err);
+        }
+      }
+      boot();
+    })();
+    return bootPromise;
   };
 
   function start() {
