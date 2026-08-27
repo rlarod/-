@@ -55,7 +55,17 @@ function boot(opts) {
     "js/position-table-extra.js",
     "js/limit-close.js",
   ];
-  for (const f of files) {
+  /* opts.extra — 기본 목록 뒤, init() 전에 더 태울 파일들. (2026-08-27 추가)
+     왜 필요한가: tests/symbol-switch-unbuilt.test.js 가 js/trading.js 만 태우고
+     js/symbol-guard.js 를 안 읽는 바람에, 안전장치가 라이브에 들어온 뒤에도
+     "아직 없다" 는 옛 기준이 55건 전부 조용히 통과했습니다(커밋 9622e15·3bce232).
+     js/symbol-guard.js 는 js/trading.js 가 price:update 를 구독하기 전에
+     App.Bus.on 을 감싸야 해서, 반드시 init() 호출 전에 태워야 합니다
+     (index.html 도 symbol-guard 1196행 → trading 1197행 순서입니다).
+     ⚠ opts.extra 를 안 주면 예전과 완전히 같습니다. 다른 테스트에 영향 없음. */
+  const extra = Array.isArray(opts.extra) ? opts.extra : [];
+
+  for (const f of files.concat(extra)) {
     const src = fs.readFileSync(path.join(REPO, f), "utf8");
     try {
       win.eval(src);

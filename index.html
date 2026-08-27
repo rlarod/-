@@ -1226,6 +1226,11 @@
 <!-- 이모지 제거 — 수정 금지 파일(board/chat/leaderboard/season)이 그린 이모지만
      그린 뒤에 글자로 바꿉니다. 원본은 한 글자도 안 고칩니다. -->
 <script src="js/no-emoji.js"></script>
+<!-- 종목이 바뀔 때 차트가 이전 종목 값을 안 남기게 하는 안전장치 (chart.js·api.js 무수정).
+     symbol:change 를 쏘지 않습니다 — 받는 쪽만 준비합니다(쏘는 것은 3·4번 작업).
+     App.Bus 구독을 여기서 먼저 걸어야 chart.js 의 loadHistory 보다 앞서 비웁니다.
+     이 한 줄을 지우면 완전히 원래대로 돌아갑니다. -->
+<script src="js/chart-symbol-switch.js"></script>
 <!-- 차트 1단계 — 청산가 / 미체결 지정가 주문 가로선 (chart.js 무수정).
      App.ChartFont.getCharts() 로 차트를 받아 전용 시리즈에 선만 얹습니다. -->
 <script src="js/chart-position-lines.js"></script>
