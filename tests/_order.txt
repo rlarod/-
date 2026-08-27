@@ -87,6 +87,7 @@ tests/docs-staleness.test.js
 tests/notices.test.js
 tests/chart-indicators.test.js
 tests/chart-drawings.test.js
+tests/chart-chip-viewport-seal.test.js
 tests/sql-on-conflict-guard.test.js
 tests/item-recharge-total-guard.test.js
 tests/guest-balance-leak.test.js
@@ -135,3 +136,5 @@ tests/funding-symbol-stamp.test.js
 tests/orderbook-click-order-seal.test.js
 tests/supabase-client-seal.test.js
 tests/funding-qty-symbol.test.js
+tests/interval-native-truth.test.js
+tests/leverage-engine-cap.test.js

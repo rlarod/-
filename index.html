@@ -1280,7 +1280,11 @@
      supabase-sync.js 76·107·146 행의 symbol:"BTCUSDT" 하드코딩을, client 객체의
      from 을 바꿔치기해 positions·trades·orders 세 표에서만 행 단위로 고쳐 씁니다.
      로그인 복원 때 auth.js 가 버리던 종목도 select 응답에서 받아 도장으로 되살립니다.
-     종목 전환은 열지 않습니다. 지금은 BTCUSDT 뿐이라 나가는 값이 그대로입니다.
+     ⚠ 2026-08-28 주석 갱신 — 코드는 한 글자도 안 바꿨습니다.
+     예전 주석은 "종목 전환은 열지 않습니다. 지금은 BTCUSDT 뿐" 이었는데,
+     2026-08-27 에 종목이 넷(비트코인·나스닥·삼성전자·SK하이닉스)이 되고
+     4번 관문(js/symbol-stream-switch.js)에서 전환이 열렸습니다.
+     그래서 이 다리가 찍는 도장도 이제 종목마다 실제로 달라집니다.
      symbol-guard.js 뒤여야 합니다(도장을 먼저 찍어야 함). 이 한 줄만 지우면 원래대로. -->
 <script src="js/symbol-sync-bridge.js"></script>
 <!-- 펀딩 정산 내역 "수량" 칸이 종목을 안 보던 것 (js/ui.js:599 무수정).

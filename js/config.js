@@ -34,10 +34,29 @@ App.Config = (function () {
   }
 
   // 실제 거래소처럼 초 단위 ~ 일봉까지 지원합니다.
-  // native: Binance가 공식 kline 스트림/REST로 직접 제공하는 간격 (1s, 1m, 5m, 15m, 1h, 4h, 1d)
-  // 비-native(5s, 15s)는 실제 체결가를 직접 그 시간 단위로 묶어서 구성합니다(가짜 데이터 아님).
+  // native: Binance 선물(fapi/fstream)이 공식 kline 스트림/REST로 직접 제공하는 간격
+  //         (1m, 5m, 15m, 1h, 4h, 1d)
+  // 비-native(1s, 5s, 15s)는 실제 체결가를 직접 그 시간 단위로 묶어서 구성합니다(가짜 데이터 아님).
+  //
+  // ── 2026-08-28 정정: 1s 는 native 가 아닙니다 (실측) ──────────────────
+  // 예전에는 1s 도 native: true 였습니다. 사실이 아니었습니다.
+  //   REST  GET /fapi/v1/klines?symbol=BTCUSDT&interval=1s
+  //         → 400 {"code":-1120,"msg":"Invalid interval."}
+  //   WS    btcusdt@kline_1s → 15초 동안 kline 0건
+  //         (같은 연결의 @ticker 는 같은 15초에 8건 정상 · 연결 오류·종료 없음)
+  // 바이낸스는 없는 스트림 이름을 받아도 오류를 내지 않고 연결을 유지합니다.
+  // 그래서 native: true 로 두면 1s 를 골랐을 때 kline 이 한 건도 안 오는데 아무
+  // 표시가 없고, js/trade-stream-fix.js 는 "native 니까 websocket.js 가 하겠지"
+  // 하고 빠져나가 합성 봉도 안 만듭니다 → price:update 0회 → 손익·강제청산·
+  // TP/SL·지정가 체결이 조용히 멈춥니다(TL-004 와 같은 고장).
+  // 1s 는 5s/15s 와 똑같이 체결을 묶어서 만드는 것이 맞습니다.
+  //
+  // ⚠ 이 값은 버튼을 되살리지 않습니다. 1s/5s/15s 버튼은 style.css 가 가리고
+  //   js/interval-guard.js 가 1m 으로 되돌립니다(둘 다 그대로 둡니다).
+  //   지금 눈에 보이는 동작은 바뀌지 않고, 나중에 그 자물쇠를 풀 때 1s 가
+  //   조용히 멈추지 않도록 사실만 미리 맞춰 두는 것입니다.
   const INTERVALS = [
-    { value: "1s", label: "1초", seconds: 1, native: true },
+    { value: "1s", label: "1초", seconds: 1, native: false },
     { value: "5s", label: "5초", seconds: 5, native: false },
     { value: "15s", label: "15초", seconds: 15, native: false },
     { value: "1m", label: "1분", seconds: 60, native: true },
