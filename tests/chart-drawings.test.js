@@ -134,8 +134,8 @@ const M = runModule();
 
   const ready = M.TOOLS.ready;
   const readyLeft = left.filter((t) => t.ready).map((t) => t.k).sort().join(",");
-  ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트 넷뿐",
-    readyLeft === "cursor,fib,hline,ruler,text,trend", readyLeft);
+  ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트·피보나치·자·돋보기 일곱",
+    readyLeft === "cursor,fib,hline,ruler,text,trend,zoom", readyLeft);
 
   /* 준비중이라고 그린 것은 실제로도 고를 수 없어야 합니다 */
   const lying = left.filter((t) => !t.ready && ready[t.k]);
@@ -263,6 +263,42 @@ const M = runModule();
   ok("두 점으로 만드는 도구는 추세선·피보나치·자 셋이다",
     Object.keys(M.TOOLS.twoPoint).sort().join(",") === "fib,ruler,trend",
     Object.keys(M.TOOLS.twoPoint).sort().join(","));
+}
+
+/* ---------- 7-1) 돋보기 (2026-08-27) ---------- */
+{
+  ok("두 번 톡 하는 도구는 추세선·피보나치·자·돋보기 넷이다",
+    Object.keys(M.TOOLS.twoTap).sort().join(",") === "fib,ruler,trend,zoom",
+    Object.keys(M.TOOLS.twoTap).sort().join(","));
+
+  /* 돋보기는 그림이 아닙니다 — 저장에 남으면 새로고침 때 유령이 생깁니다 */
+  ok("돋보기는 저장되는 그림(twoPoint)이 아니다", !M.TOOLS.twoPoint.zoom);
+
+  ok("돋보기를 고를 수 있다", (M.setTool("zoom"), M.getTool() === "zoom"), M.getTool());
+  M.setTool("cursor");
+
+  ok("확대 되돌리기 칸은 처음에 비어 있다", M.getZoomUndoDepth() === 0, String(M.getZoomUndoDepth()));
+  ok("되돌릴 것이 없으면 false 를 돌려준다 (오류를 내지 않습니다)", M.zoomBack() === false);
+  ok("너무 좁게 찍은 것은 확대하지 않는다 (최소 봉 수가 정해져 있다)",
+    typeof M.ZOOM_MIN_BARS === "number" && M.ZOOM_MIN_BARS >= 2, String(M.ZOOM_MIN_BARS));
+  ok("되돌리기 칸은 무한정 쌓이지 않는다", M.ZOOM_UNDO_MAX > 0 && M.ZOOM_UNDO_MAX <= 50, String(M.ZOOM_UNDO_MAX));
+
+  /* 차트가 없을 때(테스트 환경) 불러도 조용히 실패해야 합니다 */
+  ok("차트가 없으면 확대는 조용히 실패한다", M.zoomTo(0, 100000) === false);
+
+  /* 확정 팔레트 밖의 색을 새로 만들지 않았는지 */
+  ok("확대 칩 CSS 가 있다", /tl-zoom-chip{/.test(SRC));
+  /* 칩은 화면(viewport) 기준이어야 합니다 — 2026-08-27 fx 목록에서 났던 일
+     (차트 칸이 화면보다 길어서 칸 기준으로 잡으면 폰에서 화면 밖으로 나갑니다) */
+  ok("칩·알림줄은 position:fixed 로 화면 기준으로 잡는다",
+    /.tl-zoom-chip{position:fixed/.test(SRC) &&
+    /.tl-draw-chip{position:fixed/.test(SRC) &&
+    /.tl-draw-toast{position:fixed/.test(SRC));
+  ok("하단 매수·매도 바를 같이 재고, 없는 폭(1920·768)도 견딘다",
+    /tl-order-bar/.test(SRC) && /display === "none"/.test(SRC));
+  ok("스크롤·크기변경 때 칩을 다시 잡는다",
+    SRC.indexOf(String.fromCharCode(34) + "scroll" + String.fromCharCode(34) + ", placeSoon") !== -1 &&
+    SRC.indexOf("placeSoon()") !== -1);
 }
 
 /* ---------- 8) 화면이 없으면 아무것도 안 만든다 ---------- */

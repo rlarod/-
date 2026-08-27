@@ -120,6 +120,11 @@ tests/order-lock-notice-seal.test.js
 tests/limit-close-symbol-seal.test.js
 tests/seed-recharge-guard.test.js
 tests/html-assets-tracked.test.js
+tests/docs-sql-tracked.test.js
+tests/orderbook-mark-price-seal.test.js
+tests/currency-toggle-seal.test.js
+tests/chart-symbol-switch-seal.test.js
+tests/trades-fit-seal.test.js
 tests/forced-liquidation-wipeout-seal.test.js
 tests/order-sheet-mobile-seal.test.js
 tests/stale-notice-visible.test.js
@@ -127,3 +132,4 @@ tests/stale-market-price-display.test.js
 tests/funding-symbol-stamp.test.js
 tests/orderbook-click-order-seal.test.js
 tests/supabase-client-seal.test.js
+tests/funding-qty-symbol.test.js

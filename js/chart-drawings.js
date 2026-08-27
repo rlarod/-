@@ -25,8 +25,15 @@
  *   지표 계산·그리기는 이미 다 되어 있었는데 켜는 자리가 차트 왼쪽 위 작은
  *   글자 줄 하나뿐이었습니다. 목록은 js/chart-indicator-menu.js 가 만듭니다.
  *
- * 아직 자리만 잡아 둔 것 (8개)
- *   세로 막대 — 파동 / 여러선 / 브러시 / 표정 / 돋보기
+ * 4차(2026-08-27)에서 연 것 — 돋보기 (세로 막대)
+ *   두 점을 톡 찍으면 그 구간만 보이게 확대합니다. 되돌리기·전체 버튼이
+ *   차트 오른쪽 아래에 나옵니다(확대한 적이 있을 때만).
+ *   되돌리려면 — LEFT_TOOLS 의 zoom ready 를 false, READY_TOOLS 와 TWO_TAP 에서
+ *   zoom 을 빼고, tests/chart-toolbar-seal.test.js 의 세로 준비중 4 -> 5,
+ *   tests/chart-drawings.test.js 의 readyLeft 에서 ,zoom 을 지웁니다.
+ *
+ * 아직 자리만 잡아 둔 것 (7개)
+ *   세로 막대 — 파동 / 여러선 / 브러시 / 표정
  *   가로 막대 — 봉 종류 / 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
@@ -158,7 +165,9 @@ App.ChartDrawings = (function () {
     { k: "face", icon: "tlc-i-face", label: "표정", ready: false },
     { k: "sep3", sep: true },
     { k: "ruler", icon: "tlc-i-ruler", label: "자 (두 점 사이 측정)", ready: true },
-    { k: "zoom", icon: "tlc-i-zoom", label: "돋보기", ready: false }
+    /* 4차(2026-08-27) — 돋보기를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
+       (같이 되돌릴 것 — READY_TOOLS 의 zoom, TWO_TAP 의 zoom) */
+    { k: "zoom", icon: "tlc-i-zoom", label: "돋보기 (두 점 사이 확대)", ready: true }
   ];
 
   var TOP_TOOLS = [
@@ -176,10 +185,15 @@ App.ChartDrawings = (function () {
   ];
 
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
-  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1 };
+  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1 };
 
-  /* 두 점을 찍어 만드는 도구 — 한 번 찍고 두 번째에 완성됩니다 */
+  /* 두 점을 찍어 "그림으로 남는" 도구 — 저장되고 나중에 다시 그려집니다 */
   var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
+
+  /* 두 번 톡 해서 쓰는 도구 전부 (미리보기·취소가 같은 방식으로 돕니다).
+     돋보기는 그림으로 남지 않아서 TWO_POINT 에는 넣지 않았습니다 —
+     찍고 나면 화면만 확대되고 저장에는 아무것도 안 들어갑니다. */
+  var TWO_TAP = { trend: 1, fib: 1, ruler: 1, zoom: 1 };
 
   /* 피보나치 되돌림 눈금 — 바이낸스 선물(트레이딩뷰 모드) 기본값 그대로입니다.
      2026-08-26 실측(binance.com/en/futures/BTCUSDT, 1440px, Trading View 모드):
@@ -217,6 +231,9 @@ App.ChartDrawings = (function () {
 
   /* 시간축 환산에 쓰는 정보 — 그릴 것이 있을 때만 갱신합니다 */
   var meta = { first: null, last: null, count: 0, bar: 60, at: 0 };
+
+  /* 캔들 판의 높이 — 돋보기 띠를 위아래 끝까지 그리는 데 씁니다 */
+  var paneH = 0;
 
   /* 성능 측정 — App.ChartDrawings.getPerf() */
   var perf = { draws: 0, skipped: 0, totalMs: 0, maxMs: 0, shapes: 0 };
@@ -614,6 +631,37 @@ App.ChartDrawings = (function () {
     }
   }
 
+  /* ---------------- 돋보기 미리보기 ----------------
+   * 찍은 두 시각 사이를 세로 띠로 덮습니다. 가로(시간)만 확대되기 때문에
+   * 상자 대신 띠로 그립니다 — 세로로 자른 것처럼 보이면 "위아래도 잘린다"고
+   * 오해합니다. 가격 눈금은 라이브러리가 그 구간에 맞춰 알아서 다시 잡습니다
+   * (js/chart.js 는 autoScale 을 끄지 않았습니다).
+   * 바이낸스(트레이딩뷰 모드) 돋보기는 끌어서 네모를 그리는 방식인데, 우리는
+   * 끌기를 차트 이동에 쓰고 있어서 다른 두 점 도구와 같이 "톡 두 번" 입니다.
+   * ------------------------------------------------------------------- */
+  function drawZoomBand(ctx, s) {
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    if (x1 === null || x2 === null) return;
+    var l = Math.min(x1, x2);
+    var r = Math.max(x1, x2);
+    var h = paneH || 0;
+    ctx.fillStyle = FILL_DRAW;
+    ctx.fillRect(l, 0, r - l, h);
+    ctx.strokeStyle = COLOR_DRAW;
+    ctx.lineWidth = LINE_WIDTH;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(l + 0.5, 0);
+    ctx.lineTo(l + 0.5, h);
+    ctx.moveTo(r - 0.5, 0);
+    ctx.lineTo(r - 0.5, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    var bars = meta.bar ? Math.abs(Math.round((s.t2 - s.t1) / meta.bar)) : 0;
+    if (bars > 0) chipText(ctx, Math.round((l + r) / 2), 20, [bars + "봉"], true);
+  }
+
   /* ---------------- 그림 하나 ---------------- */
   function drawOne(ctx, s, on, preview) {
     var color = on ? COLOR_SELECTED : COLOR_DRAW;
@@ -662,6 +710,10 @@ App.ChartDrawings = (function () {
       drawFib(ctx, s, on, preview);
       return;
     }
+    if (s.type === "zoom") {
+      drawZoomBand(ctx, s);
+      return;
+    }
     if (s.type === "ruler") drawRuler(ctx, s, on, preview);
   }
 
@@ -674,7 +726,7 @@ App.ChartDrawings = (function () {
     }
 
     /* 두 점 도구를 긋는 중이면 미리보기 */
-    if (pending && hover && TWO_POINT[tool]) {
+    if (pending && hover && TWO_TAP[tool]) {
       drawOne(ctx, { type: tool, t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
       var ax = timeToX(pending.t);
       var ay = priceToY(pending.p);
@@ -694,6 +746,7 @@ App.ChartDrawings = (function () {
     try {
       target.useMediaCoordinateSpace(function (scope) {
         refreshMeta(false);
+        if (scope.mediaSize && scope.mediaSize.height) paneH = scope.mediaSize.height;
         drawShapes(scope.context);
       });
     } catch (e) {
@@ -943,11 +996,19 @@ App.ChartDrawings = (function () {
     /* 추세선 · 피보나치 · 자 — 전부 두 점을 찍어 만듭니다.
        폰에서도 그대로 됩니다(톡 두 번). 손가락으로 끄는 동안은 차트가
        움직이므로, 끌기가 아니라 "톡 두 번"으로 만들게 두었습니다. */
-    if (TWO_POINT[tool]) {
+    if (TWO_TAP[tool]) {
       if (!pending) {
         pending = { t: time, p: price };
         hover = { t: time, p: price };
         repaint();
+      } else if (tool === "zoom") {
+        /* 돋보기는 그림으로 남지 않습니다 — 화면만 그 구간으로 당깁니다 */
+        var zt1 = pending.t;
+        pending = null;
+        hover = null;
+        setTool("cursor");
+        repaint();
+        zoomTo(zt1, time);
       } else {
         shapes().push({ id: newId(), type: tool, t1: pending.t, p1: pending.p, t2: time, p2: price });
         pending = null;
@@ -974,6 +1035,150 @@ App.ChartDrawings = (function () {
     if (price === null || time === null) return;
     hover = { t: time, p: price };
     repaint();
+  }
+
+  /* =====================================================================
+   * 돋보기 — 찍은 두 시각 사이만 보이게 당깁니다
+   * ---------------------------------------------------------------------
+   * 라이브러리 공개 API 두 개만 씁니다.
+   *   chart.timeScale().getVisibleLogicalRange()   지금 보이는 범위
+   *   chart.timeScale().setVisibleLogicalRange()   그 범위로 옮기기
+   * 시각(초)을 논리 번호(몇 번째 봉인가)로 바꿔 넘깁니다 — 데이터 밖(마지막 봉
+   * 오른쪽 빈 자리)을 찍어도 그대로 되기 때문입니다.
+   *
+   * 가격 눈금은 우리가 만지지 않습니다. js/chart.js 가 autoScale 을 끄지
+   * 않았기 때문에, 시간 범위를 좁히면 그 구간의 고가·저가에 맞춰 라이브러리가
+   * 알아서 위아래를 다시 잡습니다(바이낸스 차트의 auto 와 같은 동작입니다).
+   *
+   * 되돌리기 — 확대하기 직전 범위를 쌓아 둡니다(최대 10칸).
+   * "전체" 는 js/chart.js 가 과거 봉을 불러온 뒤에 하는 것과 같은
+   * fitContent() 입니다(js/chart.js:314). 처음 보던 화면으로 돌아갑니다.
+   * ===================================================================== */
+  var ZOOM_UNDO_MAX = 10;
+  var ZOOM_MIN_BARS = 3; /* 이보다 좁게 찍으면 확대하지 않고 알려만 줍니다 */
+  var zoomUndo = [];
+
+  function tScale() {
+    try {
+      return chart ? chart.timeScale() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function pushZoomUndo() {
+    var ts = tScale();
+    if (!ts || typeof ts.getVisibleLogicalRange !== "function") return;
+    var r = null;
+    try {
+      r = ts.getVisibleLogicalRange();
+    } catch (e) {
+      r = null;
+    }
+    if (!r || typeof r.from !== "number" || typeof r.to !== "number") return;
+    zoomUndo.push({ from: r.from, to: r.to });
+    if (zoomUndo.length > ZOOM_UNDO_MAX) zoomUndo.shift();
+  }
+
+  function applyLogical(from, to) {
+    var ts = tScale();
+    if (!ts || typeof ts.setVisibleLogicalRange !== "function") return false;
+    try {
+      ts.setVisibleLogicalRange({ from: from, to: to });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function zoomTo(ta, tb) {
+    refreshMeta(true);
+    if (meta.first === null || !meta.bar) {
+      toast("아직 봉이 없어 확대할 수 없습니다");
+      return false;
+    }
+    var a = (Math.min(ta, tb) - meta.first) / meta.bar;
+    var b = (Math.max(ta, tb) - meta.first) / meta.bar;
+    var bars = Math.round(b - a);
+    if (bars < ZOOM_MIN_BARS) {
+      toast("두 점을 " + ZOOM_MIN_BARS + "봉 이상 벌려 찍어주세요");
+      return false;
+    }
+    pushZoomUndo();
+    if (!applyLogical(a, b)) {
+      zoomUndo.pop();
+      toast("이 브라우저에서는 확대가 안 됩니다");
+      return false;
+    }
+    paintZoomChip();
+    toast(bars + "봉 구간으로 확대했습니다");
+    return true;
+  }
+
+  function zoomBack() {
+    var prev = zoomUndo.pop();
+    if (!prev) {
+      paintZoomChip();
+      return false;
+    }
+    applyLogical(prev.from, prev.to);
+    paintZoomChip();
+    return true;
+  }
+
+  function zoomReset() {
+    var ts = tScale();
+    zoomUndo.length = 0;
+    if (ts && typeof ts.fitContent === "function") {
+      try {
+        ts.fitContent();
+      } catch (e) {
+        /* 무시 */
+      }
+    }
+    paintZoomChip();
+    return true;
+  }
+
+  /* ---------------- 확대 되돌리기 칩 ----------------
+   * 확대한 적이 있을 때만 나옵니다. 자리는 차트 칸 오른쪽 아래 —
+   * 바이낸스(트레이딩뷰 모드)가 되돌리기(auto) 버튼을 두는 자리와 같습니다
+   * (2026-08-26 실측 shots/bnf-tv-1440.png — 시간축 바로 위, 오른쪽 끝).
+   * 왼쪽 아래는 이미 "그린 것" 칩이 쓰고 있어서 겹치지 않습니다.
+   * ------------------------------------------------------------------- */
+  function buildZoomChip() {
+    if (els.zoomChip || !wrap) return;
+    injectStyle();
+    if (!wrap.style.position) wrap.style.position = "relative";
+    var chip = document.createElement("div");
+    chip.className = "tl-zoom-chip";
+    var label = document.createElement("span");
+    label.textContent = "확대됨";
+    var b1 = document.createElement("button");
+    b1.type = "button";
+    b1.textContent = "되돌리기";
+    b1.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      zoomBack();
+    });
+    var b2 = document.createElement("button");
+    b2.type = "button";
+    b2.textContent = "전체";
+    b2.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      zoomReset();
+    });
+    chip.appendChild(label);
+    chip.appendChild(b1);
+    chip.appendChild(b2);
+    wrap.appendChild(chip);
+    els.zoomChip = chip;
+  }
+
+  function paintZoomChip() {
+    if (!els.zoomChip) return;
+    els.zoomChip.style.display = zoomUndo.length ? "flex" : "none";
+    placeSoon();
   }
 
   /* =====================================================================
@@ -1213,6 +1418,7 @@ App.ChartDrawings = (function () {
       else panel.removeAttribute("data-tlc-full");
     }
     paintButtons();
+    placeSoon();
   }
 
   function exitNativeFull() {
@@ -1410,7 +1616,7 @@ App.ChartDrawings = (function () {
   function injectStyle() {
     if (document.getElementById("chart-drawings-style")) return;
     var css =
-      ".tl-draw-chip{position:absolute;left:8px;bottom:28px;z-index:6;display:none;align-items:center;" +
+      ".tl-draw-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
       "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
       ".tl-draw-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
@@ -1418,7 +1624,14 @@ App.ChartDrawings = (function () {
       ".tl-draw-chip button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-draw-chip button[data-dim=1]{color:" + C_MUTED + ";}" +
       ".tl-draw-chip button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
-      ".tl-draw-toast{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:9;" +
+      /* 확대 되돌리기 칩 — "그린 것" 칩과 같은 생김새, 자리만 오른쪽 아래 */
+      ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;" +
+      "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
+      "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
+      ".tl-zoom-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
+      "border-radius:5px;font-size:11px;line-height:1.6;padding:1px 7px;cursor:pointer;font-family:inherit;}" +
+      ".tl-zoom-chip button:hover{border-color:" + C_MUTED + ";}" +
+      ".tl-draw-toast{position:fixed;left:0;top:0;z-index:9;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";border-radius:6px;" +
       "padding:3px 10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
@@ -1433,6 +1646,127 @@ App.ChartDrawings = (function () {
     st.id = "chart-drawings-style";
     st.textContent = css;
     (document.head || document.documentElement).appendChild(st);
+  }
+
+  /* =====================================================================
+   * 칩·알림줄 자리 잡기 — 화면(viewport) 기준입니다
+   * ---------------------------------------------------------------------
+   * 2026-08-27 fx 목록에서 났던 것과 같은 실수를 막습니다.
+   * 차트 칸은 폰에서 화면보다 훨씬 깁니다. 360x800 실측 —
+   *   .chart-wrap 682~1242 (560px), 화면 800, 하단 매수/매도 바 위끝 727
+   *   → 칸 오른쪽 아래(bottom:28px)에 붙이면 화면 밖 1184px 에서 열립니다.
+   * 그래서 칸 rect 와 화면을 겹쳐 "실제로 보이는 네모" 를 구하고 그 안에만
+   * 붙입니다. 보이는 데가 없으면 아예 숨깁니다(안 보이는 것을 그리지 않습니다).
+   *
+   * 하단 매수/매도 바(.tl-order-bar)는 폰에서만 나옵니다(디자인팀 CSS 의
+   * @media max-width:700px). 1920·768 에서는 아예 없어서, 있는지부터 보고
+   * display 도 확인한 뒤에만 셉니다. 전체화면일 때는 그 바가 화면에 안
+   * 그려지므로 세지 않습니다.
+   * ===================================================================== */
+  var CHIP_EDGE = 8;
+
+  function vpW() {
+    return window.innerWidth || document.documentElement.clientWidth || 0;
+  }
+  function vpH() {
+    return window.innerHeight || document.documentElement.clientHeight || 0;
+  }
+
+  function chipFloorY() {
+    var lim = vpH() - CHIP_EDGE;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim; /* 1920·768 에는 없습니다 */
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - CHIP_EDGE < lim) lim = r.top - CHIP_EDGE;
+    return lim;
+  }
+
+  /** 차트 칸에서 지금 화면에 실제로 보이는 네모. 없으면 null */
+  function visibleBox() {
+    if (!wrap || !wrap.getBoundingClientRect) return null;
+    var r = wrap.getBoundingClientRect();
+    var box = {
+      top: Math.max(r.top, CHIP_EDGE),
+      bottom: Math.min(r.bottom, chipFloorY()),
+      left: Math.max(r.left, CHIP_EDGE),
+      right: Math.min(r.right, vpW() - CHIP_EDGE)
+    };
+    if (box.bottom - box.top < 44 || box.right - box.left < 80) return null;
+    return box;
+  }
+
+  function putFixed(el, left, top) {
+    el.style.left = Math.round(left) + "px";
+    el.style.top = Math.round(top) + "px";
+  }
+
+  /* 칩 두 개 — 왼쪽 아래(그린 것) · 오른쪽 아래(확대됨).
+     좁아서 둘이 겹치면 확대 칩을 한 줄 위로 올립니다. */
+  function placeChips() {
+    var box = visibleBox();
+    /* 보이는 것만 자리를 잡습니다. display 를 직접 "flex" 로 켠 것만 셉니다
+       (아직 한 번도 안 그린 칩은 style.display 가 빈 문자열입니다) */
+    var a = els.chip && els.chip.style.display === "flex" ? els.chip : null;
+    var b = els.zoomChip && els.zoomChip.style.display === "flex" ? els.zoomChip : null;
+    if (!box) {
+      if (a) a.style.visibility = "hidden";
+      if (b) b.style.visibility = "hidden";
+      return;
+    }
+    var baseY = box.bottom - CHIP_EDGE;
+    if (a) {
+      a.style.visibility = "visible";
+      putFixed(a, box.left + CHIP_EDGE, baseY - a.offsetHeight);
+    }
+    if (b) {
+      b.style.visibility = "visible";
+      var bw = b.offsetWidth;
+      var bx = box.right - CHIP_EDGE - bw;
+      var by = baseY - b.offsetHeight;
+      if (a && bx < box.left + CHIP_EDGE + a.offsetWidth + 6) by -= a.offsetHeight + 6;
+      if (bx < box.left + CHIP_EDGE) bx = box.left + CHIP_EDGE;
+      if (by < box.top) by = box.top;
+      putFixed(b, bx, by);
+    }
+  }
+
+  function placeToast() {
+    if (!els.toast || els.toast.style.display !== "block") return;
+    var box = visibleBox();
+    if (!box) {
+      els.toast.style.visibility = "hidden";
+      return;
+    }
+    els.toast.style.visibility = "visible";
+    var w = els.toast.offsetWidth;
+    var x = (box.left + box.right) / 2 - w / 2;
+    if (x < box.left) x = box.left;
+    if (x + w > box.right) x = box.right - w;
+    putFixed(els.toast, x, box.top + CHIP_EDGE);
+  }
+
+  /* 화면이 움직이면 다시 잡습니다. 프레임당 한 번만 계산합니다. */
+  var placeRaf = 0;
+  function placeSoon() {
+    if (placeRaf) return;
+    if (!window.requestAnimationFrame) {
+      placeChips();
+      placeToast();
+      return;
+    }
+    placeRaf = window.requestAnimationFrame(function () {
+      placeRaf = 0;
+      placeChips();
+      placeToast();
+    });
   }
 
   /* ---------------- 지우기 칩 ----------------
@@ -1491,6 +1825,7 @@ App.ChartDrawings = (function () {
       return;
     }
     els.chip.style.display = "flex";
+    placeSoon();
     if (askingClear) {
       els.chipLabel.textContent = "정말 모두 지울까요";
       els.chipBtn1.textContent = "지우기";
@@ -1520,6 +1855,7 @@ App.ChartDrawings = (function () {
     }
     els.toast.textContent = msg;
     els.toast.style.display = "block";
+    placeToast();
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
       if (els.toast) els.toast.style.display = "none";
@@ -1628,6 +1964,10 @@ App.ChartDrawings = (function () {
     pending = null;
     hover = null;
     askingClear = false;
+    /* 봉 간격이 바뀌면 논리 번호의 뜻이 달라집니다(1분봉 300번째 != 1일봉 300번째).
+       js/chart.js 가 새로 불러온 뒤 fitContent() 를 하므로 기록만 비웁니다. */
+    zoomUndo.length = 0;
+    paintZoomChip();
     clearPriceLines();
     meta.at = 0;
     refreshMeta(true);
@@ -1647,6 +1987,7 @@ App.ChartDrawings = (function () {
     if (!ensureSeries()) return false;
     if (!restructure()) return false;
     buildChip();
+    buildZoomChip();
     started = true;
 
     try {
@@ -1669,7 +2010,10 @@ App.ChartDrawings = (function () {
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", function () {
       if (!store || !store.ui || typeof store.ui.rail !== "boolean") applyRail();
+      placeSoon();
     });
+    /* position:fixed 라 페이지가 움직이면 칩만 따로 남습니다 — 같이 옮깁니다 */
+    window.addEventListener("scroll", placeSoon, true);
 
     document.addEventListener("fullscreenchange", onFullChange);
     document.addEventListener("webkitfullscreenchange", onFullChange);
@@ -1719,6 +2063,14 @@ App.ChartDrawings = (function () {
       return fullOn;
     },
     saveImage: saveImage,
+    zoomTo: zoomTo,
+    zoomBack: zoomBack,
+    zoomReset: zoomReset,
+    getZoomUndoDepth: function () {
+      return zoomUndo.length;
+    },
+    ZOOM_MIN_BARS: ZOOM_MIN_BARS,
+    ZOOM_UNDO_MAX: ZOOM_UNDO_MAX,
     /* 확인용 */
     getDrawings: function () {
       return { hlines: hlines().slice(), shapes: shapes().slice() };
@@ -1749,7 +2101,7 @@ App.ChartDrawings = (function () {
     LABEL_GAP: LABEL_GAP,
     fmtSpan: fmtSpan,
     FIB_LEVELS: FIB_LEVELS,
-    TOOLS: { left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS, twoPoint: TWO_POINT },
+    TOOLS: { left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS, twoPoint: TWO_POINT, twoTap: TWO_TAP },
     COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED },
     STORAGE_KEY: STORAGE_KEY
   };

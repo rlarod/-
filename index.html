@@ -1283,6 +1283,13 @@
      종목 전환은 열지 않습니다. 지금은 BTCUSDT 뿐이라 나가는 값이 그대로입니다.
      symbol-guard.js 뒤여야 합니다(도장을 먼저 찍어야 함). 이 한 줄만 지우면 원래대로. -->
 <script src="js/symbol-sync-bridge.js"></script>
+<!-- 펀딩 정산 내역 "수량" 칸이 종목을 안 보던 것 (js/ui.js:599 무수정).
+     ui.js 는 formatQty 에 종목을 안 넘겨서 "지금 활성 종목" 단위로 떨어집니다.
+     symbol-sync-bridge.js 가 찍어 둔 f.symbol 을 읽어 그린 뒤에 덮어씁니다.
+     도장이 없는 옛 행은 단위를 비웁니다(펀딩은 서버 원본이 없어 추측이 됩니다).
+     symbol-sync-bridge.js 뒤여야 합니다(도장이 먼저 찍혀야 함).
+     이 한 줄만 지우면 원래대로 돌아갑니다. -->
+<script src="js/funding-qty-symbol.js"></script>
 <!-- 종목 추가 4번(마지막) 관문 — 종목을 바꾸면 시세도 따라옵니다.
      websocket.js·orderbook.js·chart.js·config.js 무수정. 세 가지를 같이 씁니다.
      ① App.Config.getActiveSymbol 감싸기(세 소켓 주소가 전부 여기서 나옵니다)

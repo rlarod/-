@@ -371,8 +371,8 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
  * 검사를 지우지 마세요 — "준비중이라 써 놓고 실제로 열리는" 모순을 막는 그물입니다. */
-ok("세로 막대 준비중이 5개다 (2026-08-26 fib·ruler 를 열어 7 -> 5)",
-  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 5,
+ok("세로 막대 준비중이 4개다 (2026-08-27 돋보기를 열어 5 -> 4)",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 4,
   "지금 " + railBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
 ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
   barBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
