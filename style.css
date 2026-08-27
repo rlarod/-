@@ -1386,6 +1386,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .ami-price-step{
   display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--ami-line);padding-left:9px;margin-left:3px;
 }
+/* ⚠ 밝은 배경 3곳 — 브라우저로 재서 "정상" 으로 확정했습니다 (2026-08-27).
+   규칙만 읽으면 다크 화면에 흰 배경이 세 군데 있는 것처럼 보이지만, 실제로
+   칠해지는 것은 아래 +/- 버튼 하나뿐이고 글자가 어두워서 문제가 없습니다.
+   1440 · 지정가 모드 · 다크 실측 (배경 대비 글자):
+     .ami-price-step button      #F4F5F7 + 글자 #6B727F  4.44:1  ← 어두운 글자, 정상
+     .ami-market-price-field     실제 배경 투명(#FAFBFC 는 2689행
+                                 html[data-theme="dark"] 규칙에 덮임) 17.71:1
+     .ami-symbol-badge           실제 배경 투명(.on 이 background:none) 6.31:1
+   ("준비중" 배지처럼 .on 이 없는 경우에만 #F2F4F7 이 칠해지는데,
+    그때 글자는 --ami-label #78808E 라 역시 어두운 글자입니다.)
+   즉 2026-08-27 채팅 전송 버튼(밝은 배경 + 흰 글자)과는 다른 경우입니다.
+   다시 재보지 마세요 — 이미 브라우저로 확인한 값입니다. */
 .amitalk-order .ami-price-step button{
   width:26px;height:18px;line-height:15px;padding:0;font-size:17.5px;cursor:pointer;
   background:#F4F5F7;border:1px solid var(--ami-line);border-radius:3px;color:#6B727F;
@@ -2318,7 +2330,22 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
  * (숨겨진 요소도 JS의 .click()은 정상 동작합니다.)
  * 이 한 줄만 지우면 원래대로 돌아옵니다.
  * ========================================================================= */
-.top-banner-right{display:none;}
+/* ── 2026-08-27 디자인팀 — 통화 전환(USDT / 원) 버튼만 되돌립니다 ──────────
+   위 8fcb903 의 목적(헤더 우측을 치워 공지 줄에 폭을 주는 것)은 그대로입니다.
+   통화 전환 버튼은 js/ui.js:224 가 .ws-status 옆에 만들어 넣기 때문에 하필
+   이 상자 안에 생겨서 같이 사라졌던 것입니다. 8fcb903 커밋 메시지 마지막 줄에
+   그 사실이 이미 적혀 있습니다 — "필요하면 통화 버튼만 다시 노출할 수 있습니다".
+   통화 설정은 브라우저에 저장되므로(js/config.js), 8/17 이전에 원화로 바꿔 둔
+   회원은 되돌릴 버튼이 없어 원화에 갇힙니다. 그래서 버튼만 되살립니다.
+   연결 상태·닉네임·로그아웃은 계속 화면에 나오지 않습니다.
+
+   되돌리는 법 — 아래 세 줄을 `.top-banner-right{display:none;}` 한 줄로
+   되돌리면 8/17~8/27 상태(전부 숨김)가 됩니다.
+   ※ 규칙을 새로 덧붙이지 않고 이 자리에서 고칩니다 —
+     tests/css-duplicate-rules.test.js 가 같은 선택자가 세 벌이 되는 것을 잡습니다. */
+.top-banner-right{display:flex;}
+.top-banner-right > *{display:none;}                 /* 안쪽은 전부 계속 숨김 */
+.top-banner-right > #currency-toggle{display:flex;}  /* 통화 버튼만 되살림 */
 /* 우측이 빠진 만큼 헤더 공지 줄이 남은 폭을 씁니다 */
 .top-banner-inner > .header-notice{margin-right:0;}
 
@@ -3009,6 +3036,9 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   font-size:13px;font-weight:700;padding:3px 7px;border-radius:3px;
   background:var(--surface3);color:var(--text-faint);
 }
+/* ⚠ 대비 3.46:1 — 일부러 이대로 둡니다 (2026-08-27 본부장 결정).
+   빨강 배지 + 흰 글자는 업계 표준이고, #F0506E 는 확정 팔레트의 하락색입니다.
+   다시 재보지 마세요 — 이미 재서 "그대로 둔다" 로 정한 값입니다. */
 .hd-badge-hot,.hd-badge-sale,.hd-badge-soon{background:var(--red);color:#fff;}
 .hd-badge-limited{background:var(--gold);color:var(--bg);}
 .hd-badge-out{background:var(--surface3);color:var(--text-faint);}
@@ -3456,6 +3486,10 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .social-login-btn:hover{filter:brightness(0.96);}
 .social-login-btn:active{transform:translateY(1px);}
 .kakao-login-btn{background:#FEE500;color:#191600;}
+/* ⚠ 대비 2.25:1 — 일부러 이대로 둡니다 (2026-08-27 본부장 결정).
+   네이버 공식 로그인 버튼 규격(초록 #03C75A + 흰 글자)입니다.
+   브랜드 규격을 어기면 나중에 로그인 연동 심사에서 문제가 될 수 있습니다.
+   다시 재보지 마세요 — 이미 재서 "그대로 둔다" 로 정한 값입니다. */
 .naver-login-btn{background:#03C75A;color:#fff;}
 .social-login-icon{display:flex;align-items:center;}
 .social-login-err{min-height:0;color:var(--red);font-size:13px;margin-top:6px;text-align:center;}
@@ -4907,3 +4941,99 @@ html[data-theme="dark"] .board-page-btn.active{
 @media (max-width:900px){
   .chart-panel .chart-wrap .tl-ind-bar{right:82px;}
 }
+
+/* =========================================================================
+ * 통화 전환(USDT / 원) 버튼을 화면에 되돌립니다        2026-08-27 디자인팀
+ * =========================================================================
+ * 무슨 일이 있었나 — 2026-08-17 커밋 8fcb903 이 헤더 공지 줄에 폭을 주려고
+ * 헤더 우측 덩어리(.top-banner-right)를 통째로 감췄습니다. 통화 전환 버튼은
+ * js/ui.js:224 가 .ws-status 옆에 만들어 넣기 때문에 **하필 그 상자 안**에
+ * 생깁니다. 그래서 같이 사라졌습니다.
+ * 그 커밋을 쓴 사람도 알고 있었고 메시지 마지막 줄에 이렇게 적어 뒀습니다 —
+ *   "참고: 통화 전환(USDT/KRW) 버튼도 함께 숨겨져 사용자가 KRW 표시로 바꿀 수
+ *    없습니다. 필요하면 통화 버튼만 다시 노출할 수 있습니다."
+ * 즉 통화 전환을 없애려던 것이 아니라 딸려 들어간 것입니다.
+ *
+ * 왜 지금 되살리나 — 통화 설정은 브라우저에 저장됩니다(js/config.js).
+ * 8/17 이전에 원화로 바꿔 둔 회원은 **원화에 갇힌 채 돌아올 버튼이 없습니다.**
+ *
+ * 어떻게 — 8fcb903 의 목적(헤더 우측 정리)은 그대로 지킵니다.
+ * 상자만 다시 열고, 안에 있는 것은 전부 계속 감춘 뒤 통화 버튼 하나만 켭니다.
+ * 연결 상태·닉네임·로그아웃은 여전히 화면에 나오지 않습니다.
+ *
+ * ⚠ 보이게 하는 규칙 세 줄은 여기가 아니라 **2334행(8fcb903 이 넣은 자리)** 에
+ *   있습니다. 규칙을 새로 덧붙이면 .top-banner-right 가 세 벌이 되어
+ *   tests/css-duplicate-rules.test.js 가 실패합니다. 그래서 그 자리에서 고쳤습니다.
+ *   여기에는 색·간격만 둡니다.
+ *
+ * 되돌리는 법 — 2334~2336행을 `.top-banner-right{display:none;}` 한 줄로
+ * 되돌리고, 아래 #currency-toggle 두 규칙을 지우면 됩니다.
+ * ========================================================================= */
+
+/* 헤더에서 통화 전환은 "설정"이지 "지금 중요한 것"이 아닙니다.
+   차트 시간봉과 같은 .interval-btn 클래스라 기본값이 골드인데, 헤더에
+   색이 하나 더 늘어나므로 여기서만 무채색으로 낮춥니다.
+   (#currency-toggle 안쪽만 좁혀 잡아서 차트 시간봉 버튼은 그대로 골드입니다) */
+#currency-toggle{gap:2px;}
+#currency-toggle .interval-btn.active{
+  background:var(--surface2);border-color:var(--border);color:var(--text);
+}
+
+/* =========================================================================
+ * 원화 표시일 때 호가창·최근체결이 두 줄로 접히던 것              2026-08-27
+ * =========================================================================
+ * 실측 (1440 · 호가창 가격 칸)
+ *   USDT  "79,458.20"      글자 93.8px  / 칸 93.8px  / 칸높이 24px / 행 34px
+ *   원    "119,220,900원"  글자 135.3px / 칸 117px   / 칸높이 48px / 행 58px
+ *   → 칸이 117px 밖에 안 되는데 글자가 135.3px 이라 "원" 이 둘째 줄로 밀립니다.
+ *     행이 34px -> 58px 로 커져 같은 높이에 보이는 호가 줄 수가 줄어듭니다.
+ *
+ * 왜 CSS 만으로 못 골라내나 — CSS 는 칸 안의 글자가 원화인지 알 수 없습니다.
+ * js/currency-refresh.js 가 <html data-cur="KRW"> 표식만 붙여 줍니다(값 무관).
+ *
+ * 어떻게 — 원화일 때만 숫자를 줄여 한 줄에 담습니다. 실측 글자폭:
+ *   "119,220,900원"  20px 135.3  /  17px 114.6  /  16px 107.7  /  15px 100.8
+ *   1440 기준 가격 칸에 쓸 수 있는 폭이 135px 안팎이라 16px 이면 넉넉합니다.
+ * 값·자릿수·행 개수를 줄이지 않습니다. 글자 크기만 바뀝니다.
+ *
+ * 되돌리는 법 — 이 블록 전체를 지우면 다시 20px 로 돌아갑니다(두 줄로 접힘).
+ * ========================================================================= */
+html[data-cur="KRW"] .ob-row{font-size:15px;letter-spacing:-0.01em;}
+html[data-cur="KRW"] .main-grid .ob-row{font-size:16px;}
+html[data-cur="KRW"] .ob-row .ob-price,
+html[data-cur="KRW"] .ob-row .ob-qty,
+html[data-cur="KRW"] .ob-row .ob-cum{white-space:nowrap;}
+/* 호가창 한가운데 현재가(기본 24px)와 그 밑 마크가격도 원화면 길어집니다 */
+html[data-cur="KRW"] .ob-current-price{font-size:19px;white-space:nowrap;}
+html[data-cur="KRW"] .ob-mark-price-row{font-size:13px;white-space:nowrap;}
+@media (max-width:600px){
+  html[data-cur="KRW"] .ob-row{font-size:15px;}
+  html[data-cur="KRW"] .ob-current-price{font-size:18px;}
+}
+
+/* =========================================================================
+ * 비회원 마이페이지 — 자산 값 표를 화면에서 뺍니다        2026-08-27 디자인팀
+ * =========================================================================
+ * 무엇이 어긋났나 (1440 · 비로그인 실측)
+ *   "내 계정 정보 — 로그인 후 확인할 수 있습니다."   ← 안내 ①
+ *   그 아래                                          ← 안내 ②
+ *     총자산(Equity) $100,000.00 · 가용 잔고 $100,000.00
+ *     사용중 증거금 $0.00 · 미실현 손익 +$0.00 · 실현 손익(누적) +$0.00
+ *     누적 수수료 $0.00 · 누적 펀딩비 +$0.00 · TL 잔액 0 TL
+ *   한 화면에서 "못 본다" 와 "이게 당신 자산이다" 가 서로 어긋납니다.
+ *   첫 방문자는 로그인도 안 했는데 10만 달러가 있다고 읽습니다.
+ *
+ * ⚠ 남의 잔고가 새는 것이 아닙니다. 거래 엔진 기본값(100,000)이 그대로
+ *   보이는 것이고 나머지는 전부 0 입니다(점검팀 확인). 2026-08-25 의
+ *   "앞사람 잔고 유출" 과는 다른 건입니다.
+ *
+ * 어떻게 — js/login-required.js 가 비회원일 때 #mh-logout 에 붙여 주는
+ * .login-required 클래스를 그대로 씁니다. 바로 위 "계정 관리" 칸을 감추는
+ * 규칙(4556행)과 똑같은 방식이라, 새 신호를 만들지 않았습니다.
+ * 로그인하면 클래스가 떨어져 표가 곧바로 다시 보입니다 —
+ * **회원 화면은 한 픽셀도 바뀌지 않습니다.**
+ * 마크업·값·계산은 그대로입니다. 화면에서만 뺍니다.
+ *
+ * 되돌리는 법 — 아래 한 줄을 지우면 비회원에게도 다시 보입니다.
+ * ========================================================================= */
+#mypage-panel:has(#mh-logout.login-required) .mypage-grid{display:none;}
