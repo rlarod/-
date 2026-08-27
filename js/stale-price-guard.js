@@ -383,9 +383,64 @@ App.StalePriceGuard = (function () {
     box.style.cssText =
       "display:none;margin:6px 0 0;padding:7px 9px;border-radius:10px;" +
       "background:#0D1422;border:1px solid #1D273B;color:#F0B429;" +
-      "font-size:12px;line-height:1.45;";
+      "font-size:12px;line-height:1.45;z-index:2;";
     anchor.parentNode.insertBefore(box, anchor);
     return box;
+  }
+
+  /* 폰 시트에서 안내가 화면 밖에 있던 것을 고칩니다 (2026-08-27).
+   *
+   * ── 무엇이 문제였나 (실측 360x800, 회원이 매수 버튼을 화면 아래끝에
+   *    걸치도록 스크롤한 상태) ─────────────────────────────────────────
+   *     매수/매도 버튼   top 725 ~ bottom 788   ← 화면 안
+   *     안내            top 839 ~ bottom 872   ← 화면 밖 72px (1줄)
+   *                     top 839 ~ bottom 890   ← 화면 밖 90px (2줄)
+   *
+   *   버튼은 보이는데 "왜 안 눌리는지" 는 화면 밖에 있었습니다.
+   *   조용히 막지 않으려고 만든 안내가, 폰에서는 결국 조용히 막는 것과
+   *   같아져 있었습니다.
+   *
+   * ── 왜 이렇게 되나 ────────────────────────────────────────────────
+   *   .order-buttons 가 폰 시트에서 position:sticky; bottom:0 입니다
+   *   (style.css 의 [모바일 3단계-보완] 블록). 버튼만 바닥에 붙어 있고
+   *   나머지 내용은 그 뒤로 흘러갑니다. 안내는 DOM 상 버튼 다음이라
+   *   **항상 붙어 있는 버튼보다 아래**, 즉 화면 밖에 그려집니다.
+   *
+   * ── 안 되는 방법 (실측으로 걸렀습니다) ────────────────────────────
+   *   · 안내를 버튼 위로 옮기기 — 버튼이 sticky 라 위로 옮겨도 그대로
+   *     버튼 아래에 그려집니다. 실측: 버튼 725~788 인데 안내 776~807.
+   *     마크업만 흔들고 화면은 그대로입니다.
+   *   · scrollIntoView 로 데려가기 — 보이긴 하지만(실측 72~90px 이동)
+   *     회원이 보던 자리를 강제로 옮깁니다.
+   *
+   * ── 어떻게 고쳤나 ─────────────────────────────────────────────────
+   *   안내도 sticky 로 만들어 **버튼 바로 위 칸**에 붙였습니다.
+   *   버튼이 보이면 안내도 반드시 같이 보입니다. 화면이 움직이지 않고,
+   *   버튼 위치도 그대로입니다(버튼은 자기 자리에 붙어 있으므로).
+   *
+   *   버튼이 sticky 일 때만 붙입니다. 데스크톱처럼 sticky 가 아닌 곳은
+   *   지금도 잘 보이므로 예전 그대로 둡니다 — 화면 폭을 여기서 다시
+   *   세지 않고 **실제 계산된 값**을 보고 정하므로, style.css 쪽 조건이
+   *   바뀌어도 따라갑니다.
+   *
+   *   z-index 는 버튼(3)보다 낮은 2 라서 안내가 버튼을 덮지 않습니다.
+   * ---------------------------------------------------------------- */
+  function pinNotice(box) {
+    var btns = document.querySelector(".order-buttons");
+    if (!btns) return;
+    var pos = "";
+    try { pos = window.getComputedStyle(btns).position; } catch (e) { pos = ""; }
+    /* 버튼 줄의 실제 높이만큼 위로 띄웁니다(기기마다 다릅니다).
+       높이를 못 재면(0) 그냥 예전 자리에 둡니다 — 아무 숫자나 넣어
+       붙이면 어긋난 자리에 뜨는 쪽이 더 나쁩니다. */
+    var h = Math.round(btns.getBoundingClientRect().height);
+    if (pos === "sticky" && h > 0) {
+      box.style.position = "sticky";
+      box.style.bottom = h + "px";
+    } else {
+      box.style.position = "";
+      box.style.bottom = "";
+    }
   }
 
   function paint() {
@@ -400,13 +455,24 @@ App.StalePriceGuard = (function () {
       box.style.display = "none";
       return;
     }
-    /* 여러 줄이면 줄바꿈해서 보여줍니다(innerHTML 안 씁니다). */
+    /* 여러 줄이면 줄바꿈해서 보여줍니다(innerHTML 안 씁니다).
+     *
+     * 색으로 위계를 줍니다 (2026-08-27) — 문구는 한 글자도 안 바꿨습니다.
+     *   첫 줄  "왜 못 누르는지"      포인트(골드) #F0B429
+     *   그 뒤  "무엇을 지웠는지"     보조색       #838DA4
+     * 전부 골드면 360 에서 다섯 줄짜리 금색 덩어리가 되어 한 문단으로
+     * 읽힙니다. 지금은 첫 줄이 먼저 눈에 들어옵니다.
+     * 둘 다 확정 팔레트 값입니다. */
     box.textContent = "";
     for (var i = 0; i < lines.length; i++) {
       if (i > 0) box.appendChild(document.createElement("br"));
-      box.appendChild(document.createTextNode(lines[i]));
+      var span = document.createElement("span");
+      span.style.color = i === 0 ? "#F0B429" : "#838DA4";
+      span.appendChild(document.createTextNode(lines[i]));
+      box.appendChild(span);
     }
     box.style.display = "";
+    pinNotice(box);
   }
 
   /* ------------------------------------------------------------------

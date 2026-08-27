@@ -120,3 +120,6 @@ tests/limit-close-symbol-seal.test.js
 tests/seed-recharge-guard.test.js
 tests/html-assets-tracked.test.js
 tests/forced-liquidation-wipeout-seal.test.js
+tests/order-sheet-mobile-seal.test.js
+tests/stale-notice-visible.test.js
+tests/funding-symbol-stamp.test.js

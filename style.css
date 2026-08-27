@@ -908,9 +908,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .auth-input:focus{border-color:var(--gold);}
 .auth-err{font-size:20px;color:var(--red);min-height:16px;margin-bottom:10px;}
+/* 골드 배경 위에는 어두운 글자 — 확정 팔레트 규칙 (2026-08-27)
+   실측: 골드 #F0B429 위 흰 글자 = 1.86:1 로, 큰 글자 기준(3:1)도 못 넘습니다.
+   var(--bg)(다크 #0A0F1C) 로 바꾸면 10.26:1 입니다.
+   같은 이유로 아래 11곳을 함께 바꿨습니다 —
+     .auth-start-btn  .chat-send-btn  .season-reset-banner  .daily-recharge-btn
+     .board-search-row button  .hd-tab-btn.active  .hd-chip.active
+     .hd-badge-limited  .hd-buy-btn  .mk-badge-active  .multi-tab-banner .mtb-btn
+   되돌리려면 이 11곳의 color:var(--bg) 를 color:#fff 로 되돌리면 됩니다.
+   ⚠️ --gold 값 자체는 확정 팔레트라 건드리지 않았습니다. */
 .auth-start-btn{
   width:100%;padding:14px 0;border-radius:3px;border:none;background:var(--gold);
-  color:#fff;font-family:var(--sans);font-weight:800;font-size:26px;
+  color:var(--bg);font-family:var(--sans);font-weight:800;font-size:26px;
   letter-spacing:0.02em;cursor:pointer;transition:.15s;
 }
 .auth-start-btn:hover{filter:brightness(1.06);}
@@ -985,7 +994,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .chat-input:focus{border-color:var(--gold);}
 .chat-send-btn{
   flex:0 0 auto;padding:0 16px;border-radius:3px;border:none;background:var(--gold);
-  color:#fff;font-family:var(--sans);font-weight:700;font-size:22px;cursor:pointer;transition:.12s;
+  color:var(--bg);font-family:var(--sans);font-weight:700;font-size:22px;cursor:pointer;transition:.12s;
 }
 .chat-send-btn:hover{filter:brightness(1.06);}
 .chat-send-btn:disabled{background:var(--surface3);color:var(--text-faint);cursor:not-allowed;filter:none;}
@@ -1032,7 +1041,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 새 시즌 시작 안내 토스트 */
 .season-reset-banner{
   position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1200;
-  background:var(--gold);color:#fff;font-family:var(--sans);font-weight:700;font-size:22px;
+  background:var(--gold);color:var(--bg);font-family:var(--sans);font-weight:700;font-size:22px;
   padding:10px 18px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,0.12);
   transition:opacity .5s;
 }
@@ -1490,7 +1499,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .amitalk-order .ami-promo{display:flex;flex-direction:column;gap:5px;align-items:stretch;background:none !important;border:none !important;padding:0;margin:10px 0 0;}
 .daily-recharge-btn{
   width:100%;padding:11px 10px;border-radius:3px;cursor:pointer;
-  background:var(--gold);color:#fff;border:1px solid var(--gold);
+  background:var(--gold);color:var(--bg);border:1px solid var(--gold);
   font-family:var(--sans);font-size:17px;font-weight:700;transition:.12s;
 }
 .daily-recharge-btn:hover:not(:disabled){filter:brightness(1.08);}
@@ -2597,7 +2606,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   /* 폭이 반반이라 좌우 여백은 자리를 잡을 필요가 없습니다. 세로 10px 은 그대로 —
      버튼 높이(35.5px)를 바꾸지 않기 위해서입니다.
      되돌리려면 padding:10px 14px; 로, 아래 두 줄은 지우면 됩니다. */
-  padding:10px 6px;border:1px solid var(--border);border-radius:8px;cursor:pointer;
+  padding:10px 6px;border:1px solid var(--border);border-radius:3px;cursor:pointer;
   text-align:center;white-space:nowrap;
 }
 /* 밝은 배경(금색)에는 어두운 글자 — 확정 팔레트 규칙.
@@ -2833,7 +2842,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 .board-search-row input{width:min(340px,40vw);}
 .board-search-row button{
   padding:8px 18px;border-radius:3px;cursor:pointer;
-  background:var(--gold);color:#fff;border:1px solid var(--gold);
+  background:var(--gold);color:var(--bg);border:1px solid var(--gold);
   font-family:var(--sans);font-size:16px;font-weight:700;
 }
 .board-search-row button:hover{filter:brightness(1.08);}
@@ -2947,7 +2956,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   padding:11px 20px;border:1px solid var(--border);border-radius:3px;
   background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;
 }
-.hd-tab-btn.active{background:var(--gold);border-color:var(--gold);color:#fff;}
+.hd-tab-btn.active{background:var(--gold);border-color:var(--gold);color:var(--bg);}
 .hd-tab-btn:hover:not(.active){background:var(--surface2);}
 
 /* ---- 필터 ---- */
@@ -2960,7 +2969,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   padding:9px 18px;border:1px solid var(--border);border-radius:3px;
   background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;
 }
-.hd-chip.active{background:var(--gold);border-color:var(--gold);color:#fff;}
+.hd-chip.active{background:var(--gold);border-color:var(--gold);color:var(--bg);}
 .hd-chip:hover:not(.active){background:var(--surface2);}
 .hd-tools{display:flex;gap:8px;flex-wrap:wrap;}
 .hd-search{
@@ -3001,7 +3010,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
   background:var(--surface3);color:var(--text-faint);
 }
 .hd-badge-hot,.hd-badge-sale,.hd-badge-soon{background:var(--red);color:#fff;}
-.hd-badge-limited{background:var(--gold);color:#fff;}
+.hd-badge-limited{background:var(--gold);color:var(--bg);}
 .hd-badge-out{background:var(--surface3);color:var(--text-faint);}
 .hd-thumb{
   display:flex;align-items:center;justify-content:center;
@@ -3038,7 +3047,7 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 }
 .hd-buy-btn{
   flex:1;height:44px;border:1px solid var(--gold);border-radius:3px;
-  background:var(--gold);color:#fff;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;
+  background:var(--gold);color:var(--bg);font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;
 }
 .hd-buy-btn:hover:not(:disabled){filter:brightness(1.06);}
 .hd-buy-btn:disabled{
@@ -3079,7 +3088,7 @@ html[data-theme="dark"] .top-mode-row > .leverage-field-top{
 }
 .mk-badge-dur{background:var(--surface3);color:var(--text-faint);}
 .mk-badge-own{background:var(--gold-soft);color:var(--gold);}
-.mk-badge-active{background:var(--gold);color:#fff;}
+.mk-badge-active{background:var(--gold);color:var(--bg);}
 
 /* 적용 중인 효과 줄 */
 .mk-active{
@@ -3347,7 +3356,7 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .multi-tab-banner .mtb-btn{
   flex:0 0 auto;height:40px;padding:0 16px;
   border:1px solid var(--gold);border-radius:3px;
-  background:var(--gold);color:#fff;
+  background:var(--gold);color:var(--bg);
   font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
 }
 .multi-tab-banner .mtb-close{
@@ -3471,7 +3480,7 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .social-nick-sub{font-size:16px;color:var(--text-faint);text-align:center;margin:8px 0 22px;line-height:1.5;}
 .social-nick-input{
   width:100%;height:58px;padding:0 14px;box-sizing:border-box;
-  border:1px solid var(--border);border-radius:8px;
+  border:1px solid var(--border);border-radius:3px;
   background:var(--surface2);color:var(--text);
   font-family:inherit;font-size:22px;font-weight:700;text-align:center;
 }
@@ -3484,7 +3493,7 @@ html[data-theme="dark"] .menu-bar-inner::after{
 .social-nick-err{min-height:22px;margin-top:10px;color:var(--red);font-size:15px;text-align:center;}
 .social-nick-submit{
   width:100%;height:54px;margin-top:10px;
-  border:none;border-radius:8px;cursor:pointer;
+  border:none;border-radius:3px;cursor:pointer;
   background:var(--tl-blue);color:#fff;
   font-family:inherit;font-size:19px;font-weight:700;
 }
@@ -3613,14 +3622,24 @@ html[data-theme="dark"] .side-chat-panel > .page-chat-col > .panel{
 html[data-theme="dark"] .up-login-input,
 html[data-theme="dark"] .chat-input{
   background:var(--surface2);
-  border-radius:6px;
+  border-radius:3px;
 }
 
-/* 버튼 모서리도 카드와 같은 계열로 — 각진 2px 이면 둥근 카드 안에서 겉돕니다 */
+/* 버튼 모서리 3px — 사이트 규칙 (2026-08-27 통일)
+   예전에는 8px 이었습니다("각진 2px 이면 둥근 카드 안에서 겉돈다"는 이유).
+   그 사이 버튼 기준이 3px 으로 정리됐고(style.css 안 99곳이 3px),
+   tests/multi-tab.test.js · tests/leverage-guest-tl.test.js · tests/tl-hotdeal.test.js 가
+   "모서리 3px (사이트 규칙)" 을 못박고 있습니다. 8px 만 혼자 남아 있었습니다.
+   같은 이유로 아래 7곳을 함께 3px 으로 맞췄습니다 —
+     .page-right .up-currency button(8) · .social-nick-input(8) · .social-nick-submit(8)
+     다크 .up-login-input/.chat-input(6) · 다크 .up-login-submit/.social-login-btn/.chat-send-btn(8)
+     .chat-toggle-btn(8) · .tl-order-lock-btn(4)
+   카드는 그대로 10px 입니다(--card-radius). 카드·경고상자는 손대지 않았습니다.
+   되돌리려면 위 괄호 안 숫자로 각각 되돌리면 됩니다. */
 html[data-theme="dark"] .up-login-submit,
 html[data-theme="dark"] .social-login-btn,
 html[data-theme="dark"] .chat-send-btn{
-  border-radius:8px;
+  border-radius:3px;
 }
 
 /* 메뉴 바 — 밝은 파랑(#1769B3)은 딥 네이비 배경에서 혼자 튑니다.
@@ -4031,7 +4050,7 @@ html[data-theme="dark"] .board-page-btn.active{
   margin-left:auto;flex:0 0 auto;
   font:inherit;font-size:13px;font-weight:700;line-height:1;
   color:inherit;background:rgba(255,255,255,0.14);
-  border:0;border-radius:8px;padding:6px 10px;cursor:pointer;
+  border:0;border-radius:3px;padding:6px 10px;cursor:pointer;
 }
 .chat-toggle-btn:hover{background:rgba(255,255,255,0.26);}
 
@@ -4694,7 +4713,7 @@ html[data-theme="dark"] .board-page-btn.active{
 .tl-order-lock-btn{
   width:100%;margin-top:12px;
   padding:9px 10px;
-  border:1px solid var(--gold);border-radius:4px;
+  border:1px solid var(--gold);border-radius:3px;
   background:var(--gold);
   /* 밝은 배경에는 어두운 글자 — 카카오 버튼과 같은 원칙 */
   color:#191600;

@@ -246,6 +246,76 @@ console.log("\n  (6) SQL 안전 규칙");
     /not exists \(select 1 from public\.recharge_total_backfill_log/.test(read(FIX_SQL)));
 }
 
+/* ===================================================================== */
+console.log("\n  (7) 지갑 줄 RLS — 회원이 서버 소유 칸을 못 바꾼다");
+/* ===================================================================== */
+{
+  const RLS = "supabase/fix-trading-accounts-rls.sql";
+  const sql = read(RLS);
+
+  ok(RLS + " : update 정책에 with check 를 채운다",
+    /create policy "trading_accounts_update_own"[\s\S]{0,300}?with check \(auth\.uid\(\) = user_id\)/
+      .test(sql),
+    "using 만 있으면 '무엇으로 바꾸는지' 를 아무도 안 봅니다");
+
+  /* ★ 정상 거래 경로가 막히면 회원이 거래를 아예 못 저장합니다.
+     js/supabase-sync.js 가 실제로 보내는 칸은 절대 잠그면 안 됩니다. */
+  const lock = /function public\.lock_server_owned_account_fields[\s\S]*?\$fn\$;/.exec(sql);
+  ok("칸 고정 트리거 본문을 찾았다", !!lock);
+  const body = lock ? lock[0] : "";
+
+  const 보내는칸 = ["balance", "realized_pnl", "updated_at"];
+  보내는칸.forEach((c) => {
+    ok("정상 저장 칸을 잠그지 않는다 — " + c,
+      !new RegExp("new\\." + c + "\\s*:=").test(body),
+      "이걸 잠그면 js/supabase-sync.js 의 거래 저장이 통째로 막힙니다");
+  });
+
+  const 잠글칸 = ["user_id", "initial_balance", "recharge_total",
+                  "recharge_count", "last_recharge_at", "cycle_no"];
+  잠글칸.forEach((c) => {
+    ok("서버 소유 칸을 원래 값으로 되돌린다 — " + c,
+      new RegExp("new\\." + c + "\\s*:=\\s*old\\." + c).test(body));
+  });
+
+  ok("서버 권한(security definer) 작업은 통과시킨다",
+    /current_user not in \('authenticated', 'anon'\)/.test(body),
+    "무료 충전·아이템 사용·시즌 초기화가 여기서 막히면 안 됩니다");
+
+  ok("오류를 내지 않고 조용히 되돌린다",
+    !/raise exception/.test(body),
+    "오류를 내면 화면이 '저장 실패' 로 보고 무한 재시도합니다");
+
+  ok("기존 트리거(check_trading_account_update)를 지우지 않는다",
+    !/drop function[^\n]*check_trading_account_update/i.test(sql) &&
+    !/drop trigger[^\n]*check_trading_account/i.test(sql),
+    "무엇을 지키는지 서버를 봐야 알 수 있어서 건드리면 안 됩니다");
+
+  ok("서버 실제 상태를 먼저 보는 읽기 전용 블록이 있다",
+    /pg_policy/.test(sql) && /pg_get_functiondef/.test(sql),
+    "저장소 파일과 서버가 다를 수 있습니다");
+
+  ok(RLS + " : 되돌리는 방법이 적혀 있다", /\[되돌리기\]/.test(sql));
+  ok(RLS + " : 여러 번 돌려도 안전하다고 밝혀 뒀다",
+    /여러 번 돌려도 안전/.test(sql));
+
+  const 코드 = sql.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+  ok(RLS + " : DROP TABLE / TRUNCATE 가 없다",
+    !/\bdrop\s+table\b/i.test(코드) && !/\btruncate\b/i.test(코드));
+  ok(RLS + " : 회원 데이터를 바꾸는 UPDATE/DELETE 가 없다",
+    !/\bupdate\s+public\.trading_accounts\b/i.test(코드) &&
+    !/\bdelete\s+from\s+public\./i.test(코드),
+    "이 파일은 규칙만 바꿉니다");
+
+  /* 안내서에 올라갔는가 — 대표가 못 보면 반영이 0 입니다 */
+  const readme = read("supabase/README-대표님-먼저-읽으세요.md");
+  ["fix-seed-recharge-guard.sql", "fix-realized-pnl-200.sql",
+   "check-realized-pnl-200.sql", "fix-trading-accounts-rls.sql"].forEach((f) => {
+    ok("안내서에 " + f + " 가 적혀 있다", readme.indexOf(f) >= 0,
+      "대표는 안내서를 보고 Run 합니다. 없으면 아침에 아무것도 못 합니다");
+  });
+}
+
 console.log("\n==========================================================");
 console.log("통과 " + pass + " / 실패 " + fail);
 if (fail === 0) console.log("전체 통과 ✅");

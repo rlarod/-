@@ -18,9 +18,9 @@
 --   다만 파일만 봐서는 서버의 실제 상태를 알 수 없어 확정이 안 됩니다.
 --
 -- 어떻게 실행하나
---   주의 - 아래는 블록이 6개입니다. Supabase SQL Editor 는 한 번에 여러 개를
+--   주의 - 아래는 블록이 8개입니다(0번~7번). Supabase SQL Editor 는 한 번에 여러 개를
 --      돌리면 마지막 결과 하나만 보여 줍니다.
---      그래서 0번부터 6번까지 블록을 하나씩 마우스로 드래그해서 선택한 뒤
+--      그래서 0번부터 7번까지 블록을 하나씩 마우스로 드래그해서 선택한 뒤
 --      Run(Ctrl+Enter) 을 눌러 주세요. 결과 표를 각각 캡처해 주시면 됩니다.
 --
 --   0번을 먼저 돌려 주세요. 표가 없으면 그 뒤 블록은 오류가 납니다.
@@ -294,3 +294,51 @@ select name                                                 as 상품,
 -- =========================================================================
 -- 끝. 다시 말씀드리지만 이 파일은 아무것도 바꾸지 않습니다.
 -- =========================================================================
+
+
+-- =========================================================================
+-- 7번 - 지갑(balance) 을 지켜 주는 안전장치가 서버에 걸려 있나
+-- =========================================================================
+-- 왜 보나
+--   js/trading.js:571-573 은 브라우저에 저장된 잔고가 "유한한 숫자" 이기만
+--   하면 무엇이든 그대로 받아들이고, js/supabase-sync.js:53 이 그 값을
+--   서버에 그대로 올립니다. 화면 쪽에는 상한이 한 곳도 없습니다.
+--
+--   서버에는 initial_balance(시작자금) 를 지키는 트리거
+--   check_trading_account_update() 가 걸려 있다고 기록돼 있습니다
+--   (supabase/schema-initial-balance.sql:65-67).
+--   그 트리거가 balance(지갑) 까지 보고 있는지가 이 블록의 질문입니다.
+--   함수 본문이 저장소 파일에는 없어서 서버에 직접 물어봐야 합니다.
+
+select t.tgname                                             as 트리거이름,
+       p.proname                                            as 함수이름,
+       case when t.tgenabled = 'D' then '꺼져 있음' else '켜져 있음' end as 상태
+  from pg_trigger t
+  join pg_proc p on p.oid = t.tgfoid
+ where t.tgrelid = 'public.trading_accounts'::regclass
+   and not t.tgisinternal
+ order by t.tgname;
+
+
+-- 7-2. 그 함수가 실제로 무엇을 막는지 본문 그대로 보기
+select p.proname                                            as 함수이름,
+       btrim(줄)                                            as 본문
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  cross join lateral unnest(string_to_array(p.prosrc, chr(10))) as 줄
+ where n.nspname = 'public'
+   and p.proname in ('check_trading_account_update', 'force_starting_balance')
+   and btrim(줄) <> ''
+ order by p.proname;
+
+
+-- 7-3. 지갑 쓰기 권한이 회원에게 열려 있나
+--   trading_accounts_update_own 정책에 with check 가 비어 있으면,
+--   회원이 자기 계정의 balance 를 원하는 값으로 바꿔 쓸 수 있습니다.
+select policyname                                           as 정책이름,
+       cmd                                                  as 동작,
+       coalesce(qual, '(없음)')                             as 읽기조건,
+       coalesce(with_check, '(없음 - 쓰는 값을 검사하지 않음)') as 쓰기조건
+  from pg_policies
+ where schemaname = 'public' and tablename = 'trading_accounts'
+ order by policyname;

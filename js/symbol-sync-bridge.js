@@ -126,6 +126,7 @@ App.SymbolSyncBridge = (function () {
   var posSym = {};    // openTime(ms)  -> symbol
   var tradeSym = {};  // closeTime(ms) -> symbol
   var orderSym = {};  // order id      -> symbol
+  var fundingSym = {}; // funding timestamp(ms) -> symbol
 
   var armed = true;         // 복원 구간(부팅 전)인가 — symbol-guard.js 와 같은 방식
   var disarmHooked = false;
@@ -145,7 +146,8 @@ App.SymbolSyncBridge = (function () {
     stampPosition: 0,
     stampPendingOrder: 0,
     stampClosedTrades: 0,
-    stampOrderHistory: 0
+    stampOrderHistory: 0,
+    stampFundingHistory: 0
   };
 
   /* ------------------------------------------------------------------
@@ -321,6 +323,49 @@ App.SymbolSyncBridge = (function () {
           stampOne(t, resolve(tradeSym, t.closeTime, t.closeTime, data, null), "stampClosedTrades");
         }
         remember(tradeSym, t.closeTime, t.symbol);
+      }
+    }
+
+    /* 펀딩 정산 내역 — 2026-08-27 [P2]
+     * ------------------------------------------------------------------
+     * 왜 필요한가
+     *   js/ui.js:599 가 App.Utils.formatQty(f.positionSize) 를 부릅니다.
+     *   종목을 안 주면 "지금 활성 종목" 으로 떨어져서(js/utils.js:78-80),
+     *   삼성전자를 보는 동안 옛 비트코인 펀딩 기록이 "0.05 주" 로 보입니다.
+     *   그래서 기록 자체에 종목을 남겨 둡니다.
+     *
+     * 왜 여기에 넣나
+     *   App.Storage.save 를 감싸는 모듈은 지금 4개이고
+     *   tests/storage-save-wrap-order.test.js 가 그 개수와 순서를 못 박고
+     *   있습니다. 새로 감싸면 5개가 되어 봉인이 깨집니다.
+     *   이미 감싸고 있는 이 함수 안에 한 덩어리를 더하면 안 늘어납니다.
+     *
+     * ★ 키는 f.timestamp 입니다. f.fundingTime 이 아닙니다.
+     *   fundingTime 은 "정산 대상 시각" 이라 부팅 때 밀린 펀딩을 채우면
+     *   (js/trading.js:379 checkMissedFunding) 몇 시간 전 시각이 들어옵니다.
+     *   그걸 기준으로 삼으면 방금 만든 행이 "옛 기록" 으로 오판됩니다.
+     *   f.timestamp 는 그 행을 만든 순간(Date.now())입니다.
+     *
+     * ★ 옛 행은 비워 둡니다 — 여기서는 DEFAULT_SYMBOL 로 안 떨어집니다.
+     *   펀딩은 서버에 원본이 없습니다(js/supabase-sync.js 에 funding 없음).
+     *   거래내역과 달리 대조할 곳이 없어서, BTCUSDT 로 채우면 그건 추측이고
+     *   화면에는 사실처럼 보입니다. 모르면 비워 두는 쪽이 맞습니다.
+     *   (이번 세션에서 생긴 행만 찍습니다 — 소급 변경을 안 합니다)
+     * ------------------------------------------------------------------ */
+    var fundings = data.fundingHistory;
+    if (fundings && typeof fundings.length === "number") {
+      for (var k = 0; k < fundings.length; k++) {
+        var f = fundings[k];
+        if (!f || typeof f !== "object") continue;
+        if (isSym(f.symbol)) {
+          remember(fundingSym, f.timestamp, f.symbol);
+          continue;
+        }
+        var madeAt = typeof f.timestamp === "number" && isFinite(f.timestamp) ? f.timestamp : null;
+        if (madeAt === null || madeAt < PAGE_LOAD) continue;  /* 옛 행은 비워 둡니다 */
+        var fSym = recall(fundingSym, f.timestamp) || heldSymbol(data) || activeSymbol();
+        stampOne(f, fSym, "stampFundingHistory");
+        remember(fundingSym, f.timestamp, f.symbol);
       }
     }
 
