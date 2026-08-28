@@ -1244,12 +1244,18 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    생김새는 이 사이트가 이미 쓰고 있는 탭(.ob-tab-btn 호가창/최근거래)과
    같은 결입니다. 색 있는 요소는 "지금 보고 있는 종목" 하나뿐이고
    나머지는 전부 회색조입니다.
-   글자를 19px -> 14px 로 줄여서, 탭이 4개로 늘었는데도 줄 높이는
-   48px -> 34px 로 오히려 낮아졌습니다(360 실측). */
+   [2026-08-28 대표 지시] "처음에 비트코인만 있었던 그 크기로 키워"
+   - 처음 크기는 .product-tab-btn(윗줄) 의 19px 이고 줄 높이가 48px 이었습니다.
+     글자 19px + 세로 여백 11px + 밑줄 2px = 47.8px (360 실측, 줄 전체 48.8px).
+   - 가로 여백만 14px -> 폰에서 6px 로 줄였습니다(아래 max-width:700px 블록).
+     19px 로 키우면 글자 폭 합만 287.1px 이라 360 의 담는 칸 344px 에서
+     여유가 거의 없습니다. 6px + gap 0 이면 335.1px 로 8.9px 남습니다.
+   - 되돌리려면 font-size:14px / padding:7px 10px 로, 아래 폰 블록은
+     font-size:13px / padding:7px 8px 로 되돌리고 .product-tabs gap 줄을 지우세요. */
 .symbol-tab-btn{
   background:none;border:none;border-bottom:2px solid transparent;
   color:var(--text-dim);font-family:var(--sans);
-  font-size:14px;font-weight:600;line-height:1.25;padding:7px 10px;
+  font-size:19px;font-weight:600;line-height:1.25;padding:11px 14px;
   cursor:pointer;white-space:nowrap;transition:.12s;
 }
 .symbol-tab-btn:hover{color:var(--text);}
@@ -4205,8 +4211,12 @@ html[data-theme="dark"] .board-page-btn.active{
      시세 바가 34px 아래로 내려가는 대신(=탭 줄 높이) 종목을 바로 바꿀 수
      있게 됩니다. 되돌리려면 이 한 줄을 order:4 로 되돌리세요. */
   #page-exchange > .product-tabs{order:0;}
-  /* 360 에서 여유를 더 두려고 폰에서만 한 단계 작게 씁니다(아래 실측 참고) */
-  .symbol-tab-btn{font-size:13px;padding:7px 8px;}
+  /* 글자 크기는 데스크톱과 같은 19px 로 두고(대표 지시), 폰에서는 가로 여백과
+     탭 사이 간격만 줄여 360 에 넣습니다.
+     360 실측 - 글자 폭 합 287.1 + 여백 8x6=48 = 335.1px / 담는 칸 344px (여유 8.9px)
+     되돌리려면 이 두 줄을 font-size:13px;padding:7px 8px; 한 줄로 되돌리세요. */
+  .product-tabs{gap:0;}
+  .symbol-tab-btn{padding:11px 6px;}
   /* 지금 display:none 인 것들 — 되살아나면 상품탭 옆자리에 옵니다 */
   #page-exchange > .event-banner{order:5;}
   #page-exchange > #ticker-board-panel{order:6;}
