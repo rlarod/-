@@ -41,8 +41,21 @@
  *   되돌리려면 — LEFT_TOOLS 의 brush ready 를 false, READY_TOOLS 에서
  *   brush 를 빼면 끝입니다(나머지 코드는 tool 이 "brush" 일 때만 돕니다).
  *
- * 아직 자리만 잡아 둔 것 (6개)
- *   세로 막대 — 파동 / 여러선 / 표정
+ * 6차(2026-08-28)에서 연 것 — 여러선 = 평행 채널 (세로 막대)
+ *   세 번 톡 합니다 — ① 기준선 시작 ② 기준선 끝 ③ 마주 보는 선의 자리(폭).
+ *   바이낸스 선물(트레이딩뷰 모드)의 Parallel Channel 과 같은 순서·같은
+ *   생김새입니다(위·아래 두 선 + 가운데 점선 + 안쪽 옅은 채움).
+ *   실측은 아래 CHANNEL_WIDTH 위쪽 주석에 숫자로 적어 두었습니다.
+ *   종목 + 봉 간격별로 저장됩니다(시간에 매달린 그림이라 추세선과 같습니다).
+ *   되돌리려면 — LEFT_TOOLS 의 channel ready 를 false 로, label 을 "여러선"
+ *   으로 되돌리고, READY_TOOLS 에서 channel 을 빼면 끝입니다
+ *   (나머지 코드는 tool 이 "channel" 일 때만 돕니다).
+ *   같이 되돌릴 것 — tests/chart-toolbar-seal.test.js 의 세로 준비중 3 -> 2 와
+ *   남은 이름 "channel,face,wave" -> "face,wave",
+ *   tests/chart-drawings.test.js 의 readyLeft 에서 channel 을 지우기.
+ *
+ * 아직 자리만 잡아 둔 것 (5개)
+ *   세로 막대 — 파동 / 표정
  *   가로 막대 — 봉 종류 / 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
@@ -162,6 +175,29 @@ App.ChartDrawings = (function () {
   var BRUSH_MIN_PX = 2.5;
   var BRUSH_MAX_PTS = 600;
 
+  /* ---------------- 여러선 = 평행 채널 (6차 2026-08-28) ----------------
+   * 바이낸스 실측 (2026-08-28 · binance.com/en/futures/BTCUSDT · 1440px · 1D
+   *              · Trading View 모드 · shots/ct4-bnf-channel.png 픽셀 측정)
+   *   위·아래 선  #2962FF, 굵기 2px  (x=470 에서 y 377~379 / 447~449)
+   *   가운데 선   같은 색 점선, 실측 4px 긋고 6px 띄움 (주기 10px)
+   *   안쪽 채움   같은 색 20%  (바깥 24,26,32 -> 안쪽 27,41,77 로 계산 0.20)
+   *   두 선 간격  x=470 에서 70px · x=520 에서 69px  (평행 확인)
+   *   만드는 법   세 번 톡 (기준선 두 점 + 폭 한 점)
+   *
+   * 우리 값과 다른 곳 — 색만 다릅니다. 파랑은 확정 팔레트에 없습니다.
+   *   선 색  #F0B429 (포인트) — 회원이 그린 것은 전부 이 색입니다
+   *   굵기   2px — 바이낸스와 같게 맞췄습니다
+   *          ※ 우리 추세선은 1px(LINE_WIDTH) 입니다. 바이낸스 추세선도 2px 라
+   *            그쪽이 어긋나 있는데, 이미 나간 것이라 손대지 않았습니다.
+   *            숫자만 적어 둡니다 — 바꿀지는 PM/대표가 정합니다.
+   *   채움   금색 10% (FILL_DRAW · 자 상자와 같은 값). 바이낸스는 20% 인데
+   *          금색은 파랑보다 밝아 20% 면 채널 안 캔들이 묻힙니다.
+   *          20% 로 되돌리려면 아래 FILL_CHANNEL 을 따로 만들어 0.20 으로.
+   * ------------------------------------------------------------------- */
+  var CHANNEL_WIDTH = 2;
+  var CHANNEL_DASH = [4, 6];
+  var FILL_CHANNEL = FILL_DRAW;
+
   var STORAGE_KEY = "chart-drawings";
   var STORE_VERSION = 1;
   var SPRITE_URL = "assets/icons/chart-tools.svg";
@@ -179,7 +215,10 @@ App.ChartDrawings = (function () {
     { k: "hline", icon: "tlc-i-hline", label: "수평선", ready: true },
     { k: "fib", icon: "tlc-i-fib", label: "피보나치 되돌림", ready: true },
     { k: "wave", icon: "tlc-i-wave", label: "파동", ready: false },
-    { k: "channel", icon: "tlc-i-channel", label: "여러선", ready: false },
+    /* 6차(2026-08-28) — 여러선(평행 채널)을 열었습니다. 되돌리려면 이 줄의
+       ready 를 false 로, label 을 "여러선" 으로 되돌립니다.
+       (같이 되돌릴 것 — READY_TOOLS 의 channel, THREE_TAP) */
+    { k: "channel", icon: "tlc-i-channel", label: "여러선 (평행 채널 · 세 번 톡)", ready: true },
     /* 5차(2026-08-28) — 브러시를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
        (같이 되돌릴 것 — READY_TOOLS 의 brush) */
     { k: "brush", icon: "tlc-i-brush", label: "브러시 (끌어서 자유롭게)", ready: true },
@@ -208,7 +247,7 @@ App.ChartDrawings = (function () {
   ];
 
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
-  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1 };
+  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1, channel: 1 };
 
   /* 두 점을 찍어 "그림으로 남는" 도구 — 저장되고 나중에 다시 그려집니다 */
   var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
@@ -217,6 +256,10 @@ App.ChartDrawings = (function () {
      돋보기는 그림으로 남지 않아서 TWO_POINT 에는 넣지 않았습니다 —
      찍고 나면 화면만 확대되고 저장에는 아무것도 안 들어갑니다. */
   var TWO_TAP = { trend: 1, fib: 1, ruler: 1, zoom: 1 };
+
+  /* 세 번 톡 해서 만드는 도구 — 두 점으로 기준선을 긋고, 세 번째 점이 폭을
+     정합니다. 바이낸스(트레이딩뷰 모드) 평행 채널과 같은 순서입니다. */
+  var THREE_TAP = { channel: 1 };
 
   /* 피보나치 되돌림 눈금 — 바이낸스 선물(트레이딩뷰 모드) 기본값 그대로입니다.
      2026-08-26 실측(binance.com/en/futures/BTCUSDT, 1440px, Trading View 모드):
@@ -242,6 +285,7 @@ App.ChartDrawings = (function () {
   var store = null; /* { v, ui:{rail}, bySymbol:{ SYM:{ hlines:[], byInterval:{ IV:[] } } } } */
 
   var pending = null; /* 추세선 첫 점 {t,p} */
+  var chanBase = null; /* 여러선 — 다 그은 기준선 {t1,p1,t2,p2}. 세 번째 점(폭)을 기다립니다 */
   var stroke = null; /* 브러시로 지금 긋고 있는 획 { pts:[{t,p}], lastX, lastY } */
   var brushSaved = null; /* 브러시를 켜기 전 차트 옵션 (끌어 옮기기/확대) */
   var brushTouch = null; /* 브러시를 켜기 전 컨테이너의 touch-action */
@@ -752,6 +796,88 @@ App.ChartDrawings = (function () {
   }
 
   /* ---------------- 그림 하나 ---------------- */
+  /* =====================================================================
+   * 여러선 = 평행 채널 (6차 2026-08-28)
+   * ---------------------------------------------------------------------
+   * 저장 모양 { id, type:"channel", t1,p1, t2,p2, dp }
+   *   t1,p1 ~ t2,p2  기준선 두 점 (첫 번째 · 두 번째 톡)
+   *   dp             마주 보는 선까지의 "가격 차이" (세 번째 톡)
+   * 왜 픽셀이 아니라 가격으로 저장하나 — 화면을 확대·축소하면 픽셀 간격은
+   * 달라져야 맞습니다. 가격 차이로 들고 있으면 어느 배율에서도 같은 폭을
+   * 가리킵니다(추세선을 t,p 로 저장하는 것과 같은 이유입니다).
+   * ===================================================================== */
+
+  /** 두 점을 잇는 직선의 x 자리 높이 (픽셀) */
+  function lineYAt(x1, y1, x2, y2, x) {
+    if (x2 === x1) return y1;
+    return y1 + ((y2 - y1) * (x - x1)) / (x2 - x1);
+  }
+
+  /** 기준선에서 (t,p) 까지 떨어진 "가격 차이". 못 재면 null */
+  function chanOffset(base, t, p) {
+    var x1 = timeToX(base.t1);
+    var x2 = timeToX(base.t2);
+    var y1 = priceToY(base.p1);
+    var y2 = priceToY(base.p2);
+    var x = timeToX(t);
+    if (x1 === null || x2 === null || y1 === null || y2 === null || x === null) return null;
+    var pb = yToPrice(lineYAt(x1, y1, x2, y2, x));
+    if (pb === null) return null;
+    return p - pb;
+  }
+
+  function drawChannel(ctx, s, on, preview) {
+    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var dp = s.dp || 0;
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    var y1 = priceToY(s.p1);
+    var y2 = priceToY(s.p2);
+    var b1 = priceToY(s.p1 + dp);
+    var b2 = priceToY(s.p2 + dp);
+    var m1 = priceToY(s.p1 + dp / 2);
+    var m2 = priceToY(s.p2 + dp / 2);
+    if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+    if (b1 === null || b2 === null || m1 === null || m2 === null) return;
+
+    /* 안쪽 채움 먼저 — 선이 채움 위로 올라와야 또렷합니다 */
+    ctx.fillStyle = FILL_CHANNEL;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2, b2);
+    ctx.lineTo(x1, b1);
+    ctx.closePath();
+    ctx.fill();
+
+    /* 위·아래 두 선 */
+    ctx.strokeStyle = color;
+    ctx.lineWidth = on ? CHANNEL_WIDTH + 1 : CHANNEL_WIDTH;
+    ctx.setLineDash(preview ? [4, 4] : []);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.moveTo(x1, b1);
+    ctx.lineTo(x2, b2);
+    ctx.stroke();
+
+    /* 가운데 선 — 바이낸스처럼 점선 한 줄 */
+    ctx.lineWidth = 1;
+    ctx.setLineDash(CHANNEL_DASH);
+    ctx.beginPath();
+    ctx.moveTo(x1, m1);
+    ctx.lineTo(x2, m2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (on) {
+      handle(ctx, x1, y1);
+      handle(ctx, x2, y2);
+      handle(ctx, x1, b1);
+      handle(ctx, x2, b2);
+    }
+  }
+
   function drawOne(ctx, s, on, preview) {
     var color = on ? COLOR_SELECTED : COLOR_DRAW;
 
@@ -799,6 +925,10 @@ App.ChartDrawings = (function () {
       drawBrush(ctx, s, on, preview);
       return;
     }
+    if (s.type === "channel") {
+      drawChannel(ctx, s, on, preview);
+      return;
+    }
     if (s.type === "fib") {
       drawFib(ctx, s, on, preview);
       return;
@@ -821,6 +951,25 @@ App.ChartDrawings = (function () {
     /* 브러시로 지금 긋고 있는 획 — 손을 떼기 전에도 보여야 합니다 */
     if (stroke && stroke.pts.length > 1) {
       drawOne(ctx, { type: "brush", pts: stroke.pts }, false, true);
+    }
+
+    /* 여러선 — 기준선을 긋는 중 / 폭을 고르는 중 둘 다 미리 보여줍니다 */
+    if (pending && hover && tool === "channel") {
+      if (chanBase) {
+        var cdp = chanOffset(chanBase, hover.t, hover.p);
+        if (cdp !== null) {
+          drawOne(ctx, {
+            type: "channel", t1: chanBase.t1, p1: chanBase.p1,
+            t2: chanBase.t2, p2: chanBase.p2, dp: cdp
+          }, false, true);
+        }
+      } else {
+        drawOne(ctx, { type: "trend", t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
+      }
+      var cx = timeToX(pending.t);
+      var cy = priceToY(pending.p);
+      if (cx !== null && cy !== null) handle(ctx, cx, cy);
+      return;
     }
 
     /* 두 점 도구를 긋는 중이면 미리보기 */
@@ -992,6 +1141,28 @@ App.ChartDrawings = (function () {
           bestD = 0;
           best = { kind: "shape", id: s.id };
         }
+      } else if (s.type === "channel") {
+        /* 위·아래·가운데 세 줄 중 가장 가까운 것 */
+        var cx1 = timeToX(s.t1);
+        var cx2 = timeToX(s.t2);
+        var cy1 = priceToY(s.p1);
+        var cy2 = priceToY(s.p2);
+        var cdp = s.dp || 0;
+        var cb1 = priceToY(s.p1 + cdp);
+        var cb2 = priceToY(s.p2 + cdp);
+        var cm1 = priceToY(s.p1 + cdp / 2);
+        var cm2 = priceToY(s.p2 + cdp / 2);
+        if (cx1 === null || cx2 === null || cy1 === null || cy2 === null) continue;
+        if (cb1 === null || cb2 === null || cm1 === null || cm2 === null) continue;
+        var cd = Math.min(
+          distToSegment(x, y, cx1, cy1, cx2, cy2),
+          distToSegment(x, y, cx1, cb1, cx2, cb2),
+          distToSegment(x, y, cx1, cm1, cx2, cm2)
+        );
+        if (cd < bestD) {
+          bestD = cd;
+          best = { kind: "shape", id: s.id };
+        }
       } else if (s.type === "brush") {
         var bp = s.pts;
         if (!bp || bp.length < 2) continue;
@@ -1108,6 +1279,41 @@ App.ChartDrawings = (function () {
     }
 
     if (time === null) return;
+
+    /* 여러선 = 평행 채널 — 세 번 톡.
+       ① 기준선 시작 ② 기준선 끝 ③ 마주 보는 선의 자리(폭)
+       바이낸스(트레이딩뷰 모드) Parallel Channel 과 같은 순서입니다. */
+    if (THREE_TAP[tool]) {
+      if (!pending) {
+        pending = { t: time, p: price };
+        chanBase = null;
+        hover = { t: time, p: price };
+        repaint();
+        return;
+      }
+      if (!chanBase) {
+        /* 한 점에 두 번 찍으면 선이 안 됩니다 — 다시 받습니다 */
+        if (time === pending.t && price === pending.p) return;
+        chanBase = { t1: pending.t, p1: pending.p, t2: time, p2: price };
+        hover = { t: time, p: price };
+        repaint();
+        return;
+      }
+      var dp = chanOffset(chanBase, time, price);
+      if (dp === null) return;
+      shapes().push({
+        id: newId(), type: "channel",
+        t1: chanBase.t1, p1: chanBase.p1, t2: chanBase.t2, p2: chanBase.p2, dp: dp
+      });
+      pending = null;
+      chanBase = null;
+      hover = null;
+      saveStore();
+      paintChip();
+      setTool("cursor");
+      repaint();
+      return;
+    }
 
     /* 추세선 · 피보나치 · 자 — 전부 두 점을 찍어 만듭니다.
        폰에서도 그대로 됩니다(톡 두 번). 손가락으로 끄는 동안은 차트가
@@ -1338,6 +1544,7 @@ App.ChartDrawings = (function () {
     shapes().length = 0;
     selected = null;
     pending = null;
+    chanBase = null;
     hover = null;
     cancelStroke();
     saveStore();
@@ -1576,6 +1783,7 @@ App.ChartDrawings = (function () {
     tool = name;
     /* 도구를 바꾸면 긋다 만 것은 버립니다 (추세선을 찍다가 자로 바꾸는 경우) */
     pending = null;
+    chanBase = null;
     hover = null;
     cancelStroke();
     /* 브러시일 때만 차트 끌기·페이지 스크롤을 멈춥니다(끄면 되돌립니다) */
@@ -1585,6 +1793,8 @@ App.ChartDrawings = (function () {
     paintButtons();
     paintChip();
     repaint();
+    /* 세 번 톡은 다른 도구와 순서가 달라서 한 줄 알려줍니다 */
+    if (name === "channel") toast("세 번 톡 — 기준선 두 점, 그 다음 폭");
   }
 
   /* =====================================================================
@@ -2308,8 +2518,9 @@ App.ChartDrawings = (function () {
         toggleFullscreen();
         return;
       }
-      if (pending) {
+      if (pending || chanBase) {
         pending = null;
+        chanBase = null;
         hover = null;
         repaint();
       }
@@ -2333,6 +2544,7 @@ App.ChartDrawings = (function () {
   function rescope() {
     selected = null;
     pending = null;
+    chanBase = null;
     hover = null;
     cancelStroke();
     askingClear = false;
@@ -2488,7 +2700,13 @@ App.ChartDrawings = (function () {
     LABEL_GAP: LABEL_GAP,
     fmtSpan: fmtSpan,
     FIB_LEVELS: FIB_LEVELS,
-    TOOLS: { left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS, twoPoint: TWO_POINT, twoTap: TWO_TAP },
+    TOOLS: {
+      left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS,
+      twoPoint: TWO_POINT, twoTap: TWO_TAP, threeTap: THREE_TAP
+    },
+    /* 여러선 계산부 — 테스트에서 그대로 씁니다 */
+    lineYAt: lineYAt,
+    CHANNEL: { width: CHANNEL_WIDTH, dash: CHANNEL_DASH, fill: FILL_CHANNEL },
     COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED },
     STORAGE_KEY: STORAGE_KEY
   };

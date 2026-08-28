@@ -369,21 +369,25 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  *   지표 계산·그리기가 이미 다 되어 있는데 켜는 자리가 없어서 잠겨 있던 것입니다.
  * 4차(2026-08-27) — 세로 : 돋보기(zoom)              5 -> 4
  * 5차(2026-08-28) — 세로 : 브러시(brush)             4 -> 3
- *   끌어서 자유롭게 긋습니다. 남은 준비중은 세로 파동·여러선·표정 셋입니다.
+ *   끌어서 자유롭게 긋습니다.
  *   ⚠ 숫자를 낮춘 것이 아니라 "지금 잠겨 있는 개수" 로 맞춘 것입니다.
  *     아래 클릭 검사도 brush -> wave 로 옮겼습니다(brush 는 이제 열립니다).
+ * 6차(2026-08-28) — 세로 : 여러선(channel)             3 -> 2
+ *   세 번 톡 해서 만드는 평행 채널입니다. 남은 준비중은 세로 파동·표정 둘입니다.
+ *   ⚠ 여기도 기준을 낮춘 것이 아닙니다. js/chart-drawings.js 의 LEFT_TOOLS 를
+ *     직접 열어 ready:false 로 남은 것이 wave · face 둘뿐임을 확인하고 맞췄습니다.
  * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
  * 검사를 지우지 마세요 — "준비중이라 써 놓고 실제로 열리는" 모순을 막는 그물입니다. */
-ok("세로 막대 준비중이 3개다 (2026-08-28 브러시를 열어 4 -> 3 / 남은 것 파동·여러선·표정)",
-  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
+ok("세로 막대 준비중이 2개다 (2026-08-28 여러선을 열어 3 -> 2 / 남은 것 파동·표정)",
+  railBtns.filter((b) => b.hasAttribute("data-soon")).length === 2,
   "지금 " + railBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
 /* 남은 준비중이 "그 셋" 인지까지 봅니다 — 개수만 세면 엉뚱한 도구가 잠겨도
    숫자만 맞아 통과합니다(예: brush 를 열면서 ruler 를 잠근 경우). 2026-08-28 추가 */
-ok("남은 세로 준비중이 파동·여러선·표정 셋 그대로다",
+ok("남은 세로 준비중이 파동·표정 둘 그대로다",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).sort().join(",")
-    === "channel,face,wave",
+    === "face,wave",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).join(","));
 ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
   barBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,

@@ -148,3 +148,6 @@ tests/chart-attr-logo-seal.test.js
 tests/chart-brush-seal.test.js
 tests/chart-chip-nowrap-seal.test.js
 tests/order-pressure-stale-seal.test.js
+tests/chart-channel-seal.test.js
+tests/chart-double-tap-swallow.test.js
+tests/chart-addons-seal.test.js

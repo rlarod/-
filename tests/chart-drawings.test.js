@@ -135,11 +135,14 @@ const M = runModule();
   const ready = M.TOOLS.ready;
   const readyLeft = left.filter((t) => t.ready).map((t) => t.k).sort().join(",");
   /* 2026-08-28 5차 — 차트팀이 브러시(brush)를 열어 일곱 -> 여덟이 됐습니다.
+     2026-08-28 6차 — 여러선(channel · 평행 채널)을 열어 여덟 -> 아홉이 됐습니다.
      기준을 낮춘 것이 아니라 "지금 무엇이 열려 있는지" 로 맞춘 것입니다.
      열린 도구가 또 늘면 이 문자열에 그 이름을 넣고 날짜·이유를 여기 적으세요.
-     (2026-08-27 4차에서 zoom 이 들어온 것과 같은 방식입니다) */
-  ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트·피보나치·자·돋보기·브러시 여덟",
-    readyLeft === "brush,cursor,fib,hline,ruler,text,trend,zoom", readyLeft);
+     (2026-08-27 4차에서 zoom 이 들어온 것과 같은 방식입니다)
+     확인한 자리 — js/chart-drawings.js 의 LEFT_TOOLS 에서 ready:false 로 남은 것은
+     wave · face 둘뿐이고, READY_TOOLS 에 channel 이 들어와 있습니다. */
+  ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트·피보나치·자·돋보기·브러시·여러선 아홉",
+    readyLeft === "brush,channel,cursor,fib,hline,ruler,text,trend,zoom", readyLeft);
 
   /* 준비중이라고 그린 것은 실제로도 고를 수 없어야 합니다 */
   const lying = left.filter((t) => !t.ready && ready[t.k]);
@@ -154,7 +157,9 @@ const M = runModule();
   /* 고를 수 없는 도구를 억지로 넣어도 바뀌지 않아야 합니다.
      2026-08-28 — 여기서 쓰던 brush 가 실제로 열려서, 아직 안 연 도구(wave)로
      옮겼습니다. 검사 자체는 그대로입니다("준비중은 setTool 로도 안 켜진다").
-     wave 마저 열리면 그때 남아 있는 준비중 도구(channel · face)로 옮기세요. */
+     2026-08-28 6차 — channel 도 열렸습니다. 이제 준비중은 wave · face 둘뿐이라,
+     wave 마저 열리면 face 로 옮기세요. 둘 다 열리면 이 검사를 지우지 말고
+     "준비중 도구가 하나도 없다" 를 대신 못 박으세요. */
   M.setTool("wave");
   ok("준비중 도구(wave)는 setTool 로도 안 켜진다", M.getTool() === "cursor", M.getTool());
   M.setTool("trend");
@@ -162,6 +167,8 @@ const M = runModule();
   /* 반대쪽도 봅니다 — 열었다고 적은 도구는 실제로 켜져야 합니다 (2026-08-28 brush) */
   M.setTool("brush");
   ok("브러시는 실제로 켜진다 (2026-08-28 5차에서 열림)", M.getTool() === "brush", M.getTool());
+  M.setTool("channel");
+  ok("여러선은 실제로 켜진다 (2026-08-28 6차에서 열림)", M.getTool() === "channel", M.getTool());
   M.setTool("cursor");
 
   ok("준비중 버튼은 disabled 로 그린다", /setAttribute\("disabled"/.test(SRC));
