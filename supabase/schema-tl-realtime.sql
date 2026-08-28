@@ -819,7 +819,7 @@ from (
     '① 실행 결과'                        as 구분,
     '7절 밀린 것 채우기 · 8절 보정 지급'   as 항목,
     coalesce(nullif(current_setting('tl.run_result', true), ''),
-             '(결과를 남기지 못했습니다 — 본부장에게 알려 주세요)')::text as 값
+             '(결과를 남기지 못했습니다 — PM에게 알려 주세요)')::text as 값
 
   union all
 
@@ -834,7 +834,7 @@ from (
                and c.relname = 'trades'
                and t.tgname  = 'trg_tl_on_trade_insert')
           then '✅ 걸렸습니다 — 이제 거래를 닫을 때마다 TL 이 바로 들어갑니다'
-          else '❌ 안 걸렸습니다 — 본부장에게 알려 주세요' end)::text
+          else '❌ 안 걸렸습니다 — PM에게 알려 주세요' end)::text
 
   union all
 
@@ -881,12 +881,12 @@ order by 결과.순서, 결과.하위, 결과.항목;
 -- ② "보유 TL 을 옛 계산으로 되돌리고 싶을 때"
 --    schema-tl-hotdeal.sql 의 옛 tl_earned() 정의를 다시 Run 하면 됩니다.
 --    다만 그 파일은 봉인돼 있고, 옛 공식은 손해를 봐도 TL 이 쌓이는 방식입니다.
---    되돌리기 전에 반드시 본부장·대표 확인을 받으세요.
+--    되돌리기 전에 반드시 PM·대표 확인을 받으세요.
 --
 -- ③ "이번에 지급된 TL 기록 자체를 없애고 싶을 때"
 --    tl_transactions 에서 type 이 'realtime' 과 'migration' 인 줄이 이번에 생긴 것입니다.
 --    ★ 회원의 재산 기록이라 이 파일에는 지우는 문장을 일부러 넣지 않았습니다.
---      정말 필요하면 본부장에게 말씀해 주세요. 지우기 전에 몇 줄인지 먼저 세어 봅니다.
+--      정말 필요하면 PM에게 말씀해 주세요. 지우기 전에 몇 줄인지 먼저 세어 봅니다.
 --
 --        select type, count(*) from public.tl_transactions
 --         where type in ('realtime','migration') group by type;

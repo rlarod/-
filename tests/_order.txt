@@ -83,6 +83,7 @@ tests/rank-formula-seal.test.js
 tests/no-emoji.test.js
 tests/dev-server.test.js
 tests/team-structure.test.js
+tests/pm-naming-seal.test.js
 tests/docs-staleness.test.js
 tests/notices.test.js
 tests/chart-indicators.test.js

@@ -282,7 +282,7 @@ order by 결과.순서, 결과.하위, 결과.항목;
 --     그때는 supabase/schema-admin-patch.sql 을 먼저 Run 하세요.
 --
 --   · ⑦ 에서 tl_grant_diff 가 '⚠ 로그인 안 한 사람도 부를 수 있음' 으로 나오면
---     그것은 문제입니다. 본부장에게 알려 주세요.
+--     그것은 문제입니다. PM에게 알려 주세요.
 --     (tl_settle_all_past · tl_migrate_legacy 는 부를 수는 있어도
 --      맨 앞에서 관리자인지 확인하고 막으므로 실제로는 아무 일도 못 합니다.)
 --

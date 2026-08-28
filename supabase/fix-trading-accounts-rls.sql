@@ -182,7 +182,7 @@ create policy "trading_accounts_update_own" on public.trading_accounts
 -- =========================================================================
 -- 처음에 security definer 로 만들었는데, 그러면 아래 잠금이 ★한 줄도
 -- 안 돕니다★. 오류도 안 나고 [3] 확인 조회에도 '트리거 달림' 으로 나옵니다.
--- 전형적인 조용한 고장이었습니다. (감사팀 발견 / 본부장 확인)
+-- 전형적인 조용한 고장이었습니다. (감사팀 발견 / PM 확인)
 --
 -- 왜 안 됐나 —
 --   PostgreSQL 은 security definer 함수 안에서 current_user 를
