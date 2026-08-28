@@ -15,7 +15,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 let pass = 0, fail = 0;
 function ok(name, cond, detail) {
   if (cond) { pass++; console.log("  \u001b[32m✓\u001b[0m " + name); }

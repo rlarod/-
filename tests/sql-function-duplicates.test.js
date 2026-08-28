@@ -25,7 +25,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const SQL_DIR = path.join(REPO, "supabase");
 const ESC = String.fromCharCode(27);
 const MARK_OK = ESC + "[32m" + "✓" + ESC + "[0m";

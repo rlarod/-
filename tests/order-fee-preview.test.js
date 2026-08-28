@@ -5,6 +5,9 @@
 
 const fs = require("fs");
 const path = require("path");
+/* 2026-08-28 기록팀 — REPO 를 고정으로 박아두면 돌연변이 검증이 사본이 아니라
+   진짜 저장소를 읽어서 "조용히 통과" 합니다. 실제로 두 번 속았습니다. */
+const REPO = process.env.REPO || require("path").join(__dirname, "..");
 
 let pass = 0;
 let fail = 0;
@@ -95,7 +98,7 @@ console.log("\n100% 주문과 진입수수료");
 
 /* ---- 모듈이 실제로 그렇게 쓰였는지 ---- */
 {
-  const js = fs.readFileSync(path.join(__dirname, "..", "js", "order-fee-preview.js"), "utf8");
+  const js = fs.readFileSync(path.join(REPO, "js", "order-fee-preview.js"), "utf8");
   ok("수량은 order-qty-input 에서 읽는다", js.indexOf('el("order-qty-input")') !== -1);
   ok("요율은 snapshot.feeRate 에서 읽는다(하드코딩 아님)", /snap\.feeRate\.(maker|taker)/.test(js));
   ok("수수료율을 코드에 박아두지 않았다", !/0\.0005|0\.0002/.test(js));
@@ -107,10 +110,10 @@ console.log("\n100% 주문과 진입수수료");
   ok("값은 소수 2자리 — 4자리면 좁은 주문창에서 잘림", /plain\(o\.total, 2\)/.test(js) && /plain\(o\.fee, 2\)/.test(js));
   ok("라벨은 짧게(길면 값이 잘림), 설명은 title 로", /title="증거금 \+ 진입수수료/.test(js) && />필요총액</.test(js));
 
-  const cssFee = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+  const cssFee = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   ok("이 줄만 여백을 줄여 높이를 맞춘다", /\.order-account-row\.order-fee-row\{padding-top:0;padding-bottom:0;\}/.test(cssFee));
 
-  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
   ok("index.html 에 모듈이 연결됐다", html.indexOf("js/order-fee-preview.js") !== -1);
   ok("qty-price-order.js 뒤에 로드된다", html.indexOf("js/order-fee-preview.js") > html.indexOf("js/qty-price-order.js"));
   ok("충전 주석도 자정 기준으로 갱신됐다", html.indexOf("오전 6시(한국시간) 기준으로 횟수가 채워집니다") === -1);

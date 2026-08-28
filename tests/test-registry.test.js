@@ -33,7 +33,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const TESTS = __dirname;
 const ORDER = path.join(TESTS, "_order.txt");
 

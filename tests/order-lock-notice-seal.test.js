@@ -53,7 +53,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM } = require("jsdom");
 
-const REPO = path.resolve(__dirname, "..");
+const REPO = process.env.REPO || path.resolve(__dirname, "..");
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
 
 const ESC = String.fromCharCode(27);

@@ -47,7 +47,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM } = require("jsdom");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 let pass = 0;
 let fail = 0;
 function ok(name, cond, detail) {
@@ -381,6 +381,15 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  *   ⚠ 기준을 낮춘 것이 아닙니다. js/chart-drawings.js 의 TOP_TOOLS 를 직접 열어
  *     ready:false 로 남은 것이 alert · hex 둘뿐임을 확인하고 맞췄습니다.
  *   남은 가로 준비중은 알람(alert) · 육각형(hex) 둘입니다.
+ * 8차(2026-08-28) — 가로 : 육각형(hex)                 2 -> 1
+ *   이름은 "육각형" 이지만 실제로는 **차트 스타일(봉 색·격자선)** 입니다
+ *   (js/chart-drawings.js 의 label 이 "차트 스타일 (봉 색·격자선)" 입니다).
+ *   ⚠ 기준을 낮춘 것이 아닙니다. TOP_TOOLS 를 직접 열어 세었습니다 —
+ *     hex 가 ready:true 로 바뀌었고 ready:false 로 남은 것은 alert 하나뿐입니다.
+ *   ⚠⚠ **알람(alert)은 차트팀이 열지 않았습니다.** 승인대기 10번으로 보류 중입니다
+ *     (대표 캡처가 있어야 만듭니다). js/chart-drawings.js:304 에 ready:false 로
+ *     그대로 있습니다. 알람이 이 목록에서 빠지는 날은 대표 결재가 난 날이어야 합니다.
+ *   남은 가로 준비중은 알람(alert) 하나입니다.
  * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
@@ -394,16 +403,16 @@ ok("남은 세로 준비중이 파동·표정 둘 그대로다",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).sort().join(",")
     === "face,wave",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).join(","));
-ok("가로 막대 준비중이 2개다 (2026-08-28 봉 종류를 열어 3 -> 2 / 남은 것 알람·육각형)",
-  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 2,
+ok("가로 막대 준비중이 1개다 (2026-08-28 육각형을 열어 2 -> 1 / 남은 것 알람뿐)",
+  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 1,
   "지금 " + barBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
 /* ⭐ 개수만 세면 엉뚱한 도구가 잠겨도 숫자만 맞아 통과합니다 —
    누가 fx 를 도로 잠그고 알람을 열어도 2개는 2개입니다.
    세로는 이미 이름(파동·표정)까지 보고 있어서 가로에도 같이 넣습니다.
    (차트팀 지적, 2026-08-28) */
-ok("남은 가로 준비중이 알람·육각형 둘 그대로다",
+ok("남은 가로 준비중이 알람 하나뿐이다 (육각형은 2026-08-28 에 열렸습니다)",
   barBtns.filter((b) => b.hasAttribute("data-soon"))
-    .map((b) => b.getAttribute("data-tlc")).sort().join(",") === "alert,hex",
+    .map((b) => b.getAttribute("data-tlc")).sort().join(",") === "alert",
   barBtns.filter((b) => b.hasAttribute("data-soon"))
     .map((b) => b.getAttribute("data-tlc")).join(","));
 
@@ -412,7 +421,10 @@ ok("남은 가로 준비중이 알람·육각형 둘 그대로다",
    즉 열었다고 적어 놓고 버튼이 잠겨 있거나 아예 없는 경우는 못 잡습니다.
    2026-08-28 봉 종류를 열면서 같이 넣습니다. */
 {
-  const 열린가로 = ["candletype", "fx", "fullscreen", "camera", "expand"];
+  /* 2026-08-28 hex 추가 — 개수가 2 에서 1 로 준 것만 보면
+     "hex 를 목록에서 빼버린 것" 과 "hex 를 실제로 연 것" 이 구별되지 않습니다.
+     그래서 열었다고 한 것은 반드시 이 목록에 넣어 실제로 눌리는지까지 봅니다. */
+  const 열린가로 = ["candletype", "fx", "fullscreen", "camera", "expand", "hex"];
   열린가로.forEach(function (k) {
     const b = barBtns.filter((x) => x.getAttribute("data-tlc") === k)[0];
     ok("가로 " + k + " 버튼이 실제로 있다", !!b);

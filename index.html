@@ -755,14 +755,17 @@
     <div class="panel market-war-panel" id="market-war-panel">
       <div class="ob-header">
         <span class="ob-title">전쟁터 (MARKET WAR)</span>
-        <span class="mw-power-label">
-          <span class="mw-buy-label">BUY <b id="mw-buy-pct">50%</b></span>
-          <span class="mw-sell-label">SELL <b id="mw-sell-pct">50%</b></span>
+        <!-- 첫 화면부터 '모름'입니다. 체결이 한 건도 안 왔는데 50:50 을 보여주면
+             회원이 그걸 측정값으로 믿습니다(TL-004 때 실제로 그랬습니다).
+             값이 들어오면 js/market-war-power-bar.js 가 is-unknown 을 떼고 채웁니다. -->
+        <span class="mw-power-label is-unknown">
+          <span class="mw-buy-label">BUY <b id="mw-buy-pct">—</b></span>
+          <span class="mw-sell-label">SELL <b id="mw-sell-pct">—</b></span>
         </span>
       </div>
-      <div class="mw-power-bar">
-        <div class="mw-power-buy" id="mw-power-buy" style="width:50%;"></div>
-        <div class="mw-power-sell" id="mw-power-sell" style="width:50%;"></div>
+      <div class="mw-power-bar is-unknown">
+        <div class="mw-power-buy" id="mw-power-buy" style="width:0;"></div>
+        <div class="mw-power-sell" id="mw-power-sell" style="width:0;"></div>
       </div>
       <div class="mw-canvas-wrap mw-canvas-wrap-battle">
         <canvas id="mw-canvas" class="mw-canvas"></canvas>
@@ -1215,6 +1218,9 @@
 <script src="js/ob-header-currency.js"></script>
 <script src="js/market-war.js"></script>
 <script src="js/order-pressure-bar.js"></script>
+<!-- 전쟁터 힘 막대가 영구히 50:50 이던 것을 바로잡습니다(js/market-war.js 무수정).
+     계산은 위 order-pressure-bar.js 것을 그대로 재사용하므로 반드시 그 뒤에 둡니다. -->
+<script src="js/market-war-power-bar.js"></script>
 <!-- 이상한 시세가 거래 계산으로 들어가는 것을 막습니다(trading.js 앞) -->
 <script src="js/price-guard.js"></script>
 <!-- 종목 전환 안전장치 (P1 선행조건). 포지션·미체결이 있으면 종목 전환을 막고,
@@ -1342,6 +1348,9 @@
      가로선·지표·그린 도형이 그대로 남습니다.
      이 한 줄을 지우면 버튼이 다시 "준비중" 으로 돌아갑니다. -->
 <script src="js/chart-candle-type.js"></script>
+<!-- 육각형 = 차트 스타일 창 (봉 색·속빈 봉·격자선). js/chart.js 무수정.
+     이 한 줄을 지우면 육각형 버튼이 아무 일도 하지 않습니다. -->
+<script src="js/chart-style.js"></script>
 <!-- 시간축 맨 끝 눈금 글자가 잘리던 것 (chart.js 무수정). 라이브러리가 이미 가진
      "안쪽으로 밀어넣기" 가 fixRightEdge 기본값 false 때문에 한 번도 안 돌던 문제라,
      시간축 캔버스의 fillText 만 감싸 같은 계산을 해 줍니다.

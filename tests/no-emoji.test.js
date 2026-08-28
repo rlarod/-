@@ -16,7 +16,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {

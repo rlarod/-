@@ -13,6 +13,9 @@
 
 const fs = require("fs");
 const path = require("path");
+/* 2026-08-28 기록팀 — REPO 를 고정으로 박아두면 돌연변이 검증이 사본이 아니라
+   진짜 저장소를 읽어서 "조용히 통과" 합니다. 실제로 두 번 속았습니다. */
+const REPO = process.env.REPO || require("path").join(__dirname, "..");
 
 let pass = 0;
 let fail = 0;
@@ -95,14 +98,14 @@ console.log("\n주문창 통화 단위 (원화 모드 1,500배 버그)");
 
 /* ---- 코드가 실제로 그렇게 고쳐졌는지 ---- */
 {
-  const qp = fs.readFileSync(path.join(__dirname, "..", "js", "qty-price-order.js"), "utf8");
+  const qp = fs.readFileSync(path.join(REPO, "js", "qty-price-order.js"), "utf8");
   ok("syncMargin 이 화면 통화로 써 넣는다", /marginInput\.value = toDisplayFloor\(margin\)/.test(qp));
   ok("USDT 를 그대로 써 넣던 줄이 사라졌다", !/marginInput\.value = margin;/.test(qp));
   ok("지정가 가격칸에서 쉼표·단위를 걷어낸다", /replace\(\/\[\^0-9\.\]\/g, ""\)/.test(qp));
   ok("지정가 가격을 USDT 로 되돌린다", /fromDisplay\(v\)/.test(qp));
   ok("환율을 코드에 박아두지 않았다(App.Config.USD_KRW 사용)", qp.indexOf("App.Config.USD_KRW") !== -1 && !/\b1500\b/.test(qp));
 
-  const fp = fs.readFileSync(path.join(__dirname, "..", "js", "order-fee-preview.js"), "utf8");
+  const fp = fs.readFileSync(path.join(REPO, "js", "order-fee-preview.js"), "utf8");
   ok("수수료 표시 모듈도 같은 변환을 쓴다", /App\.Config\.USD_KRW/.test(fp) && /replace\(\/\[\^0-9\.\]\/g, ""\)/.test(fp));
 }
 

@@ -46,7 +46,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM, VirtualConsole } = require("jsdom");
 
-const REPO = path.resolve(__dirname, "..");
+const REPO = process.env.REPO || path.resolve(__dirname, "..");
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
 
 let pass = 0;

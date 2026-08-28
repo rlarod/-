@@ -24,7 +24,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const ESC = String.fromCharCode(27);
 const MARK_OK = ESC + "[32m" + "✓" + ESC + "[0m";
 const MARK_NG = ESC + "[31m" + "✗" + ESC + "[0m";

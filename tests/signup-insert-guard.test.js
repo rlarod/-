@@ -47,7 +47,7 @@ const fs = require("fs");
 const path = require("path");
 const cp = require("child_process");
 
-const REPO = path.resolve(__dirname, "..");
+const REPO = process.env.REPO || path.resolve(__dirname, "..");
 
 let pass = 0;
 let fail = 0;

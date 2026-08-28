@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 let pass = 0;
 let fail = 0;
 function ok(name, cond, detail) {

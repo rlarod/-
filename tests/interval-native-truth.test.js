@@ -36,7 +36,7 @@ const fs = require("fs");
 const path = require("path");
 const { JSDOM } = require("jsdom");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const CONFIG_SRC = fs.readFileSync(path.join(REPO, "js", "config.js"), "utf8");
 
 let pass = 0;

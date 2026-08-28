@@ -49,7 +49,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM, VirtualConsole } = require("jsdom");
 
-const REPO = path.resolve(__dirname, "..");
+const REPO = process.env.REPO || path.resolve(__dirname, "..");
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
 
 let pass = 0;
@@ -259,10 +259,34 @@ section("[5] 노출 표면");
     "키나 주소를 밖으로 내주면 다른 모듈이 client 를 따로 만들 수 있게 됩니다");
   ok("키 문자열을 공개 속성으로 내주지 않는다",
     JSON.stringify(t.App.SupabaseClient).indexOf("sb_publishable_") === -1);
-  ok("전역(window)에 키를 흘리지 않는다",
-    typeof t.win.SUPABASE_PUBLISHABLE_KEY === "undefined" &&
-    typeof t.win.SUPABASE_URL === "undefined",
-    "IIFE 안에 갇혀 있어야 합니다");
+  /* 2026-08-28 기록팀 — 돌연변이 검증에서 이 검사가 뚫렸습니다.
+     전에는 SUPABASE_PUBLISHABLE_KEY / SUPABASE_URL 이라는 **이름 두 개**만 봤습니다.
+     사본에 window.__k = "sb_publishable_..." 한 줄을 넣었더니 그대로 통과했습니다
+     (종료코드 0). 이름을 바꿔 흘리면 안 잡히는, 아무것도 안 지키던 검사였습니다.
+     그래서 이름이 아니라 **값**으로 봅니다 — window 와 window.App 의 데이터 속성을
+     전부 훑어 키 문자열이 들어 있는지 찾습니다.
+     getter 는 부르지 않습니다(부작용·느려짐). value 가 있는 것만 읽습니다. */
+  function 값으로흘린곳(대상, 라벨) {
+    const 찾음 = [];
+    let 이름들 = [];
+    try { 이름들 = Object.getOwnPropertyNames(대상); } catch (e) { return 찾음; }
+    for (const n of 이름들) {
+      let d;
+      try { d = Object.getOwnPropertyDescriptor(대상, n); } catch (e) { continue; }
+      if (!d || !("value" in d)) continue;          // getter 는 건너뛴다
+      const v = d.value;
+      if (typeof v !== "string") continue;
+      if (v.indexOf("sb_publishable_") !== -1 || v.indexOf("oxpjpotilcumjqixsdxw") !== -1) {
+        찾음.push(라벨 + "." + n);
+      }
+    }
+    return 찾음;
+  }
+  const 흘린곳 = 값으로흘린곳(t.win, "window").concat(값으로흘린곳(t.App, "App"));
+  ok("전역(window)에 키를 흘리지 않는다" +
+      (흘린곳.length ? " (샌 곳: " + JSON.stringify(흘린곳) + ")" : ""),
+    흘린곳.length === 0,
+    "IIFE 안에 갇혀 있어야 합니다. 이름을 바꿔도 값으로 잡습니다");
   t.win.close();
 }
 

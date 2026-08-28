@@ -302,7 +302,11 @@ App.ChartDrawings = (function () {
        목록 자체는 js/chart-indicator-menu.js 가 만듭니다. */
     { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: true },
     { k: "alert", icon: "tlc-i-alarm", label: "알람", ready: false },
-    { k: "hex", icon: "tlc-i-hexagon", label: "육각형", ready: false },
+    /* 9차(2026-08-28) — 육각형을 열었습니다. 바이낸스 Original 차트에서 이
+       아이콘의 이름표가 "Chart Style"(차트 스타일) 이었습니다(실측).
+       창은 js/chart-style.js 가 만듭니다. 되돌리려면 이 줄의 ready 를 false,
+       label 을 "육각형" 으로 되돌리고 onButton() 의 hex 토막을 지웁니다. */
+    { k: "hex", icon: "tlc-i-hexagon", label: "차트 스타일 (봉 색·격자선)", ready: true },
     { k: "spacer", spacer: true },
     { k: "fullscreen", icon: "tlc-i-fullscreen", label: "전체화면", ready: true },
     { k: "camera", icon: "tlc-i-camera", label: "카메라 (차트 그림 저장)", ready: true }
@@ -1986,6 +1990,13 @@ App.ChartDrawings = (function () {
     if (def.k === "candletype") {
       var ct = window.App && App.ChartCandleType;
       if (ct && typeof ct.toggle === "function") ct.toggle(barButton("candletype"));
+      return;
+    }
+    /* 차트 스타일(육각형) — 창은 별도 파일이 만듭니다(js/chart-style.js).
+       fx·봉 종류와 같은 방식입니다. 그 파일이 없으면 아무 일도 안 합니다. */
+    if (def.k === "hex") {
+      var cs = window.App && App.ChartStyle;
+      if (cs && typeof cs.toggle === "function") cs.toggle();
     }
   }
 

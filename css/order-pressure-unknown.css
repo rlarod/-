@@ -42,7 +42,8 @@
 
 /* 회색 빗금 = "지금 셀 체결이 없습니다".
    반투명이라 밝은 판에서도 어두운 판에서도 같은 정도로 보입니다. */
-.order-pressure-bar.is-unknown .order-pressure-track {
+.order-pressure-bar.is-unknown .order-pressure-track,
+.mw-power-bar.is-unknown {
   background-image: repeating-linear-gradient(
     45deg,
     rgba(131, 141, 164, 0.55) 0 3px,
@@ -58,6 +59,41 @@
 }
 
 /* 값이 다시 들어올 때 빗금이 뚝 끊기지 않게. */
-.order-pressure-track {
+.order-pressure-track,
+.mw-power-bar {
   transition: background-image 0.25s;
+}
+
+/* =========================================================================
+ * 전쟁터(MARKET WAR) 힘 막대 — 같은 '모름' 표시를 씁니다
+ * =========================================================================
+ * 2026-08-28 / 수리팀 (2건)
+ *
+ * 위 압력 바와 ★같은 회색 빗금★ 을 씁니다. 빗금 정의를 두 벌 만들지
+ * 않으려고 위 규칙에 선택자만 얹었습니다(.mw-power-bar.is-unknown).
+ * 디자인팀이 확정한 모양(회색 빗금 + "—")을 그대로 따릅니다.
+ *
+ * is-unknown 을 붙였다 떼는 것은 js/market-war-power-bar.js 입니다.
+ * js/market-war.js 는 한 글자도 안 고쳤습니다.
+ *
+ * 마크업은 하나도 안 지웠습니다 — 초록/빨강 칸은 그대로 있고 폭만 0 이
+ * 됩니다. 값이 들어오면 그 자리에서 다시 자랍니다.
+ *
+ * 되돌리려면 index.html 의 <script src="js/market-war-power-bar.js"> 한 줄만
+ * 지우면 됩니다(이 절은 남아 있어도 is-unknown 이 안 붙어 아무 일도 안 함).
+ * ========================================================================= */
+
+/* 값이 없을 때 — 초록/빨강을 지우고 빗금만 보이게.
+   width 는 js 가 0 으로 만들지만, js 가 못 돌아도 여기서 한 번 더 막습니다. */
+.mw-power-bar.is-unknown .mw-power-buy,
+.mw-power-bar.is-unknown .mw-power-sell {
+  width: 0 !important;
+  background: transparent;
+}
+
+/* 글자도 초록·빨강을 끕니다.
+   "BUY —" 가 초록이면 매수가 이기는 것처럼 읽힙니다. */
+.mw-power-label.is-unknown .mw-buy-label,
+.mw-power-label.is-unknown .mw-sell-label {
+  color: #838da4;
 }

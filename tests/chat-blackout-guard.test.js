@@ -37,7 +37,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM } = require("jsdom");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 
 let pass = 0, fail = 0;
 const 실패목록 = [];

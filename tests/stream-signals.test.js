@@ -41,7 +41,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { JSDOM } = require("jsdom");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 let pass = 0, fail = 0;
 function ok(name, cond, detail) {
   if (cond) { pass++; console.log("  \x1b[32m✓\x1b[0m " + name); }

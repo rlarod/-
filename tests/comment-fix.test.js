@@ -5,6 +5,9 @@
 
 const fs = require("fs");
 const path = require("path");
+/* 2026-08-28 기록팀 — REPO 를 고정으로 박아두면 돌연변이 검증이 사본이 아니라
+   진짜 저장소를 읽어서 "조용히 통과" 합니다. 실제로 두 번 속았습니다. */
+const REPO = process.env.REPO || require("path").join(__dirname, "..");
 const vm = require("vm");
 
 let pass = 0;
@@ -68,7 +71,7 @@ function makeFakeClient(store) {
 }
 
 /* ---------- 모듈 로드 ---------- */
-const src = fs.readFileSync(path.join(__dirname, "..", "js", "comment-fix.js"), "utf8");
+const src = fs.readFileSync(path.join(REPO, "js", "comment-fix.js"), "utf8");
 const sandbox = {
   console,
   setInterval: () => 0,

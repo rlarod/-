@@ -28,6 +28,9 @@
 
 const fs = require("fs");
 const path = require("path");
+/* 2026-08-28 기록팀 — REPO 를 고정으로 박아두면 돌연변이 검증이 사본이 아니라
+   진짜 저장소를 읽어서 "조용히 통과" 합니다. 실제로 두 번 속았습니다. */
+const REPO = process.env.REPO || require("path").join(__dirname, "..");
 
 let pass = 0;
 let fail = 0;
@@ -191,7 +194,7 @@ console.log("\n충전 규칙 (자정 기준 · 하루 2회)");
 
 /* ---- SQL 파일이 실제로 그렇게 쓰였는지 ---- */
 {
-  const sqlDir = path.join(__dirname, "..", "supabase");
+  const sqlDir = path.join(REPO, "supabase");
   /* 주석(-- ...)에 적힌 설명 문구가 검사에 걸리지 않도록 걷어냅니다. */
   const stripComments = (t) => t.split("\n").map((l) => l.replace(/--.*$/, "")).join("\n");
   const recharge = stripComments(fs.readFileSync(path.join(sqlDir, "schema-daily-recharge.sql"), "utf8"));
@@ -215,7 +218,7 @@ console.log("\n충전 규칙 (자정 기준 · 하루 2회)");
 
 /* ---- 화면 안내 문구 ---- */
 {
-  const js = fs.readFileSync(path.join(__dirname, "..", "js", "daily-recharge.js"), "utf8");
+  const js = fs.readFileSync(path.join(REPO, "js", "daily-recharge.js"), "utf8");
   ok("화면 문구에 '오전 6시' 가 남아있지 않다", js.indexOf("오전 6시") === -1);
   ok("화면 문구가 '자정' 기준으로 바뀌었다", js.indexOf("자정") !== -1);
   ok("남은 횟수는 서버 값(remaining/max_per_day)을 쓴다", js.indexOf("data.remaining") !== -1 && js.indexOf("data.max_per_day") !== -1);

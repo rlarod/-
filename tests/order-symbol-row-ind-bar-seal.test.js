@@ -42,7 +42,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const read = (f) => fs.readFileSync(path.join(REPO, f), "utf8");
 
 let pass = 0;

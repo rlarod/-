@@ -33,7 +33,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const SERVER_REL = "scripts/dev-server.js";
 const SERVER_ABS = path.join(REPO, SERVER_REL);
 

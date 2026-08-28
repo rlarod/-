@@ -58,7 +58,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const REPO = path.resolve(__dirname, "..");
+const REPO = process.env.REPO || path.resolve(__dirname, "..");
 const SRC = fs.readFileSync(path.join(REPO, "js", "chart-drawings.js"), "utf8");
 
 let pass = 0;

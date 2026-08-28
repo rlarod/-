@@ -33,6 +33,7 @@ tests/realized-pnl.test.js
 tests/chat-safety.test.js
 tests/leaderboard.test.js
 tests/account-isolation.test.js
+tests/auth-changed-wakeup-seal.test.js
 tests/season-reset.test.js
 tests/price-guard.test.js
 tests/currency-refresh.test.js
@@ -113,6 +114,7 @@ tests/four-symbols-seal.test.js
 tests/symbol-after-refresh.test.js
 tests/trade-history-symbol-unit.test.js
 tests/test-registry.test.js
+tests/repo-env-honored.test.js
 tests/order-symbol-row-ind-bar-seal.test.js
 tests/multi-symbol-view.test.js
 tests/stale-price-guard.test.js
@@ -157,3 +159,4 @@ tests/ad-banner-off-seal.test.js
 tests/shots-gitignore-seal.test.js
 tests/chart-candle-type-seal.test.js
 tests/menu-rename-seal.test.js
+tests/market-war-power-bar.test.js

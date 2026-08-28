@@ -49,7 +49,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = path.join(__dirname, "..");
+const REPO = process.env.REPO || path.join(__dirname, "..");
 const AGENTS = path.join(REPO, ".claude", "agents");
 
 let pass = 0, fail = 0;
