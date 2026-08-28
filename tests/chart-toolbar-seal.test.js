@@ -376,6 +376,11 @@ const titled = ALL.filter((b) => (b.getAttribute("title") || "").indexOf("준비
  *   세 번 톡 해서 만드는 평행 채널입니다. 남은 준비중은 세로 파동·표정 둘입니다.
  *   ⚠ 여기도 기준을 낮춘 것이 아닙니다. js/chart-drawings.js 의 LEFT_TOOLS 를
  *     직접 열어 ready:false 로 남은 것이 wave · face 둘뿐임을 확인하고 맞췄습니다.
+ * 7차(2026-08-28) — 가로 : 봉 종류(candletype)         3 -> 2
+ *   캔들/라인/바/영역 넷을 고르는 메뉴입니다(js/chart-candle-type.js).
+ *   ⚠ 기준을 낮춘 것이 아닙니다. js/chart-drawings.js 의 TOP_TOOLS 를 직접 열어
+ *     ready:false 로 남은 것이 alert · hex 둘뿐임을 확인하고 맞췄습니다.
+ *   남은 가로 준비중은 알람(alert) · 육각형(hex) 둘입니다.
  * 왜 이 넷인가 — 바이낸스 선물 차트에 실제로 있는 도구이고, 회원이 자주
  * 쓰는 순서로 골랐습니다(차트를 크게 보기 / 자랑용 캡처 / 되돌림·목표가 재기).
  * 이 숫자를 다시 줄이려면 무엇을 왜 열었는지 여기에 날짜와 함께 적으세요.
@@ -389,9 +394,34 @@ ok("남은 세로 준비중이 파동·표정 둘 그대로다",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).sort().join(",")
     === "face,wave",
   railBtns.filter((b) => b.hasAttribute("data-soon")).map((b) => b.getAttribute("data-tlc")).join(","));
-ok("가로 막대 준비중이 3개다 (2026-08-27 fx 를 열어 4 -> 3)",
-  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 3,
+ok("가로 막대 준비중이 2개다 (2026-08-28 봉 종류를 열어 3 -> 2 / 남은 것 알람·육각형)",
+  barBtns.filter((b) => b.hasAttribute("data-soon")).length === 2,
   "지금 " + barBtns.filter((b) => b.hasAttribute("data-soon")).length + "개");
+/* ⭐ 개수만 세면 엉뚱한 도구가 잠겨도 숫자만 맞아 통과합니다 —
+   누가 fx 를 도로 잠그고 알람을 열어도 2개는 2개입니다.
+   세로는 이미 이름(파동·표정)까지 보고 있어서 가로에도 같이 넣습니다.
+   (차트팀 지적, 2026-08-28) */
+ok("남은 가로 준비중이 알람·육각형 둘 그대로다",
+  barBtns.filter((b) => b.hasAttribute("data-soon"))
+    .map((b) => b.getAttribute("data-tlc")).sort().join(",") === "alert,hex",
+  barBtns.filter((b) => b.hasAttribute("data-soon"))
+    .map((b) => b.getAttribute("data-tlc")).join(","));
+
+/* ── 반대 방향 — "열었다고 해 놓고 실제로는 안 열리는" 것도 막습니다 ──────
+   준비중 검사는 "잠긴 것이 열려 있는" 모순만 잡습니다. 그 반대,
+   즉 열었다고 적어 놓고 버튼이 잠겨 있거나 아예 없는 경우는 못 잡습니다.
+   2026-08-28 봉 종류를 열면서 같이 넣습니다. */
+{
+  const 열린가로 = ["candletype", "fx", "fullscreen", "camera", "expand"];
+  열린가로.forEach(function (k) {
+    const b = barBtns.filter((x) => x.getAttribute("data-tlc") === k)[0];
+    ok("가로 " + k + " 버튼이 실제로 있다", !!b);
+    if (!b) return;
+    ok("가로 " + k + " 는 준비중 표시가 없다", !b.hasAttribute("data-soon"),
+      "열었다고 적어 놓고 잠겨 있으면 회원은 고장으로 봅니다");
+    ok("가로 " + k + " 는 잠겨 있지 않다(disabled 아님)", !b.hasAttribute("disabled"));
+  });
+}
 
 {
   const bad = soon.filter((b) => !b.hasAttribute("disabled")).map((b) => b.getAttribute("data-tlc"));

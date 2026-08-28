@@ -151,3 +151,9 @@ tests/order-pressure-stale-seal.test.js
 tests/chart-channel-seal.test.js
 tests/chart-double-tap-swallow.test.js
 tests/chart-addons-seal.test.js
+tests/chat-blackout-guard.test.js
+tests/chat-blackout-reentry-seal.test.js
+tests/ad-banner-off-seal.test.js
+tests/shots-gitignore-seal.test.js
+tests/chart-candle-type-seal.test.js
+tests/menu-rename-seal.test.js

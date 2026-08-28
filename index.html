@@ -166,7 +166,7 @@
     <nav class="top-banner-nav">
       <!-- 실제로 동작하는 메뉴만 노출합니다. 준비중 항목은 마크업을 남겨두고
            .nav-coming-soon 규칙으로 화면에서만 숨깁니다(클릭 안내는 그대로). -->
-      <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">코인선물</button>
+      <button class="top-banner-nav-btn active" id="page-nav-exchange" data-page="exchange">선물거래</button>
       <button class="top-banner-nav-btn" id="page-nav-board" data-page="board">커뮤니티</button>
       <button class="top-banner-nav-btn" id="page-nav-ranking" data-page="ranking">랭킹</button>
       <button class="top-banner-nav-btn" id="page-nav-hotdeal" data-page="hotdeal">TL 핫딜</button>
@@ -302,11 +302,11 @@
     <span class="event-banner-sub">가상 자금으로 즐기는 선물 시뮬레이션 · 실현 손익 기준 랭킹 경쟁</span>
   </div>
 
-  <!-- ===== 상품 카테고리 탭 — 우리는 코인선물(BTC)만 실제로 지원, 나머지는 준비중 ===== -->
+  <!-- ===== 상품 카테고리 탭 — 네 종목 전부 무기한 선물이라 "선물거래" 입니다 (2026-08-28 대표 지시) ===== -->
   <div class="product-tabs page-center">
     <button class="product-tab-btn nav-coming-soon">모의투자 <span class="nav-soon-badge">준비중</span></button>
     <button class="product-tab-btn nav-coming-soon">해외선물 <span class="nav-soon-badge">준비중</span></button>
-    <button class="product-tab-btn active">코인선물</button>
+    <button class="product-tab-btn active">선물거래</button>
   </div>
 
   <!-- ===== 전광판 — 여러 종목을 표로 한눈에(BTC는 실시간, 나머지는 준비중 배지) ===== -->
@@ -1113,6 +1113,8 @@
 <script src="js/chat.js"></script>
 <!-- 재연결 안내가 계속 깜빡이지 않게 가라앉힙니다(chat.js 무수정) -->
 <script src="js/chat-status-calm.js"></script>
+<!-- 조회가 한 번 실패하면 채팅창이 영구히 비던 것을 막습니다(chat.js 무수정) -->
+<script src="js/chat-blackout-guard.js"></script>
 <script src="js/trade-events-chat.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/board.js"></script>
@@ -1334,6 +1336,12 @@
      지표 계산·그리기는 위 두 파일이 이미 하고, 이 파일은 켜고 끄는 목록만 만듭니다.
      이 한 줄을 지우면 fx 는 다시 "준비중" 으로 돌아갑니다(지표는 그대로 동작). -->
 <script src="js/chart-indicator-menu.js"></script>
+<!-- 가로 막대의 "봉 종류" 버튼 — 캔들 / 라인 / 바 / 영역 (chart.js 무수정).
+     바이낸스 선물 Original 차트의 Chart Style 에 있는 것이 정확히 이 넷입니다.
+     캔들 시리즈를 갈아끼우지 않고 색만 투명으로 만든 뒤 위에 얹는 방식이라
+     가로선·지표·그린 도형이 그대로 남습니다.
+     이 한 줄을 지우면 버튼이 다시 "준비중" 으로 돌아갑니다. -->
+<script src="js/chart-candle-type.js"></script>
 <!-- 시간축 맨 끝 눈금 글자가 잘리던 것 (chart.js 무수정). 라이브러리가 이미 가진
      "안쪽으로 밀어넣기" 가 fixRightEdge 기본값 false 때문에 한 번도 안 돌던 문제라,
      시간축 캔버스의 fillText 만 감싸 같은 계산을 해 줍니다.

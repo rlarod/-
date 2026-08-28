@@ -315,12 +315,107 @@ section("[6] 감싸기 (두 모듈이 이 성질에 기대고 있습니다)");
     /__symbolBridged/.test(BR));
   ok("js/comment-fix.js 가 두 번 감싸지 않게 표시를 남긴다",
     /__commentFixWrapped/.test(CF));
+  const GD = 주석제거(read("js/chat-blackout-guard.js"));
+  ok("js/chat-blackout-guard.js 가 두 번 감싸지 않게 표시를 남긴다",
+    /__chatBlackoutGuardWrapped/.test(GD));
+
+  /* ── 2 -> 3 으로 올린 이유 (2026-08-28) ────────────────────────────────
+     채팅이 영구히 비는 P1 을 고치려고 js/chat-blackout-guard.js 가 늘었습니다.
+     js/chat.js 는 수정 금지라 밖에서 감싸는 것 말고는 방법이 없습니다.
+     수리팀이 세 겹이 안전한지 숫자로 재서 올렸고, 그 근거로 올렸습니다.
+
+     ⚠ 개수만 세면 안 됩니다 — 셋 중 하나가 원본을 안 넘겨도 개수는 3 입니다.
+     그래서 아래에서 실제로 셋을 겹쳐 올려 원본까지 닿는지 확인합니다. */
+  const 감싸야할것 = [
+    "chat-blackout-guard.js",   // 채팅 영구 blackout 막기
+    "comment-fix.js",           // 댓글 고쳐쓰기
+    "symbol-sync-bridge.js"     // 종목 도장
+  ].sort();
   const 감싸는것 = fs.readdirSync(path.join(REPO, "js"))
     .filter((f) => f.slice(-3) === ".js")
-    .filter((f) => /App\.SupabaseClient\.get\s*=[^=]/.test(주석제거(read("js/" + f))));
-  ok("get 을 갈아끼우는 모듈이 2개뿐이다 (지금: " + JSON.stringify(감싸는것) + ")",
-    감싸는것.length === 2,
-    "늘어나면 순서가 동작을 바꿉니다. tests/storage-save-wrap-order.test.js 와 같은 종류의 사고입니다");
+    .filter((f) => /App\.SupabaseClient\.get\s*=[^=]/.test(주석제거(read("js/" + f))))
+    .sort();
+
+  ok("get 을 갈아끼우는 모듈이 정확히 이 셋이다 (지금: " + JSON.stringify(감싸는것) + ")",
+    감싸는것.join(",") === 감싸야할것.join(","),
+    "있어야 할 것: " + JSON.stringify(감싸야할것) +
+    " — 늘거나 바뀌면 순서가 동작을 바꿉니다. tests/storage-save-wrap-order.test.js 와 같은 종류의 사고입니다");
+
+  /* ── 세 겹이 원본까지 닿는가 ───────────────────────────────────────────
+     하나라도 원본을 안 부르고 자기가 만든 것을 돌려주면, 그 아래 모듈은
+     통째로 죽습니다. 오류는 안 납니다 — 종목 도장이 안 찍히거나 댓글이
+     안 고쳐지는 조용한 고장이 됩니다. */
+  {
+    const dom = new JSDOM(
+      "<!doctype html><html><body><div id=\"chat-messages\"></div></body></html>",
+      { runScripts: "outside-only", url: "https://example.test/" });
+    const w = dom.window;
+    w.setInterval = () => 0; w.clearInterval = () => {};
+    w.setTimeout = () => 0; w.clearTimeout = () => {};
+
+    const 원본도달 = { channel: 0, removeChannel: 0, from: 0 };
+    const 진짜client = {
+      channel: function (t) {
+        원본도달.channel++;
+        return { topic: t, subscribe: function (cb) { this._h = cb; return this; } };
+      },
+      removeChannel: function () { 원본도달.removeChannel++; return true; },
+      from: function () { 원본도달.from++; return { select: () => ({ eq: () => ({}) }) }; }
+    };
+    let get호출 = 0;
+    w.App = { SupabaseClient: { get: function () { get호출++; return 진짜client; } } };
+
+    let 실림오류 = null;
+    try {
+      감싸야할것.forEach(function (f) { w.eval(read("js/" + f)); });
+    } catch (e) { 실림오류 = e.message; }
+    ok("세 모듈을 한 창에 같이 올릴 수 있다", 실림오류 === null, 실림오류);
+
+    ["ChatBlackoutGuard", "CommentFix", "SymbolSyncBridge"].forEach(function (n) {
+      const m = w.App[n];
+      if (m && typeof m.install === "function") { try { m.install(); } catch (e) { /* noop */ } }
+    });
+
+    const c1 = w.App.SupabaseClient.get();
+    const c2 = w.App.SupabaseClient.get();
+    ok("세 겹을 지나도 원본 client 그대로가 나온다 (누가 바꿔치기하지 않았다)",
+      c1 === 진짜client && c2 === 진짜client,
+      "누군가 원본 대신 자기가 만든 것을 돌려주고 있습니다");
+
+    ok("세 모듈의 도장이 전부 찍힌다 (원본이 끝까지 전달됐다는 뜻입니다)",
+      w.App.SupabaseClient.__chatBlackoutGuardWrapped === true &&
+      w.App.SupabaseClient.__commentFixWrapped === true &&
+      w.App.SupabaseClient.__symbolBridged === true,
+      JSON.stringify({
+        guard: !!w.App.SupabaseClient.__chatBlackoutGuardWrapped,
+        commentFix: !!w.App.SupabaseClient.__commentFixWrapped,
+        bridge: !!w.App.SupabaseClient.__symbolBridged
+      }));
+
+    /* install() 을 더 불러도 겹이 늘면 안 됩니다 */
+    for (let i = 0; i < 5; i++) {
+      ["ChatBlackoutGuard", "CommentFix", "SymbolSyncBridge"].forEach(function (n) {
+        const m = w.App[n];
+        if (m && typeof m.install === "function") { try { m.install(); } catch (e) { /* noop */ } }
+      });
+    }
+    ok("install() 을 다섯 번 더 불러도 여전히 같은 원본이 나온다 (겹이 안 늘어난다)",
+      w.App.SupabaseClient.get() === 진짜client);
+
+    /* 실제 호출이 원본 함수까지 닿는지 */
+    const c = w.App.SupabaseClient.get();
+    c.channel("chat_messages_live_1");
+    c.channel("other_topic");
+    c.removeChannel({});
+    c.from("comments");
+    c.from("profiles");
+    ok("channel / removeChannel / from 이 전부 원본까지 닿는다 (실제: " +
+      JSON.stringify(원본도달) + ")",
+      원본도달.channel === 2 && 원본도달.removeChannel === 1 && 원본도달.from === 2,
+      "하나라도 0 이면 그 위 모듈이 원본을 안 부르고 삼키고 있습니다");
+
+    try { w.close(); } catch (e) { /* noop */ }
+  }
 }
 
 /* =========================================================================

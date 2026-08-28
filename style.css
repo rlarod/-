@@ -1215,7 +1215,7 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    위 규칙들보다 뒤에 와야 display:flex를 덮습니다. */
 .event-banner{display:none !important;}
 
-/* 상품 카테고리 탭(모의투자/해외선물/코인선물) */
+/* 상품 카테고리 탭(모의투자/해외선물/선물거래) */
 .product-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:0;padding-bottom:0;border-bottom:1px solid var(--border-soft);align-items:flex-end;}
 .product-tabs .nav-soon-badge{color:var(--text-faint);}
 .product-tab-btn{
@@ -1228,11 +1228,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* -- 이 줄은 "분류 줄" 에서 "종목 줄" 로 바뀌었습니다 (대표 지시 2026-08-27) --
    대표: "여기다 종목 만들어 넣자"
 
-   원래 분류 버튼 3개(모의투자·해외선물·코인선물) 중 앞의 둘은 아래쪽
-   nav-coming-soon 규칙에서 이미 숨겨져 있어 `코인선물` 하나만 남고 오른쪽이
+   원래 분류 버튼 3개(모의투자·해외선물·선물거래) 중 앞의 둘은 아래쪽
+   nav-coming-soon 규칙에서 이미 숨겨져 있어 `선물거래` 하나만 남고 오른쪽이
    통째로 비어 있었습니다(360 실측 — 줄 안쪽 폭 344px 중 99.9px 만 사용).
 
-   나스닥·삼성전자·SK하이닉스는 "코인선물" 이 아니라서 그 옆에 나란히 두면
+   나스닥·삼성전자·SK하이닉스는 코인이 아니라서 그 옆에 나란히 두면
    분류가 어긋납니다. 그래서 분류 버튼 3개를 **화면에서만** 내리고 같은 줄에
    종목 탭을 넣습니다. 마크업(index.html:289-291)은 한 줄도 안 지웠습니다.
 
@@ -1247,9 +1247,11 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    [2026-08-28 대표 지시] "처음에 비트코인만 있었던 그 크기로 키워"
    - 처음 크기는 .product-tab-btn(윗줄) 의 19px 이고 줄 높이가 48px 이었습니다.
      글자 19px + 세로 여백 11px + 밑줄 2px = 47.8px (360 실측, 줄 전체 48.8px).
-   - 가로 여백만 14px -> 폰에서 6px 로 줄였습니다(아래 max-width:700px 블록).
+   - 가로 여백만 14px -> 폰에서 3px 로 줄였습니다(아래 max-width:700px 블록).
      19px 로 키우면 글자 폭 합만 287.1px 이라 360 의 담는 칸 344px 에서
-     여유가 거의 없습니다. 6px + gap 0 이면 335.1px 로 8.9px 남습니다.
+     여유가 거의 없습니다. 3px + gap 0 이면 311.1px 로 32.9px 남습니다.
+     (2026-08-28: 6px 이었을 때는 8.9px 밖에 안 남아, 글꼴이 다른 한글
+      글꼴로 대체되면 두 줄이 됐습니다. 실측표는 폰 블록 주석에 있습니다)
    - 되돌리려면 font-size:14px / padding:7px 10px 로, 아래 폰 블록은
      font-size:13px / padding:7px 8px 로 되돌리고 .product-tabs gap 줄을 지우세요. */
 .symbol-tab-btn{
@@ -3868,7 +3870,7 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
  * 빨강은 손익 표시에만 남깁니다.
  * ========================================================================= */
 
-/* 지금 보고 있는 상품 탭(코인선물) — 강조는 맞지만 하락이 아닙니다 */
+/* 지금 보고 있는 상품 탭(선물거래) — 강조는 맞지만 하락이 아닙니다 */
 html[data-theme="dark"] .product-tab-btn.active{
   color:var(--gold);
   border-color:var(--gold);
@@ -4213,10 +4215,27 @@ html[data-theme="dark"] .board-page-btn.active{
   #page-exchange > .product-tabs{order:0;}
   /* 글자 크기는 데스크톱과 같은 19px 로 두고(대표 지시), 폰에서는 가로 여백과
      탭 사이 간격만 줄여 360 에 넣습니다.
-     360 실측 - 글자 폭 합 287.1 + 여백 8x6=48 = 335.1px / 담는 칸 344px (여유 8.9px)
-     되돌리려면 이 두 줄을 font-size:13px;padding:7px 8px; 한 줄로 되돌리세요. */
+
+     [2026-08-28 대표 결정] 가로 여백 6px -> 3px.
+     6px 일 때 360 여유가 8.9px 뿐이라, 글꼴이 다른 한글 글꼴로 대체되면
+     그 자리에서 두 줄이 됐습니다. 글꼴을 바꿔가며 360 에서 실측한 값입니다
+     (담는 칸 344px · gap 0 · 탭 4개 합).
+
+       글꼴                       여백 6px          여백 3px
+       Noto Sans KR (지금)        335.1 (+8.9)      311.1 (+32.9)
+       Spoqa Han Sans Neo         334.4 (+9.6)      -
+       Malgun Gothic = system-ui  356.0 (-12.0) 두줄 332.0 (+12.0)
+       Gulim / Dotum / Batang     371~373 두 줄     348 (-4) 두 줄
+
+     글자 크기(19px)는 대표 지시라 그대로 두고 여백만 줄였습니다.
+     18px 로 줄여도 여유는 거의 같습니다(+24.0 vs 여백4px +24.9) —
+     즉 글자를 줄이지 않고도 같은 안전을 얻습니다.
+     누르는 칸은 가장 좁은 "나스닥" 이 58.5 x 48.8px 로 최소 44px 을 넘습니다.
+
+     되돌리려면 아래 두 줄을 font-size:13px;padding:7px 8px; 한 줄로 되돌리세요.
+     여백만 예전으로 되돌리려면 padding:11px 6px; 입니다. */
   .product-tabs{gap:0;}
-  .symbol-tab-btn{padding:11px 6px;}
+  .symbol-tab-btn{padding:11px 3px;}
   /* 지금 display:none 인 것들 — 되살아나면 상품탭 옆자리에 옵니다 */
   #page-exchange > .event-banner{order:5;}
   #page-exchange > #ticker-board-panel{order:6;}
@@ -4685,7 +4704,7 @@ html[data-theme="dark"] .board-page-btn.active{
  *           예전 모습으로 정확히 돌아갑니다.
  * ========================================================================= */
 @media (max-width:400px){
-  /* 상단 메뉴: 좌우 5px — 360px 에서 메뉴 6개(코인선물…TL 마켓)가 한 줄에
+  /* 상단 메뉴: 좌우 5px — 360px 에서 메뉴 6개(선물거래…TL 마켓)가 한 줄에
      다 들어가게 합니다. 글자 크기 13px 은 예전 그대로입니다.
      이 규칙은 원래 505행 @media(max-width:400px) 안에 있었는데, 그보다 뒤에
      있는 @media(max-width:520px) 규칙에 좌우 여백이 덮여 죽어 있었습니다.

@@ -54,9 +54,30 @@
  *   남은 이름 "channel,face,wave" -> "face,wave",
  *   tests/chart-drawings.test.js 의 readyLeft 에서 channel 을 지우기.
  *
- * 아직 자리만 잡아 둔 것 (5개)
+ * 7차(2026-08-28)에서 연 것 — 봉 종류 (가로 막대)
+ *   캔들 / 라인 / 바 / 영역 넷입니다. 바이낸스 선물 Original 차트의
+ *   Chart Style 창에 있는 것이 정확히 이 넷이라 그대로 맞췄습니다.
+ *   목록·그리기는 js/chart-candle-type.js 가 합니다(캔들 시리즈를 갈아끼우지
+ *   않고 색만 투명으로 만든 뒤 위에 얹는 방식이라, 이 파일이 그려 둔
+ *   수평선·추세선·채널·브러시가 그대로 남습니다).
+ *   되돌리려면 — TOP_TOOLS 의 candletype ready 를 false 로, onButton() 의
+ *   candletype 토막을 지우면 끝입니다.
+ *
+ * 8차(2026-08-28)에서 맞춘 것 — 그린 선 굵기 1px -> 2px
+ *   바이낸스 선물(트레이딩뷰 모드)에서 추세선·수평선·피보나치를 실제로 긋고
+ *   캔버스 픽셀을 읽어 재니 전부 2px 였습니다. 우리만 1px 이라, 6차에서
+ *   이미 2px 로 맞춰 둔 평행 채널과 서로 어긋나 있었습니다.
+ *   자(측정)만 1px 로 남겼습니다 — 바이낸스는 그 테두리를 아예 안 긋습니다.
+ *   실측표·되돌리는 법은 LINE_WIDTH / RULER_WIDTH 주석에 적었습니다.
+ *   주의 — 회원이 이미 그어 둔 선도 다음에 열 때 같이 굵어집니다(의도한 것).
+ *   되돌리려면 — LINE_WIDTH 를 1 로. 저장된 그림은 그대로입니다.
+ *   같이 깨질 것 — tests/chart-channel-seal.test.js 의
+ *   "추세선 굵기가 바이낸스와 어긋나 있다" 검사(위 236줄 주석을 봅니다).
+ *   이제 어긋나 있지 않으므로 그 검사는 사실과 맞지 않습니다.
+ *
+ * 아직 자리만 잡아 둔 것 (4개)
  *   세로 막대 — 파동 / 표정
- *   가로 막대 — 봉 종류 / 알람 / 육각형
+ *   가로 막대 — 알람 / 육각형
  *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
  *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
  *
@@ -160,7 +181,44 @@ App.ChartDrawings = (function () {
      그래서 방향은 색이 아니라 화살표와 +/- 부호로 알립니다. */
   var FILL_DRAW = "rgba(240,180,41,0.10)";
 
-  var LINE_WIDTH = 1;
+  /* ---------------- 그린 선 굵기 (8차 2026-08-28) ----------------
+   * 2px — 바이낸스 선물(트레이딩뷰 모드) 그리기 도구와 같은 값입니다.
+   *
+   * 실측 2026-08-28 · binance.com/en/futures/BTCUSDT · 1440x900 · 1D
+   *   도구를 하나씩 실제로 그린 뒤 캔버스(773x252, DPR 1) 픽셀을 직접 읽어
+   *   세로 한 줄씩 몇 행이 칠해졌는지 셌습니다. 눈대중이 아닙니다.
+   *
+   *   추세선            #2962FF   2px   216열 중 209열이 정확히 2행
+   *                                     shots/ct6-bnf-trend.png
+   *   수평선            #2962FF   2px   그림 설정줄에 바이낸스가 "2px" 라고
+   *                                     직접 적어 줍니다 shots/ct6-bnf-hline.png
+   *   피보나치 눈금 7개  눈금마다 다름  2px   y 81·112·131·146·161·183·211 에서
+   *                                     전부 2행 shots/ct6-bnf-fib.png
+   *   피보나치 안내선    #808080   2px   대각 점선, y 190~191 (2행)
+   *   평행 채널 위·아래  #2962FF   2px   6차에서 이미 맞춰 둔 값과 같음
+   *
+   * 즉 바이낸스는 그리기 도구를 전부 2px 로 긋습니다. 도구마다 다르지 않습니다.
+   * 우리만 1px 이라 6차에서 맞춘 평행 채널(2px)과 서로 어긋나 있었습니다.
+   *
+   * 색은 그대로 둡니다 — #2962FF 파랑은 확정 팔레트에 없습니다.
+   * 우리는 그린 것을 전부 포인트 금색(#F0B429) 하나로 씁니다.
+   *
+   * 주의 — 회원이 이미 그어 둔 선도 다음에 열 때 같이 굵어집니다. 의도한 것입니다
+   *    (굵기를 저장하지 않고 그릴 때마다 이 값을 씁니다).
+   *
+   * 되돌리려면 — 이 값을 1 로 되돌리면 끝입니다. 저장된 그림은 그대로입니다.
+   * ------------------------------------------------------------- */
+  var LINE_WIDTH = 2;
+
+  /* 자(측정)만 1px 로 남깁니다.
+     바이낸스 자(Measure)는 테두리를 아예 긋지 않습니다 — 파란 채움 20% 와
+     말풍선만 있습니다(2026-08-28 실측: 상자 위끝 y=122 에서 테두리 없이
+     바로 채움색 27,41,77 로 들어갑니다. shots/ct6-bnf-ruler.png).
+     우리는 채움이 10% 라 테두리를 없애면 상자가 잘 안 보입니다. 그래서
+     테두리는 남기되, 없는 쪽에 가까운 가장 얇은 1px 로 둡니다.
+     여기를 LINE_WIDTH 로 바꾸면 바이낸스(0px)와 더 멀어집니다. */
+  var RULER_WIDTH = 1;
+
   var HIT_PX = 7; /* 이 거리 안에서 누르면 그 그림을 고른 것으로 봅니다 */
 
   /* ---------------- 브러시 (5차 2026-08-28) ----------------
@@ -187,9 +245,10 @@ App.ChartDrawings = (function () {
    * 우리 값과 다른 곳 — 색만 다릅니다. 파랑은 확정 팔레트에 없습니다.
    *   선 색  #F0B429 (포인트) — 회원이 그린 것은 전부 이 색입니다
    *   굵기   2px — 바이낸스와 같게 맞췄습니다
-   *          ※ 우리 추세선은 1px(LINE_WIDTH) 입니다. 바이낸스 추세선도 2px 라
-   *            그쪽이 어긋나 있는데, 이미 나간 것이라 손대지 않았습니다.
-   *            숫자만 적어 둡니다 — 바꿀지는 PM/대표가 정합니다.
+   *          ※ 2026-08-28 8차에서 나머지 그리기 도구(LINE_WIDTH)도 전부
+   *            2px 로 올려, 이제 채널과 서로 어긋나지 않습니다.
+   *            그 전에는 여기만 2px 이고 나머지는 1px 이었습니다.
+   *            실측표는 위 LINE_WIDTH 주석에 도구별로 적어 두었습니다.
    *   채움   금색 10% (FILL_DRAW · 자 상자와 같은 값). 바이낸스는 20% 인데
    *          금색은 파랑보다 밝아 20% 면 채널 안 캔들이 묻힙니다.
    *          20% 로 되돌리려면 아래 FILL_CHANNEL 을 따로 만들어 0.20 으로.
@@ -235,7 +294,10 @@ App.ChartDrawings = (function () {
   var TOP_TOOLS = [
     { k: "expand", icon: "tlc-i-chevron", label: "도구 막대 접기/펴기", ready: true },
     { k: "sep1", sep: true },
-    { k: "candletype", icon: "tlc-i-candle", label: "봉 종류", ready: false },
+    /* 7차(2026-08-28) — 봉 종류를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
+       목록은 js/chart-candle-type.js 가 만듭니다(캔들/라인/바/영역 넷).
+       (같이 되돌릴 것 — onButton() 의 candletype 토막) */
+    { k: "candletype", icon: "tlc-i-candle", label: "봉 종류", ready: true },
     /* 3차(2026-08-27) — fx 를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
        목록 자체는 js/chart-indicator-menu.js 가 만듭니다. */
     { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: true },
@@ -667,7 +729,8 @@ App.ChartDrawings = (function () {
     ctx.fillStyle = FILL_DRAW;
     ctx.fillRect(l, t, r - l, b - t);
     ctx.strokeStyle = color;
-    ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+    /* 자만 RULER_WIDTH — 바이낸스에는 이 테두리가 아예 없습니다(위 주석 참고) */
+    ctx.lineWidth = on ? RULER_WIDTH + 1 : RULER_WIDTH;
     ctx.setLineDash(preview ? [4, 4] : []);
     ctx.strokeRect(l + 0.5, t + 0.5, Math.max(0, r - l - 1), Math.max(0, b - t - 1));
     ctx.setLineDash([]);
@@ -1916,6 +1979,13 @@ App.ChartDrawings = (function () {
     if (def.k === "fx") {
       var menu = window.App && App.ChartIndicatorMenu;
       if (menu && typeof menu.toggle === "function") menu.toggle(barButton("fx"));
+      return;
+    }
+    /* 봉 종류 — 목록은 별도 파일이 만듭니다(js/chart-candle-type.js).
+       fx 와 같은 방식입니다. 그 파일이 없으면 아무 일도 하지 않습니다. */
+    if (def.k === "candletype") {
+      var ct = window.App && App.ChartCandleType;
+      if (ct && typeof ct.toggle === "function") ct.toggle(barButton("candletype"));
     }
   }
 

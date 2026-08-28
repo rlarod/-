@@ -174,6 +174,118 @@ console.log("\n차트 곁다리 모듈 셋 봉인 (2026-08-28)");
 }
 
 /* =========================================================================
+ * [1-2] chart-axis-fit 이 매달려 있는 남의 값 — chart-font.js 의 21px
+ * =========================================================================
+ * 위 [1] 은 chart-axis-fit 이 "21 이라고 알고 있는 값"만 봅니다.
+ * 그런데 그 21 은 chart-axis-fit 이 정한 값이 아니라 **chart-font.js 가 정한
+ * 값을 손으로 베껴 적어 둔 것**입니다. 21 이 두 파일에 따로 적혀 있습니다.
+ *
+ *   js/chart-font.js:34      var FONT_SIZE = 21;
+ *   js/chart-axis-fit.js:44  var BASE_PX  = 21;   ← 베낀 쪽
+ *
+ * chart-font.js 는 자기 주석에 "크기를 바꾸려면 아래 FONT_SIZE 만 고치면
+ * 됩니다" 라고 적어 두었습니다. 그 말을 믿고 한 줄만 고치면 이렇게 됩니다.
+ *
+ * 2026-08-28 실측 — chart-font.js 를 21 -> 16 으로만 바꾸고 재어 봤습니다.
+ *
+ *     360px  : chart-font 가 정한 16 -> axis-fit 통과 뒤 11   (폰은 원래 덮음)
+ *     768px  : 16 -> **21**   disable() 뒤에도 21
+ *     1440px : 16 -> **21**   disable() 뒤에도 21
+ *     1920px : 16 -> **21**   disable() 뒤에도 21
+ *
+ * 데스크톱 세 폭에서 chart-font.js 의 변경이 **통째로 지워집니다.**
+ * 오류도 안 나고 차트도 멀쩡히 그려집니다. 고친 사람은 "왜 안 먹지" 하며
+ * chart-font.js 만 들여다보게 됩니다 — 범인은 다른 파일입니다.
+ * 되돌리기로 적혀 있는 disable() 조차 16 이 아니라 21 로 되돌립니다.
+ *
+ * 전형적인 조용한 고장이라 값으로 못 박습니다. 두 겹으로 둡니다 —
+ * 글자(두 파일의 21 이 같은가)와 동작(정말 안 덮어쓰는가) 양쪽입니다.
+ * ========================================================================= */
+절("[1-2] chart-axis-fit 이 베껴 적은 chart-font.js 의 21px");
+{
+  const FONT_SRC = read("js/chart-font.js");
+
+  const 폰트값 = (FONT_SRC.match(/var FONT_SIZE = (\d+);/) || [])[1];
+  const 베낀값 = (FIT_SRC.match(/var BASE_PX = (\d+);/) || [])[1];
+
+  ok("chart-font.js 에서 기본 글씨 크기를 읽을 수 있다 (var FONT_SIZE = N;)",
+    폰트값 !== undefined,
+    "선언 모양이 바뀌었으면 이 검사부터 고쳐야 합니다 — 조용히 통과시키면 안 됩니다");
+  ok("chart-axis-fit.js 에서 베껴 적은 값을 읽을 수 있다 (var BASE_PX = N;)",
+    베낀값 !== undefined,
+    "선언 모양이 바뀌었으면 이 검사부터 고쳐야 합니다");
+
+  ok("두 파일의 기본 글씨 크기가 같다 (chart-font " + 폰트값 + " / chart-axis-fit " + 베낀값 + ")",
+    폰트값 !== undefined && 폰트값 === 베낀값,
+    "chart-font.js 만 고치면 768 이상에서 그 값이 통째로 지워집니다. " +
+    "chart-axis-fit.js 의 BASE_PX 도 같이 고치세요");
+
+  /* ── 동작으로도 확인합니다 ────────────────────────────────────────────
+     글자 검사만 두면 "BASE_PX 를 지우고 App.ChartFont.getFontSize() 를
+     읽도록 고친" 개선까지 실패로 잡습니다. 그건 오히려 옳은 방향이라
+     막으면 안 됩니다. 그래서 실제로 둘을 같이 띄워 결과를 봅니다. */
+  function 같이띄우기(폭, 폰트소스) {
+    const dom = new JSDOM("<!doctype html><html><body></body></html>",
+      { runScripts: "outside-only", url: "https://example.test/" });
+    const win = dom.window;
+    win.App = {};
+    win.setInterval = () => 0; win.clearInterval = () => {};
+    win.setTimeout = () => 0; win.clearTimeout = () => {};
+    win.eval(폰트소스);
+    const 정한값 = win.App.ChartFont.getFontSize();
+    win.innerWidth = 폭;
+    win.eval(FIT_SRC);
+    win.App.ChartAxisFit.apply();
+    const 적용뒤 = win.App.ChartFont.getFontSize();
+    win.App.ChartAxisFit.disable();
+    const 되돌린뒤 = win.App.ChartFont.getFontSize();
+    try { win.close(); } catch (e) { /* noop */ }
+    return { 정한값: 정한값, 적용뒤: 적용뒤, 되돌린뒤: 되돌린뒤 };
+  }
+
+  /* 지금 그대로 — 데스크톱에서는 chart-font.js 가 정한 값이 살아 있어야 합니다 */
+  [768, 1440, 1920].forEach(function (w) {
+    const r = 같이띄우기(w, FONT_SRC);
+    ok(w + "px 에서 chart-font.js 가 정한 " + r.정한값 + "px 가 그대로 남는다",
+      r.적용뒤 === r.정한값, "정한값 " + r.정한값 + " -> 적용뒤 " + r.적용뒤);
+    ok(w + "px 에서 disable() 도 chart-font.js 가 정한 값으로 되돌린다",
+      r.되돌린뒤 === r.정한값, "정한값 " + r.정한값 + " -> disable 뒤 " + r.되돌린뒤);
+  });
+
+  /* 폰은 덮어쓰는 것이 이 모듈의 목적입니다 — 덮어쓰지 '않으면' 그게 고장입니다 */
+  {
+    const r = 같이띄우기(360, FONT_SRC);
+    ok("360px 에서는 오히려 덮어써야 한다 (이 모듈의 존재 이유입니다)",
+      r.적용뒤 === 11, String(r.적용뒤));
+  }
+
+  /* ── 조용한 고장 재현 ────────────────────────────────────────────────
+     chart-font.js 한 줄만 바뀐 세상을 만들어, 지금 코드가 정말 그 값을
+     지우는지 확인합니다. 지우는 것이 지금의 사실이고, 위 글자 검사가
+     그래서 필요합니다. 누가 BASE_PX 의존을 없애 고치면 이 검사가 실패하며
+     "이제 [1-2] 의 글자 검사는 빼도 된다" 고 알려줍니다. */
+  {
+    /* 지금 값이 무엇이든 반드시 다른 값이 되게 고릅니다.
+       "16" 을 박아 두면 훗날 진짜 기본값이 16 이 됐을 때 바꿔치기가
+       아무것도 안 바꾸고, 그러면 이 검사가 스스로 거짓 통과합니다. */
+    const 딴값 = Number(폰트값) + 5;
+    const 바뀐폰트 = FONT_SRC.replace(/var FONT_SIZE = \d+;/, "var FONT_SIZE = " + 딴값 + ";");
+    ok("바꿔치기가 실제로 먹혔다 (안 먹었으면 아래 검사가 의미 없습니다)",
+      바뀐폰트 !== FONT_SRC && new RegExp("var FONT_SIZE = " + 딴값 + ";").test(바뀐폰트));
+    const r = 같이띄우기(1440, 바뀐폰트);
+    ok("chart-font.js 만 " + 딴값 + " 로 바꾸면 1440px 에서 " + 베낀값 + "px 로 되돌아간다 " +
+      "— 이것이 BASE_PX 를 같이 고쳐야 하는 이유입니다",
+      r.정한값 === 딴값 && r.적용뒤 === Number(베낀값),
+      "정한값 " + r.정한값 + " -> 적용뒤 " + r.적용뒤 +
+      " / " + 딴값 + " 이 그대로 남았다면 의존이 끊긴 것이니 위 글자 검사를 빼세요");
+  }
+
+  ok("chart-axis-fit.js 주석이 21 을 chart-font.js 가 정했다고 밝혀 둔다",
+    /chart-font\.js 가 정한 기본값/.test(FIT_SRC),
+    "출처가 안 적혀 있으면 다음 사람이 두 값이 짝이라는 걸 모릅니다");
+}
+
+/* =========================================================================
  * [2] chart-axis-edge — 시간축 끝 글자가 안 잘린다
  * ========================================================================= */
 절("[2] chart-axis-edge — 끝 눈금 글자 밀어넣기");
