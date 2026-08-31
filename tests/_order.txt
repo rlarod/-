@@ -160,3 +160,5 @@ tests/shots-gitignore-seal.test.js
 tests/chart-candle-type-seal.test.js
 tests/menu-rename-seal.test.js
 tests/market-war-power-bar.test.js
+tests/market-war-power-bar-burst-seal.test.js
+tests/sync-guard-baseline-blindspot.test.js

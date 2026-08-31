@@ -1205,6 +1205,11 @@
 <script src="js/orderbook-price-arrow.js"></script>
 <script src="js/orderbook-mark-price.js"></script>
 <script src="js/order-info-panel.js"></script>
+<!-- 종목을 바꾼 직후 매수가격·매도가격 칸에 옛 종목 숫자가 최대 1초 남던 것을
+     없앱니다(order-info-panel.js 무수정, 1초 타이머도 그대로).
+     dataset 을 다시 읽지 않고 곧장 "-" 로 써서 실행 순서를 안 탑니다.
+     이 한 줄을 지우면 원복됩니다. -->
+<script src="js/symbol-switch-price-clear.js"></script>
 <script src="js/orderbook-click-order.js"></script>
 <!-- TL-004/TL-005 근본 수정 — 체결(@trade)은 /market 경로에 없어 한 건도 오지
      않습니다. websocket.js·config.js 무수정으로, 호가창과 같은 방식으로 체결
