@@ -178,27 +178,27 @@ App.ChartIndicatorMenu = (function () {
     if (document.getElementById(STYLE_ID)) return;
     var P = "#" + PANEL_ID;
     var css =
-      P + "{position:fixed;z-index:950;width:250px;max-width:calc(100vw - 16px);" +
+      P + "{position:fixed;z-index:950;width:286px;max-width:calc(100vw - 16px);" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:10px;" +
       "box-shadow:none;overflow:hidden;font-family:inherit;box-sizing:border-box;}" +
       P + "::before{content:\"\";position:absolute;left:0;right:0;top:0;height:1px;" +
       "background:rgba(255,255,255,.03);pointer-events:none;}" +
       P + " .tl-fx-head{display:flex;align-items:center;justify-content:space-between;" +
-      "padding:9px 12px 7px;border-bottom:1px solid " + C_BORDER + ";}" +
-      P + " .tl-fx-title{font-size:12px;font-weight:700;color:" + C_TEXT + ";letter-spacing:.2px;}" +
-      P + " .tl-fx-x{background:none;border:0;color:" + C_MUTED + ";font-size:14px;line-height:1;" +
+      "padding:10px 13px 8px;border-bottom:1px solid " + C_BORDER + ";}" +
+      P + " .tl-fx-title{font-size:14px;font-weight:700;color:" + C_TEXT + ";letter-spacing:.2px;}" +
+      P + " .tl-fx-x{background:none;border:0;color:" + C_MUTED + ";font-size:16px;line-height:1;" +
       "cursor:pointer;padding:3px 5px;border-radius:4px;font-family:inherit;}" +
       P + " .tl-fx-x:hover{color:" + C_TEXT + ";}" +
-      P + " .tl-fx-group{padding:8px 12px 3px;font-size:10px;font-weight:700;" +
+      P + " .tl-fx-group{padding:9px 13px 3px;font-size:11.5px;font-weight:700;" +
       "color:" + C_MUTED + ";letter-spacing:.4px;}" +
       /* 줄 높이 38px — 바이낸스 실측과 같은 값 (아래 주석의 실측표 참고) */
       P + " .tl-fx-row{width:100%;display:flex;align-items:center;gap:8px;background:none;" +
-      "border:0;padding:10px 12px;cursor:pointer;text-align:left;font-family:inherit;}" +
+      "border:0;padding:10px 13px;cursor:pointer;text-align:left;font-family:inherit;}" +
       P + " .tl-fx-row:hover{background:" + C_TILE + ";}" +
       P + " .tl-fx-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:" + C_BORDER + ";}" +
-      P + " .tl-fx-name{flex:1 1 auto;min-width:0;font-size:13px;line-height:18px;font-weight:600;" +
+      P + " .tl-fx-name{flex:1 1 auto;min-width:0;font-size:14px;line-height:20px;font-weight:600;" +
       "color:" + C_MUTED + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}" +
-      P + " .tl-fx-note{font-size:11px;line-height:18px;font-weight:500;color:" + C_MUTED + ";" +
+      P + " .tl-fx-note{font-size:12.5px;line-height:20px;font-weight:500;color:" + C_MUTED + ";" +
       "flex:0 0 auto;opacity:.75;}" +
       P + " .tl-fx-sw{flex:0 0 auto;width:26px;height:14px;border-radius:7px;" +
       "background:" + C_BORDER + ";position:relative;transition:background .12s;}" +
@@ -207,16 +207,16 @@ App.ChartIndicatorMenu = (function () {
       P + " .tl-fx-row[aria-pressed=\"true\"] .tl-fx-name{color:" + C_TEXT + ";}" +
       P + " .tl-fx-row[aria-pressed=\"true\"] .tl-fx-sw{background:" + C_POINT + ";}" +
       P + " .tl-fx-row[aria-pressed=\"true\"] .tl-fx-sw i{left:14px;background:" + C_PAGE + ";}" +
-      P + " .tl-fx-foot{padding:7px 12px 9px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:10px;color:" + C_MUTED + ";line-height:1.5;}" +
+      P + " .tl-fx-foot{padding:8px 13px 10px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:12px;color:" + C_MUTED + ";line-height:1.5;}" +
       /* 차트 칸이 낮은 폰에서 목록이 칸 밖으로 나가지 않게 — 몸통만 스크롤 */
       P + " .tl-fx-list{overflow-y:auto;overscroll-behavior:contain;}" +
       P + " .tl-fx-list::-webkit-scrollbar{width:3px;}" +
       P + " .tl-fx-list::-webkit-scrollbar-thumb{background:" + C_BORDER + ";border-radius:2px;}" +
       P + " .tl-fx-list::-webkit-scrollbar-track{background:transparent;}" +
       /* 잘려서 스크롤될 때만 켜지는 안내줄 — "밀 수 있다" 를 알려줍니다 */
-      P + " .tl-fx-hint{display:none;padding:6px 12px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:10px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
+      P + " .tl-fx-hint{display:none;padding:7px 13px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:11.5px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
     var st = document.createElement("style");
     st.id = STYLE_ID;
     st.textContent = css;
@@ -408,7 +408,7 @@ App.ChartIndicatorMenu = (function () {
 
     var TOP = EDGE;
     var BOT = floorY();
-    var w = panel.offsetWidth || 250;
+    var w = panel.offsetWidth || 286;
     var natural = panel.offsetHeight || 0;
 
     var br = null;

@@ -467,37 +467,37 @@ App.ChartCandleType = (function () {
     if (document.getElementById(STYLE_ID)) return;
     var P = "#" + PANEL_ID;
     var css =
-      P + "{position:fixed;z-index:60;width:214px;background:" + C_CARD + ";" +
+      P + "{position:fixed;z-index:60;width:248px;background:" + C_CARD + ";" +
       "border:1px solid " + C_BORDER + ";border-radius:10px;overflow:hidden;" +
       "box-shadow:none;font-family:inherit;}" +
       P + "::before{content:\"\";position:absolute;left:0;right:0;top:0;height:1px;" +
       "background:rgba(255,255,255,.03);pointer-events:none;}" +
       P + " .tl-ct-head{display:flex;align-items:center;justify-content:space-between;" +
-      "padding:9px 12px;border-bottom:1px solid " + C_BORDER + ";}" +
-      P + " .tl-ct-title{font-size:12px;font-weight:700;color:" + C_TEXT + ";}" +
-      P + " .tl-ct-x{background:none;border:0;color:" + C_MUTED + ";font-size:12px;line-height:1;" +
+      "padding:10px 13px;border-bottom:1px solid " + C_BORDER + ";}" +
+      P + " .tl-ct-title{font-size:14px;font-weight:700;color:" + C_TEXT + ";}" +
+      P + " .tl-ct-x{background:none;border:0;color:" + C_MUTED + ";font-size:15px;line-height:1;" +
       "cursor:pointer;padding:3px 5px;border-radius:4px;font-family:inherit;}" +
       P + " .tl-ct-x:hover{color:" + C_TEXT + ";}" +
       /* 줄 높이 38px — fx 목록과 같은 값(바이낸스 실측) */
       P + " .tl-ct-row{width:100%;display:flex;align-items:center;gap:8px;background:none;" +
-      "border:0;padding:10px 12px;cursor:pointer;text-align:left;font-family:inherit;}" +
+      "border:0;padding:10px 13px;cursor:pointer;text-align:left;font-family:inherit;}" +
       P + " .tl-ct-row:hover{background:" + C_TILE + ";}" +
       P + " .tl-ct-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:" + C_BORDER + ";}" +
-      P + " .tl-ct-name{flex:1 1 auto;min-width:0;font-size:13px;line-height:18px;font-weight:600;" +
+      P + " .tl-ct-name{flex:1 1 auto;min-width:0;font-size:14px;line-height:20px;font-weight:600;" +
       "color:" + C_MUTED + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}" +
-      P + " .tl-ct-note{font-size:11px;line-height:18px;font-weight:500;color:" + C_MUTED + ";" +
+      P + " .tl-ct-note{font-size:12.5px;line-height:20px;font-weight:500;color:" + C_MUTED + ";" +
       "flex:0 0 auto;opacity:.75;}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-name{color:" + C_TEXT + ";}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-dot{background:" + C_POINT + ";}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-note{color:" + C_POINT + ";opacity:1;}" +
-      P + " .tl-ct-foot{padding:7px 12px 9px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:10px;color:" + C_MUTED + ";line-height:1.5;}" +
+      P + " .tl-ct-foot{padding:8px 13px 10px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:12px;color:" + C_MUTED + ";line-height:1.5;}" +
       P + " .tl-ct-list{overflow-y:auto;overscroll-behavior:contain;}" +
       P + " .tl-ct-list::-webkit-scrollbar{width:3px;}" +
       P + " .tl-ct-list::-webkit-scrollbar-thumb{background:" + C_BORDER + ";border-radius:2px;}" +
       P + " .tl-ct-list::-webkit-scrollbar-track{background:transparent;}" +
-      P + " .tl-ct-hint{display:none;padding:6px 12px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:10px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
+      P + " .tl-ct-hint{display:none;padding:7px 13px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:11.5px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
     var st = document.createElement("style");
     st.id = STYLE_ID;
     st.textContent = css;
@@ -642,7 +642,7 @@ App.ChartCandleType = (function () {
 
     var TOP = EDGE;
     var BOT = floorY();
-    var w = panel.offsetWidth || 214;
+    var w = panel.offsetWidth || 248;
     var natural = panel.offsetHeight || 0;
 
     var br = null;

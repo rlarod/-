@@ -25,6 +25,18 @@
  *
  * 막을 때는 사용자에게도 알려 새로고침을 권합니다.
  * js/supabase-sync.js 와 js/trading.js 는 건드리지 않습니다.
+ *
+ * ── 2026-08-31 수정 — 기준값을 못 읽으면 0 이 아니라 "모름" 입니다 ────────
+ *   서버 조회가 실패해도 Supabase 는 예외를 안 던지고 { data:null, error } 로
+ *   정상 resolve 합니다. 그 error 를 안 봐서 기준값이 조용히 { 0, 0 } 이 되고,
+ *   그러면 유실 판정 5곳이 전부 무력화돼 보호막이 조용히 꺼졌습니다.
+ *   지금은 error 를 보고 "모름" 으로 두고, 서버 메시지를 콘솔에 그대로 찍고,
+ *   5초·15초·45초 뒤 다시 읽습니다. 자세한 것은 아래 loadBaseline 위 주석.
+ *
+ * ── 되돌리는 방법 ────────────────────────────────────────────────────────
+ *   이 파일 하나만 바뀌었습니다. 되돌리면 2026-08-31 이전과 같아집니다.
+ *     git checkout js/sync-guard.js
+ *   (그러면 "서버 조회 실패 = 기준값 0" 인 조용한 고장도 같이 돌아옵니다)
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -32,9 +44,70 @@ window.App = window.App || {};
 App.SyncGuard = (function () {
   "use strict";
 
-  var serverBaseline = null;   // { realizedPnl, tradeCount } — 서버에 있던 값
+  var serverBaseline = null;   // { realizedPnl, tradeCount, source } — 서버에 있던 값
+                               // null 이면 "모름" 입니다. ⛔ 0 이 아닙니다.
   var blocked = 0;
   var warned = false;
+
+  /* ------------------------------------------------------------------
+   * 기준값을 "못 읽었다" 와 "서버가 비어 있다" 를 구분합니다 (2026-08-31)
+   * ------------------------------------------------------------------
+   * ── 무엇이 터져 있었나 (기록팀 봉인 tests/sync-guard-baseline-blindspot) ──
+   *   Supabase 는 조회가 실패해도 예외를 던지지 않습니다.
+   *   { data: null, error: {...} } 로 **정상 resolve** 합니다.
+   *   그런데 여기서 .error 를 아무도 안 봐서, 권한 오류·네트워크 오류가 나면
+   *   data 가 null 이라는 이유로 기준값이 조용히 { 0, 0 } 이 됐습니다.
+   *
+   *     기준값 { realizedPnl: 0, tradeCount: 0 }
+   *       -> "서버에 아무것도 없는 새 계정" 과 글자 그대로 똑같아 보입니다
+   *       -> looksLikeDataLoss 의 세 갈래가 전부 false
+   *       -> 오류 한 번에 보호막이 조용히 꺼집니다 (전형적인 조용한 고장)
+   *
+   * ── 어떻게 고쳤나 ────────────────────────────────────────────────
+   *   실패를 0 으로 두지 않습니다. **"모름"(null) 으로 둡니다.**
+   *   그리고 모름일 때 무엇을 할지 한 곳에서 정합니다 — 아래 참조.
+   *
+   * ── 모를 때 어떻게 하나 — "판정하지 않는다" ─────────────────────
+   *   손실 판정이 기준값에 기대는 곳이 5곳인데, 모르는 상태에서는
+   *   그 5곳 전부 판정하지 않고 넘깁니다(looksLikeDataLoss 가 false).
+   *
+   *     · 모르는데 "잃었다" 고 하면  → 멀쩡한 회원에게 "기록이 사라졌으니
+   *       새로고침하라" 는 안내가 뜹니다. 실제로 아무 일도 안 일어났는데
+   *       회원을 놀래키고, 오프라인·권한오류 때마다 뜹니다
+   *     · 모르는데 "안 잃었다" 고 하면 → 그동안 보호가 꺼져 있습니다
+   *
+   *   둘 다 나쁩니다. 그래서 **모르는 시간을 짧게 만드는 쪽**을 골랐습니다.
+   *     1) 실패하면 서버가 준 메시지를 그대로 콘솔에 찍습니다(감추지 않습니다)
+   *     2) 5초 · 15초 · 45초 뒤 다시 읽습니다
+   *     3) 지금 상태를 밖에서 볼 수 있게 합니다 — getStatus()
+   *        (모르는 동안 몇 번 그냥 넘겼는지도 셉니다: skippedUnknown)
+   *   "모르는 채로 계속 통과시키되, 아무도 모르게는 두지 않는다" 입니다.
+   *
+   *   ⚠ 모를 때 아예 "저장을 막는" 선택지도 있습니다. 그건 회원 화면에
+   *     경고를 띄우는 동작이라 PM 결정 사항으로 올렸습니다. 여기서
+   *     임의로 정하지 않았습니다.
+   * ------------------------------------------------------------------ */
+  var baselineState = "모름";        // "모름" | "읽음" | "실패"
+  var baselineWhy = "아직 안 읽었습니다";
+  var lastError = null;
+  var skippedUnknown = 0;            // 모르는 채로 그냥 통과시킨 횟수
+  var retryAt = 0;                   // 다음 재시도까지 몇 번째인지
+  var RETRY_MS = [5000, 15000, 45000];
+
+  /* ⛔ 여기서 serverBaseline 을 { 0, 0 } 으로 만들지 않습니다.
+        그게 지금 고치는 그 고장입니다. 이전에 제대로 읽어둔 값이 있으면
+        그것도 지우지 않습니다(오래된 값이라도 모름보다는 낫습니다). */
+  function markUnknown(why, err) {
+    baselineState = err ? "실패" : "모름";
+    baselineWhy = why;
+    lastError = err || null;
+  }
+
+  function scheduleRetry() {
+    if (retryAt >= RETRY_MS.length) return;
+    var ms = RETRY_MS[retryAt++];
+    setTimeout(loadBaseline, ms);
+  }
 
   function sb() {
     return App.SupabaseClient && App.SupabaseClient.get ? App.SupabaseClient.get() : null;
@@ -43,30 +116,77 @@ App.SyncGuard = (function () {
   /* 서버에 지금 무엇이 있는지 한 번 읽어둡니다. */
   function loadBaseline() {
     var client = sb();
-    if (!client) return Promise.resolve(null);
+    if (!client) {
+      markUnknown("서버에 연결돼 있지 않습니다(App.SupabaseClient 없음)");
+      return Promise.resolve(null);
+    }
     return Promise.resolve(client.auth.getUser())
       .then(function (r) {
         var uid = r && r.data && r.data.user ? r.data.user.id : null;
-        if (!uid) return null;
+        if (!uid) {
+          /* 로그인 상태가 아니면 서버에 기준값 자체가 없습니다.
+             오류가 아니므로 다시 읽지 않습니다(로그인하면 auth:changed 로 옵니다). */
+          markUnknown("로그인 상태가 아닙니다");
+          return null;
+        }
         return Promise.all([
           client.from("trading_accounts").select("realized_pnl").eq("user_id", uid).maybeSingle(),
           client.from("trades").select("id", { count: "exact", head: true }).eq("user_id", uid),
         ]).then(function (rows) {
+          var acc = rows[0] || {};
+          var trd = rows[1] || {};
+          /* ⭐ 여기가 이번에 고친 곳 — .error 를 봅니다.
+             Supabase 는 실패해도 예외를 안 던지고 error 를 담아 정상 resolve 합니다. */
+          var err = acc.error || trd.error || null;
+          if (err) {
+            markUnknown("서버 조회 실패: " + (err.message || err), err);
+            /* 오류를 감추지 않습니다 — 서버가 준 말을 그대로 보여줍니다 */
+            console.error(
+              "[sync-guard.js] 서버 기준값을 못 읽었습니다. 읽을 때까지 이 창에서는 " +
+              "기록 유실 판정을 하지 않습니다: " + (err.message || err)
+            );
+            scheduleRetry();
+            return null;
+          }
+          /* 오류는 없는데 건수를 못 받은 경우도 "모름" 입니다(0 이 아닙니다).
+             (계정 행이 없는 것은 정상입니다 — 새 계정이면 실현손익 0 이 맞습니다) */
+          if (typeof trd.count !== "number") {
+            markUnknown("거래 건수를 못 읽었습니다(count 가 숫자가 아님)");
+            console.error(
+              "[sync-guard.js] 거래 건수를 못 읽었습니다. 읽을 때까지 이 창에서는 " +
+              "기록 유실 판정을 하지 않습니다."
+            );
+            scheduleRetry();
+            return null;
+          }
           serverBaseline = {
-            realizedPnl: rows[0] && rows[0].data ? Number(rows[0].data.realized_pnl) || 0 : 0,
-            tradeCount: rows[1] && typeof rows[1].count === "number" ? rows[1].count : 0,
+            realizedPnl: acc.data ? Number(acc.data.realized_pnl) || 0 : 0,
+            tradeCount: trd.count,
+            source: "server",
           };
+          baselineState = "읽음";
+          baselineWhy = "서버에서 읽었습니다";
+          lastError = null;
+          retryAt = 0;
           return serverBaseline;
         });
       })
       .catch(function (e) {
-        console.warn("[sync-guard.js] 서버 기준값을 읽지 못했습니다(보호는 계속 시도):", e);
+        markUnknown("서버 기준값 조회 중 예외: " + ((e && e.message) || e), e);
+        console.error(
+          "[sync-guard.js] 서버 기준값을 읽지 못했습니다. 읽을 때까지 이 창에서는 " +
+          "기록 유실 판정을 하지 않습니다: " + ((e && e.message) || e)
+        );
+        scheduleRetry();
         return null;
       });
   }
 
   /* 이 저장이 기록을 크게 깎는가 */
   function looksLikeDataLoss(snap) {
+    /* 기준값을 모르면 판정하지 않습니다(위 "모를 때 어떻게 하나" 참조).
+       그냥 넘기되 몇 번 넘겼는지는 세어 둡니다 — 아무도 모르게 두지 않으려고. */
+    if (!serverBaseline && snap) skippedUnknown++;
     if (!serverBaseline || !snap) return false;
 
     var localTrades = Array.isArray(snap.closedTrades) ? snap.closedTrades.length : 0;
@@ -135,9 +255,13 @@ App.SyncGuard = (function () {
            그래서 지금은 알리기만 하고 값은 그대로 흘려보냅니다. */
       }
 
-      /* 정상 저장이면 기준값을 최신으로 올려둡니다. */
+      /* 정상 저장이면 기준값을 최신으로 올려둡니다.
+         ⚠ 이렇게 만들어진 기준값은 **서버에서 읽은 값이 아니라 이 창의 값**입니다.
+            서버 기준값을 못 읽었을 때도 "이 창 안에서 기록이 줄어드는 것" 은
+            잡을 수 있어서 예전 그대로 둡니다. 다만 서버에서 읽은 것과
+            헷갈리지 않게 source 로 구분해 둡니다(getStatus 로 볼 수 있습니다). */
       if (name === "trading:persisted" && payload && Array.isArray(payload.closedTrades)) {
-        if (!serverBaseline) serverBaseline = { realizedPnl: 0, tradeCount: 0 };
+        if (!serverBaseline) serverBaseline = { realizedPnl: 0, tradeCount: 0, source: "local" };
         serverBaseline.realizedPnl = Number(payload.realizedPnl) || 0;
         serverBaseline.tradeCount = Math.max(serverBaseline.tradeCount, payload.closedTrades.length);
       }
@@ -158,7 +282,10 @@ App.SyncGuard = (function () {
     /* 로그인 복구가 끝난 뒤 서버 기준값을 읽습니다. */
     setTimeout(loadBaseline, 2500);
     if (App.Bus && typeof App.Bus.on === "function") {
-      App.Bus.on("auth:changed", function () { setTimeout(loadBaseline, 800); });
+      App.Bus.on("auth:changed", function () {
+        retryAt = 0;              /* 로그인 상태가 바뀌면 재시도 횟수를 새로 셉니다 */
+        setTimeout(loadBaseline, 800);
+      });
     }
   }
 
@@ -170,6 +297,19 @@ App.SyncGuard = (function () {
     loadBaseline: loadBaseline,
     looksLikeDataLoss: looksLikeDataLoss,
     getBlockedCount: function () { return blocked; },
+    /* 지금 보호막이 켜져 있는지 밖에서 볼 수 있게 합니다.
+       known:false 면 이 창에서는 유실 판정을 하지 않고 있다는 뜻입니다. */
+    getStatus: function () {
+      return {
+        state: baselineState,                  // "모름" | "읽음" | "실패"
+        known: !!serverBaseline,
+        why: baselineWhy,
+        error: lastError ? String(lastError.message || lastError) : null,
+        source: serverBaseline ? serverBaseline.source || null : null,
+        skippedUnknown: skippedUnknown,
+      };
+    },
+    isBaselineKnown: function () { return !!serverBaseline; },
     _setBaseline: function (b) { serverBaseline = b; },
     _getBaseline: function () { return serverBaseline; },
   };

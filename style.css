@@ -3262,8 +3262,11 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 .lev-modal-card{
   /* 2026-08-24 — 글자를 키우면서 버튼 11개(1x~100x)가 한 줄에 덜 접히도록
-     420px -> 460px. 되돌리려면 420px 로. */
-  width:100%;max-width:460px;max-height:calc(100vh - 32px);overflow-y:auto;
+     420px -> 460px. 되돌리려면 420px 로.
+     2026-08-31 대표 "팝업 창을 더 키워줘" — 460px -> 500px.
+     글자는 그대로입니다(이미 15~44px 로, 바이낸스 대화상자 본문 14px 보다 큽니다).
+     되돌리려면 460px 로. */
+  width:100%;max-width:500px;max-height:calc(100vh - 32px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--border);border-radius:3px;
   box-shadow:0 3px 8px rgba(0,0,0,0.35);
 }

@@ -1,49 +1,75 @@
 /* tests/sync-guard-baseline-blindspot.test.js
  * =========================================================================
- * 저장 보호막의 사각지대 — "지금 이렇다" 기록 봉인 (2026-08-28 기록팀)
+ * 저장 보호막 기준값 사각지대 — ★2026-08-31 뒤집었습니다★
  * =========================================================================
- * ⚠️⚠️ 이 파일은 **아직 안 고친 결함을 기록**합니다.
- *      아래 [2] 는 "보호가 꺼진다" 를 기대값으로 적어 놓았습니다.
- *      **그게 옳다는 뜻이 아닙니다.** 지금 그렇다는 사실을 못 박아 둔 것입니다.
- *      고치면 [2] 가 빨갛게 터지면서 "이제 고쳐졌다" 고 알려줍니다.
- *      그때 할 일은 [2] 를 지우는 게 아니라 [3] 처럼 뒤집어 쓰는 것입니다.
  *
- * 무슨 결함인가 (2026-08-28 수리팀 발견, 미배정)
- * ---------------------------------------------
- * js/sync-guard.js 는 "이 창의 기록이 서버보다 적으면 저장을 막는" 보호막입니다.
- * 서버에 뭐가 있었는지를 먼저 읽어 기준값(serverBaseline)으로 삼습니다.
+ * ── 왜 뒤집었나 ─────────────────────────────────────────────────────────
+ *   이 파일은 2026-08-28 에 "아직 안 고친 결함을 기록" 하려고 만들었습니다.
+ *   기대값을 일부러 결함 쪽으로 적어 두고, 고쳐지면 빨갛게 터지게 해서
+ *   "이제 켜도 된다" 고 알려주는 방식이었습니다(마켓 5종과 같은 방식).
  *
- *   js/sync-guard.js:54-57
- *     realizedPnl: rows[0] && rows[0].data ? Number(rows[0].data.realized_pnl) || 0 : 0,
- *     tradeCount:  rows[1] && typeof rows[1].count === "number" ? rows[1].count : 0,
+ *   2026-08-31 수리팀이 js/sync-guard.js 를 고쳤습니다(+149줄 -9줄).
+ *   그래서 예정대로 4건이 터졌습니다.
  *
- * **`.error` 를 아무도 안 봅니다.**
- * Supabase 는 조회가 실패해도 예외를 던지지 않습니다. `{ data: null, error: {...} }`
- * 로 **정상 resolve** 합니다. 그래서 권한 오류·네트워크 오류가 나면
- * `data` 가 null 이라 위 삼항식이 조용히 **0** 을 넣습니다.
+ *       [1] 오류인데도 기준값이 만들어진다        [X]  기준값 null
+ *       [1] 실현손익 기준이 0 이다                [X]
+ *       [1] 거래건수 기준이 0 이다                [X]
+ *       [1] 빈 계정과 구별이 안 된다              [X]   ← 이제 구별됩니다
  *
- *   기준값이 { realizedPnl: 0, tradeCount: 0 } 이 됩니다.
- *   -> "서버에 아무것도 없는 새 계정" 과 **글자 그대로 똑같아 보입니다.**
+ *   ★파일을 지우지 않고 뒤집었습니다.★
+ *   지우면 "왜 이렇게 됐는지" 가 같이 사라집니다.
  *
- * 그런데 looksLikeDataLoss() 의 세 갈래가 전부 이걸 전제로 합니다 —
- *     (1) serverBaseline.tradeCount > 0 && ... && localTrades < tradeCount
- *     (2) localTrades === 0 && serverBaseline.tradeCount > 0
- *     (3) localPnl === 0 && Math.abs(serverBaseline.realizedPnl) > 1 && localTrades === 0
- * **tradeCount 가 0 이고 realizedPnl 이 0 이면 셋 다 false 입니다.**
- * 무엇이 들어와도 통과시킵니다. **네트워크·권한 오류 한 번에 보호가 조용히 꺼집니다.**
+ * ── 무엇이 터져 있었나 (뒤집기 전 사실. 지우지 않습니다) ────────────────
+ *   Supabase 는 조회가 실패해도 예외를 안 던지고 { data:null, error } 로
+ *   ★정상 resolve★ 합니다. 옛 코드는 그 .error 를 아무도 안 봤습니다.
  *
- * 왜 P1 급인가 — CLAUDE.md 의 "조용한 고장" 그대로입니다.
- *   오류도 안 나고, 화면도 멀쩡하고, 회원은 보호막이 꺼진 줄 모릅니다.
- *   그 상태에서 빈 로컬이 서버를 덮으면 **회원의 거래 기록이 사라집니다.**
- *   되돌릴 수 없습니다.
+ *       js/sync-guard.js:54-57 (옛 코드)
+ *         realizedPnl: rows[0] && rows[0].data ? Number(...realized_pnl) || 0 : 0,
+ *         tradeCount:  rows[1] && typeof rows[1].count === (숫자) ? rows[1].count : 0,
  *
- * ⚠️ 실서버에 붙지 않습니다. App.SupabaseClient 를 가짜로 바꿔치기합니다.
+ *   → 권한 오류·네트워크 오류가 나면 기준값이 조용히 { 0, 0 } 이 되고,
+ *     그건 "서버에 아무것도 없는 새 계정" 과 글자 그대로 똑같아 보입니다.
+ *     looksLikeDataLoss 의 세 갈래가 전부 false 가 되어
+ *     ★오류 한 번에 보호막이 조용히 꺼졌습니다.★
+ *
+ * ── 지금은 어떻게 하나 ──────────────────────────────────────────────────
+ *   실패를 0 으로 두지 않고 ★"모름"(null)★ 으로 둡니다.
+ *   그리고 모르는 동안에는 유실 판정을 하지 않습니다.
+ *
+ * ── ⚠️⚠️ 남아 있는 위험을 여기 못 박습니다 ─────────────────────────────
+ *   ★"모름" = 그동안 방어가 꺼져 있다★ 는 뜻입니다. 이건 안 고쳐졌습니다.
+ *   남은 결함이 아니라 ★고른 것★ 입니다 — 2026-08-31 PM 결정입니다.
+ *
+ *     모르는데 "잃었다" 고 하면   → 오프라인·권한오류 때마다 멀쩡한 회원에게
+ *                                   "기록이 사라졌다" 경고가 뜹니다
+ *     모르는데 "안 잃었다" 고 하면 → 그동안 보호가 꺼져 있습니다  ← 이쪽을 골랐습니다
+ *
+ *   대신 ★모르는 시간을 짧게★ 만드는 것으로 갚습니다 — 5초·15초·45초 재시도.
+ *
+ *   ⚠️ 나중에 누가 "고쳤다는데 왜 방어가 안 되지?" 하고 헤매지 않도록
+ *      아래 [2] 가 이 사실을 동작이 아니라 ★약속★ 으로 못 박습니다.
+ *      이 결정이 바뀌면(모를 때 막기로 하면) [2] 가 터지면서 알려줍니다.
+ *      그건 회원 화면에 경고를 띄우는 동작이라 PM 결정 사항입니다.
+ *
+ * ── ⭐ 새 봉인과 겹치는 것은 전부 뺐습니다 ──────────────────────────────
+ *   고쳐진 뒤의 동작(오류→모름 / 모르면 판정 안 함 / 평소엔 예전 그대로 /
+ *   새 계정과 오류 구분 / 잘 읽어둔 값을 나중 실패가 안 지움 / 판정식 5곳)은
+ *       ★tests/sync-guard-baseline-unknown.test.js★ (35건)
+ *   가 봅니다. 두 벌이 되면 나중에 한쪽만 고쳐집니다.
+ *
+ *   이 파일에는 그쪽에 ★없는 것만★ 남겼습니다 —
+ *     · 옛 깨진 코드 모양이 되돌아오면 터지게 (★위치까지★ 봅니다)
+ *     · 남아 있는 위험("모름 = 방어 꺼짐")을 약속으로 못 박기
+ *     · 모름을 갚는 장치(재시도 5/15/45 · skippedUnknown)가 살아 있는지
+ *     · 두 봉인이 서로를 가리키는지 (한쪽만 지워지는 것을 막습니다)
+ *
+ * ⚠️ 실서버에 붙지 않습니다. 이 파일은 ★파일만 읽습니다★(가짜 서버도 안 씁니다).
  * ========================================================================= */
 "use strict";
 
 const fs = require("fs");
 const path = require("path");
-const vm = require("vm");
+const crypto = require("crypto");
 
 const REPO = process.env.REPO || path.resolve(__dirname, "..");
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
@@ -61,186 +87,269 @@ function ok(제목, 조건, 도움말) {
 }
 function 절(제목) { console.log("\n" + 제목); }
 
+/* 이 파일 주석에는 옛 깨진 코드가 인용돼 있고, js/sync-guard.js 도 주석에
+   옛 코드를 인용해 두었습니다. 문자열 검색만 하면 그 주석에 걸립니다 —
+   반드시 걷어내고 봅니다. */
 function 주석제거(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
 }
 
-/* -------------------------------------------------------------------------
- * 가짜 Supabase — 실서버에 붙지 않습니다.
- * ⭐ 핵심: 조회가 실패해도 **reject 하지 않고** { data:null, error } 로
- *    정상 resolve 합니다. 진짜 Supabase 가 그렇게 동작하기 때문입니다.
- *    여기서 reject 로 흉내내면 결함이 안 보입니다(그건 .catch 가 잡습니다).
- * ----------------------------------------------------------------------- */
-function 가짜클라이언트(계정응답, 거래응답) {
-  return {
-    auth: { getUser: () => Promise.resolve({ data: { user: { id: "user-1" } } }) },
-    from: function (표이름) {
-      return {
-        select: function () {
-          return {
-            eq: function () {
-              if (표이름 === "trading_accounts") {
-                return { maybeSingle: () => Promise.resolve(계정응답) };
-              }
-              return Promise.resolve(거래응답);   // trades 는 .eq() 가 바로 결과
-            },
-          };
-        },
-      };
-    },
-  };
+const GUARD_REL = "js/sync-guard.js";
+const 원본 = read(GUARD_REL);
+const 코드 = 주석제거(원본);
+
+const 새봉인 = "tests/sync-guard-baseline-unknown.test.js";
+
+/* =========================================================================
+ * [0] 주석 제거기 — 아래가 전부 여기 기대고 있습니다
+ * ========================================================================= */
+절("[0] 주석 제거기 자체 확인 (오탐 방지)");
+{
+  ok("블록주석을 걷어낸다", 주석제거("/* rows[0].data */ var a=1;").indexOf("rows[0]") === -1);
+  ok("코드 안의 낱말은 남긴다", 주석제거("var x = rows[0].data;").indexOf("rows[0]") >= 0);
+  ok("js/sync-guard.js 주석에 옛 코드가 실제로 인용돼 있다 (오탐 위험이 진짜 있다)",
+    원본.indexOf("{ 0, 0 }") >= 0);
 }
 
-function 창만들기() {
-  const sandbox = {
-    console: { warn() {}, log() {}, error() {} },
-    setTimeout: (fn) => 0,
-    setInterval: () => 0,
-    clearInterval: () => {},
-    document: {
-      readyState: "complete",
-      addEventListener() {},
-      createElement: () => ({ className: "", innerHTML: "", addEventListener() {} }),
-      getElementById: () => null,
-      body: { appendChild() {} },
-    },
-    Promise: Promise,
-  };
-  sandbox.window = sandbox;
-  sandbox.App = {};
-  vm.createContext(sandbox);
-  vm.runInContext(read("js/sync-guard.js"), sandbox);
-  return sandbox;
+/* =========================================================================
+ * [1] ★옛 깨진 모양이 되돌아오면 터진다★
+ *
+ *  ⚠️ 2026-08-31 정정 — 뒤집기 전 이 자리의 검사는 ★틀렸습니다.★
+ *     옛 검사는 serverBaseline 대입 ★블록 안★ 에 "error" 라는 글자가 있는지만
+ *     봤습니다. 그런데 수리팀의 .error 검사는 그 대입문 ★위★ 에 있어서
+ *     블록 안에는 안 잡힙니다.
+ *     → 고쳐졌는데도 "아직 안 고쳤다" 로 ★통과★ 해 버렸습니다.
+ *        (2026-08-31 npm test 에서 [1] 세 건은 터졌는데 이 검사만 초록으로
+ *         남아 있었습니다. 봉인이 거짓말을 한 것입니다)
+ *     그래서 블록 안이 아니라 ★파일 안에서의 위치★ 를 봅니다.
+ * ========================================================================= */
+절("[1] 옛 깨진 모양이 되돌아오면 터진다 (위치까지 봅니다)");
+{
+  const 오류검사위치 = 코드.search(/\.error\s*\|\|/);
+  const 대입위치 = 코드.search(/serverBaseline\s*=\s*\{[^}]*tradeCount/);
+
+  ok("기준값을 만드는 대입문을 찾았다", 대입위치 >= 0,
+    "코드 모양이 크게 바뀌었습니다. 이 봉인을 다시 맞춰야 합니다");
+  ok(".error 를 보는 곳을 찾았다", 오류검사위치 >= 0,
+    "이게 없으면 2026-08-28 의 그 결함이 되돌아온 것입니다");
+  ok("★.error 검사가 기준값 대입보다 앞에 있다★ (" + 오류검사위치 + " < " + 대입위치 + ")",
+    오류검사위치 >= 0 && 대입위치 >= 0 && 오류검사위치 < 대입위치,
+    "뒤에 있으면 오류인데도 기준값이 먼저 만들어집니다. " +
+    "옛 봉인이 이 순서를 안 봐서 고쳐진 것을 못 알아챘습니다");
+
+  ok("오류일 때 기준값을 만들지 않고 빠져나간다",
+    /if\s*\(err\)\s*\{[\s\S]{0,400}return null;/.test(코드),
+    "오류를 찍기만 하고 계속 내려가면 아래에서 기준값이 만들어집니다");
+
+  ok("옛 패턴(실패를 0 으로)이 없다",
+    !/realizedPnl:\s*rows\[0\]/.test(코드) && !/tradeCount:\s*rows\[1\]/.test(코드),
+    "2026-08-28 에 터져 있던 바로 그 두 줄입니다");
+
+  ok('"모름" 을 표시하는 자리가 있다 (0 이 아니라 상태로 둡니다)',
+    /function markUnknown/.test(코드) && /baselineState/.test(코드));
+
+  ok("markUnknown 이 기준값을 0 으로 만들지 않는다",
+    (function () {
+      const m = 코드.match(/function markUnknown[\s\S]*?\n  \}/);
+      return !!m && m[0].indexOf("serverBaseline") === -1;
+    })(),
+    "여기서 {0,0} 을 넣으면 고치기 전과 똑같아집니다");
+
+  /* 서버에서 읽은 값과 이 창에서 만든 값을 구분해 둡니다.
+     ⚠ 첫 정상 저장 뒤에는 "모름" 이 풀리는데, 그때 기준은 ★서버 값이 아니라
+       이 창의 값★ 입니다(trading:persisted 경로 · js/sync-guard.js:264).
+       둘을 헷갈리면 "서버 기준으로 막고 있다" 고 잘못 믿게 됩니다. */
+  ok("서버에서 읽은 값에 source 를 붙인다", /source:\s*"server"/.test(코드));
+  ok("이 창에서 만든 값에는 다른 source 를 붙인다 (서버 값과 안 헷갈리게)",
+    /source:\s*"local"/.test(코드),
+    "첫 정상 저장 뒤 기준값은 서버가 아니라 이 창의 값입니다");
+  ok("바깥에서 어느 쪽인지 볼 수 있다 (getStatus 에 source)",
+    /getStatus/.test(코드) && /source:\s*serverBaseline/.test(코드));
 }
 
-/* 로컬이 텅 빈 상태 — 이게 서버를 덮으면 회원 기록이 사라집니다. */
-const 텅빈스냅 = { closedTrades: [], realizedPnl: 0, balance: 10000000 };
+/* =========================================================================
+ * [2] ⚠️ 남아 있는 위험 — "모름 = 방어 꺼짐" (2026-08-31 PM 결정)
+ *
+ *  ★이건 결함이 아니라 고른 것입니다.★
+ *  나중에 누가 "고쳤다면서 왜 안 막지?" 하고 헤매지 않게 여기 못 박습니다.
+ *  결정이 바뀌면(모를 때 막기로 하면) 이 절이 터지면서 알려줍니다.
+ *  그건 회원 화면에 경고를 띄우는 동작이라 PM 결정 사항입니다.
+ * ========================================================================= */
+절("[2] ⚠️ 남아 있는 위험 — 모르는 동안에는 방어가 꺼져 있습니다");
+{
+  const 판정 = (코드.match(/function looksLikeDataLoss[\s\S]*?\n  \}/) || [""])[0];
 
-async function main() {
-  /* =======================================================================
-   * [1] 사실 확인 — 조회가 오류로 와도 기준값이 {0,0} 이 된다
-   * ===================================================================== */
-  절("[1] 서버 조회가 오류여도 기준값이 {0,0} 이 된다 (지금 이렇습니다)");
+  ok("looksLikeDataLoss 를 찾았다", 판정.length > 0);
+  ok("★기준값을 모르면 판정하지 않고 그냥 통과시킨다★",
+    /if\s*\(!serverBaseline[^)]*\)\s*return false;/.test(판정),
+    "true(막음) 로 바뀌었다면 PM 결정이 바뀐 것입니다. " +
+    "그때는 이 절을 다시 쓰고 결정 날짜를 남기세요");
 
-  const 오류 = { message: "permission denied for table trades", code: "42501" };
-  const t = 창만들기();
-  t.App.SupabaseClient = {
-    get: () => 가짜클라이언트(
-      { data: null, error: 오류 },              // 권한 오류 — reject 가 아닙니다
-      { count: null, error: 오류 }
-    ),
-  };
+  ok("모르는 채로 넘긴 횟수를 센다 (아무도 모르게 두지 않습니다)",
+    /skippedUnknown\s*\+\+/.test(코드));
+  ok("그 횟수를 바깥에서 볼 수 있다", /skippedUnknown:\s*skippedUnknown/.test(코드));
+  ok("보호가 켜져 있는지 바깥에서 볼 수 있다 (isBaselineKnown)",
+    /isBaselineKnown/.test(코드));
 
-  const 결과 = await t.App.SyncGuard.loadBaseline();
-  const 기준값 = t.App.SyncGuard._getBaseline();
+  /* 모르는 시간을 짧게 만드는 것이 이 결정의 유일한 갚음입니다.
+     재시도가 사라지면 "모름" 이 영영 안 풀립니다 = 방어가 영영 꺼집니다. */
+  const 재시도 = ((코드.match(/RETRY_MS\s*=\s*\[([^\]]*)\]/) || [null, ""])[1] || "")
+    .split(",").map((s) => Number(s.trim())).filter((n) => !isNaN(n));
+  ok("다시 읽는 장치가 있다 (없으면 모름이 영영 안 풀립니다)", 재시도.length > 0,
+    JSON.stringify(재시도));
+  ok("재시도가 5초·15초·45초다 (" + JSON.stringify(재시도) + ")",
+    재시도.length === 3 && 재시도[0] === 5000 && 재시도[1] === 15000 && 재시도[2] === 45000,
+    "간격을 늘리면 방어가 꺼져 있는 시간이 그만큼 길어집니다");
+  ok("실패하면 실제로 다시 읽기를 예약한다", /scheduleRetry\(\)/.test(코드));
 
-  ok("오류인데도 예외가 안 나고 기준값이 만들어진다 (" + JSON.stringify(기준값) + ")",
-    !!기준값,
-    "null 이면 이 결함이 아니라 다른 경로입니다");
-  ok("실현손익 기준이 0 이다 (오류를 0 으로 읽었습니다)",
-    !!기준값 && 기준값.realizedPnl === 0,
-    "기준값: " + JSON.stringify(기준값));
-  ok("거래건수 기준이 0 이다 (오류를 0 으로 읽었습니다)",
-    !!기준값 && 기준값.tradeCount === 0,
-    "기준값: " + JSON.stringify(기준값));
-  ok("서버가 진짜 비어 있을 때와 글자 그대로 구별이 안 된다",
-    JSON.stringify(기준값) === JSON.stringify({ realizedPnl: 0, tradeCount: 0 }),
-    "이게 조용한 고장의 핵심입니다 — 오류인지 빈 계정인지 알 방법이 없습니다");
-
-  /* =======================================================================
-   * [2] ⚠️ 결함 기록 — 그 상태에서 보호가 꺼진다
-   * =====================================================================
-   * ⚠️⚠️ 아래 기대값은 **옳아서 적은 것이 아닙니다.**
-   *      고치면 여기가 터집니다. 그게 정상입니다.
-   *      고친 뒤에는 이 절을 지우지 말고 [3] 처럼 "막는다" 로 뒤집어 쓰고,
-   *      바꾼 날짜와 이유를 여기에 남기세요. */
-  절("[2] ⚠️ 그 상태에서 보호가 꺼진다 — 고쳐지면 여기가 터집니다");
-  {
-    const 막나 = t.App.SyncGuard.looksLikeDataLoss(텅빈스냅);
-    ok("[결함] 텅 빈 로컬이 그대로 통과한다 (지금: " + (막나 ? "막음" : "통과") + ")",
-      막나 === false,
-      "여기가 빨갛게 터졌다면 **고쳐진 것입니다.** 축하합니다. " +
-      "이 검사를 지우지 말고 [3] 처럼 '막는다' 로 뒤집어 쓰고 날짜를 남기세요");
-
-    ok("[결함] 손익이 크게 깎여도 통과한다",
-      t.App.SyncGuard.looksLikeDataLoss(
-        { closedTrades: [], realizedPnl: 0, balance: 10000000 }) === false,
-      "위와 같습니다 — 터졌으면 고쳐진 것입니다");
-  }
-
-  /* =======================================================================
-   * [3] 반대 방향 — 조회가 정상이면 보호는 제대로 동작한다
-   * =====================================================================
-   * [1][2] 만 있으면 "보호막이 원래 아무것도 안 한다" 와 구별이 안 됩니다.
-   * 정상 응답에서는 확실히 막는다는 것을 같이 못 박습니다. */
-  절("[3] 조회가 정상이면 보호는 제대로 막는다 (보호막 자체는 살아 있습니다)");
-  {
-    const t2 = 창만들기();
-    t2.App.SupabaseClient = {
-      get: () => 가짜클라이언트(
-        { data: { realized_pnl: 5230000 }, error: null },
-        { count: 37, error: null }
-      ),
-    };
-    await t2.App.SyncGuard.loadBaseline();
-    const 기준2 = t2.App.SyncGuard._getBaseline();
-    ok("정상 응답은 서버 값을 그대로 읽는다 (" + JSON.stringify(기준2) + ")",
-      !!기준2 && 기준2.realizedPnl === 5230000 && 기준2.tradeCount === 37,
-      "기준값: " + JSON.stringify(기준2));
-
-    ok("텅 빈 로컬이 서버를 덮는 것을 막는다",
-      t2.App.SyncGuard.looksLikeDataLoss(텅빈스냅) === true,
-      "이게 false 면 보호막이 아예 망가진 것입니다 — 즉시 보고하세요");
-
-    ok("거래가 37건에서 5건으로 줄어든 것도 막는다",
-      t2.App.SyncGuard.looksLikeDataLoss(
-        { closedTrades: new Array(5).fill({ pnl: 1 }), realizedPnl: 100 }) === true);
-
-    ok("서버와 같은 37건은 막지 않는다 (정상 저장까지 막으면 안 됩니다)",
-      t2.App.SyncGuard.looksLikeDataLoss(
-        { closedTrades: new Array(37).fill({ pnl: 1 }), realizedPnl: 5230000 }) === false,
-      "보호가 너무 세면 정상 거래가 저장이 안 됩니다");
-
-    ok("서버보다 많은 40건도 막지 않는다",
-      t2.App.SyncGuard.looksLikeDataLoss(
-        { closedTrades: new Array(40).fill({ pnl: 1 }), realizedPnl: 6000000 }) === false);
-  }
-
-  /* =======================================================================
-   * [4] 고쳐졌는지 알아보는 신호 — 코드가 .error 를 보게 되면 알려준다
-   * =====================================================================
-   * [2] 는 동작으로 봅니다. 이건 코드 모양으로 봅니다. 둘 다 있어야
-   * "고쳤는데 테스트가 몰랐다" 도, "테스트만 고쳤다" 도 안 생깁니다. */
-  절("[4] 기준값 읽는 코드가 아직 .error 를 안 본다 (고치면 여기도 터집니다)");
-  {
-    const 코드 = 주석제거(read("js/sync-guard.js"));
-    const 기준값블록 = (코드.match(/serverBaseline\s*=\s*\{[\s\S]*?\};/) || [""])[0];
-
-    ok("기준값을 만드는 곳을 찾았다 (" + 기준값블록.length + "자)",
-      기준값블록.length > 0,
-      "못 찾았으면 코드 모양이 바뀐 것입니다. [1][2] 결과를 먼저 보세요");
-
-    ok("[결함] 기준값 만들 때 .error 를 안 본다",
-      기준값블록.indexOf("error") === -1,
-      "여기가 터졌다면 **고쳐진 것입니다.** [2] 도 같이 터졌는지 확인하고 " +
-      "두 절을 함께 '고쳐졌다' 기준으로 다시 쓰세요");
-
-    /* 고칠 때 참고하라고 같이 못 박아 둡니다 —
-       세 갈래 전부 tradeCount/realizedPnl 이 0 이 아니어야 동작합니다. */
-    const 손실판정 = (코드.match(/function looksLikeDataLoss[\s\S]*?\n  \}/) || [""])[0];
-    const 전제조건수 = (손실판정.match(/serverBaseline\.(tradeCount|realizedPnl)/g) || []).length;
-    ok("손실 판정이 기준값에 기대는 곳이 5곳이다 (지금 " + 전제조건수 + "곳)",
-      전제조건수 === 5,
-      "기준값이 {0,0} 이면 이 " + 전제조건수 + "곳이 전부 무력화됩니다. " +
-      "고칠 때 '기준값을 못 읽었다' 와 '서버가 비었다' 를 구분하는 것이 핵심입니다");
-  }
-
-  console.log("\n  통과 " + pass + " / 실패 " + fail);
-  if (fail) {
-    console.log("실패한 것");
-    실패목록.forEach((m) => console.log("  - " + m));
-  }
-  process.exit(fail ? 1 : 0);
+  /* 오류를 감추면 회원도 우리도 모릅니다 */
+  ok("서버가 준 오류 메시지를 뭉개지 않고 그대로 찍는다",
+    /console\.error\([\s\S]{0,300}err\.message/.test(코드),
+    "뭉개면 무엇이 문제인지 영영 모릅니다");
 }
 
-main();
+/* =========================================================================
+ * [3] 두 봉인이 서로를 가리킨다 — 한쪽만 지워지는 것을 막습니다
+ *
+ *  이 파일에서 뺀 검사들은 새 봉인으로 옮겼습니다.
+ *  새 봉인이 사라지면 그 검사들이 통째로 없어지는데 아무도 모릅니다.
+ *  (2026-08-30 에 배운 것 그대로입니다 — 파일은 멀쩡한데 검사만 안 되는 고장)
+ * ========================================================================= */
+절("[3] 옮긴 검사가 새 봉인에 실제로 있다");
+{
+  const 새경로 = path.join(REPO, 새봉인);
+  ok("새 봉인 파일이 있다 (" + 새봉인 + ")", fs.existsSync(새경로),
+    "여기서 뺀 검사들이 통째로 사라졌습니다");
+
+  const 새본문 = fs.existsSync(새경로) ? read(새봉인) : "";
+  [
+    ["오류면 기준값이 0 이 아니라 모름", "모름"],
+    ["모르면 판정하지 않는다", "판정하지 않는다"],
+    ["평소에는 예전 그대로", "예전 그대로"],
+    ["새 계정과 오류를 구분한다", "새 계정"],
+    ["잘 읽어둔 값을 나중 실패가 안 지운다", "지우지 않는다"],
+    ["판정식이 기준값에 기대는 곳 5곳", "5곳"],
+  ].forEach(function (쌍) {
+    ok("새 봉인이 [" + 쌍[0] + "] 를 본다", 새본문.indexOf(쌍[1]) >= 0,
+      "새 봉인에서 이 검사가 사라졌습니다 — 여기로 되가져오세요");
+  });
+
+  let order = "";
+  try { order = read("tests/_order.txt"); } catch (e) { order = ""; }
+  ok("새 봉인이 tests/_order.txt 에 등록돼 있다", order.indexOf(새봉인) >= 0,
+    "등록 안 하면 파일은 멀쩡한데 아무도 안 돌립니다");
+
+  /* 겹치지 않는지 — 이 파일은 가짜 서버를 안 씁니다(동작 검사는 전부 새 봉인 담당) */
+  /* ⚠ 자기 자신을 검사합니다. 찾는 낱말을 그대로 적으면 이 줄에 걸려서
+     항상 실패합니다(실제로 한 번 걸렸습니다). 그래서 낱말을 쪼개 만듭니다. */
+  const 나 = 주석제거(read("tests/sync-guard-baseline-blindspot.test.js"));
+  const 서버흉내 = ["Supabase", "Client"].join("");
+  ok("이 파일은 가짜 서버를 더 이상 안 쓴다 (동작 검사는 새 봉인 담당)",
+    나.indexOf(서버흉내) === -1 && 나.indexOf(['re','quire("vm")'].join('')) === -1,
+    "두 벌이 되면 나중에 한쪽만 고쳐집니다");
+}
+
+/* =========================================================================
+ * [4] 돌연변이 자체검증 — 이 봉인이 진짜 잡는가
+ *     소스 ★사본★ 을 메모리에서 틀리게 바꿔 봅니다. 디스크는 안 건드립니다.
+ * ========================================================================= */
+절("[4] 돌연변이 자체검증 (디스크는 안 건드립니다)");
+{
+  /* 1) ★옛 봉인이 놓쳤던 바로 그것★ — .error 검사를 대입 뒤로 옮기면 잡히는가 */
+  const 위치판정 = function (본문) {
+    const c = 주석제거(본문);
+    const a = c.search(/\.error\s*\|\|/);
+    const b = c.search(/serverBaseline\s*=\s*\{[^}]*tradeCount/);
+    return a >= 0 && b >= 0 && a < b;
+  };
+  ok("(대조) 지금 코드는 순서가 맞다", 위치판정(원본) === true);
+
+  const 순서뒤집기 =
+    "serverBaseline = { realizedPnl: 0, tradeCount: 0 };\n" +
+    "var err = acc.error || trd.error;\n";
+  ok("★.error 검사가 기준값 대입 뒤로 가면 잡는다★", 위치판정(순서뒤집기) === false,
+    "이걸 못 잡아서 옛 검사가 고쳐진 것을 몰랐습니다");
+
+  const 검사삭제 = 원본.replace("var err = acc.error || trd.error || null;", "var err = null;");
+  ok(".error 검사를 아예 빼면 잡는다",
+    검사삭제 !== 원본 && 위치판정(검사삭제) === false);
+
+  /* 2) 옛 패턴이 되돌아오면 잡는가 */
+  const 옛패턴 =
+    "serverBaseline = {\n" +
+    "  realizedPnl: rows[0] && rows[0].data ? 1 : 0,\n" +
+    "  tradeCount: rows[1] ? rows[1].count : 0,\n" +
+    "};\n";
+  ok("옛 패턴(실패를 0 으로)이 되돌아오면 잡는다",
+    /realizedPnl:\s*rows\[0\]/.test(주석제거(옛패턴)));
+  ok("(대조) 지금 코드에는 그 패턴이 없다", !/realizedPnl:\s*rows\[0\]/.test(코드));
+
+  /* 3) 재시도를 늘리면 잡는가 — 방어가 꺼져 있는 시간이 그만큼 길어집니다 */
+  const 느린재시도 = 원본.replace("[5000, 15000, 45000]", "[60000, 300000, 900000]");
+  const 값 = ((주석제거(느린재시도).match(/RETRY_MS\s*=\s*\[([^\]]*)\]/) || [null, ""])[1] || "")
+    .split(",").map(function (s) { return Number(s.trim()); });
+  ok("재시도를 1분·5분·15분으로 늘리면 잡는다",
+    느린재시도 !== 원본 && !(값[0] === 5000 && 값[1] === 15000 && 값[2] === 45000));
+
+  /* 4) "모르면 통과" 를 "모르면 막음" 으로 바꾸면 잡는가 (= PM 결정이 바뀐 것) */
+  const 모르면막음 = 원본.replace(
+    "if (!serverBaseline || !snap) return false;",
+    "if (!serverBaseline || !snap) return true;"
+  );
+  const 판정2 = (주석제거(모르면막음).match(/function looksLikeDataLoss[\s\S]*?\n  \}/) || [""])[0];
+  ok("모를 때 막는 쪽으로 바뀌면 [2] 가 터진다 (PM 결정 사항이라 알려야 합니다)",
+    모르면막음 !== 원본 && !/if\s*\(!serverBaseline[^)]*\)\s*return false;/.test(판정2));
+
+  /* 5) source 구분을 없애면 잡는가 */
+  const source없앰 = 원본.replace('source: "local"', 'source: "server"');
+  ok("이 창의 값에 server 를 붙이면 잡는다 (서버 값과 헷갈립니다)",
+    source없앰 !== 원본 && !/source:\s*"local"/.test(주석제거(source없앰)));
+
+  /* 6) markUnknown 이 다시 0 을 넣으면 잡는가 */
+  const 다시0 = 원본.replace(
+    "  function markUnknown(why, err) {",
+    "  function markUnknown(why, err) {\n    serverBaseline = { realizedPnl: 0, tradeCount: 0 };"
+  );
+  ok("markUnknown 이 다시 {0,0} 을 넣으면 잡는다",
+    다시0 !== 원본 &&
+      (주석제거(다시0).match(/function markUnknown[\s\S]*?\n  \}/) || [""])[0].indexOf("serverBaseline") >= 0,
+    "그게 2026-08-28 의 그 고장입니다");
+}
+
+/* =========================================================================
+ * [5] 수정 금지 12개 · 이 파일 등록
+ * ========================================================================= */
+절("[5] 수정 금지 12개 · 등록");
+{
+  const md5 = function (f) {
+    return crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
+  };
+  [
+    ["trading.js", "33250202c00b097ff8344ae2ee64cbe7"],
+    ["ui.js", "333fc427e75b47b306699c92aa4e7b50"],
+    ["auth.js", "9cec9a7257eb54f379bf72e14e21e463"],
+    ["supabase-sync.js", "faddcbbc34b5165177ff26cb978040f8"],
+    ["chat.js", "a93dfaa7f82ce72a914b270acb3650bb"],
+    ["leaderboard.js", "62e839f06e0565cca5d9216e484b6031"],
+    ["admin.js", "424e4c63ec1cd24681c4f27f60aee2fa"],
+    ["season.js", "9c5fbf13ced09ca2f348e48f87c78224"],
+    ["board.js", "8b847bd8f5d8231b8dd329f8b15dbe37"],
+    ["orderbook.js", "fa5f77dc5108133128f85ba5ab3f096e"],
+    ["chart.js", "02ddcb000d577131f797143d08c09123"],
+    ["websocket.js", "1a914631175760e0b0cb5144bc11b59e"],
+  ].forEach(function (쌍) {
+    ok("js/" + 쌍[0] + " 해시 그대로", md5(쌍[0]) === 쌍[1], md5(쌍[0]));
+  });
+
+  let order = "";
+  try { order = read("tests/_order.txt"); } catch (e) { order = ""; }
+  ok("tests/_order.txt 에 이 파일이 등록돼 있다",
+    order.indexOf("tests/sync-guard-baseline-blindspot.test.js") >= 0);
+}
+
+console.log("\n  통과 " + pass + " / 실패 " + fail);
+if (fail) {
+  console.log("실패한 것");
+  실패목록.forEach(function (m) { console.log("  - " + m); });
+}
+process.exit(fail ? 1 : 0);

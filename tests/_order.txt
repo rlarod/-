@@ -162,3 +162,9 @@ tests/menu-rename-seal.test.js
 tests/market-war-power-bar.test.js
 tests/market-war-power-bar-burst-seal.test.js
 tests/sync-guard-baseline-blindspot.test.js
+tests/symbol-switch-price-clear-seal.test.js
+tests/tests-dir-hygiene.test.js
+tests/stale-guard-mobile-bar.test.js
+tests/chart-style-seal.test.js
+tests/sync-guard-baseline-unknown.test.js
+tests/chart-longrun-accumulation.test.js
