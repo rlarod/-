@@ -42,11 +42,17 @@ function boot(opts) {
   `;
   win.eval(busSrc);
 
+  /* 엔진(js/trading.js)이 있어야 제대로 도는 모듈들 — 목록은 tests/_sandbox-modules.js
+     한 곳에만 있습니다. 여기에 이름을 또 적지 않습니다(적으면 언젠가 어긋납니다).
+     ⭐ 반드시 js/trading.js ★앞★ 에 넣습니다 (index.html 과 같은 순서). */
+  const 엔진필수경로 = require("./_sandbox-modules.js").엔진필수.map((m) => m.경로);
+
   const files = [
     "js/config.js",
     "js/utils.js",
     "js/storage.js",
     "js/symbol-registry.js",
+  ].concat(엔진필수경로, [
     "js/trading.js",
     "js/ui.js",
     "js/order-info-panel.js",
@@ -54,7 +60,7 @@ function boot(opts) {
     "js/order-panel-amitalk.js",
     "js/position-table-extra.js",
     "js/limit-close.js",
-  ];
+  ]);
   /* opts.extra — 기본 목록 뒤, init() 전에 더 태울 파일들. (2026-08-27 추가)
      왜 필요한가: tests/symbol-switch-unbuilt.test.js 가 js/trading.js 만 태우고
      js/symbol-guard.js 를 안 읽는 바람에, 안전장치가 라이브에 들어온 뒤에도

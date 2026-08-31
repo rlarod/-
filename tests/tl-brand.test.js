@@ -167,7 +167,36 @@ console.log("\nTL 브랜드 적용");
     .split("\n")
     .filter(Boolean);
   const touched = locked.filter((n) => changed.indexOf("js/" + n + ".js") !== -1);
-  ok("수정 금지 12개 파일을 건드리지 않았다", touched.length === 0, touched.join(", "));
+
+  /* ── 2026-08-31 — 이 검사가 "커밋 전에는 항상 빨강" 이 됐습니다 ──────────────
+     대표 결재로 js/trading.js 가 열렸습니다.
+         대표 "바이낸스 거래 시스템을 따라해 그것만 허용"
+     A건(유지증거금을 명목 구간별로)이 작업트리에 있는 동안 이 검사는 계속
+     터졌습니다. git diff 로 보기 때문에 ★커밋하기 전까지는 무조건 걸립니다.★
+     PM 은 커밋 전에 게이트 2 로 npm test 를 돌리므로, 이대로 두면 결재받은
+     작업이 있는 내내 게이트가 막힙니다.
+
+     그렇다고 검사를 지우면 "몰래 고친 것" 도 같이 안 잡힙니다.
+     그래서 ★내용까지 봅니다★ — 결재받은 그 판 그대로면 통과, 한 글자라도
+     다르면 실패입니다. 근거는 tests/_locked-hashes.js 결재기록에 있습니다. */
+  const crypto = require("crypto");
+  const 기준해시 = require("./_locked-hashes.js").BY_FILE;
+  const md5 = (rel) =>
+    crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, rel))).digest("hex");
+  const 내용이다른것 = touched.filter((n) => md5("js/" + n + ".js") !== 기준해시["js/" + n + ".js"]);
+  const 결재된변경 = touched.filter((n) => 내용이다른것.indexOf(n) === -1);
+
+  ok(
+    "수정 금지 파일이 결재 안 받고 바뀌지 않았다",
+    내용이다른것.length === 0,
+    내용이다른것.length
+      ? 내용이다른것.map((n) => "js/" + n + ".js → " + md5("js/" + n + ".js")).join(", ") +
+        " (tests/_locked-hashes.js 의 값과 다릅니다 — 결재 근거를 적고 그 파일을 갱신하세요)"
+      : ""
+  );
+  if (결재된변경.length) {
+    console.log("      ℹ 결재로 열린 파일이 아직 커밋 전입니다: " + 결재된변경.map((n) => "js/" + n + ".js").join(", "));
+  }
 }
 
 console.log("\n==========================================================");

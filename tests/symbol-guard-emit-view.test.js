@@ -84,7 +84,10 @@ function boot(opts) {
 
   const files = [
     "js/config.js", "js/utils.js", "js/storage.js", "js/symbol-registry.js",
-    "js/symbol-guard.js", "js/trading.js",
+    "js/symbol-guard.js",
+    /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
+    "js/risk-brackets.js",
+    "js/trading.js",
     "js/multi-symbol-view.js", "js/order-lock-notice.js",
   ];
   /* opts.wrongOrder — js/symbol-guard.js 보다 "먼저" 읽습니다([6] 에서 씁니다).
@@ -205,7 +208,15 @@ section("[2] 다른 종목을 보는 중에도 포지션 종목 시세로 강제
 {
   const { App } = boot();
   const opened = openLong(App, 110000, 1000, 10);
-  ok("청산가 99,550", Math.round(opened.position.liq) === 99550, String(opened.position.liq));
+  /* 2026-08-31 — 99,550 → 99,440 으로 바뀌었습니다. 고장이 아닙니다.
+     대표 결재로 유지증거금이 바이낸스 명목 구간별(js/risk-brackets.js)로 바뀌었습니다.
+       명목 = 증거금 1,000 × 10배 = 10,000 USDT → ★1구간★ (유지증거금률 0.4%, 공제액 0)
+       청산가 = 110,000 × (1 − 1/10 + 0.004) = ★99,440★
+     예전에는 유지증거금률이 0.5% 고정이라 110,000 × 0.905 = 99,550 이었습니다.
+     ⭐ 소액은 1구간(0.4%)이라 예전보다 버팀폭이 ★넓어집니다.★ 큰 포지션만 좁아집니다.
+     ⚠️ 이 테스트는 종목 안전장치를 보는 것이지 청산가를 보는 게 아닙니다.
+        청산가는 "엔진이 진짜로 돌았다" 는 확인용 숫자입니다. */
+  ok("청산가 99,440 (1구간 유지증거금률 0.4%)", Math.round(opened.position.liq) === 99440, String(opened.position.liq));
 
   lookAt(App, "ETHUSDT");                                             // ETH 차트를 보는 중
   App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 99000 });  // BTC 가 청산가 아래로

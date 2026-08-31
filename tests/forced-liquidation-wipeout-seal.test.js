@@ -25,6 +25,35 @@
  *   지갑 100,000 → margin 95,238.0952 · fee 4,761.9048 → 실현손익 -100,000.00
  *   지갑 200,000 → margin 190,476.1905 · fee 9,523.8095 → 실현손익 -200,000.00
  *
+ * ── ⚠️ 2026-08-31 갱신 — "0.5% 고정" 이 사라졌습니다 ────────────────────
+ *   대표 결재로 js/trading.js 가 열렸습니다.
+ *       대표 "ㅇㅇ 지금만 허용할테니까 바이낸스 시스템이랑 똑같이 따라해"
+ *            "바이낸스 거래 시스템을 따라해 그것만 허용"
+ *   [A건] 유지증거금이 ★명목 구간별★ 로 바뀌었습니다(js/risk-brackets.js).
+ *   const MMR = 0.005 → const MMR_FALLBACK = 0.005 (표를 못 읽을 때만 쓰는 값).
+ *
+ *   ★이 봉인이 지키던 것은 "0.5%" 가 아닙니다.★
+ *   지키던 것은 ─ 강제청산 한 번에 회원이 잃는 돈이 ★자기가 건 돈 딱 그만큼★
+ *   이고 그 이상이 아니라는 회계 성질입니다. 0.5% 는 그 성질을 확인하려고
+ *   같이 적어둔 ★그때의 숫자★ 였을 뿐입니다.
+ *   그 회계 성질은 구간별로 바뀐 뒤에도 그대로입니다 — 아래에서 지갑 세 종류로
+ *   다시 재서 확인했습니다. 숫자만 새 값으로 바꿉니다.
+ *
+ *   ── 2026-08-31 실측 (100배 · 최대 버튼 · 진입가 60,000) ──────────────
+ *     지갑 100,000 → 명목  9,523,809.52 → 4구간(1%,공제 12,000)
+ *                    유지증거금 83,238.10 · 청산가 59,924.40 · 버팀폭 0.126%
+ *     지갑 130,000 → 명목 12,380,952.38 → 5구간(2%,공제 132,000)
+ *                    유지증거금 115,619.05 · 청산가 59,960.31 · 버팀폭 0.066%
+ *     지갑 138,000 → 명목 13,142,857.14 → 5구간 · 청산가 59,997.39
+ *     ★지갑 138,600 부터는 아예 진입이 거절됩니다★ (아래 1-2 참조)
+ *   예전에는 지갑이 얼마든 버팀폭이 0.5%(청산가 59,700) 로 똑같았습니다.
+ *
+ *   ── ⚠️ 이 봉인이 그동안 ★fallback 을 재고 있었습니다★ ────────────────
+ *   여기 sandbox 는 js/risk-brackets.js 를 안 태웠습니다. 그래서 A건이
+ *   들어온 뒤에도 이 파일만은 옛 고정값 경로(MMR_FALLBACK)를 재고 있었습니다.
+ *   ★테스트는 초록인데 회원은 다르게 겪는★ 상태 — 우리가 P1 로 부르는
+ *   조용한 고장입니다. 아래 boot() 에서 risk-brackets 를 같이 태워 고쳤습니다.
+ *
  * 네트워크를 쓰지 않습니다. 진짜 js/trading.js 와 js/realized-pnl-fix.js 를
  * 그대로 태우고, 시세만 손으로 밀어 넣어 청산가에 닿게 만듭니다.
  * (강제청산을 직접 부르지 않습니다 — 엔진이 스스로 발동시키게 둡니다)
@@ -94,6 +123,8 @@ function boot(opts) {
 
   vm.createContext(sandbox);
   vm.runInContext(read("js/storage.js"), sandbox, { filename: "js/storage.js" });
+  /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
+  vm.runInContext(read("js/risk-brackets.js"), sandbox, { filename: "js/risk-brackets.js" });
   vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
   vm.runInContext(read("js/realized-pnl-fix.js"), sandbox, { filename: "js/realized-pnl-fix.js" });
 
@@ -164,12 +195,69 @@ function 한판(시작지갑) {
     Math.abs(a.snap.realizedPnl + (a.margin + a.entryFee)) < 1e-6, a.snap.realizedPnl.toFixed(4));
 }
 {
-  const b = 한판(200000);
-  ok("지갑 200,000 — 증거금 190,476.1905", Math.abs(b.margin - 190476.1905) < 0.001, b.margin.toFixed(4));
-  ok("지갑 200,000 — 진입수수료 9,523.8095", Math.abs(b.entryFee - 9523.8095) < 0.001, b.entryFee.toFixed(4));
-  ok("⭐ 지갑 200,000 — 실현손익이 정확히 -200,000.00",
-    Math.abs(b.snap.realizedPnl + 200000) < 0.001, b.snap.realizedPnl.toFixed(4));
-  ok("지갑 200,000 — 청산 뒤 지갑 0", Math.abs(b.snap.balance) < 1e-6, String(b.snap.balance));
+  /* 2026-08-31 — 예전에는 여기가 지갑 200,000 이었습니다.
+     지금은 200,000 이 ★진입 자체가 거절★ 됩니다(아래 1-2 에서 따로 못 박습니다).
+     "지갑 전액" 성질이 구간이 바뀌어도 살아있는지 봐야 하므로,
+     ★다른 구간(5구간)에 떨어지는★ 지갑 130,000 으로 바꿉니다.
+     100,000 은 4구간, 130,000 은 5구간이라 서로 다른 유지증거금률을 탑니다. */
+  const b = 한판(130000);
+  ok("지갑 130,000 — 증거금 123,809.5238", Math.abs(b.margin - 123809.5238) < 0.001, b.margin.toFixed(4));
+  ok("지갑 130,000 — 진입수수료 6,190.4762", Math.abs(b.entryFee - 6190.4762) < 0.001, b.entryFee.toFixed(4));
+  ok("⭐ 지갑 130,000 — 실현손익이 정확히 -130,000.00 (구간이 달라도 지갑 전액)",
+    Math.abs(b.snap.realizedPnl + 130000) < 0.001, b.snap.realizedPnl.toFixed(4));
+  ok("지갑 130,000 — 청산 뒤 지갑 0", Math.abs(b.snap.balance) < 1e-6, String(b.snap.balance));
+}
+
+/* ========================================================================
+ * 1-2. ★새 성질★ — 유지증거금이 증거금보다 크면 진입을 거절한다 (2026-08-31)
+ * ------------------------------------------------------------------------
+ * 왜 이게 "회원 돈을 지키는" 쪽인가
+ *   명목이 커지면 유지증거금이 증거금을 넘어섭니다. 그 상태로 열어주면
+ *   ★체결되는 순간 이미 청산 조건★ 이라 회원은 아무것도 못 해보고 전액을
+ *   잃습니다. 그래서 엔진이 열어주지 않고 거절합니다.
+ *
+ * 실측 경계 (100배 · 최대 버튼)
+ *   지갑 138,000 → 명목 13,142,857.14 → 열립니다
+ *   지갑 138,600 → 명목 13,200,000.00 → ★거절★ (유지증거금 132,000 = 증거금 132,000)
+ *   지갑 200,000 → 명목 19,047,619.05 → 거절 (유지증거금 248,952.38 > 증거금 190,476.19)
+ *   경계식 — 5구간에서 유지증거금 = 2×증거금 − 132,000 이므로
+ *            증거금 ≥ 132,000, 즉 지갑 ≥ 138,600 에서 거절됩니다.
+ *
+ * ⚠️ 회원 눈에는 "100배가 갑자기 안 된다" 로 보입니다.
+ *    바이낸스는 이럴 때 거절 대신 ★구간이 허용하는 배율로 낮춰줍니다★
+ *    (5구간 최대 25배). 그 차이는 PM 에게 별건으로 올렸습니다.
+ * ====================================================================== */
+section("1-2. 유지증거금 ≥ 증거금 이면 진입 거절 (2026-08-31 새 성질)");
+{
+  const 열리나 = (지갑) => {
+    const env = boot({ balance: 지갑 });
+    env.tick(60000);
+    env.T.setLeverage(100);
+    const r = env.T.openPosition("long", env.T.getMaxAffordableMargin());
+    return { 열림: !!env.T.getSnapshot().position, error: (r && r.error) || "" };
+  };
+
+  const a = 열리나(138000);
+  ok("지갑 138,000 은 아직 열린다 (경계 바로 아래)", a.열림, a.error);
+
+  const b = 열리나(138600);
+  ok("지갑 138,600 부터 거절된다 (유지증거금 132,000 = 증거금 132,000)", !b.열림, "열렸습니다");
+  ok("거절 사유에 '유지증거금' 과 '배율' 이 들어 있다",
+    b.error.indexOf("유지증거금") >= 0 && b.error.indexOf("배율") >= 0, b.error);
+
+  const c = 열리나(200000);
+  ok("지갑 200,000 도 거절된다 (유지증거금 248,952.38 > 증거금 190,476.19)", !c.열림, "열렸습니다");
+
+  /* ⭐ 거절은 ★아무 흔적도 남기지 않아야★ 합니다.
+     돈이 빠지거나 거래기록이 생기면 그게 더 나쁜 고장입니다. */
+  const env = boot({ balance: 200000 });
+  env.tick(60000);
+  env.T.setLeverage(100);
+  env.T.openPosition("long", env.T.getMaxAffordableMargin());
+  const snap = env.T.getSnapshot();
+  ok("거절되면 지갑이 그대로다 (수수료도 안 빠진다)", Math.abs(snap.balance - 200000) < 1e-9, String(snap.balance));
+  ok("거절되면 거래기록이 안 생긴다", snap.closedTrades.length === 0, String(snap.closedTrades.length));
+  ok("거절되면 포지션도 없다", snap.position === null);
 }
 {
   /* 숏도 같습니다 — 방향과 무관한 회계 성질입니다. */
@@ -213,7 +301,50 @@ section("2. 세 조각");
     trading.indexOf('closePosition("강제청산")') < trading.indexOf('closePosition("익절(TP)")'));
   ok("(7) 수수료율 테이커 0.05% / 메이커 0.02% (바이낸스 일반 사용자)",
     /taker: 0\.0005,/.test(trading) && /maker: 0\.0002,/.test(trading));
-  ok("(8) 유지증거금률 0.5% 고정", /const MMR = 0\.005;/.test(trading));
+  /* ── (8) 2026-08-31 갱신 — "0.5% 고정" 은 ★없어진 성질★ 입니다 ────────────
+     예전: ok("(8) 유지증거금률 0.5% 고정", /const MMR = 0\.005;/.test(trading));
+     대표 결재로 유지증거금이 명목 구간별(js/risk-brackets.js)로 바뀌었습니다.
+     값만 바꾸면(0.005 → 0.01 같은 식) 거짓말이 됩니다 — 구간마다 다르니까요.
+     그래서 ★"고정값이 아니다" 라는 사실 자체★ 를 못 박습니다.
+
+     ⭐ 수리팀이 잘한 것 — const MMR = 0.005; 를 일부러 안 남겼습니다.
+        남겼으면 이 봉인이 초록으로 통과했겠지만, 지키던 성질은 이미 사라진
+        뒤라 ★거짓 초록★ 이 됩니다. 이름을 MMR_FALLBACK 으로 바꿔서 봉인이
+        정직하게 터지도록 뒀습니다. 갱신도 같은 기준으로 합니다. */
+  ok("(8-a) 고정 유지증거금률(const MMR = 0.005)이 더 이상 없다",
+    !/const MMR = 0\.005;/.test(trading),
+    "0.5% 고정이 되살아났습니다 — 구간표(js/risk-brackets.js)가 무시되고 있을 수 있습니다");
+  ok("(8-b) 남은 0.005 는 표를 못 읽을 때만 쓰는 예비값이다",
+    /const MMR_FALLBACK = 0\.005;/.test(trading),
+    "예비값이 사라지면 표를 못 읽는 순간 청산가가 NaN 이 됩니다");
+  ok("(8-c) 유지증거금을 구간표(App.RiskBrackets)에서 가져온다",
+    /App\.RiskBrackets/.test(trading) && /RB\.maintenanceMargin/.test(trading),
+    "엔진이 구간표를 안 보면 회원은 화면과 다른 시점에 청산됩니다");
+  ok("(8-d) 청산가 계산이 명목(notional)을 받는다",
+    /function calcLiquidationPrice\(side, entry, leverage, notional\)/.test(trading),
+    "명목을 안 받으면 구간을 고를 수 없어 조용히 예비값으로 계산됩니다");
+
+  /* (8-e) ⭐ 이 봉인이 원래 지키려던 것 — 숫자가 아니라 ★성질★ 입니다.
+     "청산 때 회원이 잃는 돈은 자기가 건 돈 딱 그만큼이고 그 이상이 아니다."
+     구간별로 바뀌어도 이건 그대로여야 합니다. 소스가 아니라 ★실제로 돌려서★ 봅니다. */
+  {
+    const 손실이건돈을넘는가 = [50000, 100000, 130000].some((지갑) => {
+      const env = boot({ balance: 지갑 });
+      env.tick(60000);
+      env.T.setLeverage(100);
+      const margin = env.T.getMaxAffordableMargin();
+      env.T.openPosition("long", margin);
+      const pos = env.T.getSnapshot().position;
+      if (!pos) return false;
+      env.tick(pos.liq - 1);
+      const snap = env.T.getSnapshot();
+      /* 잃은 돈이 지갑보다 크거나, 지갑이 음수로 내려가면 '건 돈' 을 넘은 것입니다 */
+      return snap.realizedPnl < -지갑 - 0.001 || snap.balance < -1e-6;
+    });
+    ok("(8-e) ⭐ 구간이 바뀌어도 강제청산 손실이 '건 돈' 을 넘지 않는다 (지갑 5만·10만·13만)",
+      !손실이건돈을넘는가,
+      "회원이 건 돈보다 더 잃었습니다 — 이게 이 봉인의 진짜 목적입니다");
+  }
 
   const fix = read("js/realized-pnl-fix.js");
   ok("(9) 강제청산이면 fee 전체를 진입수수료로 본다",
@@ -235,18 +366,39 @@ section("3. 회원이 보는 값");
   env.T.openPosition("long", margin);
   const pos = env.T.getSnapshot().position || { liq: NaN };
 
-  /* 100배의 버팀폭 — 유지증거금률 0.5% 고정이므로 진입가 대비 0.5% 아래가 청산가입니다.
-     (바이낸스는 배율 구간마다 유지증거금률이 달라 이 폭이 다릅니다 — 계산식은
-      대표 결재 항목이라 여기서는 '지금 값' 을 기록만 합니다) */
-  ok("100배 롱 청산가는 진입가의 99.5%", Math.abs(pos.liq - 60000 * 0.995) < 1e-6, String(pos.liq));
-  ok("버팀폭 0.5% (60,000 → 59,700)", Math.abs(pos.liq - 59700) < 1e-6, String(pos.liq));
+  /* ── 2026-08-31 갱신 — 버팀폭이 0.500% → 0.126% 로 좁아졌습니다 ──────────
+     예전: 유지증거금률 0.5% 고정 → 청산가 59,700 (버팀폭 0.500%)
+     지금: 명목이 구간을 고릅니다.
+           증거금 95,238.0952 × 100배 = 명목 9,523,809.52
+           → 4구간 (유지증거금률 1%, 공제액 12,000)
+           → 유지증거금 = 9,523,809.52 × 0.01 − 12,000 = 83,238.0952
+           → 실효 유지증거금률 = 83,238.0952 ÷ 9,523,809.52 = 0.0087400
+           → 청산가 = 60,000 × (1 − 1/100 + 0.0087400) = 59,924.40
+           → 버팀폭 (60,000 − 59,924.40) ÷ 60,000 = ★0.126%★
+
+     ⚠️ 회원이 예전보다 ★빨리 청산됩니다.★ 0.500% → 0.126% 로 4배 가까이
+        좁아졌습니다. 대표 결재("바이낸스를 따라해") 사항이라 이 봉인은
+        막지 않고 ★새 값을 기록★ 합니다. 값이 또 조용히 바뀌면 여기서 터집니다.
+
+     대표님 실제 포지션으로 확인한 값도 같은 4구간입니다 —
+        명목 9,524,029 USDT → 4구간 → 유지증거금 83,240.29 USDT → 버팀폭 0.126% */
+  ok("명목이 4구간이다 (9,523,809.52 ≤ 12,000,000)",
+    Math.abs(margin * 100 - 9523809.5238) < 0.01, (margin * 100).toFixed(4));
+  ok("유지증거금 83,238.0952 (명목 × 1% − 공제액 12,000)",
+    Math.abs(env.T.maintenanceMargin(margin * 100) - 83238.0952) < 0.001,
+    env.T.maintenanceMargin(margin * 100).toFixed(4));
+  ok("100배 롱 청산가 59,924.40 (예전 59,700 이 아니다)",
+    Math.abs(pos.liq - 59924.4) < 1e-4, String(pos.liq));
+  ok("버팀폭 0.126% (예전 0.500%)",
+    Math.abs(((60000 - pos.liq) / 60000) * 100 - 0.126) < 0.001,
+    (((60000 - pos.liq) / 60000) * 100).toFixed(4) + "%");
 
   env.tick(pos.liq);   // 정확히 청산가에 닿아도 발동합니다
   const snap = env.T.getSnapshot();
   const t0 = snap.closedTrades[0] || null;
   ok("정확히 청산가에 닿으면 발동한다", snap.position === null && !!t0 && t0.reason === "강제청산");
   ok("청산가로 체결된 것으로 기록된다 (현재가가 아니라 pos.liq)",
-    !!t0 && Math.abs(t0.exit - 59700) < 1e-6, t0 ? String(t0.exit) : "거래 없음");
+    !!t0 && Math.abs(t0.exit - 59924.4) < 1e-4, t0 ? String(t0.exit) : "거래 없음");
   ok("ROE 는 -100%", !!t0 && Math.abs(t0.pnlPercent + 100) < 1e-9, t0 ? String(t0.pnlPercent) : "거래 없음");
   ok("자산(equity)도 0 이 된다", Math.abs(snap.equity) < 1e-6, String(snap.equity));
   ok("두 번째 강제청산은 없다 (포지션이 사라졌으므로)", snap.closedTrades.length === 1, String(snap.closedTrades.length));
@@ -272,7 +424,7 @@ section("4. 수정 금지 파일");
 {
   const crypto = require("crypto");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
-  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === "33250202c00b097ff8344ae2ee64cbe7", md5("trading.js"));
+  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === require("./_locked-hashes.js").TRADING, md5("trading.js"));  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
 }
 
 console.log("\n==========================================================");

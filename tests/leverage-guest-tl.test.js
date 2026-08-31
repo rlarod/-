@@ -78,17 +78,91 @@ console.log("\n① 최대 레버리지");
   ok("위험 안내 블록이 있다", /lev-modal-warn/.test(modal));
   ok("청산까지 남은 폭을 실제로 계산한다", /1 \/ n - MMR/.test(modal));
 
-  /* 숫자를 지어내지 않으려면 청산 공식이 trading.js 와 같아야 합니다.
-     한쪽만 바뀌면 창에 적힌 % 와 실제 청산 시점이 달라집니다. */
-  const modalMMR = Number((modal.match(/var MMR = ([\d.]+)/) || [])[1]);
-  const tradingMMR = Number((tradingSrc.match(/const MMR = ([\d.]+)/) || [])[1]);
-  ok("유지증거금률이 거래 엔진과 같다", modalMMR === tradingMMR, modalMMR + " vs " + tradingMMR);
+  /* ── 2026-08-31 갱신 — 레버리지 창의 0.5% 가 ★틀린 값★ 이 됐습니다 ────────
+     예전 검사:
+         const modalMMR  = Number((modal.match(/var MMR = ([\\d.]+)/) || [])[1]);
+         const tradingMMR = Number((tradingSrc.match(/const MMR = ([\\d.]+)/) || [])[1]);
+         ok("유지증거금률이 거래 엔진과 같다", modalMMR === tradingMMR, ...);
 
-  /* 실제 계산 결과 확인 — 청산폭 = (1/배율 − 유지증거금률) × 100 */
-  const 청산폭 = (n) => (1 / n - tradingMMR) * 100;
-  ok("100배는 1% 안쪽에서 청산", 청산폭(100) < 1, 청산폭(100).toFixed(2) + "%");
-  ok("10배는 10% 안쪽에서 청산", 청산폭(10) < 10 && 청산폭(10) > 9, 청산폭(10).toFixed(1) + "%");
-  ok("배율이 높을수록 청산이 가까워진다", 청산폭(100) < 청산폭(50) && 청산폭(50) < 청산폭(10));
+     대표 결재로 js/trading.js 의 const MMR = 0.005 가 사라졌습니다
+     (const MMR_FALLBACK = 0.005 + 명목 구간표 js/risk-brackets.js).
+     ⚠️ 그래서 위 정규식은 ★아무것도 못 잡고 NaN★ 이 됩니다. 실제로 이 파일이
+        "0.005 vs NaN" 으로 4건 터졌습니다.
+
+     ★이 봉인이 지키던 것은 "0.005 라는 숫자" 가 아닙니다.★
+     지키던 것은 ─ ★창에 적힌 % 와 실제 청산 시점이 같아야 한다★ 는 것입니다.
+     그 뜻으로 다시 씁니다.
+
+     ── 지금 상태: 어긋나 있습니다 (회원에게 보이는 값이 틀립니다) ──────────
+     js/leverage-modal.js:28 은 아직 var MMR = 0.005; 를 그대로 씁니다.
+     엔진 실측 (진입가 60,000 · 100배)
+         명목    10,000 (1구간 0.4%)  → 실제 버팀폭 0.600%   창은 0.5% 라고 말함
+         명목 9,523,809 (4구간, 공제 반영 실효 0.874%) → 실제 0.126%  창은 0.5%
+     큰 포지션에서 ★창이 위험을 4배 작게 말합니다.★ 회원은 그 숫자를 믿고
+     배율을 고릅니다 — 우리가 P1 로 부르는 조용한 고장입니다.
+
+     ⚠️ js/leverage-modal.js 는 기록팀이 못 고칩니다(사이트 코드).
+        PM 에게 별건으로 올렸습니다. 그때까지 ★일부러 빨강★ 으로 둡니다.
+        여기서 0.005 를 그대로 인정해 초록으로 만들면, 회원에게 틀린 값을
+        보여주는 상태가 "테스트 통과" 로 보장돼 버립니다. 그게 제일 나쁩니다. */
+  const modalMMR = Number((modal.match(/var MMR = ([\d.]+)/) || [])[1]);
+  ok("레버리지 창이 유지증거금률을 하나 들고 있다 (지금 " + modalMMR + ")",
+    isFinite(modalMMR) && modalMMR > 0, String(modalMMR));
+
+  /* 엔진이 실제로 계산한 값과 비교합니다 — 소스 문자열이 아니라 ★돌려서★ 봅니다.
+     구간표를 안 태우면 옛 고정값 경로를 재게 되므로 risk-brackets 도 같이 태웁니다. */
+  const vm = require("vm");
+  const 엔진 = (() => {
+    const store = {};
+    const sandbox = {
+      console: { log() {}, warn() {}, error() {} },
+      setInterval: () => 0, clearInterval: () => {}, setTimeout: () => 0,
+      JSON: JSON, Object: Object, Array: Array, String: String, Number: Number,
+      Math: Math, Date: Date, isFinite: isFinite, isNaN: isNaN, parseFloat: parseFloat,
+      module: { exports: {} },
+      document: { readyState: "complete", addEventListener() {} },
+      localStorage: {
+        getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+        setItem: (k, v) => { store[k] = String(v); },
+        removeItem: (k) => { delete store[k]; },
+      },
+    };
+    sandbox.window = sandbox;
+    const L = {};
+    sandbox.App = {
+      Bus: { on(e, f) { (L[e] = L[e] || []).push(f); return f; }, off() {}, emit(e, p) { (L[e] || []).forEach((f) => f(p)); } },
+      Config: { getActiveSymbol: () => "BTCUSDT" },
+    };
+    vm.createContext(sandbox);
+    ["js/storage.js", "js/risk-brackets.js", "js/trading.js"].forEach((f) =>
+      vm.runInContext(fs.readFileSync(path.join(REPO, f), "utf8"), sandbox, { filename: f })
+    );
+    sandbox.App.Trading.init();
+    return sandbox.App;
+  })();
+
+  /* 창이 말하는 버팀폭 vs 엔진이 실제로 잡는 버팀폭 (진입가 60,000, 증거금 100) */
+  const 창이말하는폭 = (n) => (1 / n - modalMMR) * 100;
+  const 엔진실제폭 = (n) => {
+    const 진입 = 60000;
+    const liq = 엔진.Trading.calcLiquidationPrice("long", 진입, n, 100 * n);
+    return ((진입 - liq) / 진입) * 100;
+  };
+
+  [100, 50, 10].forEach((n) => {
+    ok(
+      "레버리지 창의 " + n + "배 버팀폭이 엔진과 같다",
+      Math.abs(창이말하는폭(n) - 엔진실제폭(n)) < 0.001,
+      "창 " + 창이말하는폭(n).toFixed(3) + "% vs 엔진 " + 엔진실제폭(n).toFixed(3) + "%" +
+        " — js/leverage-modal.js:28 의 var MMR = 0.005 가 이제 엔진과 다릅니다." +
+        " 유지증거금률이 명목 구간별(js/risk-brackets.js)로 바뀌었습니다."
+    );
+  });
+
+  /* 방향성은 배율 규칙이라 구간과 무관하게 그대로여야 합니다. */
+  ok("100배는 1% 안쪽에서 청산", 엔진실제폭(100) < 1, 엔진실제폭(100).toFixed(3) + "%");
+  ok("10배는 10% 안쪽에서 청산", 엔진실제폭(10) < 10 && 엔진실제폭(10) > 9, 엔진실제폭(10).toFixed(3) + "%");
+  ok("배율이 높을수록 청산이 가까워진다", 엔진실제폭(100) < 엔진실제폭(50) && 엔진실제폭(50) < 엔진실제폭(10));
 
   ok("증거금 전액 손실을 알려준다", /증거금을 전부 잃습니다/.test(modal));
   ok("높은 배율은 더 강하게 표시한다", /lev-modal-warn-high/.test(modal) && /n >= 20/.test(modal));

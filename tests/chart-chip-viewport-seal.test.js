@@ -432,7 +432,7 @@ const 위치 = (el) => ({
 {
   const crypto = require("crypto");
   const 기준 = {
-    "trading.js": "33250202c00b097ff8344ae2ee64cbe7",
+    "trading.js": require("./_locked-hashes.js").TRADING,  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
     "ui.js": "333fc427e75b47b306699c92aa4e7b50",
     "chart.js": "02ddcb000d577131f797143d08c09123",
     "websocket.js": "1a914631175760e0b0cb5144bc11b59e"

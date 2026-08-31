@@ -246,7 +246,7 @@ console.log("\n[돌연변이] 위험한 문장을 넣으면 정말 실패하는�
 
 console.log("\n[안전] 수정 금지 파일 확인");
 const FROZEN = {
-  "js/trading.js": "33250202c00b097ff8344ae2ee64cbe7",
+  "js/trading.js": require("./_locked-hashes.js").TRADING,  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   "js/ui.js": "333fc427e75b47b306699c92aa4e7b50",
   "js/auth.js": "9cec9a7257eb54f379bf72e14e21e463",
   "js/supabase-sync.js": "faddcbbc34b5165177ff26cb978040f8",

@@ -284,7 +284,7 @@ section("[8] js/trading.js 는 한 글자도 안 건드렸다");
     .update(fs.readFileSync(path.join(REPO, "js", "trading.js")))
     .digest("hex");
   ok("js/trading.js md5 가 기준값과 같다",
-    md5 === "33250202c00b097ff8344ae2ee64cbe7", md5);
+    md5 === require("./_locked-hashes.js").TRADING, md5);  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
 }
 
 console.log("\n==========================================================");

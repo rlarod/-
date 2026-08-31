@@ -373,7 +373,7 @@ section("6. 수정 금지 파일");
 {
   const crypto = require("crypto");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
-  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === "33250202c00b097ff8344ae2ee64cbe7", md5("trading.js"));
+  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === require("./_locked-hashes.js").TRADING, md5("trading.js"));  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   ok("js/websocket.js 를 건드리지 않았다", md5("websocket.js") === "1a914631175760e0b0cb5144bc11b59e", md5("websocket.js"));
 }
 

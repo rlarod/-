@@ -77,6 +77,8 @@ function boot(opts) {
 
   const files = ["js/config.js", "js/utils.js", "js/storage.js", "js/symbol-registry.js"];
   if (withGuard) files.push("js/symbol-guard.js");
+  /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
+  files.push("js/risk-brackets.js");
   files.push("js/trading.js");
   for (const f of files) {
     try { win.eval(read(f)); }
@@ -115,7 +117,15 @@ let 기준_총자산 = null;
   const 시작잔고 = App.Trading.getSnapshot().balance;
   const opened = openLong(App, 110000, 1000, 10);
   ok("BTC 110,000 에 10배 롱 진입", opened.ok === true, opened.error || "");
-  ok("청산가 99,550", Math.round(opened.position.liq) === 99550, String(opened.position.liq));
+  /* 2026-08-31 — 99,550 → 99,440 으로 바뀌었습니다. 고장이 아닙니다.
+     대표 결재로 유지증거금이 바이낸스 명목 구간별(js/risk-brackets.js)로 바뀌었습니다.
+       명목 = 증거금 1,000 × 10배 = 10,000 USDT → ★1구간★ (유지증거금률 0.4%, 공제액 0)
+       청산가 = 110,000 × (1 − 1/10 + 0.004) = ★99,440★
+     예전에는 유지증거금률이 0.5% 고정이라 110,000 × 0.905 = 99,550 이었습니다.
+     ⭐ 소액은 1구간(0.4%)이라 예전보다 버팀폭이 ★넓어집니다.★ 큰 포지션만 좁아집니다.
+     ⚠️ 이 테스트는 종목 안전장치를 보는 것이지 청산가를 보는 게 아닙니다.
+        청산가는 "엔진이 진짜로 돌았다" 는 확인용 숫자입니다. */
+  ok("청산가 99,440 (1구간 유지증거금률 0.4%)", Math.round(opened.position.liq) === 99440, String(opened.position.liq));
 
   pretendActive(App, "ETHUSDT");
   App.Bus.emit("price:update", { symbol: "ETHUSDT", price: 3000 });
@@ -487,7 +497,7 @@ section("[12] 수정 금지 파일");
 {
   const crypto = require("crypto");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
-  [["trading.js", "33250202c00b097ff8344ae2ee64cbe7"],
+  [["trading.js", require("./_locked-hashes.js").TRADING],  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
    ["ui.js", "333fc427e75b47b306699c92aa4e7b50"],
    ["auth.js", "9cec9a7257eb54f379bf72e14e21e463"],
    ["supabase-sync.js", "faddcbbc34b5165177ff26cb978040f8"],

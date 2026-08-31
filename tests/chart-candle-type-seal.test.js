@@ -162,7 +162,7 @@ console.log("\n봉 종류 봉인 — 시리즈를 갈아끼우지 않는다 (202
   const md5 = (f) => crypto.createHash("md5")
     .update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
   ok("js/chart.js 를 한 글자도 안 고쳤다", md5("chart.js") === "02ddcb000d577131f797143d08c09123", md5("chart.js"));
-  ok("js/trading.js 를 한 글자도 안 고쳤다", md5("trading.js") === "33250202c00b097ff8344ae2ee64cbe7", md5("trading.js"));
+  ok("js/trading.js 를 한 글자도 안 고쳤다", md5("trading.js") === require("./_locked-hashes.js").TRADING, md5("trading.js"));  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
 
   const 부름 = "src=\"" + MOD + "\"";
   ok("index.html 이 이 모듈을 부른다", HTML.indexOf(부름) !== -1);

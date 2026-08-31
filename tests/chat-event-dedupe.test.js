@@ -218,7 +218,7 @@ section("[9] 수정 금지 파일을 건드리지 않았다");
 {
   const 기준 = {
     "js/chat.js": "a93dfaa7f82ce72a914b270acb3650bb",
-    "js/trading.js": "33250202c00b097ff8344ae2ee64cbe7",
+    "js/trading.js": require("./_locked-hashes.js").TRADING,  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
     "js/supabase-sync.js": "faddcbbc34b5165177ff26cb978040f8"
   };
   Object.keys(기준).forEach(function (f) {

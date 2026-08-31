@@ -260,7 +260,7 @@ const 거래 = (over) => Object.assign(
     const md5 = (f) => crypto.createHash("md5")
       .update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
     ok("chat.js 를 건드리지 않았다", md5("chat.js") === "a93dfaa7f82ce72a914b270acb3650bb", md5("chat.js"));
-    ok("trading.js 를 건드리지 않았다", md5("trading.js") === "33250202c00b097ff8344ae2ee64cbe7", md5("trading.js"));
+    ok("trading.js 를 건드리지 않았다", md5("trading.js") === require("./_locked-hashes.js").TRADING, md5("trading.js"));  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   }
 
   console.log("통과 " + pass + " / 실패 " + fail);

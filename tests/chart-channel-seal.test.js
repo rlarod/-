@@ -269,7 +269,7 @@ console.log("\n여러선(평행 채널) 봉인 (2026-08-28 차트팀 6차)");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
   ok("js/chart.js 를 건드리지 않았다", md5("chart.js") === "02ddcb000d577131f797143d08c09123", md5("chart.js"));
   ok("js/ui.js 를 건드리지 않았다", md5("ui.js") === "333fc427e75b47b306699c92aa4e7b50", md5("ui.js"));
-  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === "33250202c00b097ff8344ae2ee64cbe7", md5("trading.js"));
+  ok("js/trading.js 를 건드리지 않았다", md5("trading.js") === require("./_locked-hashes.js").TRADING, md5("trading.js"));  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
 
   ok("주석에 6차(2026-08-28) 여러선을 열었다고 적혀 있다",
     /6차\(2026-08-28\)[\s\S]{0,120}여러선/.test(SRC));

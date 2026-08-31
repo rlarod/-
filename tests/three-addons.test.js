@@ -246,7 +246,7 @@ console.log("\n[안전] 수정 금지 파일 확인");
     "js/chart.js": "02ddcb000d577131f797143d08c09123",
     "js/orderbook.js": "fa5f77dc5108133128f85ba5ab3f096e",
     "js/websocket.js": "1a914631175760e0b0cb5144bc11b59e",
-    "js/trading.js": "33250202c00b097ff8344ae2ee64cbe7",
+    "js/trading.js": require("./_locked-hashes.js").TRADING,  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   };
   for (const [f, want] of Object.entries(FROZEN)) {
     const got = crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, f))).digest("hex");

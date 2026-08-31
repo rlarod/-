@@ -25,7 +25,12 @@ window.App = window.App || {};
 App.LeverageModal = (function () {
   "use strict";
 
-  var MMR = 0.005; // 유지증거금률 — js/trading.js 의 MMR 과 같은 값이어야 합니다
+  /* 유지증거금률 — 2026-08-31 대표 결재로 바이낸스 명목 구간표(js/risk-brackets.js)를
+     따르게 됐습니다. ★구간마다 값이 달라서 고정값 하나로는 맞출 수 없습니다.★
+     아래 값은 1구간(가장 작은 주문) 값이고, 주문 규모를 아직 모를 때만 씁니다.
+     실제 숫자를 회원에게 보여줄 때는 엔진(App.Trading.maintenanceMargin)에서
+     그때그때 받아옵니다 — 여기서 따로 계산하면 또 어긋납니다. */
+  var MMR = 0.004;
   var PRESETS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
   var dom = {};
@@ -39,6 +44,43 @@ App.LeverageModal = (function () {
       return App.LeverageGate.currentMax();
     }
     return 100;
+  }
+
+  /* 지금 주문의 명목(USDT) = 수량 × 가격.
+     레버리지와 무관하게 정해지는 값이라, 팝업에서 배율을 움직여도 안 흔들립니다.
+     수량이 아직 비어 있으면 null 을 돌려주고, 그때는 ★숫자를 말하지 않습니다.★ */
+  function orderNotional() {
+    var qtyEl = el("order-qty-input");
+    var qty = qtyEl ? parseFloat(String(qtyEl.value).replace(/,/g, "")) : NaN;
+    if (!isFinite(qty) || qty <= 0) return null;
+
+    var price = NaN;
+    if (App.Trading && typeof App.Trading.getSnapshot === "function") {
+      var snap = App.Trading.getSnapshot();
+      if (snap && typeof snap.currentPrice === "number") price = snap.currentPrice;
+    }
+    /* 지정가로 주문할 참이면 회원이 적은 그 가격이 기준입니다. */
+    var limitEl = el("limit-price-input");
+    if (limitEl) {
+      var limit = parseFloat(String(limitEl.value).replace(/,/g, ""));
+      if (isFinite(limit) && limit > 0) price = limit;
+    }
+    if (!isFinite(price) || price <= 0) return null;
+
+    var n = qty * price;
+    return isFinite(n) && n > 0 ? n : null;
+  }
+
+  /* 그 명목 구간의 실효 유지증거금률(공제액까지 반영된 값).
+     ★엔진이 청산가를 계산할 때 쓰는 값을 그대로 받아옵니다.★
+     못 받아오면 null — 그러면 숫자를 말하지 않습니다. */
+  function effectiveMmr(notional) {
+    if (notional === null) return null;
+    if (!App.Trading || typeof App.Trading.maintenanceMargin !== "function") return null;
+    var mm = App.Trading.maintenanceMargin(notional);
+    if (typeof mm !== "number" || !isFinite(mm) || mm < 0) return null;
+    var rate = mm / notional;
+    return rate >= 0 && rate < 1 ? rate : null;
   }
 
   function currentLev() {
@@ -140,12 +182,24 @@ App.LeverageModal = (function () {
        js/trading.js 의 청산가 공식과 같은 식입니다.
          LONG  청산가 = 진입가 × (1 − 1/배율 + 유지증거금률)
        즉 진입가 대비 (1/배율 − 유지증거금률) 만큼 반대로 움직이면 청산입니다.
-       유지증거금률 0.5% 도 trading.js 의 MMR 과 같은 값입니다.
-       숫자를 지어내지 않고 실제 규칙 그대로 보여줍니다. */
+
+       ── 2026-08-31 ─────────────────────────────────────────────────
+       유지증거금률이 명목 구간별로 바뀌어, 같은 100배라도 주문이 크면
+       버티는 폭이 훨씬 좁습니다(실측 0.600% → 0.126%).
+       그래서 ★주문 규모를 알면 그 구간 값으로 다시 계산★ 하고,
+       ★모르면 숫자를 말하지 않습니다.★ 틀린 숫자를 보여주면 회원이
+       그 값을 믿고 배율을 고릅니다. */
     if (dom.warn) {
-      var 청산폭 = (1 / n - MMR) * 100;
+      var 청산폭 = (1 / n - MMR) * 100; // 주문 규모를 모를 때(1구간 기준)
+      var 실효율 = effectiveMmr(orderNotional());
+      if (실효율 !== null) 청산폭 = (1 / n - 실효율) * 100; // 알면 정확히
+
       if (청산폭 <= 0) {
         dom.warn.textContent = "이 배율에서는 진입 즉시 청산될 수 있습니다.";
+      } else if (실효율 === null) {
+        /* 주문 수량이 아직 없습니다 — 어떤 숫자를 말해도 틀립니다. */
+        dom.warn.textContent =
+          n + "배 — 버티는 폭은 주문 규모마다 다릅니다. 수량을 넣어주세요.";
       } else {
         var 폭글자 = 청산폭.toFixed(청산폭 < 1 ? 2 : 1) + "%";
         /* '만' 은 작을 때만 붙입니다 — "99.5%만" 은 말이 안 됩니다. */

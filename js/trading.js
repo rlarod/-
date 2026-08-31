@@ -39,7 +39,10 @@ App.Trading = (function () {
   "use strict";
 
   const INITIAL_BALANCE = 100000; // 총자산 초기값: 100,000 USDT
-  const MMR = 0.005; // 유지증거금률
+  // 유지증거금률 — 2026-08-31 대표 결재로 바이낸스 구간표(js/risk-brackets.js)를 따릅니다.
+  // 명목 구간마다 유지증거금률과 공제액이 달라, 더 이상 고정값 하나가 아닙니다.
+  // 아래 값은 그 표를 못 읽었을 때만 쓰는 예전 고정값입니다(그 경우 동작이 예전 그대로).
+  const MMR_FALLBACK = 0.005;
   const MIN_QTY = 0.0001; // 최소 주문 수량(BTC) — 이 밑으로 남으면 의미가 없어 전체청산으로 처리
   // Binance Futures(USDⓈ-M) 일반 사용자 기준 수수료: 메이커 0.02% / 테이커 0.05%.
   // 하나의 설정값으로만 관리합니다 — 다른 곳에 하드코딩하지 않습니다.
@@ -130,11 +133,23 @@ App.Trading = (function () {
     if (margin + entryFee > state.balance) {
       return { ok: false, error: "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다." };
     }
+    // 구간별 유지증거금이 증거금 이상이면 진입하는 순간 이미 청산 조건입니다.
+    // 그대로 열면 회원 증거금이 즉시 사라지므로 여기서 막습니다.
+    const maintAtOpen = maintenanceMargin(notional);
+    if (maintAtOpen >= margin) {
+      return {
+        ok: false,
+        error:
+          "이 금액 구간에서는 배율이 너무 높습니다 — 유지증거금(" +
+          maintAtOpen.toFixed(2) +
+          " USDT)이 증거금보다 커서 진입 즉시 청산됩니다. 배율이나 증거금을 낮춰주세요.",
+      };
+    }
 
     const entry = state.currentPrice; // 사용자가 가격을 입력하지 않고 현재 실시간 가격으로 자동 진입
     const leverage = state.leverage;
     const qty = notional / entry;
-    const liq = calcLiquidationPrice(side, entry, leverage);
+    const liq = calcLiquidationPrice(side, entry, leverage, notional);
 
     let validTp = tp || null;
     let validSl = sl || null;
@@ -205,6 +220,17 @@ App.Trading = (function () {
     if (margin + entryFee > state.balance) {
       return { ok: false, error: "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다." };
     }
+    // 시장가와 같은 이유 — 유지증거금이 증거금 이상이면 체결되는 순간 청산됩니다.
+    const maintAtOrder = maintenanceMargin(notional);
+    if (maintAtOrder >= margin) {
+      return {
+        ok: false,
+        error:
+          "이 금액 구간에서는 배율이 너무 높습니다 — 유지증거금(" +
+          maintAtOrder.toFixed(2) +
+          " USDT)이 증거금보다 커서 체결 즉시 청산됩니다. 배율이나 증거금을 낮춰주세요.",
+      };
+    }
 
     let validTp = tp || null;
     let validSl = sl || null;
@@ -215,7 +241,7 @@ App.Trading = (function () {
     // 시장가 진입과 동일한 버그 수정 — 지정가 체결가(price) 기준으로 청산가를
     // 미리 계산해서, SL이 청산가보다 불리하면 발동 불가능한 "죽은 SL"이 되므로
     // 청산가 바로 위/아래로 당겨줍니다.
-    const limitLiq = calcLiquidationPrice(side, price, leverage);
+    const limitLiq = calcLiquidationPrice(side, price, leverage, notional);
     if (validSl && side === "long" && validSl <= limitLiq) validSl = limitLiq * 1.0001;
     if (validSl && side === "short" && validSl >= limitLiq) validSl = limitLiq * 0.9999;
 
@@ -279,7 +305,7 @@ App.Trading = (function () {
 
     const fillPrice = order.price; // 지정가 주문은 지정한 가격 그대로 체결됩니다(현재가가 아님)
     const qty = order.notional / fillPrice;
-    const liq = calcLiquidationPrice(order.side, fillPrice, order.leverage);
+    const liq = calcLiquidationPrice(order.side, fillPrice, order.leverage, order.notional);
 
     state.position = {
       side: order.side,
@@ -390,13 +416,35 @@ App.Trading = (function () {
       });
   }
 
-  /* ---------------- 청산가 계산 (별도 함수로 분리) ----------------
-   * LONG  : entry × (1 − 1/leverage + 유지증거금률)
-   * SHORT : entry × (1 + 1/leverage − 유지증거금률)
+  /* ---------------- 유지증거금 (바이낸스 구간별) ----------------
+   * 유지증거금 = 명목 × 구간 유지증거금률 − 구간 공제액   (js/risk-brackets.js)
+   * 표를 못 읽으면 예전 고정값(MMR_FALLBACK)으로 되돌아갑니다.
    * ------------------------------------------------ */
-  function calcLiquidationPrice(side, entry, leverage) {
-    if (side === "long") return entry * (1 - 1 / leverage + MMR);
-    return entry * (1 + 1 / leverage - MMR);
+  function maintenanceMargin(notional) {
+    if (typeof notional !== "number" || !isFinite(notional) || notional <= 0) return 0;
+    const RB = App.RiskBrackets;
+    if (RB && typeof RB.maintenanceMargin === "function") {
+      const mm = RB.maintenanceMargin(notional);
+      if (typeof mm === "number" && isFinite(mm) && mm >= 0) return mm;
+    }
+    return notional * MMR_FALLBACK;
+  }
+  // 유지증거금 ÷ 명목 — 청산가 식에 넣는 실효 유지증거금률(공제액이 이미 반영됨)
+  function maintenanceMarginRate(notional) {
+    if (typeof notional !== "number" || !isFinite(notional) || notional <= 0) return MMR_FALLBACK;
+    return maintenanceMargin(notional) / notional;
+  }
+
+  /* ---------------- 청산가 계산 (별도 함수로 분리) ----------------
+   * LONG  : entry × (1 − 1/leverage + 실효 유지증거금률)
+   * SHORT : entry × (1 + 1/leverage − 실효 유지증거금률)
+   * notional(명목)을 넘기면 그 구간의 유지증거금률·공제액이 반영됩니다.
+   * 안 넘기면 구간을 고를 수 없어 예전 고정값으로 계산합니다.
+   * ------------------------------------------------ */
+  function calcLiquidationPrice(side, entry, leverage, notional) {
+    const mmr = maintenanceMarginRate(notional);
+    if (side === "long") return entry * (1 - 1 / leverage + mmr);
+    return entry * (1 + 1 / leverage - mmr);
   }
 
   /* ---------------- 전체 종료 ----------------
@@ -683,6 +731,7 @@ App.Trading = (function () {
     closePosition,
     closePartial,
     calcLiquidationPrice,
+    maintenanceMargin,
     getSnapshot,
   };
 })();

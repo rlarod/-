@@ -15,6 +15,10 @@
 # 새 테스트를 만들면 여기에 한 줄 추가하세요.
 # 빠뜨리면 tests/test-registry.test.js 가 잡아냅니다.
 
+# 2026-08-31 — 수정 금지 파일 md5 의 단 하나의 출처(tests/_locked-hashes.js)를
+# 감시합니다. 봉인 48개가 그 값을 읽으므로 ★맨 앞에서★ 확인합니다.
+# 출처가 틀어졌으면 뒤의 48개가 무슨 뜻인지 알 수 없는 빨강으로 쏟아집니다.
+tests/locked-hashes-source.test.js
 tests/order-panel.test.js
 tests/top-panel.test.js
 tests/comment-fix.test.js
@@ -169,3 +173,12 @@ tests/chart-style-seal.test.js
 tests/sync-guard-baseline-unknown.test.js
 tests/chart-longrun-accumulation.test.js
 tests/chart-canvas-restore.test.js
+tests/risk-brackets-tiered-mmr.test.js
+# 2026-08-31 — 봉인들이 "회원이 겪지 않는 경로(MMR_FALLBACK 0.5%)" 를 재고 있던
+# 사각지대를 막습니다. 엔진을 태우는 테스트는 js/risk-brackets.js 도 같이 태워야
+# 합니다. 안 그러면 테스트는 초록인데 회원은 다른 값을 겪습니다(조용한 고장).
+tests/mmr-fallback-blindspot.test.js
+# 2026-08-31 — "주석 글자에 기대는 검사" 를 관리합니다. 주석은 코드가 아니라서
+# 코드가 되살아나도 주석만 다르면 초록으로 넘어갑니다(실제로 sync-guard 가 그랬습니다).
+tests/comment-anchor-guard.test.js
+tests/leverage-modal-tiered-warn.test.js

@@ -103,7 +103,58 @@ console.log("\n서버 기록 보호");
   const at = (n) => tags.findIndex((t) => t.indexOf(n) !== -1);
 
   ok("supabase-sync 보다 먼저 실린다", at("js/sync-guard.js") >= 0 && at("js/sync-guard.js") < at("js/supabase-sync.js"));
-  ok("이벤트를 통째로 막지 않는다(잔고 저장 보호)", !/return undefined;\s*\/\/ 서버로/.test(src));
+  /* ── ⚠️ 2026-08-31 갱신 — ★주석 글자에 기대던 검사★ 였습니다 ──────────────
+     예전:
+         ok("이벤트를 통째로 막지 않는다(잔고 저장 보호)",
+            !/return undefined;\s*\/\/ 서버로/.test(src));
+
+     이건 ★없어야 할 것이 없다★ 를 보는 검사인데, 찾는 글자에 ★주석★ 이
+     섞여 있었습니다. 그래서 누가 이벤트를 다시 막아버려도
+     주석을 안 쓰거나 다르게 쓰면 ★그대로 통과★ 합니다.
+     막힌 것은 오류도 안 나고 화면도 멀쩡합니다 — 회원 잔고가 조용히
+     서버에 안 올라갑니다. 우리가 P1 로 부르는 조용한 고장입니다.
+
+     같은 날 tests/mmr-fallback-blindspot.test.js 도 같은 함정을 밟았습니다
+     (주석에 파일명이 있어서 로드 줄을 지워도 통과). CLAUDE.md 가 적어둔
+     "문자열 검사는 못 쓴다. 주석에 파일명이 적혀 있어 오탐이 난다" 그대로입니다.
+
+     그래서 두 가지로 바꿉니다 —
+       (1) ★실제로 돌려서★ 원본 emit 이 불렸는지 본다  ← 주석과 무관
+       (2) 소스는 ★주석을 걷어낸 뒤★ 본다              ← 주석과 무관 */
+  {
+    /* (1) 동작 — 데이터 유실로 판정해 '막은' 상황에서도 원본 emit 은 그대로 불려야 합니다.
+       (막는다 = 회원에게 알린다는 뜻이지, 이벤트를 삼킨다는 뜻이 아닙니다) */
+    const b = boot();
+    b.G._setBaseline({ realizedPnl: 20000000, tradeCount: 57 });
+    const 보낸수_전 = b.sent.length;
+    const 원본payload = { closedTrades: [], balance: 88000, realizedPnl: 0 };
+    b.App.Bus.emit("trading:persisted", 원본payload);
+    const 마지막 = b.sent[b.sent.length - 1];
+    ok("유실로 판정해도 원본 emit 이 그대로 불린다", b.sent.length === 보낸수_전 + 1,
+      "보낸 수 " + 보낸수_전 + " → " + b.sent.length + " (이벤트를 삼키면 잔고가 서버에 안 올라갑니다)");
+    ok("삼키지 않고 payload 를 그대로 넘긴다", !!마지막 && 마지막.payload === 원본payload);
+    ok("그러면서 막은 횟수는 센다 (알리기는 한다)", b.G.getBlockedCount() === 1,
+      String(b.G.getBlockedCount()));
+  }
+  {
+    /* (2) 소스 — 주석을 걷어낸 뒤 emit 감싼 함수 안을 봅니다.
+       마지막 return orig.apply(...) 말고 다른 return 이 있으면 이벤트를 삼키는 길이 생긴 것입니다. */
+    const 코드만 = src
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+      .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+    const 시작 = 코드만.indexOf("App.Bus.emit = function");
+    const 끝 = 코드만.indexOf("return orig.apply(App.Bus, arguments);", 시작);
+    ok("emit 감싼 함수를 찾았다 (구조가 바뀌면 여기서 알려줍니다)", 시작 !== -1 && 끝 > 시작,
+      "시작 " + 시작 + " / 끝 " + 끝);
+    if (시작 !== -1 && 끝 > 시작) {
+      const 본문 = 코드만.slice(시작, 끝);
+      const 이른return = 본문.match(/\breturn\b/g) || [];
+      ok("이벤트를 통째로 막지 않는다 (원본 호출 전에 return 이 없다)",
+        이른return.length === 0,
+        "원본 emit 을 부르기 전에 return 이 " + 이른return.length + "개 있습니다 — 이벤트를 삼키면" +
+          " 회원 잔고가 조용히 서버에 안 올라갑니다");
+    }
+  }
   ok("payload 를 바꾸지 않는다(알림 도배 방지)", !/safe\.closedTrades = \[\]/.test(src));
   ok("왜 건드리면 안 되는지 적어뒀다", /같은 알림을 200번/.test(src));
   ok("서버 기록은 추가만 되어 안전하다는 근거를 적어뒀다", /서버 기록을 지우지 않습니다/.test(src));

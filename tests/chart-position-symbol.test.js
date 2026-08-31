@@ -760,7 +760,7 @@ section("[11] 라이브러리·설정이 없어도 죽지 않는다");
 section("[12] 수정 금지 파일 12개");
 
 const BASELINE = {
-  "trading.js": "33250202c00b097ff8344ae2ee64cbe7",
+  "trading.js": require("./_locked-hashes.js").TRADING,  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   "ui.js": "333fc427e75b47b306699c92aa4e7b50",
   "auth.js": "9cec9a7257eb54f379bf72e14e21e463",
   "supabase-sync.js": "faddcbbc34b5165177ff26cb978040f8",

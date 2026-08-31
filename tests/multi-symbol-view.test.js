@@ -72,6 +72,8 @@ const LOAD_ORDER = [
   "js/api.js",
   "js/websocket.js",
   "js/symbol-guard.js",
+  /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
+  "js/risk-brackets.js",
   "js/trading.js",
   "js/symbol-sync-bridge.js",
   "js/symbol-stream-switch.js",
@@ -588,7 +590,7 @@ section("[11] 수정 금지 파일 12개");
   const crypto = require("crypto");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");
   [
-    ["trading.js", "33250202c00b097ff8344ae2ee64cbe7"],
+    ["trading.js", require("./_locked-hashes.js").TRADING],  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
     ["ui.js", "333fc427e75b47b306699c92aa4e7b50"],
     ["auth.js", "9cec9a7257eb54f379bf72e14e21e463"],
     ["supabase-sync.js", "faddcbbc34b5165177ff26cb978040f8"],

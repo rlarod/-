@@ -115,7 +115,7 @@ console.log("\n거래내역 손익 표시");
 
   const md5 = crypto.createHash("md5")
     .update(fs.readFileSync(path.join(REPO, "js", "trading.js"))).digest("hex");
-  ok("trading.js 를 건드리지 않았다", md5 === "33250202c00b097ff8344ae2ee64cbe7");
+  ok("trading.js 를 건드리지 않았다", md5 === require("./_locked-hashes.js").TRADING);  // 2026-08-31 대표 결재로 js/trading.js 가 열렸습니다 — 옛 33250202… → 새 7e26f9d5…, 근거는 tests/_locked-hashes.js 결재기록
   ok("누적 실현손익 보정 모듈은 그대로 있다",
     fs.existsSync(path.join(REPO, "js", "realized-pnl-fix.js")),
     "표와 누적값이 같은 기준을 써야 합니다");

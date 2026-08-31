@@ -8,9 +8,12 @@
  * 손대지 않는 새 칸만 채웁니다. 계산은 전부 App.Trading의 공개 값에서
  * 가져오고, 여기서 손익이나 잔고를 새로 계산하지 않습니다.
  *
- * 유지증거금률(MMR)은 trading.js 안의 상수라 밖에서 읽을 수 없습니다.
- * 같은 값을 여기에 또 적어두면 한쪽만 바뀌었을 때 숫자가 어긋나므로,
- * 공개 API인 calcLiquidationPrice()에서 역산해 항상 같은 값을 씁니다.
+ * 유지증거금은 2026-08-31 대표 결재로 바이낸스 구간표를 따릅니다.
+ *   유지증거금 = 명목 × 구간 유지증거금률 − 구간 공제액   (js/risk-brackets.js)
+ * 구간마다 값이 달라 고정값 하나로는 표시할 수 없습니다. 같은 값을 여기에
+ * 또 적으면 한쪽만 바뀌었을 때 숫자가 어긋나므로, trading.js 의 공개 API
+ * maintenanceMargin() 을 그대로 씁니다.
+ * 그것도 없는 아주 옛 버전에서는 예전처럼 calcLiquidationPrice() 에서 역산합니다.
  *   long  : liq = entry × (1 − 1/lev + MMR)  →  MMR = liq/entry − 1 + 1/lev
  * ========================================================================= */
 
@@ -25,8 +28,28 @@ App.PositionTableExtra = (function () {
     return document.getElementById(id);
   }
 
-  /* ---------------- 유지증거금률 역산 ---------------- */
-  function getMMR() {
+  /* ---------------- 지금 포지션의 명목(USDT) ---------------- */
+  // 구간을 고르려면 명목이 필요합니다. render() 와 같은 기준(수량 × 현재가)을 씁니다.
+  function currentNotional() {
+    if (!App.Trading || typeof App.Trading.getSnapshot !== "function") return null;
+    const snap = App.Trading.getSnapshot();
+    const pos = snap && snap.position;
+    if (!pos) return null;
+    const price = snap.currentPrice;
+    const ref = price && isFinite(price) ? price : pos.entry;
+    const n = pos.qty * ref;
+    return isFinite(n) && n > 0 ? n : null;
+  }
+
+  /* ---------------- 유지증거금률(구간별) ---------------- */
+  function getMMR(notional) {
+    const n = typeof notional === "number" && isFinite(notional) && notional > 0 ? notional : currentNotional();
+    const RB = App.RiskBrackets;
+    if (RB && typeof RB.mmr === "function" && n) {
+      const r = RB.mmr(n);
+      if (isFinite(r) && r > 0 && r < 1) return r;
+    }
+    // 구간표를 못 읽을 때만 — 예전 방식(공개 API에서 역산)
     if (!App.Trading || typeof App.Trading.calcLiquidationPrice !== "function") return null;
     const entry = 10000;
     const lev = 10;
@@ -35,6 +58,17 @@ App.PositionTableExtra = (function () {
     const mmr = liq / entry - 1 + 1 / lev;
     // 상식적인 범위를 벗어나면 표시하지 않습니다(잘못된 숫자를 보여주느니 "-").
     return mmr >= 0 && mmr < 0.1 ? mmr : null;
+  }
+
+  /* ---------------- 유지증거금(USDT) ---------------- */
+  // 공제액까지 반영된 값은 거래 엔진만 알고 있으므로 그 값을 그대로 씁니다.
+  function getMaintenanceMargin(notional) {
+    if (App.Trading && typeof App.Trading.maintenanceMargin === "function") {
+      const mm = App.Trading.maintenanceMargin(notional);
+      if (typeof mm === "number" && isFinite(mm) && mm >= 0) return mm;
+    }
+    const mmr = getMMR(notional);
+    return mmr === null ? null : notional * mmr;
   }
 
   /* ---------------- 표시 ---------------- */
@@ -215,9 +249,9 @@ App.PositionTableExtra = (function () {
     paintMoney(dom.notional, notional);
 
     if (dom.maint) {
-      const mmr = getMMR();
-      if (mmr === null) dom.maint.textContent = "-";
-      else paintMoney(dom.maint, notional * mmr);
+      const maint = getMaintenanceMargin(notional);
+      if (maint === null) dom.maint.textContent = "-";
+      else paintMoney(dom.maint, maint);
     }
 
     if (dom.closeBtn) dom.closeBtn.disabled = false;

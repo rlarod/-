@@ -17,6 +17,42 @@ npm test              # tests/_order.txt 에 적힌 파일을 전부 실행
 > `&&` 는 앞이 실패하면 뒤를 아예 실행하지 않아서, 2번째 파일이 1건 실패하자
 > **뒤의 91개가 한 번도 실행되지 않았습니다.** 그래서 바꿨습니다.
 
+## 수정 금지 파일 md5 를 검사할 때 — ★해시를 복사해 넣지 마세요★
+
+`tests/_locked-hashes.js` 하나만 읽습니다.
+
+```js
+require("./_locked-hashes.js").TRADING          // js/trading.js 의 지금 기준값
+require("./_locked-hashes.js").BY_FILE["js/ui.js"]
+```
+
+2026-08-31 대표 결재로 `js/trading.js` 가 열렸을 때, 같은 32자리 문자열이
+**48개 파일에 따로 박혀 있어서 48곳을 손으로 고쳐야 했습니다.**
+같은 결재가 A·B·C·D 네 건이라 앞으로도 서너 번 더 바뀝니다.
+
+값을 바꿔야 하면 `tests/_locked-hashes.js` 의 `열림` **한 줄**과
+`결재기록` **한 항목**만 고칩니다. 다른 파일은 손대지 않습니다.
+`tests/locked-hashes-source.test.js` 가 그 한 곳을 감시합니다
+(CLAUDE.md 기준표와 대조 · 결재 근거가 비면 실패 · 다시 하드코딩하면 실패).
+
+## 거래 엔진(js/trading.js)을 sandbox 에 태울 때
+
+**무엇을 태워야 하는지는 `tests/_sandbox-modules.js` 한 곳에만 적혀 있습니다.**
+
+```js
+const { 엔진필수 } = require("./_sandbox-modules.js");
+엔진필수.forEach((m) => vm.runInContext(read(m.경로), sandbox, { filename: m.경로 }));
+vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
+```
+
+`tests/harness.js` 를 쓰면 자동으로 태워집니다 — 아무것도 안 해도 됩니다.
+**반드시 `js/trading.js` 보다 먼저** 태웁니다 (index.html 과 같은 순서).
+
+안 태우면 엔진이 예전 고정값(`MMR_FALLBACK` 0.5%)으로 되돌아갑니다.
+**테스트는 초록인데 회원은 다른 값을 겪는** 상태가 됩니다 — 조용한 고장입니다.
+실제로 2026-08-31 에 봉인 여러 개가 이 상태였습니다(청산가 59,700 vs 59,924.40).
+`tests/mmr-fallback-blindspot.test.js` 가 재발을 막습니다.
+
 ## 새 테스트를 추가할 때
 
 1. `tests/새이름.test.js` 를 만든다
