@@ -349,6 +349,12 @@ App.ChartStyle = (function () {
    * 작게 줄인 이유 — 우리 차트 칸이 바이낸스보다 좁고, 360 폰에서 16px
    * 컨트롤이 들어가면 오른쪽이 잘립니다.
    * ===================================================================== */
+  /* 2026-08-31 대표 "다 키워줘 / 여전히 작다" (두 번째 지시) — 글자 확대
+     제목 18 -> 20px / 닫기 ✕ 16 -> 20px / 왼쪽 탭 14 -> 16px
+     항목 이름 14 -> 16px / 아래 설명 12 -> 14px / 맨 아래 설명 12 -> 14px
+     고른값 표시 12.5 -> 14px / 선택 상자 13.5 -> 16px(높이 34 -> 40)
+     체크박스 글자 13.5 -> 16px(네모 14 -> 17) / 버튼 14 -> 16px(높이 42 -> 48)
+     되돌리려면 화살표 왼쪽 값으로. 창 폭(620px)과 색은 그대로입니다. */
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var P = "#" + PANEL_ID;
@@ -366,15 +372,15 @@ App.ChartStyle = (function () {
       "background:rgba(255,255,255,.03);pointer-events:none;}" +
       P + " .tl-cs-head{display:flex;align-items:center;justify-content:space-between;" +
       "padding:12px 16px;border-bottom:1px solid " + C_BORDER + ";flex:0 0 auto;}" +
-      P + " .tl-cs-title{font-size:18px;font-weight:700;color:" + C_TEXT + ";}" +
-      P + " .tl-cs-x{background:none;border:0;color:" + C_MUTED + ";font-size:16px;line-height:1;" +
+      P + " .tl-cs-title{font-size:20px;font-weight:700;color:" + C_TEXT + ";}" +
+      P + " .tl-cs-x{background:none;border:0;color:" + C_MUTED + ";font-size:20px;line-height:1;" +
       "cursor:pointer;padding:4px 6px;border-radius:4px;font-family:inherit;}" +
       P + " .tl-cs-x:hover{color:" + C_TEXT + ";}" +
       P + " .tl-cs-body{display:flex;min-height:0;flex:1 1 auto;}" +
       P + " .tl-cs-tabs{width:144px;flex:0 0 144px;border-right:1px solid " + C_BORDER + ";" +
       "background:" + C_TILE + ";padding:8px 0;}" +
       P + " .tl-cs-tab{width:100%;display:block;background:none;border:0;text-align:left;" +
-      "padding:11px 16px;font-size:14px;font-weight:600;color:" + C_MUTED + ";cursor:pointer;" +
+      "padding:12px 14px;font-size:16px;font-weight:600;color:" + C_MUTED + ";cursor:pointer;" +
       "font-family:inherit;}" +
       P + " .tl-cs-tab[aria-selected=\"true\"]{color:" + C_TEXT + ";background:" + C_CARD + ";}" +
       P + " .tl-cs-pane{flex:1 1 auto;min-width:0;overflow-y:auto;overscroll-behavior:contain;" +
@@ -382,11 +388,11 @@ App.ChartStyle = (function () {
       P + " .tl-cs-pane::-webkit-scrollbar{width:3px;}" +
       P + " .tl-cs-pane::-webkit-scrollbar-thumb{background:" + C_BORDER + ";border-radius:2px;}" +
       P + " .tl-cs-row{display:flex;align-items:center;gap:10px;min-height:44px;}" +
-      P + " .tl-cs-label{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.4;color:" + C_TEXT + ";}" +
-      P + " .tl-cs-sub{display:block;font-size:12px;line-height:1.45;color:" + C_MUTED + ";margin-top:3px;}" +
+      P + " .tl-cs-label{flex:1 1 auto;min-width:0;font-size:16px;line-height:1.4;color:" + C_TEXT + ";}" +
+      P + " .tl-cs-sub{display:block;font-size:14px;line-height:1.45;color:" + C_MUTED + ";margin-top:3px;}" +
       P + " .tl-cs-ctl{flex:0 0 auto;display:flex;align-items:center;gap:6px;}" +
-      P + " select.tl-cs-sel{height:34px;min-width:124px;background:" + C_TILE + ";color:" + C_TEXT + ";" +
-      "border:1px solid " + C_BORDER + ";border-radius:6px;font-size:13.5px;font-family:inherit;" +
+      P + " select.tl-cs-sel{height:40px;min-width:124px;background:" + C_TILE + ";color:" + C_TEXT + ";" +
+      "border:1px solid " + C_BORDER + ";border-radius:6px;font-size:16px;font-family:inherit;" +
       "padding:0 8px;cursor:pointer;}" +
       P + " .tl-cs-sw{width:28px;height:28px;border-radius:6px;background:" + C_TILE + ";" +
       "border:1px solid " + C_BORDER + ";display:inline-flex;align-items:center;justify-content:center;" +
@@ -394,18 +400,18 @@ App.ChartStyle = (function () {
       P + " .tl-cs-sw i{display:block;width:20px;height:20px;border-radius:4px;}" +
       P + " .tl-cs-sw input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;" +
       "cursor:pointer;border:0;padding:0;}" +
-      P + " .tl-cs-chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:" + C_TEXT + ";" +
+      P + " .tl-cs-chk{display:inline-flex;align-items:center;gap:8px;font-size:16px;color:" + C_TEXT + ";" +
       "cursor:pointer;}" +
-      P + " .tl-cs-chk input{accent-color:" + C_POINT + ";width:14px;height:14px;cursor:pointer;}" +
-      P + " .tl-cs-note{font-size:12px;line-height:1.55;color:" + C_MUTED + ";padding-top:8px;" +
+      P + " .tl-cs-chk input{accent-color:" + C_POINT + ";width:17px;height:17px;cursor:pointer;}" +
+      P + " .tl-cs-note{font-size:14px;line-height:1.55;color:" + C_MUTED + ";padding-top:8px;" +
       "border-top:1px solid " + C_BORDER + ";margin-top:6px;}" +
       P + " .tl-cs-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;" +
       "border-top:1px solid " + C_BORDER + ";flex:0 0 auto;}" +
-      P + " .tl-cs-btn{height:42px;min-width:108px;border-radius:6px;border:1px solid " + C_BORDER + ";" +
-      "background:" + C_TILE + ";color:" + C_TEXT + ";font-size:14px;font-weight:600;cursor:pointer;" +
+      P + " .tl-cs-btn{height:48px;min-width:112px;border-radius:6px;border:1px solid " + C_BORDER + ";" +
+      "background:" + C_TILE + ";color:" + C_TEXT + ";font-size:16px;font-weight:600;cursor:pointer;" +
       "font-family:inherit;padding:0 16px;}" +
       P + " .tl-cs-btn.on{background:" + C_POINT + ";border-color:" + C_POINT + ";color:" + C_BG + ";}" +
-      P + " .tl-cs-fixed{font-size:12.5px;color:" + C_MUTED + ";}" +
+      P + " .tl-cs-fixed{font-size:14px;color:" + C_MUTED + ";}" +
       "@media (max-width:520px){" +
       P + "{padding:8px;}" +
       P + " .tl-cs-body{flex-direction:column;}" +

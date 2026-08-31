@@ -3253,6 +3253,13 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 .ad-creative-image.ad-banner-failed .ad-creative-cta{display:inline-flex;}
 
 /* ===== 레버리지 설정 팝업 =====
+   2026-08-31 대표 "다 키워줘 / 여전히 작다" (두 번째 지시) — 글자 확대
+     항목 이름 17 -> 18px  프리셋 18 -> 20px (폰 16.5 -> 18px)
+     1x/100x 눈금 15 -> 17px  안내문 15.5 -> 17px (아래쪽 두 번째 벌도 같이)
+     경고 본문 18 -> 19px  20배 이상 19.5 -> 20.5px  경고 부연 15 -> 17px
+     프리셋 높이 44 -> 48px
+   제목(21px) · 큰 숫자(44px) · 확인/취소(18px, 높이 50px) 는 이미 커서 그대로입니다.
+   되돌리려면 화살표 왼쪽 값으로.
    새 색을 만들지 않고 기존 변수만 씁니다(다크모드 자동 대응).
    모서리 3px, 그림자 8px — 사이트 규칙 그대로. */
 .lev-modal{
@@ -3281,7 +3288,7 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 .lev-modal-x:hover{color:var(--text);}
 .lev-modal-body{padding:18px;}
-.lev-modal-label{font-size:17px;color:var(--text-faint);margin-bottom:8px;}
+.lev-modal-label{font-size:18px;color:var(--text-faint);margin-bottom:8px;}
 .lev-modal-value{
   display:flex;align-items:baseline;justify-content:center;gap:4px;
   padding:14px 0 18px;
@@ -3293,20 +3300,20 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   /* 2026-08-24 대표 지적: "버튼들(1x~100x)과 설명 글씨가 작다".
      전: 글자 15px · 높이 약 35px.  후: 글자 18px · 높이 44px(손가락 기준 최소치).
      되돌리려면 min-width:56px;padding:9px 6px;font-size:15px 로. */
-  flex:1 0 auto;min-width:62px;min-height:44px;padding:11px 8px;
+  flex:1 0 auto;min-width:66px;min-height:48px;padding:12px 8px;
   border:1px solid var(--border);border-radius:3px;
-  background:var(--surface);color:var(--text);font-family:inherit;font-size:18px;cursor:pointer;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:20px;cursor:pointer;
 }
 .lev-preset:hover{background:var(--surface2);}
 .lev-preset.active{background:var(--gold);border-color:var(--gold);color:#0A0F1C;font-weight:700;}
 .lev-modal-range{width:100%;display:block;}
 .lev-modal-scale{
   display:flex;justify-content:space-between;
-  font-size:15px;color:var(--text-faint);margin-top:6px;
+  font-size:17px;color:var(--text-faint);margin-top:6px;
 }
 .lev-modal-note{
   margin:14px 0 0;padding:10px 12px;border-radius:3px;
-  background:var(--surface2);color:var(--text-faint);font-size:15.5px;line-height:1.55;
+  background:var(--surface2);color:var(--text-faint);font-size:17px;line-height:1.55;
 }
 .lev-modal-foot{
   display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);
@@ -3325,8 +3332,11 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 @media (max-width:520px){
   .lev-modal-card{max-width:none;}
   .lev-modal-value b{font-size:36px;}
+  /* 2026-08-31 — 글자를 키운 만큼(약 +30px) 큰 숫자 위아래 여백에서 되찾습니다.
+     되돌리려면 이 한 줄을 지우면 됩니다(기본값 14px 0 18px). */
+  .lev-modal-value{padding:8px 0 12px;}
   /* 폰에서도 손가락 기준 44px 은 지킵니다(글자만 한 단계 줄임) */
-  .lev-preset{min-width:54px;font-size:16.5px;padding:11px 5px;}
+  .lev-preset{min-width:56px;font-size:18px;padding:12px 5px;}
 }
 
 /* 비회원에게 잠긴 버튼 — 눌러도 로그인 안내가 뜹니다.
@@ -3790,24 +3800,24 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
      되돌리려면 font-size:15px 로. */
   margin:0 0 8px;
   color:#FF8A9B;
-  font-size:18px;
+  font-size:19px;
   font-weight:700;
   line-height:1.45;
 }
 /* 20배 이상은 한 단계 더 세게 — 이때부터 1%대에서 청산됩니다 */
 .lev-modal-warn-main.lev-modal-warn-high{
-  font-size:19.5px;
+  font-size:20.5px;
   color:#FF6A80;
 }
 .lev-modal-warn-sub{
   margin:4px 0 0;
   color:var(--text-faint);
-  font-size:15px;
+  font-size:17px;
   line-height:1.55;
 }
 /* 2026-08-24 — 13px -> 15.5px. 위쪽 .lev-modal-note 와 같은 값으로 맞춥니다
    (두 벌이라 뒤엣것이 이깁니다 — tests/css-duplicate-rules.test.js 기준선에 등록됨). */
-.lev-modal-note{font-size:15.5px;color:var(--text-faint);margin-top:10px;}
+.lev-modal-note{font-size:17px;color:var(--text-faint);margin-top:10px;}
 
 /* ===== 채팅 안내 줄 — 자리를 항상 같게 =====
    글자가 들어올 때마다 높이가 14px ↔ 28px 로 오갔습니다(실측).
