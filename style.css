@@ -497,7 +497,8 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
      블록으로 옮겼습니다. 여기 두면 635행 기본 규칙(display:none)이 파일에서
      더 뒤라 특이도가 같은 채 덮여 버려, 폰에서 버튼이 아예 안 떴습니다. */
   .mypage-grid{grid-template-columns:1fr 1fr;}
-  .mypage-nickname-value{font-size:18px;}
+  /* 2026-08-31 — 폰에서만 18px 로 도로 줄이던 줄입니다. 22px 로 맞춥니다. */
+  .mypage-nickname-value{font-size:22px;}
   .leaderboard-rank-badge{font-size:20.5px;}
 }
 @media (max-width:400px){
@@ -1123,8 +1124,32 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
   display:flex;align-items:baseline;gap:8px;
   padding:0 0 8px;margin-bottom:8px;border-bottom:1px solid var(--border-soft);
 }
-.mypage-nickname-label{font-size:15px;color:var(--text-faint);}
-.mypage-nickname-value{font-size:19px;font-weight:700;color:var(--gold);}
+/* 2026-08-31 — 라벨 15 → 17px, 닉네임 19 → 22px. 되돌리려면 15/19 로. */
+.mypage-nickname-label{font-size:17px;color:var(--text-faint);}
+.mypage-nickname-value{font-size:22px;font-weight:700;color:var(--gold);}
+
+/* =========================================================================
+   2026-08-31 대표 캡처 ③ "글씨 더 키우고 가독성있게 새롭게 디자인해라"
+   =========================================================================
+   대표가 캡처에서 지적한 것 —
+     · 글씨가 전반적으로 작다
+     · 숫자 칸이 2열로 빽빽하다
+     · 위쪽 빈 카드 4개가 "없습니다" 한 줄인데 세로를 많이 쓴다
+     · 총자산과 안 중요한 값이 같은 크기라 뭐가 중요한지 안 보인다
+
+   ★ 항목을 하나도 빼지 않았습니다. 마크업도 그대로입니다.
+     자리만 CSS order 로 바꾸고, 글자 크기와 여백만 손봤습니다.
+
+   순서 — 숫자 표(.mypage-grid)가 마크업상 맨 끝이라 빈 카드 4개를
+   지나야 자기 돈이 보였습니다. DOM 은 그대로 두고 보이는 자리만 올립니다
+   (js/stats-bar-priority.js 와 같은 방식).
+   되돌리려면 아래 #mypage-panel 블록만 지우면 마크업 순서대로 돌아갑니다. */
+#mypage-panel{display:flex;flex-direction:column;}
+#mypage-panel > .field-label{order:1;}
+#mypage-panel > .mypage-nickname-row{order:2;}
+#mypage-panel > .mypage-grid{order:3;}
+#mypage-panel > .mpi-box{order:4;}
+#mypage-panel > .mh-box{order:5;}
 
 /* 카드 격자 -> 두 칸짜리 표. 각 행이 "라벨 | 값" 한 줄입니다. */
 .mypage-grid{
@@ -1133,17 +1158,44 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 }
 .mypage-item{
   display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-  padding:9px 12px;border-bottom:1px solid var(--border-soft);min-width:0;
+  /* 2026-08-31 — 글자를 키운 만큼 줄 여백도 9 → 12px. 되돌리려면 9px 12px 로. */
+  padding:12px;border-bottom:1px solid var(--border-soft);min-width:0;
 }
-.mypage-item:nth-child(odd){border-right:1px solid var(--border-soft);}
-.mypage-item-label{font-size:15px;color:var(--text-dim);white-space:nowrap;}
+/* 2026-08-31 — 세로 구분선을 뺍니다.
+   총자산이 두 칸을 통째로 쓰게 되면서 아래 칸들의 홀짝이 한 칸씩 밀려,
+   구분선이 바깥 가장자리에 혼자 남았습니다. 가로 구분선만으로 충분합니다.
+   되돌리려면 border-right:1px solid var(--border-soft) 로. */
+.mypage-item:nth-child(odd){border-right:0;}
+/* 2026-08-31 — 라벨 15 → 17px (대표가 정한 최소치). 되돌리려면 15px 로. */
+.mypage-item-label{font-size:17px;color:var(--text-dim);white-space:nowrap;}
 .mypage-value{
-  font-family:var(--sans);font-size:17px;font-weight:600;color:var(--text);
+  /* 2026-08-31 — 값 17 → 20px. 숫자는 이 화면의 주인공이라 라벨보다 큽니다.
+     되돌리려면 17px 로. */
+  font-family:var(--sans);font-size:20px;font-weight:600;color:var(--text);
   font-variant-numeric:tabular-nums lining-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-align:right;
 }
-.mypage-item-highlight{background:var(--surface2);}
-.mypage-item-highlight .mypage-value{color:var(--gold);font-size:19px;font-weight:700;}
+/* ── 총자산 — 이 화면의 주인공 ────────────────────────────────────
+   2026-08-31 대표: "중요한 숫자와 안 중요한 것이 같은 크기입니다".
+   두 칸을 통째로 쓰고, 라벨을 위에 얹고 숫자를 아래에 크게 깔았습니다.
+   라벨 옆에 붙이지 않는 이유 — 9자리(₩148,479,792)가 큰 글자로도
+   줄바꿈 없이 한 줄에 들어가야 하기 때문입니다.
+   되돌리려면 이 블록을 지우고
+   .mypage-item-highlight{background:var(--surface2);} 와
+   .mypage-item-highlight .mypage-value{color:var(--gold);font-size:19px;font-weight:700;}
+   두 줄만 남기면 됩니다. */
+.mypage-item-highlight{
+  grid-column:1 / -1;
+  display:block;background:var(--surface2);
+  padding:14px 12px 16px;
+}
+.mypage-item-highlight .mypage-item-label{
+  display:block;font-size:17px;color:var(--text-faint);margin-bottom:2px;
+}
+.mypage-item-highlight .mypage-value{
+  display:block;text-align:left;
+  color:var(--gold);font-size:32px;font-weight:700;line-height:1.15;
+}
 
 /* =========================================================================
  * 종목 선택 드롭다운 — 구조만(다종목 데이터 연동은 보류 중). BTC만 실제
@@ -3292,7 +3344,7 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 .lev-modal-head{
   display:flex;align-items:center;justify-content:space-between;
-  padding:15px 18px;border-bottom:1px solid var(--border);
+  padding:11px 18px;border-bottom:1px solid var(--border);
   font-size:24px;font-weight:700;color:var(--text);
   flex:0 0 auto;
 }
@@ -3302,15 +3354,15 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   font-size:34px;line-height:1;cursor:pointer;padding:0 4px;
 }
 .lev-modal-x:hover{color:var(--text);}
-.lev-modal-body{padding:18px;flex:1 1 auto;min-height:0;overflow-y:auto;}
-.lev-modal-label{font-size:19px;color:var(--text-faint);margin-bottom:8px;}
+.lev-modal-body{padding:14px;flex:1 1 auto;min-height:0;overflow-y:auto;}
+.lev-modal-label{font-size:19px;color:var(--text-faint);margin-bottom:6px;}
 .lev-modal-value{
   display:flex;align-items:baseline;justify-content:center;gap:4px;
   padding:14px 0 18px;
 }
 .lev-modal-value b{font-size:44px;font-weight:700;color:var(--gold);line-height:1;}
 .lev-modal-value span{font-size:26px;color:var(--text-faint);}
-.lev-modal-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.lev-modal-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
 .lev-preset{
   /* 2026-08-24 대표 지적: "버튼들(1x~100x)과 설명 글씨가 작다".
      전: 글자 15px · 높이 약 35px.  후: 글자 18px · 높이 44px(손가락 기준 최소치).
@@ -3321,17 +3373,25 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 }
 .lev-preset:hover{background:var(--surface2);}
 .lev-preset.active{background:var(--gold);border-color:var(--gold);color:#0A0F1C;font-weight:700;}
-.lev-modal-range{width:100%;display:block;}
+/* 2026-08-31 대표 캡처 — 레버리지 창 맨 아래 ★가로 스크롤바★.
+   원인은 프리셋 줄이 아니라 ★이 슬라이더★ 였습니다.
+   브라우저 기본 스타일이 input[type=range] 에 margin:2px 를 줍니다.
+   width:100%(=290px) + 좌우 여백 2+2 = 294px 로 몸통 내용폭(290px)을 4px 넘겼고,
+   .lev-modal-body 가 overflow-y:auto 라 overflow-x 가 visible → auto 로 계산되어
+   그 4px 하나 때문에 가로 스크롤바가 통째로 생겼습니다.
+   실측 — 여섯 폭(360/375/390/768/1440/1920) 전부 몸통 +4px, 페이지는 0.
+   되돌리려면 margin:0 만 지우면 됩니다. */
+.lev-modal-range{width:100%;display:block;margin:0;}
 .lev-modal-scale{
   display:flex;justify-content:space-between;
-  font-size:19px;color:var(--text-faint);margin-top:6px;
+  font-size:19px;color:var(--text-faint);margin-top:4px;
 }
 .lev-modal-note{
-  margin:14px 0 0;padding:10px 12px;border-radius:3px;
+  margin:10px 0 0;padding:8px 12px;border-radius:3px;
   background:var(--surface2);color:var(--text-faint);font-size:19px;line-height:1.55;
 }
 .lev-modal-foot{
-  display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);
+  display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);
   flex:0 0 auto;
 }
 .lev-modal-btn{
@@ -3350,9 +3410,11 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   .lev-modal-value b{font-size:36px;}
   /* 2026-08-31 — 글자를 키운 만큼(약 +30px) 큰 숫자 위아래 여백에서 되찾습니다.
      되돌리려면 이 한 줄을 지우면 됩니다(기본값 14px 0 18px). */
-  .lev-modal-value{padding:8px 0 12px;}
+  .lev-modal-value{padding:2px 0 6px;}
   /* 폰에서도 손가락 기준 44px 은 지킵니다(글자만 한 단계 줄임) */
-  .lev-preset{min-width:62px;font-size:20px;padding:13px 5px;}
+  /* 2026-08-31 세로 스크롤 줄이기 — 글자(20px)는 그대로, 높이만 54 → 46px.
+     손가락 최소치 44px 은 지킵니다. 되돌리려면 min-height 를 지우고 padding:13px 5px 로. */
+  .lev-preset{min-width:62px;font-size:20px;padding:11px 5px;min-height:46px;}
 }
 
 /* 비회원에게 잠긴 버튼 — 눌러도 로그인 안내가 뜹니다.
@@ -3481,26 +3543,29 @@ html[data-theme="dark"] .menu-bar-inner::after{
   margin:14px 0;padding:14px;
   border:1px solid var(--border);border-radius:3px;background:var(--surface2);
 }
-.mpi-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px;}
+/* 2026-08-31 — 제목 16 → 18px. 되돌리려면 16px 로. */
+.mpi-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;}
 .mpi-row{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:8px 0;border-bottom:1px solid var(--border);
 }
 .mpi-row:last-child{border-bottom:0;}
-.mpi-label{font-size:14px;color:var(--text-faint);flex:0 0 auto;}
-.mpi-value{font-size:15px;color:var(--text);text-align:right;word-break:break-all;}
-.mpi-ok{color:var(--green);font-size:13px;}
-.mpi-no{color:var(--text-faint);font-size:13px;}
-.mpi-empty{margin:6px 0;font-size:14px;color:var(--text-faint);}
+/* 2026-08-31 — 14/15/13/13/14 → 17/18/15/15/17px (대표가 정한 최소치 17). */
+.mpi-label{font-size:17px;color:var(--text-faint);flex:0 0 auto;}
+.mpi-value{font-size:18px;color:var(--text);text-align:right;word-break:break-all;}
+.mpi-ok{color:var(--green);font-size:15px;}
+.mpi-no{color:var(--text-faint);font-size:15px;}
+.mpi-empty{margin:0;font-size:17px;color:var(--text-faint);}
 
 /* ===== 마이페이지 — 내역과 계정 관리 ===== */
 .mh-box{
   margin:14px 0;padding:14px;
   border:1px solid var(--border);border-radius:3px;background:var(--surface2);
 }
-.mh-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px;}
-.mh-empty{margin:6px 0;font-size:14px;color:var(--text-faint);}
-.mh-table{width:100%;border-collapse:collapse;font-size:14px;}
+/* 2026-08-31 — 제목 16 → 18px, 안내 14 → 17px, 표 14 → 17px. */
+.mh-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;}
+.mh-empty{margin:0;font-size:17px;color:var(--text-faint);}
+.mh-table{width:100%;border-collapse:collapse;font-size:17px;}
 .mh-table th{
   text-align:left;padding:8px 6px;color:var(--text-faint);font-weight:400;
   border-bottom:1px solid var(--border);white-space:nowrap;
@@ -3514,17 +3579,72 @@ html[data-theme="dark"] .menu-bar-inner::after{
   height:42px;padding:0 18px;
   border:1px solid var(--border);border-radius:3px;
   background:var(--surface);color:var(--text);
-  font-family:inherit;font-size:15px;cursor:pointer;
+  font-family:inherit;font-size:17px;cursor:pointer;
 }
 .mh-btn:hover{background:var(--surface2);}
 .mh-btn-danger{border-color:var(--red);color:var(--red);}
 .mh-btn-danger:hover{background:var(--red);color:#fff;}
-.mh-warn{margin:10px 0 0;font-size:13px;color:var(--text-faint);line-height:1.5;}
+/* 2026-08-31 — 13 → 16px. 경고문이라 본문보다 살짝 작게만 둡니다. */
+.mh-warn{margin:10px 0 0;font-size:16px;color:var(--text-faint);line-height:1.5;}
 /* 좁은 화면에서 표가 넘치면 옆으로 밀어 봅니다 */
 @media (max-width:640px){
   .mh-box{overflow-x:auto;}
-  .mh-table{min-width:420px;}
+  /* 2026-08-31 — 표 글자를 14 → 17px 로 키운 만큼 420 → 480px.
+     되돌리려면 420px 로. */
+  .mh-table{min-width:480px;}
   .mh-btn{flex:1 1 auto;}
+}
+
+/* =========================================================================
+ * 2026-08-31 대표 캡처 ③ — "비어 있는 카드 4개가 세로를 너무 많이 씁니다"
+ * =========================================================================
+ * "내 계정 정보" · "TL 내역" · "TL 핫딜 구매 내역" · "TL 마켓 아이템" 은
+ * 새 회원에게는 전부 "…없습니다" 한 줄뿐인데, 제목 줄과 본문 줄이 위아래로
+ * 쌓여 카드 하나가 70px 넘게 세로를 씁니다. 네 개면 280px 이고,
+ * 그만큼 정작 봐야 할 숫자가 아래로 밀립니다.
+ *
+ * ★ 지우지 않습니다. 회원이 나중에 채우는 칸입니다.
+ *   "비어 있을 때만" 제목과 안내를 한 줄에 나란히 놓아 절반으로 접습니다.
+ *   내용이 하나라도 생기면(.mh-empty 가 사라지면) 규칙이 저절로 안 맞아
+ *   원래의 세로 카드로 돌아갑니다. 자바스크립트가 필요 없습니다.
+ *
+ *   접기 전   TL 내역
+ *             TL 내역이 없습니다.
+ *   접은 뒤   TL 내역            TL 내역이 없습니다.
+ *
+ * 되돌리는 방법 — 이 블록을 통째로 지우면 됩니다.
+ * ========================================================================= */
+.mh-box:has(> div > .mh-empty),
+.mpi-box:has(> div > .mpi-empty){
+  display:flex;align-items:baseline;gap:12px;
+  padding:12px 14px;
+}
+.mh-box:has(> div > .mh-empty) > .mh-title,
+.mpi-box:has(> div > .mpi-empty) > .mpi-title{
+  margin-bottom:0;flex:0 0 auto;
+}
+.mh-box:has(> div > .mh-empty) > div:not(.mh-title),
+.mpi-box:has(> div > .mpi-empty) > div:not(.mpi-title){
+  margin-left:auto;min-width:0;text-align:right;
+}
+/* ⚠ :not(.mh-title)/:not(.mpi-title) 이 꼭 있어야 합니다 —
+   제목도 <div> 라서 그냥 "> div" 로 잡으면 제목까지 오른쪽으로 밀립니다.
+   실제로 1920 에서 "내 계정 정보" 가 x=606 까지 밀렸습니다(왼쪽 끝은 32). */
+/* 좁은 폰에서 두 글자가 부딪히면 자르지 말고 아랫줄로 내립니다 */
+@media (max-width:400px){
+  /* 360 에서는 제목과 "없습니다" 가 한 줄에 못 들어가 두 줄이 됩니다.
+     그만큼 위아래 여백을 12 → 9px 로 줄여 되찾습니다(글자는 그대로). */
+  .mh-box:has(> div > .mh-empty),
+  .mpi-box:has(> div > .mpi-empty){flex-wrap:wrap;gap:0 12px;padding:9px 14px;}
+  .mh-box:has(> div > .mh-empty) > div:not(.mh-title),
+  .mpi-box:has(> div > .mpi-empty) > div:not(.mpi-title){text-align:left;margin-left:0;}
+}
+
+/* 폰에서는 총자산 숫자를 32 → 28px.
+   9자리(₩148,479,792)보다 긴 값이 와도 한 줄에 들어가게 하는 여유입니다.
+   되돌리려면 이 블록을 지우면 32px 로 돌아갑니다. */
+@media (max-width:400px){
+  .mypage-item-highlight .mypage-value{font-size:28px;}
 }
 
 /* ===== 간편 로그인 (카카오·네이버) =====
@@ -3803,8 +3923,8 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
    무엇을 뜻하는지 알 수 없었습니다. 실제로 몇 % 움직이면 청산되는지를
    계산해 크게 보여줍니다(숫자는 js/trading.js 의 청산가 공식 그대로). */
 .lev-modal-warn{
-  margin:14px 0 0;
-  padding:12px 14px;
+  margin:10px 0 0;
+  padding:10px 12px;
   background:rgba(240,80,110,0.10);
   border:1px solid rgba(240,80,110,0.30);
   border-radius:8px;
@@ -3833,7 +3953,7 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
 }
 /* 2026-08-24 — 13px -> 15.5px. 위쪽 .lev-modal-note 와 같은 값으로 맞춥니다
    (두 벌이라 뒤엣것이 이깁니다 — tests/css-duplicate-rules.test.js 기준선에 등록됨). */
-.lev-modal-note{font-size:19px;color:var(--text-faint);margin-top:10px;}
+.lev-modal-note{font-size:19px;color:var(--text-faint);margin-top:8px;}
 
 /* ===== 채팅 안내 줄 — 자리를 항상 같게 =====
    글자가 들어올 때마다 높이가 14px ↔ 28px 로 오갔습니다(실측).
@@ -4791,7 +4911,8 @@ html[data-theme="dark"] .board-page-btn.active{
 .tl-order-lock{
   position:absolute;inset:0;z-index:6;
   display:flex;align-items:flex-start;justify-content:center;
-  padding:12px;
+  /* 2026-08-31 글씨를 키우면서 내용폭을 벌기 위해 12 → 10px. 되돌리려면 12px 로. */
+  padding:10px;
   /* --bg #0A0F1C 를 그대로 쓴 반투명 막. 뒤 내용이 무엇인지는 보이되
      읽어서 판단할 수는 없게 — "지금 여기는 못 쓴다" 가 한눈에 읽혀야 합니다. */
   background:rgba(10,15,28,0.82);
@@ -4812,40 +4933,49 @@ html[data-theme="dark"] .board-page-btn.active{
   border-radius:6px;
   /* 그림자 아님 — 카드 윗변에 흰색 3% 얇은 선 */
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
-  padding:14px 14px 12px;
+  /* 2026-08-31 글씨를 키우면서 내용폭을 벌기 위해 14 → 12px. 되돌리려면 14px 14px 12px 로. */
+  padding:12px 12px 12px;
   text-align:center;
 }
 .tl-order-lock-card p{margin:0;}
 
-/* 지금 보고 있는 종목 — 맥락이라 작고 조용하게 */
+/* 지금 보고 있는 종목 — 대표가 "제목 줄" 이라 부른 첫 줄입니다.
+   2026-08-31 대표 캡처 ① "글씨더 키워라" — 12 → 20px.
+   크기는 올리되 색은 보조(--text-faint)로 두어, 아래 핵심 문장이 계속 이깁니다.
+   되돌리려면 font-size:12px 로. */
 .tl-order-lock-now{
-  font-size:12px;line-height:1.4;color:var(--text-faint);
+  font-size:20px;line-height:1.35;color:var(--text-faint);
 }
-/* 핵심 한 줄 — 이 카드에서 제일 먼저 읽혀야 하는 문장 */
+/* 핵심 한 줄 — 이 카드에서 제일 먼저 읽혀야 하는 문장.
+   2026-08-31 — 15 → 21px, 굵기 600 → 700. 카드에서 가장 큰 글자입니다.
+   되돌리려면 font-size:15px;font-weight:600 으로. */
 .tl-order-lock-main{
-  margin-top:4px !important;
-  font-size:15px;line-height:1.4;font-weight:600;color:var(--text);
+  margin-top:6px !important;
+  font-size:21px;line-height:1.35;font-weight:700;color:var(--text);
 }
-/* 이유 — "보유 중인 포지션이 있습니다" 등. js/symbol-guard.js 가 준 문장 그대로 */
+/* 이유 — "보유 중인 포지션이 있습니다" 등. js/symbol-guard.js 가 준 문장 그대로.
+   2026-08-31 — 12 → 17px (대표가 정한 최소치). 되돌리려면 12px 로. */
 .tl-order-lock-why{
-  margin-top:4px !important;
-  font-size:12px;line-height:1.4;color:var(--text-faint);
+  margin-top:6px !important;
+  font-size:17px;line-height:1.4;color:var(--text-faint);
 }
 .tl-order-lock-btn{
   width:100%;margin-top:12px;
-  padding:9px 10px;
+  /* 2026-08-31 — 글자 14 → 19px 에 맞춰 높이도 9 → 12px. 되돌리려면 9px 10px 로. */
+  padding:12px 10px;
   border:1px solid var(--gold);border-radius:3px;
   background:var(--gold);
   /* 밝은 배경에는 어두운 글자 — 카카오 버튼과 같은 원칙 */
   color:#191600;
-  font-family:var(--sans);font-size:14px;font-weight:700;
+  font-family:var(--sans);font-size:19px;font-weight:700;
   cursor:pointer;transition:.12s;
 }
 .tl-order-lock-btn:hover{filter:brightness(1.08);}
-/* 무엇이 아직 열려 있는지 — 겁먹지 않게 마지막에 한 줄 */
+/* 무엇이 아직 열려 있는지 — 겁먹지 않게 마지막에 한 줄.
+   2026-08-31 — 11 → 17px (대표가 정한 최소치). 되돌리려면 11px 로. */
 .tl-order-lock-ok{
   margin-top:10px !important;
-  font-size:11px;line-height:1.4;color:var(--text-faint);
+  font-size:17px;line-height:1.4;color:var(--text-faint);
 }
 
 
@@ -4856,8 +4986,10 @@ html[data-theme="dark"] .board-page-btn.active{
       그래서 그 블록보다 앞에 둡니다. 서로 겹치는 속성이 없어 순서는 무관합니다. */
 @media (max-width:700px){
   .tl-order-lock{padding:10px;}
-  .tl-order-lock-card{max-width:none;padding:12px 12px 10px;}
-  .tl-order-lock-main{font-size:14px;}
+  .tl-order-lock-card{max-width:none;padding:12px;}
+  /* 2026-08-31 — 폰에서만 14px 로 도로 줄이던 줄입니다. 데스크톱과 같은 21px 로.
+     되돌리려면 font-size:14px 로. */
+  .tl-order-lock-main{font-size:21px;}
 }
 
 /* =========================================================================
