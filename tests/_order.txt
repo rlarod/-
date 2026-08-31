@@ -168,3 +168,4 @@ tests/stale-guard-mobile-bar.test.js
 tests/chart-style-seal.test.js
 tests/sync-guard-baseline-unknown.test.js
 tests/chart-longrun-accumulation.test.js
+tests/chart-canvas-restore.test.js

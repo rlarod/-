@@ -1378,6 +1378,14 @@
      거래량·MACD 칸 위에 겹치던 것 — 지우지 않고 시간축 띠로 자리만 옮깁니다.
      chart.js·style.css 무수정. 이 한 줄을 지우면 원래 자리로 돌아갑니다. -->
 <script src="js/chart-attr-logo.js"></script>
+<!-- 차트가 비면 스스로 되살아납니다 (대표 2026-08-31 "계속 켜놓으니까 차트가 안 보이더라").
+     컴퓨터가 무거우면 크롬이 캔버스 그림판을 회수해 차트 칸만 통째로 빕니다.
+     시세까지 끊긴 상태면 라이브러리가 다시 그릴 이유가 없어 영영 빈 화면이 됩니다.
+     브라우저가 알려주는 신호(contextrestored·탭 복귀)에만 반응해
+     chart.applyOptions({}) 로 다시 그립니다 — 0.008ms, 레이아웃 안 건드림, 상태 그대로.
+     정상일 때는 아무 일도 안 합니다. chart.js 무수정.
+     이 한 줄을 지우면 기능이 완전히 꺼집니다. 반드시 chart-font.js 뒤. -->
+<script src="js/chart-canvas-restore.js"></script>
 <!-- 상품탭 줄에 종목 탭 4개 (대표 지시 2026-08-27 "여기다 종목 만들어 넣자").
      .product-tabs 안에 App.SymbolRegistry 의 종목을 그리기만 합니다.
      "바꿔도 되나" 판정은 SymbolRegistry.isEnabled, 실제 전환은
