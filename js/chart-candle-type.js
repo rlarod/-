@@ -464,48 +464,52 @@ App.ChartCandleType = (function () {
    * 목록 (껍데기는 fx 목록과 같은 규칙 — 확정 팔레트만 씁니다)
    * =====================================================================
    *
-   * 2026-08-31 대표 "다 키워줘 / 여전히 작다" (두 번째 지시) — 글자 확대
-   *   제목      14 -> 20px      닫기 ✕   15   -> 20px
-   *   항목 이름 14 -> 16px(줄22) 오른쪽 설명 12.5 -> 14px(줄22)
-   *   아래 안내 12 -> 14px      스크롤 안내 11.5 -> 14px
-   *   창 폭     248 -> 264px  (+ max-width:calc(100vw - 16px) 안전장치)
-   * 되돌리려면 위 숫자를 화살표 왼쪽 값으로 되돌리고 폭을 248px 로.
+   * 2026-08-31 대표 "내가 글씨 크게 하라는 거 다 크게해" (★세 번째 지시★) — 다시 확대
+   *   제목      20 -> 24px       닫기 ✕      20 -> 24px
+   *   항목 이름 16 -> 19px(줄26) 오른쪽 설명 14 -> 17px(줄26)
+   *   아래 안내 14 -> 17px       스크롤 안내 14 -> 17px
+   *   점        7  -> 8px        머리 여백 10/13 -> 12/15, 줄 여백 10/13 -> 11/15
+   *   창 폭     264 -> 320px   (place() 의 기본값 320 도 함께)
+   * 되돌리려면 위 숫자를 화살표 왼쪽 값으로 되돌리고 폭을 264px 로
+   * (아래 place() 의 "offsetWidth || 320" 도 264 로 함께 되돌립니다).
+   * (두 번째 지시 때의 값: 제목 20 / 이름 16 / 설명 14 / 안내 14 / 폭 264)
+   * max-width:calc(100vw - 16px) 가 있어 360 폰에서도 화면 밖으로 나가지 않습니다.
    * 바이낸스(14px)보다 큽니다 — 글자 크기는 거래 규칙이 아니라 대표 지시를 따릅니다. */
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var P = "#" + PANEL_ID;
     var css =
-      P + "{position:fixed;z-index:60;width:264px;max-width:calc(100vw - 16px);box-sizing:border-box;background:" + C_CARD + ";" +
+      P + "{position:fixed;z-index:60;width:320px;max-width:calc(100vw - 16px);box-sizing:border-box;background:" + C_CARD + ";" +
       "border:1px solid " + C_BORDER + ";border-radius:10px;overflow:hidden;" +
       "box-shadow:none;font-family:inherit;}" +
       P + "::before{content:\"\";position:absolute;left:0;right:0;top:0;height:1px;" +
       "background:rgba(255,255,255,.03);pointer-events:none;}" +
       P + " .tl-ct-head{display:flex;align-items:center;justify-content:space-between;" +
-      "padding:10px 13px;border-bottom:1px solid " + C_BORDER + ";}" +
-      P + " .tl-ct-title{font-size:20px;font-weight:700;color:" + C_TEXT + ";}" +
-      P + " .tl-ct-x{background:none;border:0;color:" + C_MUTED + ";font-size:20px;line-height:1;" +
-      "cursor:pointer;padding:3px 5px;border-radius:4px;font-family:inherit;}" +
+      "padding:12px 15px;border-bottom:1px solid " + C_BORDER + ";}" +
+      P + " .tl-ct-title{font-size:24px;font-weight:700;color:" + C_TEXT + ";}" +
+      P + " .tl-ct-x{background:none;border:0;color:" + C_MUTED + ";font-size:24px;line-height:1;" +
+      "cursor:pointer;padding:4px 6px;border-radius:4px;font-family:inherit;}" +
       P + " .tl-ct-x:hover{color:" + C_TEXT + ";}" +
       /* 줄 높이 38px — fx 목록과 같은 값(바이낸스 실측) */
       P + " .tl-ct-row{width:100%;display:flex;align-items:center;gap:8px;background:none;" +
-      "border:0;padding:10px 13px;cursor:pointer;text-align:left;font-family:inherit;}" +
+      "border:0;padding:11px 15px;cursor:pointer;text-align:left;font-family:inherit;}" +
       P + " .tl-ct-row:hover{background:" + C_TILE + ";}" +
-      P + " .tl-ct-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:" + C_BORDER + ";}" +
-      P + " .tl-ct-name{flex:1 1 auto;min-width:0;font-size:16px;line-height:22px;font-weight:600;" +
+      P + " .tl-ct-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:" + C_BORDER + ";}" +
+      P + " .tl-ct-name{flex:1 1 auto;min-width:0;font-size:19px;line-height:26px;font-weight:600;" +
       "color:" + C_MUTED + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}" +
-      P + " .tl-ct-note{font-size:14px;line-height:22px;font-weight:500;color:" + C_MUTED + ";" +
+      P + " .tl-ct-note{font-size:17px;line-height:26px;font-weight:500;color:" + C_MUTED + ";" +
       "flex:0 0 auto;opacity:.75;}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-name{color:" + C_TEXT + ";}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-dot{background:" + C_POINT + ";}" +
       P + " .tl-ct-row[aria-checked=\"true\"] .tl-ct-note{color:" + C_POINT + ";opacity:1;}" +
-      P + " .tl-ct-foot{padding:8px 13px 10px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:14px;color:" + C_MUTED + ";line-height:1.5;}" +
+      P + " .tl-ct-foot{padding:9px 15px 11px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:17px;color:" + C_MUTED + ";line-height:1.5;}" +
       P + " .tl-ct-list{overflow-y:auto;overscroll-behavior:contain;}" +
       P + " .tl-ct-list::-webkit-scrollbar{width:3px;}" +
       P + " .tl-ct-list::-webkit-scrollbar-thumb{background:" + C_BORDER + ";border-radius:2px;}" +
       P + " .tl-ct-list::-webkit-scrollbar-track{background:transparent;}" +
-      P + " .tl-ct-hint{display:none;padding:7px 13px;border-top:1px solid " + C_BORDER + ";" +
-      "font-size:14px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
+      P + " .tl-ct-hint{display:none;padding:8px 15px;border-top:1px solid " + C_BORDER + ";" +
+      "font-size:17px;line-height:1.4;color:" + C_POINT + ";background:" + C_TILE + ";}";
     var st = document.createElement("style");
     st.id = STYLE_ID;
     st.textContent = css;
@@ -650,7 +654,7 @@ App.ChartCandleType = (function () {
 
     var TOP = EDGE;
     var BOT = floorY();
-    var w = panel.offsetWidth || 264;
+    var w = panel.offsetWidth || 320;
     var natural = panel.offsetHeight || 0;
 
     var br = null;

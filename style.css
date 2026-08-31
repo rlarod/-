@@ -3253,13 +3253,17 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
 .ad-creative-image.ad-banner-failed .ad-creative-cta{display:inline-flex;}
 
 /* ===== 레버리지 설정 팝업 =====
-   2026-08-31 대표 "다 키워줘 / 여전히 작다" (두 번째 지시) — 글자 확대
-     항목 이름 17 -> 18px  프리셋 18 -> 20px (폰 16.5 -> 18px)
-     1x/100x 눈금 15 -> 17px  안내문 15.5 -> 17px (아래쪽 두 번째 벌도 같이)
-     경고 본문 18 -> 19px  20배 이상 19.5 -> 20.5px  경고 부연 15 -> 17px
-     프리셋 높이 44 -> 48px
-   제목(21px) · 큰 숫자(44px) · 확인/취소(18px, 높이 50px) 는 이미 커서 그대로입니다.
+   2026-08-31 대표 "내가 글씨 크게 하라는 거 다 크게해" (★세 번째 지시★) — 다시 확대
+     제목 21 -> 24px (다른 세 창의 제목 24px 과 같은 값)  닫기 × 26 -> 28px
+     항목 이름 18 -> 19px  프리셋 20 -> 23px (폰 18 -> 20px)
+     1x/100x 눈금 17 -> 19px  안내문 17 -> 19px (아래쪽 두 번째 벌도 같이)
+     경고 본문 19 -> 21px  20배 이상 20.5 -> 22.5px  경고 부연 17 -> 19px
+     확인/취소 18 -> 19px (높이 50 -> 54px)  프리셋 높이 48 -> 54px
+     창 폭 500 -> 540px
+   큰 숫자(44px, 폰 36px)는 이미 커서 그대로입니다.
    되돌리려면 화살표 왼쪽 값으로.
+   (두 번째 지시 때의 값: 제목 21 / 이름 18 / 프리셋 20(폰 18) / 눈금 17 /
+    안내문 17 / 경고 19·20.5·17 / 버튼 18·높이 50 / 폭 500)
    새 색을 만들지 않고 기존 변수만 씁니다(다크모드 자동 대응).
    모서리 3px, 그림자 8px — 사이트 규칙 그대로. */
 .lev-modal{
@@ -3271,24 +3275,35 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   /* 2026-08-24 — 글자를 키우면서 버튼 11개(1x~100x)가 한 줄에 덜 접히도록
      420px -> 460px. 되돌리려면 420px 로.
      2026-08-31 대표 "팝업 창을 더 키워줘" — 460px -> 500px.
-     글자는 그대로입니다(이미 15~44px 로, 바이낸스 대화상자 본문 14px 보다 큽니다).
-     되돌리려면 460px 로. */
-  width:100%;max-width:500px;max-height:calc(100vh - 32px);overflow-y:auto;
+     2026-08-31 세 번째 지시(글자 재확대)로 500px -> 540px.
+     되돌리려면 500px 로. */
+  width:100%;max-width:540px;max-height:calc(100vh - 32px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--border);border-radius:3px;
   box-shadow:0 3px 8px rgba(0,0,0,0.35);
+  /* 2026-08-31 세 번째 지시 — 글자를 키우니 360 폰에서 내용이 창보다 길어져,
+     카드가 통째로 스크롤되면서 제목("레버리지 변경")이 위로 밀려 안 보였습니다.
+     제목과 확인/취소는 제자리에 두고 ★가운데 몸통만★ 스크롤되게 바꿉니다.
+     위의 overflow-y:auto 는 그대로 둡니다 — 세로줄 배치가 안 먹는 브라우저에서
+     카드가 통째로라도 스크롤되게 하는 보험입니다(테스트도 이 줄을 봅니다).
+     마크업은 그대로이고 CSS 만 바뀝니다.
+     되돌리려면 아래 한 줄(display:flex...)과 .lev-modal-head/.lev-modal-foot 의
+     flex:0 0 auto, .lev-modal-body 의 flex/min-height/overflow-y 를 지우면 됩니다. */
+  display:flex;flex-direction:column;
 }
 .lev-modal-head{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px;border-bottom:1px solid var(--border);
-  font-size:21px;font-weight:700;color:var(--text);
+  padding:15px 18px;border-bottom:1px solid var(--border);
+  font-size:24px;font-weight:700;color:var(--text);
+  flex:0 0 auto;
 }
 .lev-modal-x{
   border:0;background:transparent;color:var(--text-faint);
-  font-size:26px;line-height:1;cursor:pointer;padding:0 4px;
+  /* × 는 ✕ 보다 글자보다 작게 그려집니다 — 다른 세 창의 ✕ 24px 와 눈으로 맞추려고 34px. */
+  font-size:34px;line-height:1;cursor:pointer;padding:0 4px;
 }
 .lev-modal-x:hover{color:var(--text);}
-.lev-modal-body{padding:18px;}
-.lev-modal-label{font-size:18px;color:var(--text-faint);margin-bottom:8px;}
+.lev-modal-body{padding:18px;flex:1 1 auto;min-height:0;overflow-y:auto;}
+.lev-modal-label{font-size:19px;color:var(--text-faint);margin-bottom:8px;}
 .lev-modal-value{
   display:flex;align-items:baseline;justify-content:center;gap:4px;
   padding:14px 0 18px;
@@ -3300,28 +3315,29 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
   /* 2026-08-24 대표 지적: "버튼들(1x~100x)과 설명 글씨가 작다".
      전: 글자 15px · 높이 약 35px.  후: 글자 18px · 높이 44px(손가락 기준 최소치).
      되돌리려면 min-width:56px;padding:9px 6px;font-size:15px 로. */
-  flex:1 0 auto;min-width:66px;min-height:48px;padding:12px 8px;
+  flex:1 0 auto;min-width:72px;min-height:54px;padding:13px 8px;
   border:1px solid var(--border);border-radius:3px;
-  background:var(--surface);color:var(--text);font-family:inherit;font-size:20px;cursor:pointer;
+  background:var(--surface);color:var(--text);font-family:inherit;font-size:23px;cursor:pointer;
 }
 .lev-preset:hover{background:var(--surface2);}
 .lev-preset.active{background:var(--gold);border-color:var(--gold);color:#0A0F1C;font-weight:700;}
 .lev-modal-range{width:100%;display:block;}
 .lev-modal-scale{
   display:flex;justify-content:space-between;
-  font-size:17px;color:var(--text-faint);margin-top:6px;
+  font-size:19px;color:var(--text-faint);margin-top:6px;
 }
 .lev-modal-note{
   margin:14px 0 0;padding:10px 12px;border-radius:3px;
-  background:var(--surface2);color:var(--text-faint);font-size:17px;line-height:1.55;
+  background:var(--surface2);color:var(--text-faint);font-size:19px;line-height:1.55;
 }
 .lev-modal-foot{
   display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);
+  flex:0 0 auto;
 }
 .lev-modal-btn{
-  flex:1;height:50px;border:1px solid var(--border);border-radius:3px;
+  flex:1;height:54px;border:1px solid var(--border);border-radius:3px;
   background:var(--surface);color:var(--text);
-  font-family:inherit;font-size:18px;font-weight:700;cursor:pointer;
+  font-family:inherit;font-size:19px;font-weight:700;cursor:pointer;
 }
 .lev-modal-btn:hover{background:var(--surface2);}
 /* 금색 배경에는 어두운 글자 — 확정 팔레트 규칙(예전 값 color:#fff) */
@@ -3336,7 +3352,7 @@ html[data-theme="dark"] .ad-creative-image.ad-banner-failed .ad-banner-dark{disp
      되돌리려면 이 한 줄을 지우면 됩니다(기본값 14px 0 18px). */
   .lev-modal-value{padding:8px 0 12px;}
   /* 폰에서도 손가락 기준 44px 은 지킵니다(글자만 한 단계 줄임) */
-  .lev-preset{min-width:56px;font-size:18px;padding:12px 5px;}
+  .lev-preset{min-width:62px;font-size:20px;padding:13px 5px;}
 }
 
 /* 비회원에게 잠긴 버튼 — 눌러도 로그인 안내가 뜹니다.
@@ -3800,24 +3816,24 @@ html[data-theme="dark"] .page-right .page-chat-panel > .field-label{
      되돌리려면 font-size:15px 로. */
   margin:0 0 8px;
   color:#FF8A9B;
-  font-size:19px;
+  font-size:21px;
   font-weight:700;
   line-height:1.45;
 }
 /* 20배 이상은 한 단계 더 세게 — 이때부터 1%대에서 청산됩니다 */
 .lev-modal-warn-main.lev-modal-warn-high{
-  font-size:20.5px;
+  font-size:22.5px;
   color:#FF6A80;
 }
 .lev-modal-warn-sub{
   margin:4px 0 0;
   color:var(--text-faint);
-  font-size:17px;
+  font-size:19px;
   line-height:1.55;
 }
 /* 2026-08-24 — 13px -> 15.5px. 위쪽 .lev-modal-note 와 같은 값으로 맞춥니다
    (두 벌이라 뒤엣것이 이깁니다 — tests/css-duplicate-rules.test.js 기준선에 등록됨). */
-.lev-modal-note{font-size:17px;color:var(--text-faint);margin-top:10px;}
+.lev-modal-note{font-size:19px;color:var(--text-faint);margin-top:10px;}
 
 /* ===== 채팅 안내 줄 — 자리를 항상 같게 =====
    글자가 들어올 때마다 높이가 14px ↔ 28px 로 오갔습니다(실측).
