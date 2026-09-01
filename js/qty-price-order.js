@@ -14,6 +14,26 @@
  * 가격 기준:
  *  - 지정가 모드: 사용자가 입력한 #limit-price-input 값
  *  - 시장가 모드: App.Trading.getSnapshot().currentPrice(실시간 시세)
+ *
+ * ── 퍼센트 버튼의 상한이 두 개입니다 (B-2, 2026-08-31 대표 결재) ──────────
+ *  ① 지갑 상한  : App.Trading.getMaxAffordableMargin() × 배율
+ *  ② 구간 상한  : 그 배율을 쓸 수 있는 마지막 구간의 명목 상한
+ *                 (바이낸스 Leverage & Margin Bracket — js/risk-brackets.js)
+ *  ★둘 중 작은 쪽★ 을 씁니다.
+ *
+ *  왜 필요한가 — B건으로 "명목이 크면 배율 상한이 내려간다" 가 들어오면서,
+ *  ②를 안 보면 51배 이상에서 최대(100%) 버튼이 ★누를 때마다 거부★ 됐습니다.
+ *  실측 — 지갑 100,000 · 100배 → 명목 9,523,810 을 만들어 놓고 전부 거부.
+ *  바이낸스는 최대 수량 자체를 구간 상한으로 깎아서 보여줍니다
+ *  (100배면 명목 800,000 = 증거금 8,000).
+ *
+ *  ⭐ 깎였을 때는 #qty-cap-note 로 ★왜 이 숫자인지★ 말합니다.
+ *     조용히 8,000 만 넣으면 "왜 10만이 안 들어가지" 가 됩니다.
+ *
+ * ── 되돌리는 방법 ───────────────────────────────────────────────────────
+ *  git checkout -- js/qty-price-order.js
+ *  (부분만 끄려면 bracketMaxNotional() 이 Infinity 를 돌려주게 하면
+ *   퍼센트 버튼이 예전처럼 지갑 상한만 봅니다)
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -64,6 +84,105 @@ App.QtyPriceOrder = (function () {
     return isNaN(v) || v <= 0 ? 1 : v;
   }
 
+  /* 이 배율을 쓸 수 있는 ★명목 상한★ (USDT).
+     ★기준을 여기서 새로 만들지 않고 엔진에게 직접 묻습니다★ —
+     각 구간의 명목 상한을 App.Trading.bracketMaxLeverage() 에 넣어보고,
+     이 배율을 아직 허용하는 마지막 구간까지만 인정합니다.
+     그래야 "버튼이 만든 수량" 과 "주문이 받아주는 수량" 이 같은 기준이 됩니다.
+
+     표나 엔진이 없으면 Infinity — ★막지 않습니다.★ (예전과 똑같이 동작) */
+  function bracketMaxNotional(leverage) {
+    const RB = App.RiskBrackets;
+    if (!RB || typeof RB.tableFor !== "function") return Infinity;
+    if (!App.Trading || typeof App.Trading.bracketMaxLeverage !== "function") return Infinity;
+    const table = RB.tableFor();
+    if (!table || !table.length) return Infinity;
+    let cap = 0;
+    for (let i = 0; i < table.length; i++) {
+      /* 구간이 뒤로 갈수록 허용 배율이 내려갑니다. 처음 막히는 곳에서 멈춥니다
+         (표가 그 순서가 아니더라도 ★더 보수적인 쪽★ 으로 답이 나옵니다). */
+      if (App.Trading.bracketMaxLeverage(table[i].maxNotional) < leverage) break;
+      cap = table[i].maxNotional;
+    }
+    return cap;
+  }
+
+  function 돈(v) { return Math.round(v).toLocaleString("en-US"); }
+
+  /* 이 주문 금액에서 쓸 수 있는 최대 배율 — 엔진에게 그대로 묻습니다. */
+  function 허용배율(notional) {
+    if (!App.Trading || typeof App.Trading.bracketMaxLeverage !== "function") return null;
+    const m = App.Trading.bracketMaxLeverage(notional);
+    return typeof m === "number" && isFinite(m) && m >= 1 ? Math.floor(m) : null;
+  }
+
+  /* ⭐ 왜 이 숫자인지 회원에게 말해줍니다. 세 가지 경우가 있습니다.
+       (1) 방금 수량을 깎았다        → 무엇을 왜 깎았는지
+       (2) 지금 수량이 한도를 넘었다  → ★주문 버튼까지 가기 전에★ 여기서 알려줍니다
+       (3) 구간 때문에 최대가 낮다    → 최대가 얼마인지
+     지갑 때문에 걸린 것이면 아무 말도 안 합니다(예전 그대로). */
+  function updateCapNote(줄임안내) {
+    const note = el("qty-cap-note");
+    if (!note) return;
+    const 보조 = "#838DA4", 경고 = "#F0B429"; // 확정 팔레트. 빨강은 손익 전용이라 안 씁니다
+    const price = getEffectivePrice();
+    const leverage = getLeverage();
+    if (!price || !App.Trading) { note.textContent = ""; return; }
+    const 구간명목 = bracketMaxNotional(leverage);
+    if (!isFinite(구간명목)) { note.textContent = ""; return; }
+
+    if (줄임안내) { note.style.color = 경고; note.textContent = 줄임안내; return; }
+
+    const qty = dom.qtyInput ? parseFloat(dom.qtyInput.value) : NaN;
+    if (!isNaN(qty) && qty > 0 && qty * price > 구간명목) {
+      const 쓸수있는배율 = 허용배율(qty * price);
+      note.style.color = 경고;
+      note.textContent =
+        "지금 수량은 주문 금액 " + 돈(qty * price) + " USDT 입니다. " +
+        "이 금액에서는 최대 " + (쓸수있는배율 || 1) + "배까지만 됩니다(지금 " + leverage + "배). " +
+        "배율을 " + (쓸수있는배율 || 1) + "배 이하로 낮추거나 수량을 줄여주세요.";
+      return;
+    }
+
+    const 지갑명목 = App.Trading.getMaxAffordableMargin() * leverage;
+    if (구간명목 >= 지갑명목) { note.textContent = ""; return; }
+    note.style.color = 보조;
+    note.textContent =
+      leverage + "배에서는 주문 금액이 " + 돈(구간명목) +
+      " USDT 까지라 최대 수량이 여기까지입니다. 배율을 낮추면 더 넣을 수 있습니다.";
+  }
+
+  /* 입력을 끝냈을 때(칸을 벗어나거나 엔터) 한도까지 깎습니다.
+     ⚠️ 타이핑 중에는 안 건드립니다 — "10" 을 치는 중에 값이 바뀌면 못 씁니다.
+     바이낸스도 수량 자체를 한도로 잘라서 보여줍니다. */
+  function clampQtyToBracket() {
+    if (!dom.qtyInput || !App.Trading) return;
+    const price = getEffectivePrice();
+    const leverage = getLeverage();
+    if (!price) return;
+    /* 한도는 두 개입니다 — ★퍼센트 버튼과 완전히 같은 계산★ 입니다.
+       하나라도 빠뜨리면 "버튼으로는 되는데 손으로 치면 거부" 가 됩니다. */
+    const 구간명목 = bracketMaxNotional(leverage);
+    const 지갑명목 = App.Trading.getMaxAffordableMargin() * leverage;
+    const 한도명목 = Math.min(구간명목, 지갑명목);
+    if (!isFinite(한도명목) || 한도명목 <= 0) return;
+    const qty = parseFloat(dom.qtyInput.value);
+    if (isNaN(qty) || qty <= 0) return;
+    const 한도수량 = Math.floor((한도명목 / price) * 1e6) / 1e6;
+    if (qty <= 한도수량) return;
+    dom.qtyInput.value = 한도수량.toFixed(6);
+    syncMargin();
+    /* 어느 한도에 걸렸는지 ★구분해서★ 말합니다. 회원이 할 일이 다릅니다 —
+       배율을 낮출 일인지, 자산을 더 넣을 일인지. */
+    updateCapNote(
+      구간명목 <= 지갑명목
+        ? leverage + "배 한도에 맞춰 수량을 " + 한도수량.toFixed(6) + " 로 줄였습니다 " +
+          "(이 배율의 주문 금액 한도 " + 돈(구간명목) + " USDT). 더 넣으려면 배율을 낮춰주세요."
+        : "가진 자산에 맞춰 수량을 " + 한도수량.toFixed(6) + " 로 줄였습니다 " +
+          "(지금 넣을 수 있는 주문 금액 " + 돈(지갑명목) + " USDT)."
+    );
+  }
+
   // 수량(BTC) + 가격 + 레버리지로부터 증거금을 역산해서, ui.js가 읽는
   // 기존 #margin-input에 채워 넣습니다(새 계산이 아니라 값 변환).
   //
@@ -87,6 +206,7 @@ App.QtyPriceOrder = (function () {
     } else {
       marginInput.value = "0";
     }
+    updateCapNote();
   }
 
   function onLastClick() {
@@ -102,7 +222,11 @@ App.QtyPriceOrder = (function () {
     if (!price || !App.Trading) return;
     const maxMargin = App.Trading.getMaxAffordableMargin();
     const leverage = getLeverage();
-    const maxQty = (maxMargin * leverage) / price;
+    /* ★지갑 상한과 구간 상한 중 작은 쪽★ (B-2). 구간 상한을 안 보면
+       51배 이상에서 이 버튼이 만든 수량을 주문이 매번 거부합니다. */
+    const 지갑수량 = (maxMargin * leverage) / price;
+    const 구간수량 = bracketMaxNotional(leverage) / price;
+    const maxQty = Math.min(지갑수량, 구간수량);
 
     // toFixed(6)는 반올림이라 100%에서 최대치를 아주 조금 넘길 수 있습니다.
     // 그러면 "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다"로 진입이
@@ -153,9 +277,18 @@ App.QtyPriceOrder = (function () {
       '<div class="chip" data-pct="75">75%</div>' +
       '<div class="chip" data-pct="100">100%</div>' +
       "</div>" +
+      /* 구간 상한 때문에 수량이 깎였을 때만 글자가 들어갑니다(평소 빈 칸).
+         css 파일을 건드리지 않으려고 스타일을 여기 붙였습니다 —
+         확정 팔레트의 보조색(#838DA4)입니다. */
+      '<div id="qty-cap-note" style="margin-top:6px;font-size:14px;line-height:1.5;' +
+      'color:#838DA4;word-break:keep-all;"></div>' +
       "</div>";
     dom.qtyInput = el("order-qty-input");
     dom.qtyInput.addEventListener("input", syncMargin);
+    /* ⭐ 입력을 마치면 그 배율의 한도까지 깎습니다(주문 버튼까지 안 가게).
+       버튼을 누르면 브라우저가 먼저 칸을 벗어나게 하므로 change 가 먼저 옵니다. */
+    dom.qtyInput.addEventListener("change", clampQtyToBracket);
+    dom.qtyInput.addEventListener("blur", clampQtyToBracket);
 
     document.querySelectorAll("#qty-percent-row .chip").forEach((chip) => {
       chip.addEventListener("click", () => onPercentClick(parseFloat(chip.dataset.pct)));
@@ -181,6 +314,16 @@ App.QtyPriceOrder = (function () {
     // 하나 더 추가해서 레버리지 변경 시 증거금 재계산이 되게 합니다.
     const levSlider = el("lev-slider");
     if (levSlider) levSlider.addEventListener("input", () => setTimeout(syncMargin, 0));
+
+    /* 배율이 바뀌면 지금 수량이 그 배율의 한도를 넘을 수 있습니다.
+       ⚠️ 여기서는 ★깎지 않고 알려만 줍니다★ — 회원이 넣은 수량을 배율 변경만으로
+          말없이 바꾸면 그것도 놀랍니다. 깎는 것은 수량 칸을 직접 만졌을 때만 합니다.
+       (레버리지 창은 애초에 못 쓰는 배율을 안 보여줍니다 — js/leverage-modal.js) */
+    const levDisplay = el("lev-display");
+    if (levDisplay && typeof MutationObserver === "function") {
+      new MutationObserver(() => setTimeout(syncMargin, 0))
+        .observe(levDisplay, { childList: true, characterData: true, subtree: true });
+    }
 
     /* 종목이 바뀌면 수량 단위 이름도 같이 바뀝니다(BTC → 주).
        2026-08-27 실측 — 이걸 안 하면 삼성전자로 바꾼 뒤에도 주문수량 칸이

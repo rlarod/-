@@ -543,7 +543,14 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
   t("표시용 덮어쓰기가 ui.js의 요소를 지우지 않음(수량/청산가 공백 회귀 방지)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64224, time: Date.now() });
-    App.Trading.setLeverage(100);
+    /* 2026-08-31 [B건] 100배 → 75배.
+       이 검사가 지키는 것은 ★표 요소를 지우지 않는다★ 이지 배율이 아닙니다.
+       증거금 10,283 은 실제 캡처에서 가져온 값이라 그대로 두고 배율만 내립니다.
+         10,283 × 100 = 1,028,300 → 3구간(최대 75배) → ★진입 거절★
+         10,283 ×  75 =   771,225 → 2구간(최대 100배) → 열립니다
+       배율을 다시 100 으로 올리면 포지션이 안 생겨 pos-qty 가 '-' 로 남고
+       바로 아래 '수량이 비면 안 됨' 이 터집니다. */
+    App.Trading.setLeverage(75);
     App.Trading.openPosition("long", 10283, null, null);
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 64058, time: Date.now() });
     App.PositionTableExtra.renderForTest();
@@ -595,9 +602,16 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
 
     const { App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 96000, time: Date.now() });
-    App.Trading.setLeverage(100);
+    /* 2026-08-31 [B건] 100배 → 50배. 지갑을 거의 다 쓰면 명목이 4,878,049 라
+       4구간(최대 50배)에 떨어집니다. 100배로 두면 ★진입 자체가 거절★ 되고,
+       그러면 펀딩을 낼 포지션이 없어 이 검사가 ★아무것도 안 재면서★
+       맨 아래 '펀딩 지불 기록은 남아야 함' 에서만 빨강이 됩니다.
+       지키는 성질은 "잔고가 음수로 안 내려간다" 이지 배율이 아닙니다. */
+    App.Trading.setLeverage(50);
     // 잔고를 거의 다 쓰는 크기로 진입
-    App.Trading.openPosition("long", App.Trading.getMaxAffordableMargin(), null, null);
+    const r진입 = App.Trading.openPosition("long", App.Trading.getMaxAffordableMargin(), null, null);
+    ok(r진입.ok !== false, "진입이 되어야 펀딩을 잴 수 있음: " + (r진입.error || ""));
+    ok(App.Trading.getSnapshot().position, "포지션이 있어야 펀딩이 나갑니다");
     ok(App.Trading.getSnapshot().balance >= 0, "진입 직후 잔고는 0 이상");
 
     // 펀딩을 여러 번 정산해도 음수로 내려가면 안 됩니다
@@ -619,7 +633,17 @@ section("[8] 알림음 / 프로모션 / 종목 스트립");
   t("100% 버튼으로 실제 진입이 되어야 함(반올림 초과 방지)", () => {
     const { doc, App } = boot();
     App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 96456.75, time: Date.now() });
-    App.Trading.setLeverage(100);
+    /* 2026-08-31 [B건] 100배 → 50배.
+       이 검사가 지키는 것은 ★"100% 버튼 값이 반올림 때문에 최대치를 넘겨
+       진입이 거부되는" 회귀★ 입니다(그래서 Math.floor 를 씁니다).
+       100배로 두면 반올림과 무관하게 ★구간 최대배율★ 로 거절돼서, 지키던
+       회귀가 아니라 엉뚱한 이유로 빨강이 됩니다. 배율만 내립니다.
+
+       ⚠️ 곧 수리팀 B-2 가 js/qty-price-order.js 의 "최대(100%)" 버튼을
+          "구간 상한에 맞춰 수량을 깎는" 쪽으로 바꿉니다. 그때 이 검사가
+          다시 흔들릴 수 있습니다 — 그러면 ★100배에서도 100% 버튼이
+          진입까지 된다★ 로 다시 쓰면 됩니다. 지금은 아직 아닙니다. */
+    App.Trading.setLeverage(50);
 
     const before = App.Trading.getSnapshot().balance;
     click(doc.querySelector('#qty-percent-row .chip[data-pct="100"]'));

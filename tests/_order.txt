@@ -188,3 +188,8 @@ tests/first-paint-dark.test.js
 # 2026-08-31 대표 결정(B) — TL 마켓 상품 판매 중지. 효과 없는 상품에 TL 이 나가던 것.
 # 되돌리기: js/tl-market.js 의 SALE_PAUSED 를 false 로.
 tests/tl-market-sale-paused.test.js
+# 2026-08-31 대표 결재(B건) — "바이낸스 거래 시스템을 따라해 그것만 허용".
+# 명목이 커지면 최대 배율이 구간별로 내려갑니다. ⭐ 제일 중요한 것은 ① —
+# ★이미 열려 있는 포지션은 소급해서 줄지 않는다★ (대표님이 100배를 들고 계십니다).
+# 되돌리기: git checkout -- js/trading.js js/leverage-modal.js
+tests/bracket-max-leverage-seal.test.js

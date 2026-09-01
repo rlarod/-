@@ -133,17 +133,11 @@ App.Trading = (function () {
     if (margin + entryFee > state.balance) {
       return { ok: false, error: "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다." };
     }
-    // 구간별 유지증거금이 증거금 이상이면 진입하는 순간 이미 청산 조건입니다.
-    // 그대로 열면 회원 증거금이 즉시 사라지므로 여기서 막습니다.
-    const maintAtOpen = maintenanceMargin(notional);
-    if (maintAtOpen >= margin) {
-      return {
-        ok: false,
-        error:
-          "이 금액 구간에서는 배율이 너무 높습니다 — 유지증거금(" +
-          maintAtOpen.toFixed(2) +
-          " USDT)이 증거금보다 커서 진입 즉시 청산됩니다. 배율이나 증거금을 낮춰주세요.",
-      };
+    // 바이낸스 규칙 — 명목이 커질수록 쓸 수 있는 최대 배율이 구간별로 내려갑니다.
+    // (js/risk-brackets.js) 상한을 넘으면 왜 안 되는지 숫자로 알려주고 막습니다.
+    const capAtOpen = bracketMaxLeverage(notional);
+    if (state.leverage > capAtOpen) {
+      return { ok: false, error: bracketLeverageError(notional, state.leverage, capAtOpen) };
     }
 
     const entry = state.currentPrice; // 사용자가 가격을 입력하지 않고 현재 실시간 가격으로 자동 진입
@@ -220,16 +214,10 @@ App.Trading = (function () {
     if (margin + entryFee > state.balance) {
       return { ok: false, error: "증거금과 수수료를 합친 금액이 가용 자산보다 큽니다." };
     }
-    // 시장가와 같은 이유 — 유지증거금이 증거금 이상이면 체결되는 순간 청산됩니다.
-    const maintAtOrder = maintenanceMargin(notional);
-    if (maintAtOrder >= margin) {
-      return {
-        ok: false,
-        error:
-          "이 금액 구간에서는 배율이 너무 높습니다 — 유지증거금(" +
-          maintAtOrder.toFixed(2) +
-          " USDT)이 증거금보다 커서 체결 즉시 청산됩니다. 배율이나 증거금을 낮춰주세요.",
-      };
+    // 시장가와 같은 규칙 — 명목 구간의 최대 배율을 넘으면 받지 않습니다.
+    const capAtOrder = bracketMaxLeverage(notional);
+    if (leverage > capAtOrder) {
+      return { ok: false, error: bracketLeverageError(notional, leverage, capAtOrder) };
     }
 
     let validTp = tp || null;
@@ -428,6 +416,33 @@ App.Trading = (function () {
       if (typeof mm === "number" && isFinite(mm) && mm >= 0) return mm;
     }
     return notional * MMR_FALLBACK;
+  }
+  /* 명목 구간에서 허용되는 최대 배율 (바이낸스 Leverage & Margin Bracket).
+   * 표를 못 읽으면 엔진 상한을 돌려줘 예전처럼 동작합니다(막지 않습니다).
+   * ★레버리지 창(js/leverage-modal.js)도 이 함수를 그대로 씁니다 —
+   *   창에서 고를 수 있는 값과 주문이 받아주는 값이 어긋나면 그 자체가 고장입니다.★ */
+  function bracketMaxLeverage(notional) {
+    if (typeof notional !== "number" || !isFinite(notional) || notional <= 0) return MAX_LEVERAGE;
+    const RB = App.RiskBrackets;
+    if (RB && typeof RB.maxLeverage === "function") {
+      const m = RB.maxLeverage(notional);
+      if (typeof m === "number" && isFinite(m) && m >= 1) return Math.min(MAX_LEVERAGE, m);
+    }
+    return MAX_LEVERAGE;
+  }
+  // 거부 사유를 회원이 읽고 무엇을 고쳐야 할지 알 수 있게 씁니다(조용히 실패 금지).
+  function bracketLeverageError(notional, leverage, cap) {
+    return (
+      "주문 금액이 " +
+      Math.round(notional).toLocaleString("en-US") +
+      " USDT 라 최대 " +
+      cap +
+      "배까지만 가능합니다(지금 " +
+      leverage +
+      "배). 배율을 " +
+      cap +
+      "배 이하로 낮추거나 주문 금액을 줄여주세요."
+    );
   }
   // 유지증거금 ÷ 명목 — 청산가 식에 넣는 실효 유지증거금률(공제액이 이미 반영됨)
   function maintenanceMarginRate(notional) {
@@ -732,6 +747,7 @@ App.Trading = (function () {
     closePartial,
     calcLiquidationPrice,
     maintenanceMargin,
+    bracketMaxLeverage,
     getSnapshot,
   };
 })();

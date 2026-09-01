@@ -18,6 +18,18 @@
  *  레버리지 변경은 "앞으로 넣을 주문"에만 적용됩니다.
  *  이미 열린 포지션의 증거금·청산가·손익은 건드리지 않습니다
  *  (trading.js 의 기존 동작 그대로 — 이 파일은 계산에 관여하지 않습니다).
+ *
+ * ── 명목 구간별 배율 상한 (B건, 2026-08-31 대표 결재) ───────────────────
+ *  주문 금액이 커지면 바이낸스는 최대 배율을 구간별로 낮춥니다.
+ *  기준은 App.Trading.bracketMaxLeverage() 하나뿐입니다 — 창과 주문이
+ *  같은 함수를 봅니다. 여기서 따로 계산하지 않습니다.
+ *  ⭐ 수량이 비어 있으면 상한을 줄이지 않습니다(모르는 걸 막지 않습니다).
+ *  ⭐ 이미 열린 포지션은 건드리지 않습니다. 새로 여는 주문에만 적용됩니다.
+ *
+ * ── 되돌리는 방법 ───────────────────────────────────────────────────────
+ *  git checkout -- js/leverage-modal.js js/trading.js
+ *  (부분만 끄려면 이 파일의 allowedMax() 가 maxLev() 를 그대로 돌려주게
+ *   바꾸면 창만 예전처럼 100배까지 보여줍니다 — 주문 거부는 그대로 남습니다)
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -81,6 +93,29 @@ App.LeverageModal = (function () {
     if (typeof mm !== "number" || !isFinite(mm) || mm < 0) return null;
     var rate = mm / notional;
     return rate >= 0 && rate < 1 ? rate : null;
+  }
+
+  /* ── 명목 구간별 배율 상한 (2026-08-31 대표 결재 · 바이낸스 B건) ──────────
+     주문 금액이 커지면 바이낸스는 쓸 수 있는 최대 배율을 낮춥니다.
+     ★기준을 여기서 새로 만들지 않고 엔진(App.Trading.bracketMaxLeverage)을
+       그대로 부릅니다.★ 창은 50배까지만 보여주는데 주문은 60배를 받는 식으로
+       어긋나면 그것도 고장입니다.
+
+     ⭐ 수량이 아직 없으면 null 을 돌려주고 ★상한을 줄이지 않습니다.★
+        주문 금액을 모르는 상태에서 임의로 막으면 그것도 거짓말입니다. */
+  function bracketMax() {
+    var n = orderNotional();
+    if (n === null) return null;
+    if (!App.Trading || typeof App.Trading.bracketMaxLeverage !== "function") return null;
+    var m = App.Trading.bracketMaxLeverage(n);
+    return typeof m === "number" && isFinite(m) && m >= 1 ? Math.floor(m) : null;
+  }
+
+  /* 실제로 고를 수 있는 상한 = 이용권 상한 ∩ 명목 구간 상한 */
+  function allowedMax() {
+    var gate = maxLev();
+    var b = bracketMax();
+    return b === null ? gate : Math.min(gate, b);
   }
 
   function currentLev() {
@@ -150,9 +185,14 @@ App.LeverageModal = (function () {
     built = true;
   }
 
-  function renderPresets() {
-    var max = maxLev();
-    dom.presets.innerHTML = PRESETS.filter(function (v) { return v <= max; })
+  function renderPresets(maxArg) {
+    var max = typeof maxArg === "number" ? maxArg : allowedMax();
+    var 목록 = PRESETS.filter(function (v) { return v <= max; });
+    /* ⭐ 상한 자체는 ★언제나 하나 보여줍니다.★
+       구간 상한이 25배인데 프리셋이 1·10·20 에서 끊기면 회원은 25배를
+       고를 방법을 못 찾습니다(슬라이더를 정확히 25에 맞춰야 함). */
+    if (목록.indexOf(max) === -1) 목록.push(max);
+    dom.presets.innerHTML = 목록
       .map(function (v) {
         return '<button type="button" class="lev-preset" data-v="' + v + '">' + v + "x</button>";
       })
@@ -163,7 +203,12 @@ App.LeverageModal = (function () {
   }
 
   function setPending(v) {
-    var max = maxLev();
+    var max = allowedMax();
+    /* ⭐ 창이 열려 있는 동안 수량·가격이 바뀌어 상한이 달라졌을 수 있습니다.
+       ★그때마다 눈금·슬라이더·프리셋을 다시 맞춥니다.★
+       안 맞추면 회원은 100 까지 밀 수 있는 슬라이더를 보고 있는데
+       주문은 25배까지만 받는 상태가 됩니다. */
+    syncMax(max);
     var n = Math.max(1, Math.min(max, Math.round(Number(v) || 1)));
     pending = n;
     dom.value.textContent = String(n);
@@ -173,10 +218,20 @@ App.LeverageModal = (function () {
     });
     /* 안내 문구 — 지어낸 숫자 없이 지금 상한만 알려줍니다. */
     var base = App.LeverageGate && App.LeverageGate.getDefaultMax ? App.LeverageGate.getDefaultMax() : max;
-    dom.note.textContent =
-      max > base
-        ? "이용권 적용 중 — 최대 " + max + "배까지 사용할 수 있습니다."
-        : "현재 최대 " + max + "배까지 사용할 수 있습니다.";
+    var 구간상한 = bracketMax();
+    var 명목 = orderNotional();
+    if (구간상한 !== null && 명목 !== null && 구간상한 < maxLev()) {
+      /* 주문 금액 때문에 상한이 내려간 경우 — 이유를 그대로 말합니다. */
+      dom.note.textContent =
+        "주문 금액 " + Math.round(명목).toLocaleString("en-US") +
+        " USDT 구간이라 최대 " + 구간상한 +
+        "배까지 가능합니다. 금액을 줄이면 더 높은 배율을 쓸 수 있습니다.";
+    } else {
+      dom.note.textContent =
+        max > base
+          ? "이용권 적용 중 — 최대 " + max + "배까지 사용할 수 있습니다."
+          : "현재 최대 " + max + "배까지 사용할 수 있습니다.";
+    }
 
     /* 위험 안내 — 이 배율이면 가격이 몇 % 반대로 가면 청산되는지 실제로 계산합니다.
        js/trading.js 의 청산가 공식과 같은 식입니다.
@@ -211,12 +266,41 @@ App.LeverageModal = (function () {
     }
   }
 
+  /* 눈금·슬라이더 상한·프리셋 목록을 지금 상한에 맞춥니다.
+     값이 그대로면 아무것도 다시 그리지 않습니다(누르는 중에 깜빡이지 않게). */
+  var 마지막상한 = null;
+  function syncMax(max) {
+    if (마지막상한 === max) return;
+    마지막상한 = max;
+    if (dom.range) dom.range.max = String(max);
+    if (dom.maxLabel) dom.maxLabel.textContent = max + "x";
+    renderPresets(max);
+  }
+
+  /* 창이 열려 있는 동안 수량·가격이 바뀌면 다시 계산합니다. */
+  function refresh() {
+    if (!built || !dom.wrap || dom.wrap.style.display === "none") return;
+    setPending(pending === null ? currentLev() : pending);
+  }
+
+  /* 수량·지정가 칸을 지켜봅니다. 창이 열려 있을 때만 일합니다. */
+  var 감시붙임 = false;
+  function watchOrderInputs() {
+    if (감시붙임) return;
+    감시붙임 = true;
+    ["order-qty-input", "limit-price-input"].forEach(function (id) {
+      var e = el(id);
+      if (!e) return;
+      e.addEventListener("input", refresh);
+      e.addEventListener("change", refresh);
+    });
+  }
+
   function open() {
     build();
-    var max = maxLev();
-    dom.range.max = String(max);
-    dom.maxLabel.textContent = max + "x";
-    renderPresets();
+    watchOrderInputs();
+    마지막상한 = null; // 열 때마다 새로 맞춥니다
+    syncMax(allowedMax());
     setPending(currentLev());
     dom.wrap.style.display = "flex";
     setTimeout(function () { dom.ok.focus(); }, 0);
@@ -229,7 +313,10 @@ App.LeverageModal = (function () {
 
   /* 확인을 눌렀을 때만 실제로 바꿉니다. */
   function apply() {
-    var v = pending;
+    /* ⚠️ 확인을 누르는 ★그 순간★ 다시 잽니다. 창을 띄워둔 사이에 수량이
+       커졌을 수 있고, 그러면 지금 고른 배율이 이미 못 쓰는 값입니다.
+       여기서 안 깎으면 "창은 100 을 보여줬는데 주문은 거부" 가 됩니다. */
+    var v = pending === null ? null : Math.max(1, Math.min(allowedMax(), pending));
     close();
     if (!v) return;
     if (App.Trading && typeof App.Trading.setLeverage === "function") {
@@ -265,7 +352,11 @@ App.LeverageModal = (function () {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  return { init: init, open: open, close: close, apply: apply, _setPending: setPending, PRESETS: PRESETS };
+  return {
+    init: init, open: open, close: close, apply: apply,
+    _setPending: setPending, PRESETS: PRESETS,
+    bracketMax: bracketMax, allowedMax: allowedMax, refresh: refresh,
+  };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = App.LeverageModal;

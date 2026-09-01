@@ -165,10 +165,10 @@ js/board.js        js/orderbook.js   js/chart.js      js/websocket.js
 
 **한 글자도 고치지 않습니다.** 필요하면 별도 모듈을 만들어 우회합니다.
 
-기준 해시 (2026-08-20 · **js/trading.js 만 2026-08-31 대표 결재로 갱신**):
+기준 해시 (2026-08-20 · **js/trading.js 만 2026-08-31 대표 결재로 갱신 · B건까지 반영**):
 
 ```
-7e26f9d581820f425b4402edd132d653  js/trading.js
+ff3fef520608d56d4c7eb6aef9b08dff  js/trading.js
 333fc427e75b47b306699c92aa4e7b50  js/ui.js
 9cec9a7257eb54f379bf72e14e21e463  js/auth.js
 faddcbbc34b5165177ff26cb978040f8  js/supabase-sync.js
