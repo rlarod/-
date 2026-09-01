@@ -1,7 +1,35 @@
-/* tests/_sandbox-modules.js
+/* tests/_engine-modules.js
  * =========================================================================
  * 거래 엔진(js/trading.js)을 sandbox 에 태울 때 ★같이 태워야 하는 것★ — 단 하나의 목록
  * =========================================================================
+ *
+ * ── ⚠️⚠️ 2026-08-31 — ★이름을 바꿨습니다★ (_sandbox-modules.js → _engine-modules.js)
+ *   처음 이름이 tests/_sandbox-modules.js 였습니다.
+ *   tests/tests-dir-hygiene.test.js 의 ★약한금지★ 낱말에 "sandbox" 가 있습니다.
+ *
+ *   ⚠️ 기록팀이 그 함정을 ★자기 손으로 문서에 적어놓고 자기가 밟았습니다.★
+ *      (같은 날 tests/temp-file-guard.test.js 가 자기 이름에 걸려 개명한 일을
+ *       바로 그 파일 주석에 적어뒀는데도 그랬습니다)
+ *
+ *   ★단독 실행으로는 안 잡혔습니다.★ 그 검사는 "git 이 추적하는" 파일만 봅니다.
+ *   파일이 git 밖일 때는 목록에 없어서 통과했고(그때 npm test 159/159),
+ *   PM 이 git add 한 ★그 순간★ 빨강이 됐습니다. 재실행 없이 커밋돼 c6242d8 로
+ *   배포까지 나갔습니다.
+ *
+ *   ── 왜 "예외" 가 아니라 "이름 바꾸기" 인가 ──
+ *     1) 예외를 한 번 만들면 다음 사람이 자기 파일도 넣습니다. 예외 목록은 자랍니다.
+ *     2) "sandbox 는 이 파일이 진짜로 하는 일의 이름 아니냐" 는 반론이 있었습니다.
+ *        (js/jitter-probe.js 의 "probe" 가 실제 모듈 이름인 것처럼)
+ *        ★아닙니다.★ 이 저장소에 js/sandbox.js 같은 모듈은 없습니다.
+ *        "sandbox" 는 테스트 도구를 가리키는 일반 낱말이라 probe 와 다릅니다.
+ *        게다가 이 목록이 진짜로 가리키는 것은 ★엔진이 필요로 하는 모듈★ 입니다.
+ *        _engine-modules 가 하는 일을 더 정확히 말합니다.
+ *     3) 이름을 바꾸면 ★원인이 사라집니다.★ 예외는 증상만 가립니다.
+ *
+ *   ⭐ 같은 사고가 또 안 나게 tests/tests-dir-hygiene.test.js 에 [5] 를 넣었습니다 —
+ *      ★도우미목록·_order.txt 에 등록된 파일은 git 추적 여부와 상관없이★ 이름을 봅니다.
+ *      등록했다는 것 자체가 "이건 임시 파일이 아니다" 라는 선언이기 때문입니다.
+ *      그러면 git add 전에도 잡힙니다.
  *
  * ── 왜 이 파일이 생겼나 (2026-08-31) ────────────────────────────────────
  *   대표 결재로 유지증거금이 바이낸스 명목 구간별로 바뀌면서
@@ -23,7 +51,7 @@
  *
  *   harness 를 못 쓰고 직접 sandbox 를 만드는 테스트는 이렇게 씁니다 —
  *
- *     const { 엔진필수 } = require("./_sandbox-modules.js");
+ *     const { 엔진필수 } = require("./_engine-modules.js");
  *     엔진필수.forEach((m) => vm.runInContext(read(m.경로), sandbox, { filename: m.경로 }));
  *     vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
  *

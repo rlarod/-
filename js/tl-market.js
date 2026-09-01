@@ -99,6 +99,68 @@ App.TLMarket = (function () {
     return { buyable: true, label: "구매하기", badge: null };
   }
 
+  /* =======================================================================
+   * 2026-08-31 — TL 마켓 판매 중지 (대표 결정 · 승인대기 4번)
+   * =======================================================================
+   * 대표 결정: "일단 상품을 내려서 못 사게 한다"
+   *
+   * 왜 — 지금 마켓에서 살 수 있는 유일한 상품인 '레버리지 x100배 이용권' 이
+   *      아무 효과가 없습니다. js/leverage-gate.js 의 DEFAULT_MAX 가 이미 100 이라
+   *      50 TL 을 내고 사도 상한은 그대로 100 입니다.
+   *      (2026-08-27 "일단 100배로 냅두자" 결정의 결과입니다. 누구 잘못이 아닙니다)
+   *
+   * 무엇을 했나 — 상품을 지우지 않았습니다. 카드는 그대로 보이고 살 수만 없게 했습니다.
+   *      이미 산 회원의 보관함·구매기록은 손대지 않았습니다(환불은 대표가 고르지
+   *      않으신 안입니다). 보관함의 [사용하기] 도 그대로 둡니다 — TL 이 안 나갑니다.
+   *
+   * ⚠ statusInfo() 는 건드리지 않았습니다. 그건 "서버가 알려준 상품 상태" 이고
+   *   이건 "우리가 화면에서 잠근 것" 이라 뜻이 다릅니다. 섞으면 나중에 서버 상태를
+   *   못 읽습니다. 그래서 saleInfo() 라는 한 겹을 따로 뒀습니다.
+   *
+   * ⚠ 이것은 화면 잠금입니다. 개발자도구로 purchase_tl_market_item 을 직접 부르면
+   *   서버는 여전히 받습니다. 완전히 막으려면 서버에서 tl_market_products.status 를
+   *   'paused' 로 바꿔야 합니다 (supabase/schema-market-pause-unbuilt.sql 과 같은 방식).
+   *
+   * 되돌리기 — 아래 SALE_PAUSED 를 false 로 바꾸면 즉시 원래대로 돌아갑니다.
+   *            그 한 글자 말고는 아무것도 안 바꿔도 됩니다.
+   * ======================================================================= */
+  var SALE_PAUSED = true;
+  var PAUSED_BADGE = "판매 중지";
+  var PAUSED_BTN = "지금은 살 수 없습니다";
+  var PAUSED_WHY =
+    "지금은 아이템을 살 수 없습니다. 아이템 효과가 실제로 적용되지 않는 것이 확인돼 " +
+    "판매를 잠시 멈췄습니다. 보유하신 TL 은 그대로 남아 있고, 이미 가지고 계신 " +
+    "아이템은 [아이템 보관함] 에서 그대로 쓰실 수 있습니다.";
+
+  /* 화면에 보여줄 상태. 판매 중지가 켜져 있으면 서버 상태보다 이것이 앞섭니다. */
+  function saleInfo(product) {
+    if (SALE_PAUSED) return { buyable: false, label: PAUSED_BTN, badge: PAUSED_BADGE, paused: true };
+    return statusInfo(product);
+  }
+
+  /* 왜 못 사는지 알려주는 안내문. 마크업을 지우지 않고 여기서 만들어 넣습니다.
+     SALE_PAUSED 를 false 로 하면 만들지 않고, 이미 있으면 감춥니다. */
+  function renderPausedNote() {
+    if (!dom || !dom.shopSection) return;
+    var note = document.getElementById("mk-sale-paused-note");
+    if (!SALE_PAUSED) { if (note) note.style.display = "none"; return; }
+    if (!note) {
+      note = document.createElement("p");
+      note.id = "mk-sale-paused-note";
+      note.className = "hd-empty mk-paused-note";
+      /* 색을 새로 만들지 않습니다. style.css 의 팔레트 변수를 그대로 씁니다 —
+         값을 여기 적어두면 style.css 가 바뀔 때 여기만 옛 색으로 남습니다. */
+      note.style.cssText =
+        "display:block;text-align:left;margin:0 0 12px;padding:12px 14px;" +
+        "background:var(--surface);border:1px solid var(--border);" +
+        "border-left:3px solid var(--gold);" +
+        "border-radius:10px;color:var(--text);line-height:1.6;";
+      dom.shopSection.insertBefore(note, dom.shopSection.firstChild);
+    }
+    note.textContent = PAUSED_WHY;
+    note.style.display = state.view === "shop" ? "block" : "none";
+  }
+
   /* 구매 전 안내용 검사 — 서버와 같은 순서 */
   function checkPurchase(product, quantity, balance, alreadyOwned) {
     var q = Number(quantity) || 0;
@@ -231,6 +293,8 @@ App.TLMarket = (function () {
    * ======================================================================= */
 
   function openConfirm(product, quantity) {
+    /* 2026-08-31 대표 결정 — 판매 중지. 버튼을 안 그리지만 여기서도 막습니다. */
+    if (SALE_PAUSED) { alert(PAUSED_WHY); return; }
     var bal = state.balance ? Number(state.balance.balance) : NaN;
     var pre = checkPurchase(product, quantity, bal, ownedQty(product.id));
 
@@ -366,7 +430,8 @@ App.TLMarket = (function () {
   }
 
   function productCard(p) {
-    var st = statusInfo(p);
+    /* statusInfo 가 아니라 saleInfo — 판매 중지(2026-08-31 대표 결정)를 함께 봅니다 */
+    var st = saleInfo(p);
     var owned = ownedQty(p.id);
     var thumb = p.image_url
       ? '<img class="hd-thumb-img" src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '">'
@@ -503,6 +568,7 @@ App.TLMarket = (function () {
     });
     renderBalance();
     renderActive();
+    renderPausedNote();
 
     if (dom.shopSection) dom.shopSection.style.display = state.view === "shop" ? "" : "none";
     if (dom.bagSection) dom.bagSection.style.display = state.view === "bag" ? "" : "none";
@@ -616,6 +682,9 @@ App.TLMarket = (function () {
     filterProducts: filterProducts,
     sortProducts: sortProducts,
     statusInfo: statusInfo,
+    saleInfo: saleInfo,
+    isSalePaused: function () { return SALE_PAUSED; },
+    pausedText: function () { return PAUSED_WHY; },
     checkPurchase: checkPurchase,
     activeEffect: activeEffect,
     durationText: durationText,

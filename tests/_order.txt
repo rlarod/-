@@ -182,3 +182,9 @@ tests/mmr-fallback-blindspot.test.js
 # 코드가 되살아나도 주석만 다르면 초록으로 넘어갑니다(실제로 sync-guard 가 그랬습니다).
 tests/comment-anchor-guard.test.js
 tests/leverage-modal-tiered-warn.test.js
+# 2026-08-31 대표 "처음 키면 화이트모드가 나오고 얼마있다 다크모드로 바껴".
+# 첫 화면이 하얗게 보이던 것 — index.html 의 인라인 배경과 data-theme 를 지킵니다.
+tests/first-paint-dark.test.js
+# 2026-08-31 대표 결정(B) — TL 마켓 상품 판매 중지. 효과 없는 상품에 TL 이 나가던 것.
+# 되돌리기: js/tl-market.js 의 SALE_PAUSED 를 false 로.
+tests/tl-market-sale-paused.test.js

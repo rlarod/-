@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<!-- ⭐ data-theme="dark" 를 처음부터 붙여둡니다 (2026-08-31 대표 보고 "처음 키면 화이트모드").
+     예전에는 js/theme.js 가 모든 스크립트가 끝난 뒤에야 이 속성을 붙여서, 그때까지
+     style.css 의 밝은 팔레트(--bg:#F3F4F7)가 그대로 보였습니다. 실측 1.6초.
+     js/theme.js 는 DARK_ONLY 라 항상 같은 "dark" 를 다시 넣습니다 — 동작은 그대로입니다.
+     되돌리기: 이 줄의 data-theme="dark" 만 지우면 원래대로. -->
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <title>TL · TRADING LEAGUE — 모의투자 트레이딩 리그</title>
@@ -8,6 +13,27 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/tl-mark-dark-32.png" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="assets/brand/tl-mark-180.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ⭐ 첫 그림 배경 — 이 <style> 은 반드시 아래 <link rel="stylesheet"> 들보다 위에 있어야
+     합니다. 아래로 내리면 바깥 CSS 를 기다리는 동안 다시 하얘집니다.
+
+     왜 필요한가 (2026-08-31 대표: "처음 키면 화이트모드가 나오고 얼마있다 다크모드로 바껴")
+       바깥 CSS 가 도착하기 전까지 html·body 에 배경이 없어 브라우저 기본값(하양)이 칠해졌습니다.
+       실측(CSS 를 800ms 늦춘 조건): 0~1632ms 하양 → 1632~3275ms 밝은회색 → 3275ms 에야 다크.
+
+     ⚠ 색을 여기서 새로 정한 것이 아닙니다. 원본은 아래 두 곳이고 값이 같아야 합니다.
+        style.css  html[data-theme="dark"]{ --bg:#0A0F1C; --text:#E7ECF5; }   ← 정본
+        CLAUDE.md  확정 팔레트  배경 #0A0F1C / 본문 #E7ECF5
+        tests/first-paint-dark.test.js 가 이 두 줄과 style.css 가 같은 값인지 검사합니다.
+        style.css 의 --bg / --text 를 바꾸면 이 블록도 같이 바꿔야 합니다.
+
+     되돌리기: 이 <style id="tl-first-paint"> 블록만 지우면 원래대로. -->
+<style id="tl-first-paint">
+  /* style.css html[data-theme="dark"] 의 --bg 와 같은 값 */
+  html{background:#0A0F1C;}
+  /* style.css html[data-theme="dark"] 의 --bg / --text 와 같은 값 */
+  body{background:#0A0F1C;color:#E7ECF5;}
+</style>
 
 <link rel="stylesheet" href="style.css">
 <!-- 폰(≤700px)에서 시세 바를 접어 펀딩비가 보이게 합니다 (TL-001).

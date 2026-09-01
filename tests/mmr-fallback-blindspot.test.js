@@ -48,8 +48,8 @@ const path = require("path");
 const vm = require("vm");
 
 const REPO = process.env.REPO || path.resolve(__dirname, "..");
-/* 엔진과 같이 태워야 하는 모듈 목록 — tests/_sandbox-modules.js 한 곳에만 있습니다 */
-const { 엔진필수 } = require("./_sandbox-modules.js");
+/* 엔진과 같이 태워야 하는 모듈 목록 — tests/_engine-modules.js 한 곳에만 있습니다 */
+const { 엔진필수 } = require("./_engine-modules.js");
 const TESTS = __dirname;
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
 
@@ -101,7 +101,7 @@ const 로드아님파일 = {
   "dev-server.test.js": "로컬 서버가 특정 파일을 특별 취급하지 않는지 보는 목록입니다(엔진을 안 태웁니다)",
   "locked-hashes-source.test.js": "md5 기준값을 다루는 파일이라 경로 문자열만 나옵니다",
   "_locked-hashes.js": "md5 기준값 자체를 담은 파일입니다",
-  "_sandbox-modules.js": "무엇을 태울지 적어둔 목록 자체입니다(태우는 파일이 아닙니다)",
+  "_engine-modules.js": "무엇을 태울지 적어둔 목록 자체입니다(태우는 파일이 아닙니다)",
 };
 
 /* =========================================================================
@@ -223,20 +223,20 @@ const 엔진태움 = [];
     if (예외[name]) return;
     const 원문 = fs.readFileSync(path.join(TESTS, name), "utf8");
     const src = 주석걷어내기(원문);
-    /* ⭐ 목록(tests/_sandbox-modules.js)을 읽어 쓰는 테스트는 통과입니다.
+    /* ⭐ 목록(tests/_engine-modules.js)을 읽어 쓰는 테스트는 통과입니다.
        그게 권장 방식입니다 — 목록이 늘어도 자동으로 따라옵니다.
 
        ⚠️ 2026-08-31 — 처음에는 "require 했으면 통과" 로 만들었습니다.
        그런데 ★require 만 해놓고 실제로는 안 쓰는★ 돌연변이를 넣었더니
        그대로 통과했습니다. 방금 만든 검사에 방금 구멍이 생긴 것입니다.
        그래서 ★읽어온 이름이 실제로 쓰이는지★ 까지 봅니다(선언 말고 또 나와야 함). */
-    const 읽는줄 = src.split(/\r?\n/).find((l) => l.indexOf("_sandbox-modules.js") !== -1);
+    const 읽는줄 = src.split(/\r?\n/).find((l) => l.indexOf("_engine-modules.js") !== -1);
     if (읽는줄) {
       const m = 읽는줄.match(/const\s*\{?\s*([A-Za-z0-9_$가-힣]+)/);
       const 이름 = m ? m[1] : null;
       const 쓰인횟수 = 이름 ? (src.split(이름).length - 1) : 0;
       ok(
-        name + " 이 tests/_sandbox-modules.js 목록을 ★실제로 써서★ 태운다",
+        name + " 이 tests/_engine-modules.js 목록을 ★실제로 써서★ 태운다",
         !!이름 && 쓰인횟수 >= 2,
         "목록을 읽어오기만 하고 로드 목록에 안 넣었습니다 (" + 이름 + " 등장 " + 쓰인횟수 + "회)." +
           "\n         → require 만 하면 아무것도 안 태워집니다. 실제 로드 목록에 넣으세요."
@@ -253,7 +253,7 @@ const 엔진태움 = [];
         rb !== -1,
         m.이유 +
           "\n         → 로드 목록에서 \"js/trading.js\" 바로 앞에 \"" + m.경로 + "\" 를 넣으세요." +
-          "\n         → 또는 tests/_sandbox-modules.js 의 엔진필수 를 읽어 쓰세요(권장)." +
+          "\n         → 또는 tests/_engine-modules.js 의 엔진필수 를 읽어 쓰세요(권장)." +
           "\n         → 일부러 그런 것이면 이 파일 위쪽 예외 목록에 ★이유와 함께★ 적으세요."
       );
       if (rb !== -1) {

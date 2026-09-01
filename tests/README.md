@@ -37,10 +37,10 @@ require("./_locked-hashes.js").BY_FILE["js/ui.js"]
 
 ## 거래 엔진(js/trading.js)을 sandbox 에 태울 때
 
-**무엇을 태워야 하는지는 `tests/_sandbox-modules.js` 한 곳에만 적혀 있습니다.**
+**무엇을 태워야 하는지는 `tests/_engine-modules.js` 한 곳에만 적혀 있습니다.**
 
 ```js
-const { 엔진필수 } = require("./_sandbox-modules.js");
+const { 엔진필수 } = require("./_engine-modules.js");
 엔진필수.forEach((m) => vm.runInContext(read(m.경로), sandbox, { filename: m.경로 }));
 vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
 ```
@@ -52,6 +52,75 @@ vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
 **테스트는 초록인데 회원은 다른 값을 겪는** 상태가 됩니다 — 조용한 고장입니다.
 실제로 2026-08-31 에 봉인 여러 개가 이 상태였습니다(청산가 59,700 vs 59,924.40).
 `tests/mmr-fallback-blindspot.test.js` 가 재발을 막습니다.
+
+## ⚠️ git 을 보는 검사는 **스테이징 전후로 결과가 달라집니다**
+
+**`npm test` 가 통과해도, `git add` 뒤에는 빨강이 될 수 있습니다.**
+
+2026-08-31 실제 사고 — `tests/_sandbox-modules.js` 라는 이름을 만들었습니다.
+`sandbox` 는 `tests/tests-dir-hygiene.test.js` 의 금지 낱말입니다.
+
+```
+① 기록팀이 npm test 를 돌림          → 159/159 통과 (파일이 아직 git 밖)
+② PM 이 git add tests/               → 그 순간 추적 대상이 됨
+③ PM 이 다시 안 돌리고 커밋          → 빨간 채로 c6242d8 배포
+```
+
+같은 성질로 **하루에 두 번** 당했습니다(그전엔 `temp-file-guard` 가 자기 이름에 걸림).
+
+### 왜 이런 일이 생기나 — 검사에 방향이 두 가지 있습니다
+
+| 방향 | 무엇을 보나 | 스테이징 전 | 잊으면? |
+|---|---|---|---|
+| **A. 빠졌나** | "이 파일이 git 에 있나" | **빨강** | 안전 — 커밋 전에 눈에 띔 |
+| **B. 끼었나** | "추적 목록에 이상한 게 있나" | **초록** | ⚠️ 커밋 뒤에야 빨강 |
+
+**B 방향은 성질상 스테이징 뒤에만 판정됩니다.** 없앨 수 없습니다.
+
+지금 B 방향인 봉인 (2026-08-31 실측 **2개**)
+
+```
+tests/tests-dir-hygiene.test.js   [2] 정체불명 파일  [3] 임시 낱말 이름
+tests/shots-gitignore-seal.test.js  shots/ 가 커밋에 들어갔나
+```
+
+A 방향(안전)은 `html-assets-tracked` · `docs-sql-tracked` · `test-registry` ·
+`pm-naming-seal` · `signup-insert-guard` · `risk-brackets-tiered-mmr` 등입니다.
+`tl-brand` 는 `git diff --name-only HEAD` 라 작업트리 기준이고 스테이징과 무관합니다.
+
+### ⭐ `git add` 하기 전에 "add 한 뒤"를 미리 보는 법
+
+**진짜 색인을 건드리지 않고** 확인합니다. 임시 색인 파일에만 씁니다.
+
+```bash
+GIT_INDEX_FILE=/tmp/tl-idx sh -c 'git read-tree HEAD && git add -A && npm test'
+rm -f /tmp/tl-idx
+```
+
+`git ls-files` 는 **색인(staged)** 을 읽으므로, 이렇게 하면 봉인들이
+"곧 커밋될 상태" 를 그대로 봅니다. **작업트리도 진짜 색인도 안 바뀝니다.**
+
+> `git diff --cached` 를 따로 볼 필요는 없습니다. `git ls-files` 가 이미 색인을 봅니다.
+> 이번에 빠져 있던 것은 **반대쪽** — "아직 git 밖인데 이미 등록된 파일" 이었습니다.
+> 그건 `tests-dir-hygiene` 의 `[6]` 이 막습니다(아래).
+
+### 그래서 무엇이 바뀌었나 — `[6]` 등록된 파일은 git 과 무관하게 봅니다
+
+`도우미목록` 이나 `tests/_order.txt` 에 이름을 적는 것은
+**"이건 임시 파일이 아니다" 라는 선언**입니다. 그런 파일은 git 이 알든 모르든
+그 자리에서 이름을 검사합니다.
+
+**이게 있었으면 `_sandbox-modules.js` 는 `git add` 전, 159/159 그 시점에 잡혔습니다.**
+
+### PM 절차 (잊어도 되게 만들었지만, 그래도)
+
+```
+1. git add <파일들>
+2. ★npm test 를 한 번 더★         ← B 방향 2개는 이때만 판정됩니다
+3. 통과하면 커밋
+```
+
+위 `GIT_INDEX_FILE` 한 줄을 쓰면 1번 전에 미리 볼 수 있습니다.
 
 ## 새 테스트를 추가할 때
 
