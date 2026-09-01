@@ -163,7 +163,21 @@ function 엔진태우는줄인가(line) {
   if (!/["']js\/trading\.js["']/.test(line)) return false;
   if (/["']js\/trading\.js["']\s*:/.test(line)) return false; // 해시맵 키
   if (다른잠긴파일.test(line)) return false; // 수정 금지 12개 목록
-  if (소스읽기.test(line)) return false; // 소스를 글자로 읽는 것
+  /* ⚠️⚠️ 2026-09-01 — ★소스를 글자로 읽는 줄을 '엔진을 태운다' 로 잘못 읽었습니다.★
+    [
+      '        const 상한 = (fs.readFileSync(path.join(REPO, "js/trading.js"), "utf8")',
+      "소스를 읽는데 ★변수 이름이 src 가 아닌★ 줄 (2026-09-01 실제 오탐)",
+    ],
+     order-panel.test.js 가 MAX_CLOSED_TRADES 를 읽으려고 이렇게 썼습니다 —
+         const 상한 = (fs.readFileSync(path.join(REPO, "js/trading.js"), "utf8")
+     소스읽기 목록이 'const src = ' 처럼 ★변수 이름★ 에 기대고 있어서, 이름이 다르면
+     그대로 오탐이 났습니다. 변수 이름은 사람마다 달라서 기댈 기준이 못 됩니다.
+     ★readFileSync 가 있으면 소스를 읽는 것★ 으로 봅니다. 단 그 결과를 곧바로
+     runInContext·eval 에 넣으면 그건 ★진짜 태우는 줄★ 이라 예외입니다
+     (tests/realized-pnl.test.js:31 이 실제로 그렇게 씁니다). */
+  const 태우는호출 = /runInContext|\.eval\(|win\.eval/.test(line);
+  if (/readFileSync/.test(line) && !태우는호출) return false;
+  if (소스읽기.test(line) && !태우는호출) return false; // 소스를 글자로 읽는 것
   return true;
 }
 
@@ -180,6 +194,10 @@ section("[1] 판정기 자체 확인 (오탐 / 미탐)");
     [
       '  vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });',
       "forced-liquidation-wipeout-seal.test.js 의 vm 방식",
+    ],
+    [
+      '  vm.runInContext(fs.readFileSync(path.join(REPO, "js/trading.js"), "utf8"), sandbox);',
+      "readFileSync 를 곧바로 태우는 줄 — ★이건 진짜 태우는 것★ (realized-pnl.test.js:31)",
     ],
     ['  "js/symbol-guard.js", "js/trading.js", "js/ui.js",', "boot-once.test.js 의 한 줄 목록"],
   ].forEach(([line, why]) => {
@@ -370,13 +388,56 @@ section("[3] 예외 목록");
  * ========================================================================= */
 section("[4] index.html 순서");
 {
-  const html = read("index.html");
+  /* ⚠️⚠️ 2026-09-01 — ★주석 안에 있는 script 태그를 '부른다' 로 읽고 있었습니다.★
+     대표 지시로 구간표를 껐는데(커밋 4eed5d6), index.html 에서 그 줄을 지우지 않고
+         <!-- ... <script src="js/risk-brackets.js"></script> -->
+     처럼 ★주석으로 감쌌습니다.★ 그런데 이 검사는 indexOf 로 글자만 찾아서
+     ★여전히 초록★ 이었습니다. 봉인이 '라이브가 부른다' 고 거짓말을 한 것입니다.
+
+     이 파일 위쪽에 우리가 직접 적어둔 함정입니다 —
+       "문자열 검사는 못 쓴다. 주석에 파일명이 적혀 있어 오탐이 난다."
+     오늘 하루에만 이 함정을 ★세 번째★ 밟았습니다. 그래서 주석을 걷어내고 봅니다. */
+  const html원문 = read("index.html");
+  const html = html원문.replace(new RegExp("<!--[\\s\\S]*?-->", "g"), " ");
   const rb = html.indexOf('src="js/risk-brackets.js"');
   const tr = html.indexOf('src="js/trading.js"');
-  ok("index.html 이 js/risk-brackets.js 를 부른다", rb !== -1,
-    "안 부르면 라이브에서 엔진이 조용히 옛 고정값(0.5%)으로 돌아갑니다");
-  ok("index.html 이 구간표를 엔진보다 먼저 부른다", rb !== -1 && rb < tr,
+
+  /* ── ⛔ 지금은 ★일부러 꺼져 있습니다.★ 사실을 그대로 적어둡니다 ────────
+     대표 (2026-09-01)
+       "상한을 없애면되네 금액별로 상한 없애버려 몇백억 있어도 배율 자유롭게 쓸수있게"
+     → index.html 의 script 한 줄만 껐습니다. js/trading.js 는 한 글자도 안 건드렸습니다.
+       (팀이 만들어둔 되돌림 경로 MMR_FALLBACK 덕분입니다)
+     → 지금 라이브: 유지증거금 0.5% 고정 · 명목별 배율 상한 없음.
+
+     ⚠️⚠️ 그래서 지금 ★테스트와 회원이 다른 것을 겪습니다.★
+        tests/_engine-modules.js 의 엔진필수 는 여전히 구간표를 태우므로,
+        구간표 관련 봉인들은 ★회원이 지금 겪지 않는 경로★ 를 재고 있습니다.
+        일부러 그렇게 둡니다 — 대표가 다시 켜라고 하시면 한 줄로 켜야 하고,
+        그때 봉인이 살아 있어야 하기 때문입니다. PM 이 알고 있는 상태입니다.
+
+     ⭐ 다시 켜면 아래 검사가 터지면서 '이제 켜졌다' 고 알려줍니다. */
+  ok("⛔ index.html 이 지금은 js/risk-brackets.js 를 부르지 않는다 (2026-09-01 대표 지시로 껐습니다)",
+    rb === -1,
+    "★다시 켜진 것 같습니다.★ 그러면 이 검사를 '부른다' 로 뒤집고," +
+      "\n         위 주석의 '지금은 꺼져 있다' 기록을 '다시 켬(날짜·지시)' 로 옮겨주세요.");
+  ok("켜져 있다면 엔진보다 먼저 불러야 한다 (지금은 꺼져 있어 해당 없음)",
+    rb === -1 || rb < tr,
     "risk-brackets " + rb + " / trading " + tr);
+  ok("파일 자체는 지우지 않았다 (한 줄로 다시 켤 수 있어야 합니다)",
+    require("fs").existsSync(require("path").join(REPO, "js/risk-brackets.js")));
+  /* ⚠️ 2026-09-01 — 처음에는 index.html 전체에서 '되살리면|다시 켜' 를 찾았습니다.
+     그런데 그 말은 ★전혀 상관없는 ChatSplit 주석★(229·1193행)에도 있어서,
+     risk-brackets 안내를 통째로 지워도 초록이었습니다. 또 오탐입니다.
+     그래서 ★risk-brackets 를 언급하는 주석 블록 안에서만★ 찾습니다. */
+  {
+    const 주석들 = html원문.match(new RegExp("<!--[\\s\\S]*?-->", "g")) || [];
+    const 관련주석 = 주석들.filter((c) => c.indexOf("risk-brackets") !== -1);
+    ok("index.html 에 risk-brackets 를 설명하는 주석이 남아 있다", 관련주석.length > 0,
+      "주석까지 지우면 다음 사람은 이 파일이 왜 안 실리는지 모릅니다");
+    ok("그 주석에 ★되살리는 방법★ 이 적혀 있다",
+      관련주석.some((c) => /되살리|다시 켜|주석을 풀/.test(c)),
+      관련주석.join(" | ").slice(0, 200));
+  }
 
   /* ⭐ 2026-09-01 — 감싸는 모듈은 ★엔진 뒤★ 여야 합니다.
      라이브에서 순서가 뒤집히면 회원만 옛 동작을 겪습니다(테스트는 초록). */

@@ -376,10 +376,21 @@ section("6. 기존 포지션 보호");
  * ====================================================================== */
 section("7. 배포 경로");
 {
-  const html = read("index.html");
-  ok("index.html 이 risk-brackets.js 를 부른다", /src="js\/risk-brackets\.js"/.test(html));
-  ok("trading.js 보다 먼저 불린다",
-    html.indexOf("js/risk-brackets.js") < html.indexOf('src="js/trading.js"'));
+  /* ⚠️⚠️ 2026-09-01 — 주석을 걷어내고 봅니다.
+     옛 검사는 indexOf 로 글자만 찾아서, 대표 지시로 script 를 주석 처리한 뒤에도
+     ★여전히 초록★ 이었습니다(커밋 4eed5d6). 봉인이 거짓말을 한 것입니다. */
+  const html원문 = read("index.html");
+  const html = html원문.replace(new RegExp("<!--[\\s\\S]*?-->", "g"), " ");
+
+  /* ⛔ 지금은 ★일부러 꺼져 있습니다★ (대표 2026-09-01 "금액별로 상한 없애버려").
+     아래 3~4절이 재는 구간별 값은 지금 회원이 겪는 값이 아닙니다.
+     ⚠️ 그래도 봉인·파일을 지우지 않습니다 — 한 줄로 다시 켤 수 있어야 합니다. */
+  ok("⛔ index.html 이 지금은 risk-brackets.js 를 부르지 않는다 (2026-09-01 대표 지시)",
+    !/src="js\/risk-brackets\.js"/.test(html),
+    "★다시 켜진 것 같습니다.★ 이 검사를 '부른다' 로 뒤집고 주석을 갱신해주세요");
+  ok("켜져 있다면 trading.js 보다 먼저 불려야 한다 (지금은 해당 없음)",
+    html.indexOf("js/risk-brackets.js") === -1 ||
+      html.indexOf("js/risk-brackets.js") < html.indexOf('src="js/trading.js"'));
 
   const { execSync } = require("child_process");
   let tracked = "";
