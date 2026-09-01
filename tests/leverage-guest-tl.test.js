@@ -134,7 +134,7 @@ console.log("\n① 최대 레버리지");
       Config: { getActiveSymbol: () => "BTCUSDT" },
     };
     vm.createContext(sandbox);
-    ["js/storage.js", "js/risk-brackets.js", "js/trading.js"].forEach((f) =>
+    ["js/storage.js", "js/risk-brackets.js", "js/trading.js", "js/max-margin-safe.js"].forEach((f) =>
       vm.runInContext(fs.readFileSync(path.join(REPO, f), "utf8"), sandbox, { filename: f })
     );
     sandbox.App.Trading.init();

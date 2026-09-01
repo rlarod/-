@@ -193,3 +193,9 @@ tests/tl-market-sale-paused.test.js
 # ★이미 열려 있는 포지션은 소급해서 줄지 않는다★ (대표님이 100배를 들고 계십니다).
 # 되돌리기: git checkout -- js/trading.js js/leverage-modal.js
 tests/bracket-max-leverage-seal.test.js
+# 2026-09-01 — "최대 버튼을 눌렀는데 돈이 모자란다고 한다" 두 결함.
+# (가) 되돌려 계산한 최대 증거금을 엔진 부등호가 소수 마지막 자리 때문에 거절 (29/66)
+# (나) 최대 버튼 뒤 배율을 낮추면 증거금이 반비례로 커짐 (대표님 잔고 96,572 → 482,861)
+# ⭐ 제일 중요한 것은 [2] — ★깎는 양을 사람이 고르지 않는다★ (0.999 곱하기 금지).
+# 되돌리기: index.html 에서 js/max-margin-safe.js 한 줄 삭제
+tests/max-margin-safe-seal.test.js

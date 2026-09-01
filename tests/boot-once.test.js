@@ -55,7 +55,7 @@ const MODULES = [
   "js/symbol-guard.js",
   /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
   "js/risk-brackets.js",
-  "js/trading.js", "js/ui.js",
+  "js/trading.js", "js/max-margin-safe.js", "js/ui.js",
   "js/order-info-panel.js", "js/qty-price-order.js", "js/order-panel-amitalk.js",
   "js/position-table-extra.js", "js/limit-close.js",
 ];

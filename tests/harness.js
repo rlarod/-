@@ -28,6 +28,18 @@ function boot(opts) {
   };
   win.__beeps = [];
 
+  /* opts.balance — 시작 잔고를 바꿉니다 (2026-09-01 추가).
+     엔진 안의 INITIAL_BALANCE 는 100,000 고정이라, 다른 잔고를 재려면
+     ★스크립트가 실려 restoreFromStorage 가 읽기 전에★ 저장소에 심어야 합니다.
+     ⚠️ 안 주면 예전과 완전히 같습니다(기본 100,000). 다른 테스트에 영향 없음.
+     왜 필요했나 — 최대 버튼 반올림 문제는 ★잔고마다 다르게★ 나타납니다.
+     대표님 잔고 98,986.53 에서만 나오는 조합이 있어서 100,000 하나로는 못 잡습니다. */
+  if (opts.balance !== undefined) {
+    win.localStorage.setItem("btc_sim_v2_trading", JSON.stringify({
+      version: 1, savedAt: Date.now(), state: { balance: opts.balance },
+    }));
+  }
+
   // App.Bus — main.js와 동일한 구현(main.js는 자동 부팅하므로 여기서 직접 정의)
   const busSrc = `
     window.App = window.App || {};
@@ -46,6 +58,9 @@ function boot(opts) {
      한 곳에만 있습니다. 여기에 이름을 또 적지 않습니다(적으면 언젠가 어긋납니다).
      ⭐ 반드시 js/trading.js ★앞★ 에 넣습니다 (index.html 과 같은 순서). */
   const 엔진필수경로 = require("./_engine-modules.js").엔진필수.map((m) => m.경로);
+  /* 엔진을 ★감싸는★ 모듈들 — 반드시 js/trading.js ★뒤★ 입니다 (2026-09-01 추가).
+     먼저 태우면 App.Trading 이 아직 없어서 조용히 아무 일도 안 합니다. */
+  const 엔진뒤경로 = require("./_engine-modules.js").엔진뒤.map((m) => m.경로);
 
   const files = [
     "js/config.js",
@@ -54,6 +69,7 @@ function boot(opts) {
     "js/symbol-registry.js",
   ].concat(엔진필수경로, [
     "js/trading.js",
+  ], 엔진뒤경로, [
     "js/ui.js",
     "js/order-info-panel.js",
     "js/qty-price-order.js",

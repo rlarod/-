@@ -101,6 +101,11 @@ function boot(opts) {
     vm.runInContext(read("js/risk-brackets.js"), sandbox, { filename: "js/risk-brackets.js" });
   }
   vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
+  /* js/max-margin-safe.js — 2026-09-01. ★엔진을 감싸는 모듈이라 반드시 trading.js 뒤★ 입니다
+     (index.html 도 1269행 trading → 1272행 max-margin-safe 순서).
+     안 태우면 getMaxAffordableMargin 이 옛 값을 돌려줘, ★테스트는 거절을 보고
+     회원은 통과를 겪습니다★ — 목록은 tests/_engine-modules.js 의 엔진뒤 에 있습니다. */
+  vm.runInContext(read("js/max-margin-safe.js"), sandbox, { filename: "js/max-margin-safe.js" });
   sandbox.App.Trading.init();
 
   const tick = (price) => sandbox.App.Bus.emit("price:update", { symbol: "BTCUSDT", price: price });

@@ -37,6 +37,7 @@
  *   ④ MAX_LEVERAGE(125) 를 절대 안 넘는다
  *   ⑤ 구간표를 못 읽으면 막지 않는다 (되돌림 경로)
  *   ⑥ ★대체 안전성★ — 구간 상한을 지킨 주문은 진입 즉시 청산되지 않는다
+ *   ⑦ ⚠️ 화면-엔진이 아직 어긋날 수 있는 통로 두 곳 (2026-09-01 추가 · ★사실 기록★)
  *
  * 네트워크를 쓰지 않습니다. 진짜 js/trading.js 를 그대로 태웁니다.
  * ========================================================================= */
@@ -105,6 +106,11 @@ function boot(opts) {
     vm.runInContext(read("js/risk-brackets.js"), sandbox, { filename: "js/risk-brackets.js" });
   }
   vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
+  /* js/max-margin-safe.js — 2026-09-01. ★엔진을 감싸는 모듈이라 반드시 trading.js 뒤★ 입니다
+     (index.html 도 1269행 trading → 1272행 max-margin-safe 순서).
+     안 태우면 getMaxAffordableMargin 이 옛 값을 돌려줘, ★테스트는 거절을 보고
+     회원은 통과를 겪습니다★ — 목록은 tests/_engine-modules.js 의 엔진뒤 에 있습니다. */
+  vm.runInContext(read("js/max-margin-safe.js"), sandbox, { filename: "js/max-margin-safe.js" });
   sandbox.App.Trading.init();
 
   const tick = (price) => sandbox.App.Bus.emit("price:update", { symbol: "BTCUSDT", price: price });
@@ -547,9 +553,122 @@ section("⑥ ⭐ 대체 안전성 — 구간 상한을 지키면 진입 즉시 �
 }
 
 /* ========================================================================
- * ⑦ 수정 금지 파일 (md5)
+ * ⑦ ⚠️ 화면과 엔진이 어긋날 수 있는 통로 두 곳 — ★지금 사실★ 을 적어둡니다
+ * ------------------------------------------------------------------------
+ * ⛔ 이건 "이게 옳다" 고 못 박는 게 아닙니다. 수리팀이 B건 작업 중에 옆에서
+ *    발견한 것을 ★지금 그렇다는 사실★ 로 남기는 것입니다.
+ *    막히면 이 검사가 실패하면서 "이제 막혔다" 고 알려줍니다.
+ *
+ * ⭐ 왜 굳이 적어두나 — 2026-08-31 ~ 09-01 이틀 사이에 ★같은 종류★ 로 세 번 당했습니다.
+ *      (가) 창은 0.50% 라고 말하는데 엔진은 0.126% 에서 청산
+ *      (나) 최대 버튼이 만든 값을 엔진이 거절
+ *      B건  창은 100배를 보여주는데 주문은 50배까지만 받음
+ *    전부 ★같은 값을 두 곳에서 따로 계산★ 해서 난 일입니다.
+ *    CLAUDE.md 도 "화면 상한이 엔진 상한보다 높으면 조용한 고장" 이라고 못 박습니다.
+ *    그래서 남은 통로도 소리 없이 사라지지 않게 적어둡니다.
+ * ====================================================================== */
+section("⑦ ⚠️ 화면-엔진이 어긋날 수 있는 통로 (지금 사실 기록)");
+{
+  const { boot: harnessBoot } = require("./harness.js");
+
+  /* ── (1) 저장된 배율이 100 을 넘으면 엔진만 그 값을 씁니다 ────────────
+     js/leverage-gate.js 는 화면(#lev-display · #lev-slider)만 100 으로 조입니다.
+     엔진 쪽은 setLeverage 를 감싸서 막는데, ★복원은 setLeverage 를 안 거칩니다.★
+     그래서 저장소에 125 가 들어 있으면 엔진만 125 가 됩니다.
+
+     실측(2026-09-01) — 저장 배율 125 로 복원 → 엔진 125 / 슬라이더 max 100.
+     회원이 화면에서 도달할 수 있는 값이 아니라 ★지금은 안 터집니다.★
+     다만 화면이 100 인데 엔진이 125 면 명목이 25% 더 커지고 청산가도 가까워집니다. */
+  const env = harnessBoot({ balance: 100000, extra: ["js/leverage-gate.js"] });
+  if (env.App.LeverageGate && typeof env.App.LeverageGate.init === "function") {
+    env.App.LeverageGate.init();
+  }
+  env.App.Bus.emit("price:update", { symbol: "BTCUSDT", price: 진입가, time: Date.now() });
+
+  ok("화면 경로로는 100 을 못 넘는다 (게이트가 setLeverage 를 감싼다)",
+    (function () { env.App.Trading.setLeverage(125); return env.App.Trading.getSnapshot().leverage; })() === 100,
+    String(env.App.Trading.getSnapshot().leverage));
+  ok("슬라이더 상한도 100 이다",
+    Number(env.doc.getElementById("lev-slider").max) === 100,
+    env.doc.getElementById("lev-slider").max);
+
+  /* ⚠️ 저장소 복원 경로 — ★setLeverage 를 안 거칩니다.★
+     harness 는 스크립트가 실린 뒤에야 손댈 수 있어 복원 순간을 못 잡습니다.
+     그래서 엔진만 직접 띄워서 확인합니다. */
+  {
+    /* 저장 배율 125 를 심고 엔진만 띄웁니다 — 게이트 없이도 엔진은 125 를 받습니다 */
+    const vm2 = require("vm");
+    const store = {
+      btc_sim_v2_trading: JSON.stringify({
+        version: 1, savedAt: Date.now(), state: { balance: 100000, leverage: 125 },
+      }),
+    };
+    const sb = {
+      console: { log() {}, warn() {}, error() {} },
+      setInterval: () => 0, clearInterval: () => {}, setTimeout: () => 0,
+      JSON: JSON, Object: Object, Array: Array, String: String, Number: Number,
+      Math: Math, Date: Date, isFinite: isFinite, isNaN: isNaN, parseFloat: parseFloat,
+      module: { exports: {} },
+      document: { readyState: "complete", addEventListener() {} },
+      localStorage: {
+        getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+        setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; },
+      },
+    };
+    sb.window = sb;
+    const L2 = {};
+    sb.App = {
+      Bus: { on(e, f) { (L2[e] = L2[e] || []).push(f); }, off() {}, emit(e, p) { (L2[e] || []).forEach((f) => f(p)); } },
+      Config: { getActiveSymbol: () => "BTCUSDT" },
+    };
+    vm2.createContext(sb);
+    ["js/storage.js", "js/risk-brackets.js", "js/trading.js"].forEach((f) =>
+      vm2.runInContext(read(f), sb, { filename: f }));
+    sb.App.Trading.init();
+    ok("⚠️ 저장소에 125 가 들어 있으면 엔진은 그 값을 그대로 쓴다 (복원은 setLeverage 를 안 거침)",
+      sb.App.Trading.getSnapshot().leverage === 125,
+      String(sb.App.Trading.getSnapshot().leverage) +
+        " — 100 이 나왔다면 ★복원 경로도 조여진 것★ 입니다. 축하합니다. 이 검사를" +
+        "\n         '복원해도 100 을 넘지 않는다' 로 뒤집고 위 주석을 '막힘(날짜)' 로 옮겨주세요.");
+    ok("그때 화면 상한(100)보다 엔진이 크다 — 이것이 어긋남의 정의다",
+      sb.App.Trading.getSnapshot().leverage > 100);
+  }
+
+  /* ── (2) js/ui.js 의 MAX 칩은 구간 상한을 모릅니다 ──────────────────
+     js/ui.js:646 의 .chip[data-margin="max"] 는 지갑 상한만 봅니다.
+     그 칩이 든 #margin-field-hidden 이 display:none 이라 ★회원에게 안 보입니다.★
+     js/ui.js 는 수정 금지 파일이라 손댈 수 없고, 되살리려면 감싸야 합니다.
+
+     실측(2026-09-01) — 그 칩을 눌러 나온 증거금 95,238.09 (명목 9,523,809) 로
+     100배 주문을 넣으면 ★"최대 50배까지만 가능합니다" 로 거절★ 됩니다. */
+  const 칸 = env.doc.getElementById("margin-field-hidden");
+  ok("MAX 칩이 든 칸이 아직 화면에서 숨겨져 있다 (그래서 지금은 안 터진다)",
+    !!칸 && /display\s*:\s*none/.test(칸.getAttribute("style") || ""),
+    (칸 && 칸.getAttribute("style")) +
+      "\n         ⚠️ 이 칸을 되살렸다면 ★MAX 칩이 구간 상한을 모른다★ 는 문제가 바로 드러납니다." +
+      "\n         js/ui.js 는 수정 금지 파일이라, js/qty-price-order.js 처럼 감싸서 고쳐야 합니다.");
+
+  const 칩 = env.doc.querySelector('.chip[data-margin="max"]');
+  ok("그 칩 자체는 아직 남아 있다 (마크업을 지운 게 아니다)", !!칩);
+
+  if (칩) {
+    env.App.Trading.setLeverage(100);
+    칩.dispatchEvent(new env.win.Event("click", { bubbles: true }));
+    const m = parseFloat(env.doc.getElementById("margin-input").value);
+    const r = env.App.Trading.openPosition("long", m);
+    ok("⚠️ 그 칩이 넣은 값으로 100배 주문을 넣으면 지금은 거절된다 (구간 상한을 모름)",
+      r.ok === false && String(r.error).indexOf("배율") >= 0,
+      (r.ok === false ? r.error : "주문이 통과했습니다 — ★고쳐진 것 같습니다.★ 축하합니다.") +
+        "\n         통과했다면 이 검사를 '거절되지 않는다' 로 뒤집고 위 주석을 '고쳐짐(날짜)' 로 옮겨주세요.");
+    ok("그 값은 지갑 상한으로는 맞다 (틀린 게 아니라 ★구간만 안 본다★)",
+      Math.abs(m - 95238.09) < 0.5, String(m));
+  }
+}
+
+/* ========================================================================
+ * ⑧ 수정 금지 파일 (md5)
  * ---------------------------------------------------------------------- */
-section("⑦ 수정 금지 파일");
+section("⑧ 수정 금지 파일");
 {
   const crypto = require("crypto");
   const md5 = (f) => crypto.createHash("md5").update(fs.readFileSync(path.join(REPO, "js", f))).digest("hex");

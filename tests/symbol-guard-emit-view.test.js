@@ -88,6 +88,7 @@ function boot(opts) {
     /* js/risk-brackets.js — 2026-08-31 대표 결재(바이낸스 구간별 유지증거금). index.html 은 risk-brackets → trading 순서라 여기도 같게 태웁니다. 안 태우면 이 테스트는 회원이 겪지 않는 옛 고정값(MMR_FALLBACK 0.5%) 경로를 재게 됩니다. */
     "js/risk-brackets.js",
     "js/trading.js",
+    "js/max-margin-safe.js",   // 엔진을 감쌉니다 — 반드시 trading.js 뒤
     "js/multi-symbol-view.js", "js/order-lock-notice.js",
   ];
   /* opts.wrongOrder — js/symbol-guard.js 보다 "먼저" 읽습니다([6] 에서 씁니다).

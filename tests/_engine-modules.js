@@ -51,11 +51,24 @@
  *
  *   harness 를 못 쓰고 직접 sandbox 를 만드는 테스트는 이렇게 씁니다 —
  *
- *     const { 엔진필수 } = require("./_engine-modules.js");
+ *     const { 엔진필수, 엔진뒤 } = require("./_engine-modules.js");
  *     엔진필수.forEach((m) => vm.runInContext(read(m.경로), sandbox, { filename: m.경로 }));
  *     vm.runInContext(read("js/trading.js"), sandbox, { filename: "js/trading.js" });
+ *     엔진뒤.forEach((m) => vm.runInContext(read(m.경로), sandbox, { filename: m.경로 }));
  *
- *   ⭐ 반드시 js/trading.js ★보다 먼저★ 태웁니다 (index.html 과 같은 순서).
+ *   ⭐ 엔진필수 는 js/trading.js ★보다 먼저★, 엔진뒤 는 ★그 뒤에★ 태웁니다.
+ *      (index.html 과 같은 순서입니다)
+ *
+ * ── ⚠️ 왜 목록이 둘인가 (2026-09-01) ────────────────────────────────────
+ *   태우는 시점이 반대인 모듈이 생겼습니다.
+ *
+ *     엔진필수  엔진이 ★읽어가는★ 것        → 엔진보다 먼저 있어야 읽힙니다
+ *     엔진뒤    엔진 함수를 ★감싸는★ 것      → 엔진이 먼저 있어야 감쌀 수 있습니다
+ *
+ *   순서가 뒤집히면 ★조용히 아무 일도 안 일어납니다.★ 감싸는 모듈은
+ *   App.Trading 이 아직 없으면 그냥 되돌아가고(오류도 안 냅니다),
+ *   테스트는 초록인데 회원은 감싸지지 않은 옛 동작을 겪습니다.
+ *   그래서 목록을 하나로 합치지 않고 ★시점까지 같이 적습니다.★
  *
  * ── 늘릴 때 ─────────────────────────────────────────────────────────────
  *   엔진이 새로 의존하는 모듈이 생기면 여기에 한 줄 추가하세요.
@@ -76,7 +89,25 @@ const 엔진필수 = [
   },
 ];
 
-/* index.html 안에서 이 순서로 실려야 합니다(실측 1239행 → 1240행). */
+/* 엔진(js/trading.js) ★뒤★ 에 태워야 하는 것 — 엔진 함수를 감싸는 모듈들.
+   먼저 태우면 App.Trading 이 아직 없어서 ★아무 일도 안 하고 되돌아갑니다.★
+   오류가 안 나기 때문에 알아채기가 어렵습니다. */
+const 엔진뒤 = [
+  {
+    경로: "js/max-margin-safe.js",
+    이유:
+      "App.Trading.getMaxAffordableMargin 을 감싸, 되돌려 계산한 최대 증거금이 " +
+      "엔진 진입 검사(margin + margin×배율×taker > balance)에 소수 마지막 자리 때문에 " +
+      "걸리던 것을 막습니다. 안 태우면 ★테스트는 옛 동작(거절)을 보고 회원은 " +
+      "새 동작(통과)을 겪습니다★ — 실측: 지갑 130,000·50배에서 " +
+      "130,000.00000000001 > 130,000 으로 거절, 대표님 잔고 98,986.53 에서는 " +
+      "배율 조합 30개 중 15개가 거절됐습니다.",
+    확인법: "App.MaxMarginSafe 가 있으면 태워진 것입니다",
+  },
+];
+
+/* index.html 안에서 이 순서로 실려야 합니다
+   (실측 2026-09-01 — 1268행 risk-brackets → 1269행 trading → 1272행 max-margin-safe). */
 const 엔진 = "js/trading.js";
 
-module.exports = { 엔진필수, 엔진 };
+module.exports = { 엔진필수, 엔진뒤, 엔진 };

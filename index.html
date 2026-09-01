@@ -1267,6 +1267,9 @@
      이 한 줄만 지우면 예전 고정값(유지증거금률 0.5%)으로 되돌아갑니다. -->
 <script src="js/risk-brackets.js"></script>
 <script src="js/trading.js"></script>
+<!-- 최대(MAX/100%) 버튼이 만든 증거금을 엔진이 스스로 거절하던 것을 막습니다.
+     js/trading.js 를 감싸기만 하고 진입 검사는 건드리지 않습니다. -->
+<script src="js/max-margin-safe.js"></script>
 <!-- 실현손익에서 진입 수수료가 빠져 있던 문제 보정(trading.js 무수정) -->
 <script src="js/realized-pnl-fix.js"></script>
 <!-- 말이 안 되는 TP/SL 값이 주문으로 들어가는 것을 막습니다 -->

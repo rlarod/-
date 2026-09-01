@@ -209,6 +209,14 @@ App.QtyPriceOrder = (function () {
     updateCapNote();
   }
 
+  /* 배율이 바뀌었을 때 — 증거금을 다시 계산하고, 한도를 넘으면 수량을 맞춥니다.
+     ⭐ 수량 칸을 만졌을 때와 ★같은 함수★ 를 씁니다. 두 곳에서 따로 계산하면
+        또 어긋납니다((가)·B-2 때와 같은 문제). */
+  function onLeverageChanged() {
+    syncMargin();
+    clampQtyToBracket();
+  }
+
   function onLastClick() {
     const snap = App.Trading ? App.Trading.getSnapshot() : null;
     if (dom.priceInput && snap && snap.currentPrice) {
@@ -313,15 +321,20 @@ App.QtyPriceOrder = (function () {
     // 레버리지 슬라이더도 이미 ui.js가 리스너를 갖고 있지만, 여기서도
     // 하나 더 추가해서 레버리지 변경 시 증거금 재계산이 되게 합니다.
     const levSlider = el("lev-slider");
-    if (levSlider) levSlider.addEventListener("input", () => setTimeout(syncMargin, 0));
+    if (levSlider) levSlider.addEventListener("input", () => setTimeout(onLeverageChanged, 0));
 
     /* 배율이 바뀌면 지금 수량이 그 배율의 한도를 넘을 수 있습니다.
-       ⚠️ 여기서는 ★깎지 않고 알려만 줍니다★ — 회원이 넣은 수량을 배율 변경만으로
-          말없이 바꾸면 그것도 놀랍니다. 깎는 것은 수량 칸을 직접 만졌을 때만 합니다.
-       (레버리지 창은 애초에 못 쓰는 배율을 안 보여줍니다 — js/leverage-modal.js) */
+       ⚠️⚠️ ★배율을 낮추면 증거금이 반비례로 커집니다.★
+             증거금 = 수량 × 가격 ÷ 배율 이라, 수량이 그대로면 배율이 절반이 될 때
+             증거금은 두 배가 됩니다. 최대 버튼은 "누를 때의 배율" 기준이었으므로
+             그 전제가 깨집니다.
+             실측(잔고 98,986 · 50배에서 최대 → 10배로 변경): 증거금 482,861 → 거절.
+             배율만 바꿨는데 "돈이 모자랍니다" 가 뜹니다.
+       ⭐ 그래서 배율이 바뀌면 ★수량을 다시 한도에 맞추고 이유를 말합니다.★
+          (수량 칸을 만졌을 때와 같은 함수 clampQtyToBracket 를 씁니다) */
     const levDisplay = el("lev-display");
     if (levDisplay && typeof MutationObserver === "function") {
-      new MutationObserver(() => setTimeout(syncMargin, 0))
+      new MutationObserver(() => setTimeout(onLeverageChanged, 0))
         .observe(levDisplay, { childList: true, characterData: true, subtree: true });
     }
 
