@@ -168,7 +168,7 @@ with 보정할_금액 as (
                       where o.user_id = ta.user_id and o.status = 'OPEN'), 0)
            as 지갑_더_증거금
     from public.trading_accounts ta
-)
+),
 미리보기 as (
   select
     coalesce(p.nickname, '(이름없음)')                                  as 회원,
