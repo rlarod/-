@@ -28,7 +28,10 @@
  *                              원화 회원 화면에 "₩56" 이 뜹니다(ATR 과 반대 사고).
  *   ⑥ 켜 두었던 것이 꺼진다     옛 저장칸(chart-oscillators)과 새 칸이 다릅니다.
  *   ⑦ 두 번 옮긴다              회원이 지운 줄이 새로고침마다 되살아납니다.
- *   ⑧ MACD 를 건드린다          ★MACD 는 이번에 안 옮겼습니다.★ 옛 자리 그대로여야 합니다.
+ *   ⑧ MACD 자리가 밀린다        ⚠️ 2026-09-03 12.8절에 MACD 도 틀로 옮겼습니다.
+ *                              그전에는 "MACD 는 안 건드렸다" 였습니다 — 아래 세
+ *                              군데를 새 사실(macd-12-26-9)로 고쳤습니다. RSI 줄이
+ *                              MACD 바로 앞이라는 ★자리★ 는 그대로 봅니다.
  *   ⑨ 태생값이 없다             "기본값" 버튼이 기간 14 · 흰색으로 안 돌아가면
  *                              2026-09-02 밤 P2 와 같은 사고가 다시 납니다.
  *
@@ -761,7 +764,10 @@ console.log("\n[3] 옛 켜짐/꺼짐 이어받기");
   ok("옛 RSI 가 켜져 있었으면 우리 것도 켜진다", 켬.K.isOn("rsi-14") === true);
   ok("★옛 RSI 는 꺼졌다★ (안 끄면 선이 두 벌)", 켬.옛osc.rsi === false, String(켬.옛osc.rsi));
   ok("옛 모듈의 setOn 을 실제로 불렀다", 켬.calls.setOn.indexOf("rsi=false") >= 0, 켬.calls.setOn.join(","));
-  ok("★MACD 는 안 건드렸다★", 켬.calls.setOn.every((c) => c.indexOf("macd") < 0), 켬.calls.setOn.join(","));
+  /* ⚠️ 2026-09-03 (12.8절) 에 고친 줄 — 그전에는 "MACD 는 안 건드렸다" 였습니다.
+     MACD 도 옮겼으므로 이제는 ★옛 MACD 도 꺼져야★ 맞습니다(안 끄면 선이 두 벌). */
+  ok("★옛 MACD 도 꺼졌다★ (12.8절에 같이 옮겼습니다)",
+    켬.calls.setOn.indexOf("macd=false") >= 0, 켬.calls.setOn.join(","));
 
   const 끔 = boot(candles, { 옛osc: { rsi: false } });
   ok("옛 RSI 가 꺼져 있었으면 우리 것도 꺼짐", 끔.K.isOn("rsi-14") === false);
@@ -792,22 +798,23 @@ console.log("\n[4] fx 목록 · 칩 줄 (옛 자리 그대로)");
   );
   ok(
     "★RSI 자리가 그대로다★ (아래 칸 첫 줄 · MACD 바로 앞)",
-    줄.indexOf("rsi-14") >= 0 && 줄.indexOf("macd") === 줄.indexOf("rsi-14") + 1 && 줄[줄.length - 2] === "rsi-14",
+    줄.indexOf("rsi-14") >= 0 && 줄.indexOf("macd-12-26-9") === 줄.indexOf("rsi-14") + 1 && 줄[줄.length - 2] === "rsi-14",
     줄.join(" ")
   );
   ok("옛 rsi 줄은 빠졌다", 줄.indexOf("rsi") < 0, 줄.join(" "));
-  ok("MACD 줄은 옛것 그대로 남아 있다", 줄.indexOf("macd") >= 0, 줄.join(" "));
+  /* 2026-09-03 (12.8절) — 옛 "macd" 줄이 빠지고 우리 줄이 그 자리에 들어갑니다 */
+  ok("MACD 줄도 우리 것으로 바뀌어 그 자리에 있다", 줄.indexOf("macd-12-26-9") >= 0 && 줄.indexOf("macd") < 0, 줄.join(" "));
 
   const 칩 = 칩이름들(B.indBar);
   ok(
     "★칩 자리도 그대로다★ (거래량 다음 · MACD 앞)",
-    칩.indexOf("rsi-14") === 5 && 칩.indexOf("macd") === 6,
+    칩.indexOf("rsi-14") === 5 && 칩.indexOf("macd-12-26-9") === 6,
     칩.join(" ")
   );
   ok("옛 rsi 칩(.tl-osc-btn)은 빠졌다", 칩.indexOf("rsi") < 0, 칩.join(" "));
   ok(
-    "옛 MACD 칩(.tl-osc-btn)은 그대로 있다",
-    B.indBar.querySelectorAll('.tl-osc-btn[data-osc="macd"]').length === 1,
+    "옛 MACD 칩(.tl-osc-btn)도 빠졌다 (12.8절에 같이 옮겼습니다)",
+    B.indBar.querySelectorAll('.tl-osc-btn[data-osc="macd"]').length === 0,
     칩.join(" ")
   );
 
@@ -857,7 +864,7 @@ console.log("\n[5] 옛 회원 상태 + 새로고침");
   const 칩2 = 칩이름들(B2.indBar);
   ok(
     "새로고침 뒤에도 칩 자리가 그대로다 (거래량 다음 · MACD 앞)",
-    칩2.indexOf("rsi-14") === 5 && 칩2.indexOf("macd") === 6,
+    칩2.indexOf("rsi-14") === 5 && 칩2.indexOf("macd-12-26-9") === 6,
     칩2.join(" ")
   );
 

@@ -184,7 +184,21 @@
  *               (옛 RSI 는 전부 코드에 박혀 있어 하나도 못 바꿨습니다)
  *   옮기기      12.7절. 12.5 · 12.6절과 순서·안전장치가 같습니다.
  *   되돌리기    콘솔에서 App.ChartIndicatorKit.restoreLegacyRSI() 뒤 새로고침.
- *   ⚠️ 아직 안 옮긴 것  거래량 · MACD.
+ *
+ * -- 2026-09-03 (12.8단계) 에 옮겨 온 것 - ★옛 MACD(12,26,9)★ --------------
+ *   무엇을      정의 "macd" ★하나★ + 인스턴스 ★하나★ (macd-12-26-9).
+ *               RSI 와 같은 js/chart-oscillators.js 것입니다.
+ *               ★이 틀에서 막대(kind:"hist") 를 쓰는 첫 지표★ 입니다 -
+ *               틀에 길만 있고 아무도 안 써 본 길이었습니다.
+ *   안 바꾼 것  12/26/9 · 색 셋(#838DA4 막대 · #E7ECF5 MACD · #F0B429 신호선) ·
+ *               굵기 1 실선 · 0선 · 여백 0.15 · ★계산값(옛 computeMACD 와 오차 0)★
+ *   ⭐ unit: "price" - MACD 는 ★가격 차이★ 라 표시 통화를 따라갑니다.
+ *      옛 모듈의 macdPriceFormat() 이 하던 일을 틀의 13.3 이 대신합니다.
+ *      안 붙이면 원화 회원 화면에 USDT 숫자가 뜹니다(ATR 과 같은 조용한 고장).
+ *   이제 되는 것 빠른·느린·신호선 기간 · 값 종류 · 색 20 · 굵기 4 · 선 모양 3
+ *   옮기기      12.8절. 12.5 ~ 12.7절과 순서·안전장치가 같습니다.
+ *   되돌리기    콘솔에서 App.ChartIndicatorKit.restoreLegacyMACD() 뒤 새로고침.
+ *   ⚠️ 아직 안 옮긴 것  거래량.
  *
  * -- 2026-09-02 (10단계) 에 늘어난 것 - 지표 4개 + ★색 겹침 마무리★ ----
  *   Stochastic  %K 14 · 다듬기 1 · %D 3 · 기준선 20 · 80   (트레이딩뷰 내장)
@@ -236,6 +250,7 @@
  *   0) 먼저 콘솔에서  App.ChartIndicatorKit.restoreLegacyMA()  → 새로고침
  *      그리고     App.ChartIndicatorKit.restoreLegacyBB()  → 새로고침
  *      그리고     App.ChartIndicatorKit.restoreLegacyRSI() → 새로고침
+ *      그리고     App.ChartIndicatorKit.restoreLegacyMACD() → 새로고침
  *      (안 하면 옛 MA · 옛 볼린저가 꺼진 채로 남습니다 - 이 파일이 옛 모듈의
  *       setOn 으로 꺼 두었기 때문입니다. 회원마다 브라우저에서 한 번씩 해야
  *       합니다. 못 하면 회원이 fx 목록에서 다시 켜면 됩니다.)
@@ -939,6 +954,15 @@ App.ChartIndicatorKit = (function () {
       return {
         params: { p: MOVED_RSI.p },
         colors: { rsi: MOVED_RSI.hex },
+        style: "solid",
+        width: DEFAULT_WIDTH
+      };
+    }
+    /* 12.8절 MACD 도 같은 이유로 기본 목록에 없습니다 */
+    if (defId === "macd" && id === MOVED_MACD.id) {
+      return {
+        params: { fast: MOVED_MACD.fast, slow: MOVED_MACD.slow, sig: MOVED_MACD.sig },
+        colors: copy(MOVED_MACD.colors),
         style: "solid",
         width: DEFAULT_WIDTH
       };
@@ -5059,6 +5083,155 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* -- MACD 이동평균수렴확산 ---------------------------------------------
+   * ⭐ 2026-09-03 (12.8절) 에 ★옛 js/chart-oscillators.js 에서 옮겨 온★ 것입니다.
+   *    새로 만든 지표가 아닙니다 - 계산식도 색도 기준선도 옛 것 그대로입니다.
+   *
+   *   MACD   = EMA(빠른) - EMA(느린)
+   *   신호선 = MACD 의 EMA(신호)
+   *   막대   = MACD - 신호선          ★이 틀에서 kind:"hist" 를 쓰는 첫 지표★
+   *
+   * ⚠️ 시작값을 ★옛 것과 똑같이★ 둡니다 (js/chart-oscillators.js:257 computeMACD)
+   *      빠른 EMA  앞 fast개의 단순평균으로 시작한 뒤 [fast, slow) 구간만 평활
+   *      느린 EMA  앞 slow개의 단순평균 (그 자리에서 바로 씀 - 평활 안 함)
+   *      신호선    처음 signal개 MACD 값의 ★단순평균★ 으로 시작
+   *    즉 첫 봉(i = slow-1)에서 빠른 EMA 는 c[0..slow-2] 까지, 느린 EMA 는
+   *    c[0..slow-1] 까지 먹은 상태입니다. ★고르지 않아 보이지만 옛 것 그대로★
+   *    입니다 - 여기를 "정리" 하면 회원이 보던 선이 조용히 달라집니다.
+   *
+   * ⭐ 기본 12 / 26 / 9 - 바이낸스 선물 차트 · 트레이딩뷰가 같습니다
+   *    (옛 파일 MACD_FAST · MACD_SLOW · MACD_SIGNAL 그대로)
+   * ⭐ unit: "price" ★필수★ - MACD 는 ★가격 차이★ 입니다(EMA 뺄셈).
+   *    안 붙이면 원화로 보는 회원 화면에 USDT 숫자가 그대로 뜹니다.
+   *    2026-09-03 에 ATR 이 정확히 그 상태였습니다(오류 0건 · 화면 멀쩡 ·
+   *    회원은 그게 USDT 인 줄 모름). 옛 모듈은 macdPriceFormat() 이 같은 일을
+   *    하고 있었습니다 - 옮기면서 그 일을 틀의 unit 으로 넘깁니다.
+   * ⚠️ 눈금은 ★고정하지 않습니다★ (scale.min/max 없음). RSI 와 다릅니다 -
+   *    MACD 는 정해진 범위가 없는 가격 차이라 0~100 같은 틀을 씌우면 선이
+   *    화면 밖으로 나갑니다. 대신 옛 것과 같은 위·아래 여백 0.15 만 겁니다.
+   *    0선은 막대(hist)가 늘 0 에서 자라기 때문에 눈금 안에 들어옵니다
+   *    (HistogramSeries 는 base 0 을 눈금 계산에 포함합니다 - 아래 실측 주석).
+   *
+   * -- 출력 순서가 ★그리는 순서★ 입니다 ---------------------------------
+   *    막대 → MACD → 신호선. 막대를 먼저 만들어야 선이 그 위에 옵니다
+   *    (옛 파일 733줄 주석과 같은 이유). 트레이딩뷰 내장 MACD 도 plot 순서가
+   *    Histogram → MACD → Signal 이라 범례 숫자 순서까지 같아집니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    EMA 세 개(빠른 · 느린 · 신호선)는 직전 값만 있으면 다음 값이 나옵니다.
+   *    창을 훑지 않습니다. 상태가 { emaFast, emaSlow, sig } 셋뿐이고 배열이
+   *    없어서 같은 상태로 몇 번 다시 불려도 답이 같습니다(새 객체를 냅니다).
+   * ------------------------------------------------------------------- */
+
+  /** MACD 한 걸음 - 옛 js/chart-oscillators.js:235 macdStep 과 같은 식입니다. */
+  function macdOne(st, x, fast, slow, signal) {
+    var kf = 2 / (fast + 1);
+    var ks = 2 / (slow + 1);
+    var kg = 2 / (signal + 1);
+    var ef = x * kf + st.emaFast * (1 - kf);
+    var es = x * ks + st.emaSlow * (1 - ks);
+    var m = ef - es;
+    var sg = st.sig === null || st.sig === undefined ? null : m * kg + st.sig * (1 - kg);
+    return {
+      values: { macd: m, signal: sg, hist: sg === null ? null : m - sg },
+      state: { emaFast: ef, emaSlow: es, sig: sg }
+    };
+  }
+
+  define({
+    id: "macd",
+    name: "MACD",
+    note: "이동평균수렴확산",
+    pane: "sub",
+    /* 13.3 값이 가격 차이라 표시 통화를 따라갑니다 - 위 주석 참조 */
+    unit: "price",
+    /* 13.1 범위는 안 고정하고 여백만 - 옛 scaleMargins {top:0.15, bottom:0.15} */
+    scale: { top: 0.15, bottom: 0.15 },
+    params: { fast: 12, slow: 26, sig: 9 },
+    inputs: [
+      { key: "fast", label: "빠른 기간", min: 1, max: 1000 },
+      { key: "slow", label: "느린 기간", min: 1, max: 1000 },
+      { key: "sig", label: "신호선", min: 1, max: 1000 }
+    ],
+    useSource: true,
+    nameOf: function (prm) {
+      return "MACD(" + prm.fast + "," + prm.slow + "," + prm.sig + ")";
+    },
+    /* 색 셋은 ★지금 회원이 보던 그 색★ 입니다 - 옛 COLORS.hist · macd · signal */
+    outputs: [
+      { key: "hist", kind: "hist", color: "#838DA4" },
+      { key: "macd", kind: "line", color: "#E7ECF5", style: "solid" },
+      { key: "signal", kind: "line", color: "#F0B429", style: "solid" }
+    ],
+    /* 0선 - 옛 addGuide(series.macd, 0, COLORS.zero) 그대로 (#1D273B 점선) */
+    guides: [{ price: 0 }],
+
+    seed: function (bs, prm, cap) {
+      var fast = Math.max(1, prm.fast | 0);
+      var slow = Math.max(1, prm.slow | 0);
+      var signal = Math.max(1, prm.sig | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = { macd: [], signal: [], hist: [] };
+      if (n < slow) return out;
+
+      var kf = 2 / (fast + 1);
+      var ks = 2 / (slow + 1);
+      var kg = 2 / (signal + 1);
+      var i;
+      var sum = 0;
+
+      /* 빠른 EMA - 앞 fast개 단순평균으로 시작해 [fast, slow) 만 평활 */
+      for (i = 0; i < fast; i++) sum += src[i];
+      var ef = sum / fast;
+      for (i = fast; i < slow; i++) ef = src[i] * kf + ef * (1 - kf);
+
+      /* 느린 EMA - 앞 slow개 단순평균 */
+      sum = 0;
+      for (i = 0; i < slow; i++) sum += src[i];
+      var es = sum / slow;
+
+      var sig = null;
+      var seedSum = 0;
+      var seedCount = 0;
+
+      for (i = slow - 1; i < n; i++) {
+        if (i > slow - 1) {
+          ef = src[i] * kf + ef * (1 - kf);
+          es = src[i] * ks + es * (1 - ks);
+        }
+        var m = ef - es;
+
+        if (sig === null) {
+          seedSum += m;
+          seedCount++;
+          if (seedCount === signal) sig = seedSum / signal;
+        } else {
+          sig = m * kg + sig * (1 - kg);
+        }
+
+        out.macd.push({ time: bs.time[i], value: m });
+        if (sig !== null) {
+          out.signal.push({ time: bs.time[i], value: sig });
+          out.hist.push({ time: bs.time[i], value: m - sig });
+        }
+
+        /* 확정 상태 - "마지막으로 닫힌 봉까지". 신호선이 아직 자리를 못 잡았으면
+           실시간 한 걸음도 못 하므로 넘기지 않습니다(옛 것과 같은 판단). */
+        if (i === n - 2) cap.state = sig === null ? null : { emaFast: ef, emaSlow: es, sig: sig };
+      }
+      return out;
+    },
+
+    step: function (st, bar, prm) {
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      return macdOne(
+        st, x,
+        Math.max(1, prm.fast | 0), Math.max(1, prm.slow | 0), Math.max(1, prm.sig | 0)
+      );
+    }
+  });
+
   /* ---------------------------------------------------------------------
    * 옛 MA 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다.
    *
@@ -5096,6 +5269,24 @@ App.ChartIndicatorKit = (function () {
    *    가 그립니다. 그래서 켜짐/꺼짐을 묻는 곳도, 끄는 곳도 저 모듈입니다.
    * ------------------------------------------------------------------- */
   var MOVED_RSI = { old: "rsi", id: "rsi-14", p: 14, hex: "#E7ECF5" };
+
+  /* ---------------------------------------------------------------------
+   * 옛 MACD 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다. (12.8절)
+   *
+   * 옛 이름 "macd" 는 RESERVED_IDS 라 쓸 수 없습니다(MA · 볼린저 · RSI 와 같은 이유).
+   * 색 셋은 ★지금 회원이 보던 그 색★ 입니다 - 막대 #838DA4 · MACD #E7ECF5 ·
+   * 신호선 #F0B429, 전부 굵기 1 실선. 12 / 26 / 9 도 옛 값 그대로입니다.
+   *
+   * ⚠️ 옛 MACD 도 RSI 와 같은 js/chart-oscillators.js 것입니다.
+   * ------------------------------------------------------------------- */
+  var MOVED_MACD = {
+    old: "macd",
+    id: "macd-12-26-9",
+    fast: 12,
+    slow: 26,
+    sig: 9,
+    colors: { hist: "#838DA4", macd: "#E7ECF5", signal: "#F0B429" }
+  };
 
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
      정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 8단계의 증명이었습니다.
@@ -5251,7 +5442,7 @@ App.ChartIndicatorKit = (function () {
           손으로 다시 만들어 담아서, RSI 표시가 조용히 사라졌습니다. */
     movedState.ma = false;
     movedState.legacy0 = null;
-    if (!movedState.bb && !movedState.rsi) movedState = null;
+    if (!movedState.bb && !movedState.rsi && !movedState.macd) movedState = null;
     saveState();
     /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
     return true;
@@ -5339,7 +5530,8 @@ App.ChartIndicatorKit = (function () {
     var a = moveLegacyMA(true);
     var b = moveLegacyBB(true);
     var c = moveLegacyRSI(true);   /* 12.7절 - 옛 모듈이 다릅니다(오실레이터) */
-    if (!a && !b && !c) return false;
+    var e = moveLegacyMACD(true); /* 12.8절 - RSI 와 같은 오실레이터 모듈 */
+    if (!a && !b && !c && !e) return false;
     buildButtons();
     injectMenuRows();
     paintMenu();
@@ -5361,7 +5553,7 @@ App.ChartIndicatorKit = (function () {
     }
     movedState.bb = false;
     movedState.legacyBB = null;
-    if (!movedState.ma && !movedState.rsi) movedState = null;
+    if (!movedState.ma && !movedState.rsi && !movedState.macd) movedState = null;
     saveState();
     return true;
   }
@@ -5495,7 +5687,129 @@ App.ChartIndicatorKit = (function () {
     }
     movedState.rsi = false;
     movedState.legacyRSI = null;
-    if (!movedState.ma && !movedState.bb) movedState = null;
+    if (!movedState.ma && !movedState.bb && !movedState.macd) movedState = null;
+    saveState();
+    /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
+    return true;
+  }
+
+  /* =====================================================================
+   * 12.8 ★옛 MACD(12, 26, 9) 를 이 틀로 옮기기★  - 한 번만
+   *
+   * 위 12.7절(RSI)과 ★같은 순서·같은 안전장치★ 입니다. 옛 모듈도 같습니다
+   * (js/chart-oscillators.js · App.ChartOscillators · 칩이 data-osc).
+   * 다른 점만 적습니다.
+   *
+   *   · ★막대(kind:"hist") 를 쓰는 첫 지표★ 입니다. 틀에 길만 나 있고
+   *     아무도 안 써 본 길이었습니다(ALLOWED_KINDS 에 hist 는 처음부터 있었고
+   *     addSeriesFor 가 HistogramSeries 를 고르는 줄도 있었지만, 그 줄을 타는
+   *     정의가 하나도 없었습니다). 실제로 태워 본 결과는 아래 실측에 적습니다.
+   *   · 값이 ★가격 차이★ 라 unit: "price" 를 붙였습니다. 옛 모듈의
+   *     macdPriceFormat() 이 하던 일을 틀이 대신합니다(같은 일 두 벌 금지).
+   *
+   * -- 안 바꾼 것 -------------------------------------------------------
+   *   12 / 26 / 9 · 색 셋(#838DA4 막대 · #E7ECF5 MACD · #F0B429 신호선) ·
+   *   굵기 1 실선 · 0선(#1D273B 점선) · 칸 위아래 여백 0.15 ·
+   *   ★계산값(옛 computeMACD 와 오차 0)★ · 그리는 순서(막대가 선 아래)
+   *
+   * -- 달라진 것 (숫자로 적습니다) --------------------------------------
+   *   칩 글자    "MACD"        ->  "MACD(12,26,9)"   (MA · 볼린저 · RSI 때와 같습니다)
+   *   칩 점 색   #F0B429 금색  ->  #838DA4 회색
+   *              ⚠️ 점 색은 ★첫 번째 출력선★ 을 따릅니다(mainColor). 막대를
+   *                 먼저 그려야 선이 그 위에 오기 때문에 첫 줄이 막대입니다.
+   *                 옛 칩은 신호선 색을 손으로 적어 두었습니다(BUTTONS).
+   *   칸 이름표  "MACD 12 26 9  1.34  1.46"  ->  값이 ★셋★ (막대 · MACD · 신호선)
+   *              트레이딩뷰 내장 MACD 도 Histogram · MACD · Signal 셋을 띄웁니다
+   *   이름표 글씨 10px -> 12px  ·  칸 높이 0.30 -> 0.32   (12.7절과 같은 이유)
+   *   설정 버튼  없음 -> 있음   (빠른 · 느린 · 신호선 기간 · 값 종류 · 색 · 굵기 · 선모양)
+   *
+   * -- 왜 DEFAULT_INSTANCES 에 안 넣었나 --------------------------------
+   *   12.7절(RSI)과 같은 이유입니다 - MACD 선도 #E7ECF5 실선이라 기본 줄의
+   *   ma-25(#E7ECF5 실선)와 ★같은 색 같은 선모양★ 이 됩니다. 색을 바꾸면
+   *   회원이 보던 MACD 선 색이 바뀝니다. 화면이 안 바뀌는 쪽을 골랐습니다.
+   *   줄은 아래 moveLegacyMACD() 가 만들어 옛 자리에 끼웁니다.
+   *
+   * -- 되돌리기 ---------------------------------------------------------
+   * 콘솔에서  App.ChartIndicatorKit.restoreLegacyMACD()  → 새로고침.
+   * 옮기기 직전의 옛 켜짐/꺼짐(legacyMACD)이 그대로 돌아옵니다.
+   * ===================================================================== */
+  function movedMACD() {
+    return !!(movedState && movedState.macd);
+  }
+
+  /** 옛 MACD 켜짐/꺼짐. 아직 못 읽는 상태면 null(그때는 안 옮깁니다). */
+  function readLegacyMACD() {
+    var OSC = legacyOSC();
+    if (!OSC || !isFn(OSC.getState)) return null;
+    var g;
+    try {
+      g = OSC.getState();
+    } catch (e) {
+      return null;
+    }
+    if (!g || typeof g !== "object") return null;
+    if (!("macd" in g)) return null;
+    return { macd: !!g.macd };
+  }
+
+  function moveLegacyMACD(quiet) {
+    if (movedMACD()) return false;
+    var old = readLegacyMACD();
+    if (!old) return false;   /* 아직 못 읽음 - 다음 기회에 */
+
+    if (insts[MOVED_MACD.id]) {
+      insts[MOVED_MACD.id].on = !!old.macd;
+    } else {
+      addInstance("macd", {
+        id: MOVED_MACD.id,
+        params: { fast: MOVED_MACD.fast, slow: MOVED_MACD.slow, sig: MOVED_MACD.sig },
+        colors: copy(MOVED_MACD.colors),
+        style: "solid",
+        width: DEFAULT_WIDTH,
+        on: !!old.macd
+      });
+    }
+
+    /* 옛 선 끄기 - ★우리 인스턴스를 만든 뒤에★ 합니다(안 끄면 두 벌) */
+    var OSC = legacyOSC();
+    if (OSC && isFn(OSC.setOn)) {
+      try {
+        OSC.setOn(MOVED_MACD.old, false);
+      } catch (e) {
+        /* 못 꺼도 화면은 돕니다 - 그 경우 선이 두 벌 보입니다 */
+      }
+    }
+
+    movedState = movedState || {};
+    movedState.macd = true;
+    movedState.macdAt = Date.now();
+    movedState.legacyMACD = { macd: !!old.macd };
+    saveState();
+
+    if (!quiet) {
+      buildButtons();
+      injectMenuRows();
+      paintMenu();
+    }
+    return true;
+  }
+
+  /** 되돌리기 - 우리 MACD 줄을 지우고 옛 켜짐/꺼짐을 되살립니다. */
+  function restoreLegacyMACD() {
+    if (!movedMACD()) return false;
+    var old = (movedState && movedState.legacyMACD) || { macd: false };
+    if (insts[MOVED_MACD.id]) removeInstance(MOVED_MACD.id);
+    var OSC = legacyOSC();
+    if (OSC && isFn(OSC.setOn)) {
+      try {
+        OSC.setOn(MOVED_MACD.old, !!old.macd);
+      } catch (e) {
+        /* 무시 */
+      }
+    }
+    movedState.macd = false;
+    movedState.legacyMACD = null;
+    if (!movedState.ma && !movedState.bb && !movedState.rsi) movedState = null;
     saveState();
     /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
     return true;
@@ -5513,6 +5827,8 @@ App.ChartIndicatorKit = (function () {
     if (movedBB()) out.push({ old: MOVED_BB.old, id: MOVED_BB.id, who: "ind" });
     /* 12.7절 - 옛 RSI 는 오실레이터 모듈 것이라 칩 생김새가 다릅니다 */
     if (movedRSI()) out.push({ old: MOVED_RSI.old, id: MOVED_RSI.id, who: "osc" });
+    /* 12.8절 - 옛 MACD 도 오실레이터 모듈 것입니다 */
+    if (movedMACD()) out.push({ old: MOVED_MACD.old, id: MOVED_MACD.id, who: "osc" });
     return out;
   }
 
@@ -5572,7 +5888,7 @@ App.ChartIndicatorKit = (function () {
     loadState(DEFAULT_INSTANCES);
     /* 옛 MA 옮기기 - 옛 모듈이 이미 상태를 읽었으면 여기서 끝납니다.
        아직이면 아래 준비 타이머가 될 때까지 다시 시도합니다(12.5절). */
-    moveLegacyAll(); /* 옛 MA(12.5절) · 옛 볼린저(12.6절) */
+    moveLegacyAll(); /* 옛 MA(12.5절) · 볼린저(12.6절) · RSI(12.7절) · MACD(12.8절) */
 
     if (App.Bus && isFn(App.Bus.on)) {
       App.Bus.on("kline:update", onTick);
@@ -5595,7 +5911,7 @@ App.ChartIndicatorKit = (function () {
       }
       wrapMenuBridge();
       watchMenu(); /* .chart-panel 이 늦게 생길 수 있어 여기서도 다시 겁니다 */
-      moveLegacyAll(); /* 옛 모듈이 늦게 올라오는 경우 (12.5 · 12.6절) */
+      moveLegacyAll(); /* 옛 모듈이 늦게 올라오는 경우 (12.5 ~ 12.8절) */
       if (!ensureChart()) return;
       if (!buildButtons()) return;
       if (!anyOn()) {
@@ -5656,6 +5972,11 @@ App.ChartIndicatorKit = (function () {
     isMovedRSIForTest: movedRSI,
     moveLegacyRSIForTest: moveLegacyRSI,
     MOVED_RSI: MOVED_RSI,
+    /* 옛 MACD 옮기기 (12.8절) */
+    restoreLegacyMACD: restoreLegacyMACD,
+    isMovedMACDForTest: movedMACD,
+    moveLegacyMACDForTest: moveLegacyMACD,
+    MOVED_MACD: MOVED_MACD,
     /** 라인(종가선) 모드에서 점선으로 바꿀 MA(7) 선.
      *  js/chart-ma-line-mode.js 가 옛 MA7 선 대신 이것을 봅니다 -
      *  옮긴 뒤에는 옛 선이 아예 안 그려지므로, 안 넘겨주면 라인 모드에서
