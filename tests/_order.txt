@@ -635,3 +635,22 @@ tests/chart-timezone-order-bar-floor.test.js
 #   이 테스트가 그 안전망과 "글씨 20.5px 그대로"를 지킵니다.
 # 되돌리기: 이 줄과 tests/interval-8h-3d.test.js 삭제
 tests/interval-8h-3d.test.js
+
+# 2026-09-03 기록팀 — keepGuides 봉인 (차트팀 자진 신고)
+#   js/chart-indicator-kit.js 의 scale:{keepGuides:true} 를 지키는 테스트가
+#   없었습니다. 차트팀이 스스로 "지워도 npm test 가 조용히 통과한다"고 신고했고,
+#   확인해 보니 사실이었습니다.
+#   실측 — 단조 상승 300봉에서 30봉 창 26개를 훑으면 장치가 없을 때 26개 전부가
+#          기준선(0 · ±100)을 잃습니다(CCI 값이 120.5~133.3 에 갇힘).
+#          장치를 거치면 26개 전부 눈금 안에 들어옵니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-keepguides-seal.test.js 삭제
+tests/chart-indicator-keepguides-seal.test.js
+
+# 2026-09-03 차트팀 — Williams %R 을 얹었습니다 (0 ~ -100 · 기준선 -20 · -80)
+#   계산식 근거: 트레이딩뷰 Pine 참고서 ta.wpr 원문(브라우저로 직접 열어 읽음)
+#   이 파일이 보는 것 — 참조식과 대조 / 값이 0~-100 밖으로 안 나감 /
+#   진행중 봉 5번에도 안 흔들림 / ★%R = Stoch %K - 100 항등★ / 정의 약속
+#   ⚠️ 이 틀에서 ★처음 음수 눈금★ 이라 부호가 뒤집혀도 오류가 안 납니다.
+#      그래서 계속 오르는 장 · 계속 내리는 장을 만들어 0 과 -100 에 실제로 닿는지 봅니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-wr.test.js 삭제
+tests/chart-indicator-wr.test.js

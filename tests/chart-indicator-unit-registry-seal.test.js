@@ -394,7 +394,7 @@ const 정의로 = {};
   const 눈금건것 = 기준선지표.filter((d) => d.scale && d.scale.min !== null && d.scale.min !== undefined)
     .map((d) => d.id).sort();
   ok("기준선이 있는 지표 " + 기준선지표.length + "개 중 눈금을 고정한 것은 [" + 눈금건것.join(" ") + "] 이다",
-    눈금건것.join(",") === "rsi,srsi,stoch",
+    눈금건것.join(",") === "rsi,srsi,stoch,wr",
     "지금: " + 눈금건것.join(",") +
     "  → 늘었으면 좋은 일입니다. 아래 「PM 보고」 줄과 함께 새 사실로 고치세요");
 
@@ -409,6 +409,10 @@ const 정의로 = {};
                         대신 scale { keepGuides:true } 를 걸었습니다 —
                         범위는 데이터에 맡기고 ★기준선 값만 눈금 범위에 더합니다★
                         (트레이딩뷰 hline 이 눈금에 참여하는 것과 같은 뜻).
+     ⭐ 2026-09-03 (같은 날 뒤) 차트팀이 Williams %R(wr) 을 얹었습니다.
+        0 ~ -100 짜리라 scale { min:-100, max:0 } 을 걸었고, 기준선 -20 · -80 이
+        그 안입니다. ★검사 논리는 그대로이고 기대값 한 줄만★ rsi,srsi,stoch →
+        rsi,srsi,stoch,wr 로 옮겼습니다.
      ⚠️ 그래서 아래 재기에는 cci 가 ★그대로 남습니다★ — 이 재기는 「그린 값의
         최소~최대」 만 보고 autoscaleInfoProvider 를 안 보기 때문입니다.
         지금 cci 의 기준선은 화면에 ★보입니다.★ 실제로 눈금이 벌어지는지는

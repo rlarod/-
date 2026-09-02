@@ -4595,6 +4595,110 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* -- Williams %R  (%R) ------------------------------------------------
+   *   %R = (highest(high,p) - 종가) / (highest(high,p) - lowest(low,p)) · -100
+   *
+   * "지금 종가가 최근 p봉 폭의 어디쯤인가" 를 ★0 ~ -100★ 으로 봅니다.
+   * 최근 고점에 붙으면 0 쪽, 최근 저점에 붙으면 -100 쪽입니다.
+   * ⚠️ ★0~100 이 아닙니다.★ 위가 0 이고 아래가 -100 입니다(뒤집힌 스토캐스틱).
+   *
+   * ⭐ 계산식 · 기본값 - ★트레이딩뷰 Pine 참고서 ta.wpr 원문★
+   *    (2026-09-03 브라우저로 직접 열어 읽었습니다. 이 페이지는 자바스크립트로
+   *     그려져 curl 로는 본문이 한 글자도 안 나옵니다 - 그래서 브라우저로 열었습니다)
+   *      "ta.wpr()  Williams %R. The oscillator shows the current closing price
+   *       in relation to the high and low of the past 'length' bars."
+   *      "SYNTAX  ta.wpr(length) → series float"
+   *      "EXAMPLE  indicator("Williams %R", shorttitle="%R", ...)
+   *                plot(ta.wpr(14), title="%R", color=color.new(#ff6d00, 0))"
+   *
+   *    ⭐ 기본 기간 14 - 참고서 예제가 ta.wpr(14) 이고, 트레이딩뷰 내장
+   *       "Williams %R" 의 Length 기본도 14 입니다.
+   *    ⚠️ 참고서에 ★나눗셈 식이 글자로는 안 적혀 있습니다★ (ta.stoch 와 다릅니다 -
+   *       저쪽은 "100 * (close - lowest) / (highest - lowest)" 를 적어 둡니다).
+   *       그래서 ★같은 참고서의 ta.stoch 원문과 맞물려★ 확인했습니다 -
+   *           ta.stoch =  100 · (종가 - 최저) / (최고 - 최저)
+   *           %R       = -100 · (최고 - 종가) / (최고 - 최저)
+   *       두 식은 ★%R = ta.stoch - 100★ 으로 항등입니다(분자를 더하면 분모).
+   *       이 파일의 Stochastic(%K 다듬기 1)과 봉마다 대조해 확인했고,
+   *       tests/chart-indicator-wr.test.js 가 매번 다시 잽니다.
+   *
+   * ⭐ 눈금 0 ~ -100 ★고정★ - %R 은 정의상 이 밖으로 못 나갑니다
+   *    (분자 0 이상 · 분모 이하). RSI · Stochastic 칸과 같은 처리입니다.
+   * ⭐ 기준선 -20 · -80 - Stochastic 의 80 · 20 을 위 항등식만큼(100) 내린
+   *    ★같은 자리★ 입니다. 이 파일 Stochastic 이 트레이딩뷰 내장의
+   *    hline(80) · hline(20) 을 따르고 있어 여기서도 그것을 따릅니다.
+   *    ⚠️ 트레이딩뷰 앱 안 "Williams %R" 설정 창은 못 열었습니다 - 지표를
+   *       얹으려면 회원가입 창이 막고, 우리는 로그인하지 않습니다(앞 팀과 같은 벽).
+   *
+   * ⚠️ unit 을 ★안 붙입니다★ - %R 은 가격이 아니라 지수입니다. 붙이면 원화로
+   *    보는 회원 화면에서 -20 이 환산돼 뜻 없는 숫자가 됩니다(13.3 절).
+   *
+   * ⚠️ 창이 평평하면(최고 == 최저) 나눌 것이 없습니다. ★-100★ 을 둡니다 -
+   *    이 파일 Stochastic 의 "평평하면 0" 을 항등식으로 100 내린 같은 자리라
+   *    두 지표가 다르게 굴지 않습니다.
+   * ⚠️ 종가가 최근 고점이면 식이 ★-0★ 을 냅니다(0 · -100). 화면에 "-0.00" 으로
+   *    보일 수 있어 그 자리에서 0 으로 바꿉니다(값은 같습니다).
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    최고 · 최저를 위 rollPush 가 보통 비교 한 번으로 굴립니다(극값이 창에서
+   *    빠질 때만 창을 훑습니다 - Stochastic 과 같은 장치를 그대로 씁니다).
+   *    ⚠️ 덮어쓰는 칸은 hb[head] · lb[head] 둘뿐이고 그 값으로 답을 바로 냅니다.
+   *       그래서 진행 중인 봉으로 몇 번을 다시 불러도 답이 같습니다.
+   * --------------------------------------------------------------------- */
+
+  function wprCopy(st) {
+    return { w: rollCopy(st.w) };
+  }
+
+  /** 봉 하나. seed 와 step 이 ★같은 함수★ 를 씁니다. */
+  function wprOne(st, high, low, close, p) {
+    var w = rollPush(st.w, high, low, p);
+    var v = null;
+    if (w.cnt >= p) {
+      v = w.hiMax > w.loMin ? ((w.hiMax - close) / (w.hiMax - w.loMin)) * -100 : -100;
+      if (v === 0) v = 0;               /* -0 을 0 으로 (=== 는 둘을 같게 봅니다) */
+    }
+    return { value: v, state: { w: w } };
+  }
+
+  define({
+    id: "wr",
+    name: "Williams %R",
+    note: "최근 폭에서 종가의 자리 (0 ~ -100)",
+    pane: "sub",
+    params: { p: 14 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    nameOf: function (prm) {
+      return "%R(" + prm.p + ")";
+    },
+    /* 색 - 구리 #B87414. 20색 중 아무도 안 쓰던 자리이고, 트레이딩뷰 내장이
+       쓰는 주황(#ff6d00)에 우리 목록에서 제일 가까운 축입니다. 이미 주황
+       #FF8F3C 을 쓰는 선이 여럿이라 그쪽은 피했습니다. */
+    outputs: [{ key: "wr", kind: "line", color: "#B87414", style: "solid" }],
+    guides: [{ price: -20 }, { price: -80 }],
+    scale: { min: -100, max: 0, top: 0.12, bottom: 0.12 },
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var n = bs.close.length;
+      var out = [];
+      var st = { w: rollInit(p) };
+
+      for (var i = 0; i < n; i++) {
+        var r = wprOne(st, bs.high[i], bs.low[i], bs.close[i], p);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = wprCopy(st);
+      }
+      return { wr: out };
+    },
+
+    step: function (st, bar, prm) {
+      var r = wprOne(st, bar.high, bar.low, bar.close, Math.max(1, prm.p | 0));
+      return { values: r.value === null ? {} : { wr: r.value }, state: r.state };
+    }
+  });
+
 
   /* -- 와일더 평활(RMA) - ADX · Supertrend 가 같이 씁니다 -----------------
    *   첫 값은 앞 len개의 단순평균, 그 뒤로는 ((len-1)·이전 + 새값) / len.
