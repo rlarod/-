@@ -1087,13 +1087,34 @@ App.ChartIndicatorKit = (function () {
     return true;
   }
 
+  /* 기존 7개가 이미 쓰고 있는 색 - MA(7) 금색 · MA(25) 흰색 · MA(99) 회색이고,
+     RSI 는 흰색 · MACD 는 금색과 회색입니다(js/chart-oscillators.js).
+     새로 얹는 줄에는 이 셋을 ★맨 뒤로 미룹니다.★
+     ⚠️ 2026-09-02 실측 - 그 전에는 "지표 추가" 로 얹은 첫 줄이 무조건 금색이라
+        MA(7) 을 켜 둔 회원 화면에서 두 선이 한 줄로 보였습니다. 2026-08-31 에
+        시세선과 MA7 이 둘 다 금색이던 사고와 같은 종류입니다.
+     (LINE_COLORS 의 앞 세 자리는 기존 MA 색을 그대로 두기 위한 것이라
+      순서를 못 바꿉니다. 그래서 목록이 아니라 고르는 쪽에서 미룹니다) */
+  var LEGACY_HEXES = ["#F0B429", "#E7ECF5", "#838DA4"];
+
   /** 아직 아무도 안 쓴 색을 하나 고릅니다(같은 색 두 줄을 막습니다). */
   function suggestColor() {
+    /* 대표색만이 아니라 ★모든 선의 색★ 을 셉니다 - KDJ 처럼 선이 셋인 지표가
+       생기면서, 새로 얹은 줄의 첫 선이 다른 줄의 둘째·셋째 선과 같은 색이
+       될 수 있게 됐습니다. */
     var used = {};
     instOrder.forEach(function (iid) {
-      used[mainColor(insts[iid])] = true;
+      var it = insts[iid];
+      for (var ck in it.colors) used[it.colors[ck]] = true;
     });
-    for (var i = 0; i < LINE_COLORS.length; i++) {
+    var i;
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      if (!used[LINE_COLORS[i].hex] && LEGACY_HEXES.indexOf(LINE_COLORS[i].hex) < 0) {
+        return LINE_COLORS[i].hex;
+      }
+    }
+    /* 나머지를 다 썼으면 그때 기존 7개와 같은 색도 씁니다 */
+    for (i = 0; i < LINE_COLORS.length; i++) {
       if (!used[LINE_COLORS[i].hex]) return LINE_COLORS[i].hex;
     }
     return LINE_COLORS[instOrder.length % LINE_COLORS.length].hex;
@@ -1523,6 +1544,265 @@ App.ChartIndicatorKit = (function () {
       var x = typeof bar.src === "number" ? bar.src : bar.close;
       var e = x * k + st.e * (1 - k);
       return { values: { ema: e }, state: { e: e } };
+    }
+  });
+
+  /* -- WMA 가중이동평균 -------------------------------------------------
+   * WMA(t) = (p·값(t) + (p-1)·값(t-1) + ... + 1·값(t-p+1)) / (1+2+...+p)
+   * 단순평균(MA)과 뿌리가 같고 무게만 다릅니다 - 최근 봉에 가장 큰 무게.
+   *
+   * 기본 길이 9 · 종가 · 밀기 0 · 굵기 1 - 트레이딩뷰 "Moving Average
+   * Weighted" 기본값입니다. ⚠️ 바이낸스는 다릅니다 - 2026-09-02 에 직접
+   * 열어 보니 WMA1·2·3 = 7 · 25 · 99 였습니다(MA 와 같은 칸 열 개짜리 구조).
+   * ★차트 시스템은 트레이딩뷰를 따라간다★ 는 지시라 9 로 뒀습니다. 바이낸스
+   * 처럼 보고 싶으면 WMA(7) · WMA(25) · WMA(99) 세 줄을 얹으면 됩니다 -
+   * 이 틀이 "정의 1개 + 인스턴스 N개" 인 이유가 그것입니다.
+   *
+   * -- step 이 O(1) 인 이유 (이 지표의 핵심) ----------------------------
+   * 그냥 하면 틱마다 p개를 다시 더해야 합니다. 아래 두 줄이면 끝납니다.
+   *     분자(t) = 분자(t-1) + p·값(t) - 합(t-1)
+   *     합(t)   = 합(t-1)   + 값(t)   - 값(t-p)
+   * 그래서 상태가 "곧 창에서 빠질 값(oldest)" 과 최근 p개(buf) 를 들고 다닙니다.
+   *
+   * ⚠️ buf 를 그 자리에서 고쳐 씁니다. 그래도 되는 이유 -
+   *    step 은 ★진행 중인 봉★ 때문에 같은 상태로 여러 번 불립니다. 그때
+   *    덮어쓰는 칸은 st.head ★하나뿐★ 이고, 그 칸의 옛 값은 st.oldest 에
+   *    따로 적어 두었습니다. 그래서 몇 번을 다시 불러도 답이 같습니다.
+   *    (다음 oldest 는 ★쓴 뒤에★ 읽습니다 - 기간이 1이면 그 칸이 자기 자신입니다)
+   * ------------------------------------------------------------------- */
+
+  /** i번째 봉까지 확정된 WMA 상태. buf 는 [i-p+1 .. i] 를 시간순으로 담고
+   *  head 는 "곧 빠질 칸"(= i-p+1) 을 가리킵니다. */
+  function wmaState(num, sum, src, i, p) {
+    var buf = new Array(p);
+    for (var q = 0; q < p; q++) buf[q] = src[i - p + 1 + q];
+    return { N: num, S: sum, oldest: buf[0], buf: buf, head: 0 };
+  }
+
+  define({
+    id: "wma",
+    name: "WMA",
+    note: "가중이동평균",
+    pane: "main",
+    params: { p: 9 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    useOffset: true,
+    nameOf: function (prm) {
+      return "WMA(" + prm.p + ")";
+    },
+    outputs: [{ key: "wma", kind: "line", color: "#FF8F3C", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      if (n < p) return { wma: out };
+
+      var den = (p * (p + 1)) / 2;
+      var num = 0;
+      var sum = 0;
+      var i;
+      for (i = 0; i < p; i++) {
+        num += (i + 1) * src[i];
+        sum += src[i];
+      }
+      out.push({ time: bs.time[p - 1], value: num / den });
+      if (p - 1 === n - 2) cap.state = wmaState(num, sum, src, p - 1, p);
+
+      for (i = p; i < n; i++) {
+        num = num + p * src[i] - sum;
+        sum = sum + src[i] - src[i - p];
+        out.push({ time: bs.time[i], value: num / den });
+        if (i === n - 2) cap.state = wmaState(num, sum, src, i, p);
+      }
+      return { wma: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var den = (p * (p + 1)) / 2;
+      var num = st.N + p * x - st.S;
+      var sum = st.S + x - st.oldest;
+
+      var len = st.buf.length || 1;
+      st.buf[st.head] = x;                    /* 덮어쓰는 칸은 여기 하나뿐 */
+      var head = (st.head + 1) % len;
+      return {
+        values: { wma: num / den },
+        state: { N: num, S: sum, oldest: st.buf[head], buf: st.buf, head: head }
+      };
+    }
+  });
+
+  /* -- KDJ -------------------------------------------------------------
+   * 국내·아시아권에서 많이 쓰는 스토캐스틱 계열입니다. 선이 셋입니다.
+   *
+   *   RSV(t) = (종가 - 기간최저) / (기간최고 - 기간최저) x 100
+   *   K = ((k-1)·이전K + RSV) / k    기본 k=3 이면  K = (2·이전K + RSV) / 3
+   *   D = ((d-1)·이전D + K)  / d     기본 d=3 이면  D = (2·이전D + K)  / 3
+   *   J = 3K - 2D                    시작값은 K = D = 50
+   *
+   * J 는 K 와 D 의 벌어짐이라 0~100 을 넘어갑니다 - 그래서 눈금을 고정하지
+   * 않고 라이브러리 자동 눈금에 맡깁니다.
+   *
+   * ⭐ 기본값 9 · 3 · 3 의 근거 - ★2026-09-02 바이낸스 선물 차트에서 직접 열어
+   *    읽은 값입니다.★ (Original 차트 > 지표 > Sub Indicator > KDJ)
+   *        KDJ - Stochastic Indicator
+   *        Calculating Period 9 · MA Period 1  3 · MA Period 2  3
+   *    우리 이름으로는 기간 9 · K 기간 3 · D 기간 3 입니다.
+   *    트레이딩뷰 ★내장★ 에는 KDJ 가 없어서(커뮤니티 지표뿐이고 기본값이
+   *    제각각입니다) 회원이 실제로 보는 바이낸스 값을 따랐습니다.
+   *    바이낸스 선 색은 #EB40B5 · #B385F8 · #F0B90B 세 가지였습니다 -
+   *    우리는 확정 팔레트 밖 색을 못 쓰므로 LINE_COLORS 안에서 골랐습니다.
+   *
+   * -- 기간최고 · 기간최저를 틱마다 다시 훑지 않습니다 -------------------
+   *    창에 최고값이 어느 칸인지(hiIdx) 를 같이 들고 다닙니다.
+   *      · 새 값이 더 높다         -> 그 값이 새 최고 (비교 한 번)
+   *      · 최고가 창에 그대로 있다  -> 그대로 (비교 한 번)
+   *      · 최고이던 봉이 빠졌다     -> 그때만 창을 훑습니다
+   *    보통은 O(1) 이고, 훑는 경우에도 ★봉 개수 n 이 아니라 기간 p★ 입니다.
+   *    (기본 9 -> 최대 8번 비교. 1000봉을 다시 계산하는 것과 다릅니다)
+   *
+   * ⚠️ ring 을 그 자리에서 고쳐 쓰는 것은 위 WMA 와 같은 이유로 안전합니다.
+   *    값은 상태에 적어 둔 hiMax/loMin 으로만 내고, 창을 훑는 경우는
+   *    ★현재 값을 쓴 뒤★ 라 몇 번을 다시 불러도 답이 같습니다.
+   * ------------------------------------------------------------------- */
+
+  function kdjInit(m) {
+    return {
+      hb: new Array(m), lb: new Array(m), head: 0, cnt: 0,
+      hiMax: -Infinity, hiIdx: -1, loMin: Infinity, loIdx: -1,
+      k: 50, d: 50
+    };
+  }
+
+  /** seed 가 잡아 두는 상태는 배열까지 복사합니다 - 뒤이어 도는 봉이
+   *  같은 배열을 고쳐 쓰지 못하게. (켤 때 한 번뿐입니다) */
+  function kdjCopy(st) {
+    return {
+      hb: st.hb.slice(), lb: st.lb.slice(), head: st.head, cnt: st.cnt,
+      hiMax: st.hiMax, hiIdx: st.hiIdx, loMin: st.loMin, loIdx: st.loIdx,
+      k: st.k, d: st.d
+    };
+  }
+
+  /** 봉 하나를 처리합니다. seed 와 step 이 ★같은 함수★ 를 씁니다
+   *  (계산이 두 벌이 되면 켤 때와 틱이 어긋납니다). */
+  function kdjOne(st, high, low, close, m, m1, m2) {
+    var vals = null;
+    var k = st.k;
+    var d = st.d;
+
+    if (st.cnt >= m) {
+      var hh = high > st.hiMax ? high : st.hiMax;
+      var ll = low < st.loMin ? low : st.loMin;
+      var rsv = hh > ll ? ((close - ll) / (hh - ll)) * 100 : 50;
+      k = ((m1 - 1) * st.k + rsv) / m1;
+      d = ((m2 - 1) * st.d + k) / m2;
+      vals = { k: k, d: d, j: 3 * k - 2 * d };
+    }
+
+    var head = st.head;
+    var cnt = st.cnt;
+    var hiMax = st.hiMax, hiIdx = st.hiIdx;
+    var loMin = st.loMin, loIdx = st.loIdx;
+    var a, v;
+
+    if (m > 0) {
+      st.hb[head] = high;                     /* 덮어쓰는 칸은 여기 하나뿐 */
+      st.lb[head] = low;
+
+      if (high >= hiMax) {
+        hiMax = high;
+        hiIdx = head;
+      } else if (hiIdx === head) {            /* 최고이던 봉이 창에서 빠졌습니다 */
+        hiMax = -Infinity;
+        hiIdx = -1;
+        for (a = 0; a < m; a++) {
+          v = st.hb[a];
+          if (v === undefined) continue;
+          if (v > hiMax) { hiMax = v; hiIdx = a; }
+        }
+      }
+
+      if (low <= loMin) {
+        loMin = low;
+        loIdx = head;
+      } else if (loIdx === head) {
+        loMin = Infinity;
+        loIdx = -1;
+        for (a = 0; a < m; a++) {
+          v = st.lb[a];
+          if (v === undefined) continue;
+          if (v < loMin) { loMin = v; loIdx = a; }
+        }
+      }
+
+      head = (head + 1) % m;
+      if (cnt < m) cnt++;
+    }
+
+    return {
+      values: vals,
+      state: {
+        hb: st.hb, lb: st.lb, head: head, cnt: cnt,
+        hiMax: hiMax, hiIdx: hiIdx, loMin: loMin, loIdx: loIdx, k: k, d: d
+      }
+    };
+  }
+
+  define({
+    id: "kdj",
+    name: "KDJ",
+    note: "K·D·J 세 선",
+    pane: "sub",
+    params: { p: 9, k: 3, d: 3 },
+    inputs: [
+      { key: "p", label: "기간", min: 1, max: 1000 },
+      { key: "k", label: "K 기간", min: 1, max: 100 },
+      { key: "d", label: "D 기간", min: 1, max: 100 }
+    ],
+    nameOf: function (prm) {
+      return "KDJ(" + prm.p + "," + prm.k + "," + prm.d + ")";
+    },
+    outputs: [
+      { key: "k", kind: "line", color: "#499EE9", style: "solid" },
+      { key: "d", kind: "line", color: "#E1ED97", style: "solid" },
+      { key: "j", kind: "line", color: "#E637E6", style: "solid" }
+    ],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var m1 = Math.max(1, prm.k | 0);
+      var m2 = Math.max(1, prm.d | 0);
+      var m = p - 1;
+      var n = bs.close.length;
+      var outK = [], outD = [], outJ = [];
+      var st = kdjInit(m);
+
+      for (var i = 0; i < n; i++) {
+        var r = kdjOne(st, bs.high[i], bs.low[i], bs.close[i], m, m1, m2);
+        st = r.state;
+        if (r.values) {
+          outK.push({ time: bs.time[i], value: r.values.k });
+          outD.push({ time: bs.time[i], value: r.values.d });
+          outJ.push({ time: bs.time[i], value: r.values.j });
+        }
+        if (i === n - 2) cap.state = kdjCopy(st);
+      }
+      return { k: outK, d: outD, j: outJ };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var r = kdjOne(
+        st, bar.high, bar.low, bar.close,
+        p - 1, Math.max(1, prm.k | 0), Math.max(1, prm.d | 0)
+      );
+      return { values: r.values || {}, state: r.state };
     }
   });
 
