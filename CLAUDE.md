@@ -227,7 +227,8 @@ md5sum -c /tmp/baseline.md5
 
 ```
 옛  33250202c00b097ff8344ae2ee64cbe7
-새  7e26f9d581820f425b4402edd132d653
+새  7e26f9d581820f425b4402edd132d653   (A건)
+    ff3fef520608d56d4c7eb6aef9b08dff   (B건 — 지금 값)
 ```
 
 ⚠️ **허가 범위는 바이낸스 거래 규칙 4가지뿐입니다.**
