@@ -204,3 +204,27 @@ tests/max-margin-safe-seal.test.js
 # 제일 중요한 것은 [2] — 익절/손절 판정도 보정값 기준.
 # 되돌리기: git checkout HEAD -- js/trade-events-chat.js
 tests/chat-event-entry-fee.test.js
+# 2026-09-02 — TL 마켓 판매 중지가 ★화면에만★ 걸려 있고 서버는 열려 있던 것(P1).
+# 개발자도구로 purchase_tl_market_item 을 직접 부르면 효과 없는 50 TL 아이템을
+# 지금도 살 수 있었습니다. 제일 중요한 것은 [2] — ★leverage_boost 를 빠뜨리지 않는다★.
+# 되돌리기: supabase/schema-market-sale-stop.sql 의 [되돌리기] 한 줄을 Run
+tests/market-sale-stop-server.test.js
+# 2026-09-02 — 지표 틀(js/chart-indicator-kit.js) 1,255줄이 봉인 0건으로 배포됐던 것(d49bd27).
+# 제일 중요한 것은 [2] — ★step 이 없으면 정의를 거부★ (틱마다 전체 재계산하는 지표를 막습니다.
+# 켜기 6.51ms → 2.14ms 의 근거 전부) 와 [6] — ★기존 ma7/ma25/ma99/bb/vol 이 원래 모듈로
+# 그대로 넘어간다★ (틀이 App.ChartIndicators.isOn/toggle 을 감싸기 때문입니다).
+# ⚠️ 소스 문자열이 아니라 공개 API 로만 검사합니다 — 차트팀이 같은 파일을 만지고 있습니다.
+# 되돌리기: index.html 에서 js/chart-indicator-kit.js 한 줄 삭제 + 이 줄 삭제
+tests/chart-indicator-kit-seal.test.js
+# 2026-09-02 — 누적 실현손익이 ★201건째부터 얼어붙는 것★ (거래 200 → 1799, 260 → 1799).
+# ⚠️ 고친 게 아니라 ★지금 이렇다★ 를 남기는 기록입니다. 나중에 고치면 여기가 터지면서
+# "이제 바뀌었다" 고 알려줍니다. 제일 중요한 것은 [1] — MAX_CLOSED_TRADES 를 바꾸면 터집니다
+# (표 머리글 툴팁의 200 도 같이 고쳐야 합니다).
+# 되돌리기: 이 줄과 tests/closed-trades-cap-seal.test.js 삭제
+tests/closed-trades-cap-seal.test.js
+# 2026-09-02 — TL-015 auth:changed 를 13곳이 듣는데 발신 0건. "비회원으로 둘러보다
+# 화면 안에서 로그인" 하는 길에서만 마이페이지가 "로그인 후 확인할 수 있습니다" 로 굳었습니다.
+# ⭐⭐ 제일 중요한 것은 [2] — ★AccountIsolation 을 절대 안 부른다★ (부르면 로컬
+# 거래기록이 지워지고 되돌릴 수 없습니다). 그래서 App.Bus 로 쏘지 않고 안전한 3개만 직접 부릅니다.
+# 되돌리기: index.html 에서 js/auth-changed-bridge.js 한 줄 삭제
+tests/auth-changed-bridge.test.js

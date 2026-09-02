@@ -68,6 +68,19 @@
  * 것을 못 셉니다. 그대로 두면 화면이 사실과 달라지므로(EMA 를 켰는데
  * "켜진 지표 0개"), 우리가 화면에 있는 줄을 다시 세어 고쳐 적습니다.
  *
+ * -- 2026-09-02 (6단계) 에 늘어난 것 ----------------------------------
+ * 설정 창(js/chart-indicator-settings.js)이 쓸 것만 틀에 더했습니다.
+ *   값 종류(Source)   SOURCES 한 곳. 종가 · 시가 · 고가 · 저가 · HL2 · HLC3 · OHLC4
+ *                     정의는 bs.src / bar.src 를 읽습니다(종가면 배열을 새로 안 만듭니다)
+ *   앞뒤로 밀기(Offset)  봉 개수만큼 좌우로. 봉 끝을 넘으면 마지막 간격으로 늘려 잡습니다
+ *   updateInstance()  인스턴스 ★하나만★ 다시 계산. 값 다듬기(범위 · 색 · 굵기)는 여기만
+ *   createInstance()  "지표 추가" - 만들고 저장하고 화면까지
+ *   resetInstance()   트레이딩뷰 Defaults 자리
+ *   inputsOf()        설정 창이 무엇을 그릴지. 정의가 들고 있습니다
+ * 설정 창 쪽 파일에는 기간 · 색 · 범위 같은 값이 하나도 없습니다(두 벌 금지).
+ * 저장 키는 그대로 btc_sim_v2_chart-indicator-kit 이고 형식도 v1 그대로라
+ * 이미 저장된 인스턴스는 그대로 열립니다.
+ *
  * -- 되돌리기 ---------------------------------------------------------
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
@@ -130,8 +143,57 @@ App.ChartIndicatorKit = (function () {
   var ALLOWED_KINDS = ["line", "hist"];
   var ALLOWED_PANES = ["main", "sub"];
 
+  var ALLOWED_WIDTHS = [1, 2, 3, 4];   /* 트레이딩뷰 Thickness 도 네 칸입니다 */
+  var MAX_OFFSET = 500;                /* 앞뒤로 밀기 한계 */
+
+  /* ---------------------------------------------------------------------
+   * 값 종류(Source) - 트레이딩뷰 Inputs 의 Source 와 같은 목록입니다.
+   * 실측(2026-09-02 · 트레이딩뷰 EMA 설정 창) - Close / Open / High / Low /
+   * HL2 / HLC3 / OHLC4. 이름도 계산도 여기 한 곳에만 적습니다.
+   * ------------------------------------------------------------------- */
+  var SOURCES = [
+    { key: "close", name: "종가", pick: function (b, i) { return b.close[i]; } },
+    { key: "open", name: "시가", pick: function (b, i) { return b.open[i]; } },
+    { key: "high", name: "고가", pick: function (b, i) { return b.high[i]; } },
+    { key: "low", name: "저가", pick: function (b, i) { return b.low[i]; } },
+    { key: "hl2", name: "(고+저)/2", pick: function (b, i) { return (b.high[i] + b.low[i]) / 2; } },
+    { key: "hlc3", name: "(고+저+종)/3", pick: function (b, i) { return (b.high[i] + b.low[i] + b.close[i]) / 3; } },
+    { key: "ohlc4", name: "(시+고+저+종)/4", pick: function (b, i) { return (b.open[i] + b.high[i] + b.low[i] + b.close[i]) / 4; } }
+  ];
+
+  function sourceOf(key) {
+    for (var si = 0; si < SOURCES.length; si++) if (SOURCES[si].key === key) return SOURCES[si];
+    return SOURCES[0];
+  }
+
+  function hasSource(key) {
+    for (var si = 0; si < SOURCES.length; si++) if (SOURCES[si].key === key) return true;
+    return false;
+  }
+
   var DEFAULT_WIDTH = 1;   /* 바이낸스 · 트레이딩뷰 기본 굵기와 같은 1px */
   var PANE_RATIO = 0.32;   /* 아래 별도 칸 높이 비율 - 3단계와 같은 값 */
+
+  /* ---------------------------------------------------------------------
+   * 이미 남이 쓰고 있는 이름 - 여기 한 곳에만 적습니다.
+   *
+   * 2026-09-02 조사팀 지적. 아래 일곱은 js/chart-indicators.js 와
+   * js/chart-oscillators.js 가 쓰는 이름입니다. 우리 인스턴스가 같은 이름을
+   * 가지면, fx 목록에 끼어들려고 감싸 둔 isOn/toggle 다리가
+   *     insts[key] 가 있다  ->  우리가 답한다
+   * 로 갈라지기 때문에 ★MA(7) 스위치가 EMA 를 켜는★ 일이 납니다.
+   * 화면은 멀쩡하고 오류도 안 나는 조용한 고장입니다.
+   *
+   * 지금 자동으로 붙이는 이름은 ema-1 · ema-2 라 부딪히지 않습니다. 그래도
+   * 막는 이유는 두 가지입니다.
+   *   1) 저장소는 ★회원 브라우저★ 에 있습니다. 손으로 고칠 수 있습니다
+   *   2) 나중에 이름을 정하게 하는 화면이 생기면 그때 바로 열립니다
+   * ------------------------------------------------------------------- */
+  var RESERVED_IDS = ["ma7", "ma25", "ma99", "bb", "vol", "rsi", "macd"];
+
+  function isReservedId(id) {
+    return RESERVED_IDS.indexOf(id) >= 0;
+  }
 
   var STORAGE_KEY = "chart-indicator-kit";
   var STORE_VERSION = 1;
@@ -203,12 +265,40 @@ App.ChartIndicatorKit = (function () {
       if (o.style && ALLOWED_STYLES.indexOf(o.style) < 0) return no("style 은 solid/dashed/dotted: " + def.id);
     }
 
+    /* 설정 창이 무엇을 보여줄지도 정의가 들고 있습니다. 화면 쪽 파일에
+       "EMA 는 기간" 을 또 적으면 같은 값이 두 벌이 됩니다. */
+    var params0 = copy(def.params || {});
+    var inputs = [];
+    var bad = null;
+    (def.inputs || []).forEach(function (sp) {
+      if (!sp || !sp.key) { bad = "inputs 에 key 가 없습니다"; return; }
+      if (!(sp.key in params0)) { bad = "inputs 의 key 가 params 에 없습니다: " + sp.key; return; }
+      inputs.push({
+        key: sp.key,
+        label: sp.label || sp.key,
+        type: "int",
+        min: typeof sp.min === "number" ? sp.min : 1,
+        max: typeof sp.max === "number" ? sp.max : 5000
+      });
+    });
+    if (bad) return no(bad + " : " + def.id);
+
+    if (def.useSource) {
+      params0.src = hasSource(def.srcDefault) ? def.srcDefault : "close";
+      inputs.push({ key: "src", label: "값 종류", type: "select" });
+    }
+    if (def.useOffset) {
+      params0.off = 0;
+      inputs.push({ key: "off", label: "앞뒤로 밀기", type: "int", min: -MAX_OFFSET, max: MAX_OFFSET });
+    }
+
     defs[def.id] = {
       id: def.id,
       name: def.name,
       note: def.note || "",
       pane: def.pane,
-      params: def.params || {},
+      params: params0,
+      inputs: inputs,
       outputs: def.outputs,
       nameOf: isFn(def.nameOf) ? def.nameOf : null,
       seed: def.seed,
@@ -218,10 +308,56 @@ App.ChartIndicatorKit = (function () {
     return true;
   }
 
+  /** 정의가 들고 있는 설정 항목 목록. 설정 창은 이것만 보고 그립니다. */
+  function inputsOf(defId) {
+    var d = defs[defId];
+    if (!d) return [];
+    return d.inputs.map(function (sp) {
+      var r = { key: sp.key, label: sp.label, type: sp.type };
+      if (sp.type === "int") {
+        r.min = sp.min;
+        r.max = sp.max;
+      } else {
+        r.options = SOURCES.map(function (o) {
+          return { key: o.key, name: o.name };
+        });
+      }
+      return r;
+    });
+  }
+
+  /** 회원이 적어 넣은 값을 정의가 정한 범위 안으로 다듬습니다(틀에서 한 번만). */
+  function cleanParams(defId, raw) {
+    var d = defs[defId];
+    var out = copy(d ? d.params : {});
+    if (!d || !raw) return out;
+    d.inputs.forEach(function (sp) {
+      var v = raw[sp.key];
+      if (v === undefined || v === null || v === "") return;
+      if (sp.type === "select") {
+        if (hasSource(v)) out[sp.key] = v;
+        return;
+      }
+      var n = parseInt(v, 10);
+      if (!isFinite(n)) return;
+      if (n < sp.min) n = sp.min;
+      if (n > sp.max) n = sp.max;
+      out[sp.key] = n;
+    });
+    return out;
+  }
+
   function listDefs() {
     return defOrder.map(function (id) {
       var d = defs[id];
-      return { id: d.id, name: d.name, note: d.note, pane: d.pane, params: copy(d.params) };
+      return {
+        id: d.id,
+        name: d.name,
+        note: d.note,
+        pane: d.pane,
+        params: copy(d.params),
+        inputs: inputsOf(d.id)
+      };
     });
   }
 
@@ -260,15 +396,31 @@ App.ChartIndicatorKit = (function () {
     }
     opts = opts || {};
 
-    var id = opts.id || defId + "-" + ++instSeq;
+    var id = opts.id;
+    if (id !== undefined && id !== null && (typeof id !== "string" || !id)) {
+      console.warn("[chart-indicator-kit] 인스턴스 이름이 글자가 아니라 거부했습니다:", id);
+      return null;
+    }
+    if (isReservedId(id)) {
+      console.warn(
+        "[chart-indicator-kit] 이미 다른 지표가 쓰는 이름이라 거부했습니다: " + id +
+        " (못 쓰는 이름 - " + RESERVED_IDS.join(" · ") + ")"
+      );
+      return null;
+    }
+    if (!id) {
+      /* 저장된 인스턴스가 "ema-1" 을 이미 쓰고 있을 수 있습니다.
+         빈 번호가 나올 때까지 올립니다(다시 켜도 이름이 안 겹치게). */
+      do {
+        id = defId + "-" + ++instSeq;
+      } while (insts[id] || isReservedId(id));
+    }
     if (insts[id]) {
       console.warn("[chart-indicator-kit] 인스턴스 id 가 이미 있습니다: " + id);
       return null;
     }
 
-    var params = copy(d.params);
-    var k;
-    if (opts.params) for (k in opts.params) params[k] = opts.params[k];
+    var params = cleanParams(defId, opts.params);
 
     /* 색 - 정의의 기본색에서 시작하고, 인스턴스가 골랐으면 그걸 씁니다.
        목록 밖의 색은 조용히 넘어가지 않고 기본색으로 되돌리며 알립니다. */
@@ -292,7 +444,7 @@ App.ChartIndicatorKit = (function () {
       params: params,
       colors: colors,
       style: style,          /* null 이면 정의의 outputs[].style 을 씁니다 */
-      width: opts.width || DEFAULT_WIDTH,
+      width: ALLOWED_WIDTHS.indexOf(opts.width | 0) >= 0 ? opts.width | 0 : DEFAULT_WIDTH,
       pane: pane,
       on: !!opts.on,
       live: null
@@ -426,6 +578,82 @@ App.ChartIndicatorKit = (function () {
     return true;
   }
 
+  /* ---------------------------------------------------------------------
+   * 값 종류(Source) - 정의는 bs.src 를 읽습니다. 종가면 배열을 새로 만들지
+   * 않고 있는 것을 그대로 넘깁니다(켤 때 한 번, O(n)).
+   * ------------------------------------------------------------------- */
+  function barsView(params) {
+    var key = params && params.src;
+    if (!key || key === "close") {
+      bars.src = bars.close;
+      return bars;
+    }
+    var s = sourceOf(key);
+    var n = bars.close.length;
+    var arr = new Array(n);
+    for (var i = 0; i < n; i++) arr[i] = s.pick(bars, i);
+    return {
+      time: bars.time, open: bars.open, high: bars.high, low: bars.low,
+      close: bars.close, volume: bars.volume, src: arr
+    };
+  }
+
+  /** 마지막 봉 하나에 src 를 붙입니다. 종가면 그대로(새로 안 만듭니다). */
+  function barWithSrc(bar, key) {
+    if (!key || key === "close") {
+      bar.src = bar.close;
+      return bar;
+    }
+    var s = sourceOf(key);
+    var one = { open: [bar.open], high: [bar.high], low: [bar.low], close: [bar.close] };
+    return {
+      time: bar.time, open: bar.open, high: bar.high, low: bar.low,
+      close: bar.close, volume: bar.volume, src: s.pick(one, 0)
+    };
+  }
+
+  /* ---------------------------------------------------------------------
+   * 앞뒤로 밀기(Offset) - 트레이딩뷰와 같이 "봉 개수" 만큼 좌우로 밉니다.
+   * 봉 끝을 넘어가면 마지막 봉 간격으로 시각을 늘려 잡습니다.
+   * ------------------------------------------------------------------- */
+  function offOf(params) {
+    var o = params && params.off ? params.off | 0 : 0;
+    if (!isFinite(o)) return 0;
+    if (o > MAX_OFFSET) return MAX_OFFSET;
+    if (o < -MAX_OFFSET) return -MAX_OFFSET;
+    return o;
+  }
+
+  function timeAtIndex(i) {
+    var n = bars.time.length;
+    if (i < 0 || !n) return null;
+    if (i < n) return bars.time[i];
+    if (n < 2) return null;
+    var gap = bars.time[n - 1] - bars.time[n - 2];
+    if (!(gap > 0)) return null;
+    return bars.time[n - 1] + gap * (i - n + 1);
+  }
+
+  function timeIndexMap() {
+    var m = {};
+    for (var i = 0; i < bars.time.length; i++) m[bars.time[i]] = i;
+    return m;
+  }
+
+  /** 켤 때 한 번. off 가 0 이면 원본 배열을 그대로 씁니다(복사 안 함). */
+  function shiftPoints(arr, off, map) {
+    if (!off || !arr || !arr.length) return arr || [];
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var at = map[arr[i].time];
+      if (at === undefined) continue;
+      var t = timeAtIndex(at + off);
+      if (t === null) continue;
+      out.push({ time: t, value: arr[i].value });
+    }
+    return out;
+  }
+
   /* =====================================================================
    * 4. 차트 · 시리즈 찾기 - chart.js 를 고치지 않고 공개 API 로만
    * ===================================================================== */
@@ -547,12 +775,15 @@ App.ChartIndicatorKit = (function () {
     var cap = {};
     var outData;
     try {
-      outData = d.seed(bars, it.params, cap);
+      outData = d.seed(barsView(it.params), it.params, cap);
     } catch (e) {
       console.warn("[chart-indicator-kit] seed 가 실패했습니다: " + id, e);
       return;
     }
     if (!outData) return;
+
+    var off = offOf(it.params);
+    var map = off ? timeIndexMap() : null;
 
     var pane = it.pane === "sub" ? makePane() : null;
     var made = {};
@@ -560,7 +791,7 @@ App.ChartIndicatorKit = (function () {
       var out = d.outputs[i];
       try {
         made[out.key] = addSeriesFor(it, out, pane);
-        made[out.key].setData(outData[out.key] || []);
+        made[out.key].setData(shiftPoints(outData[out.key] || [], off, map));
       } catch (e2) {
         console.warn("[chart-indicator-kit] 선을 못 그렸습니다: " + id + "." + out.key, e2);
       }
@@ -569,6 +800,7 @@ App.ChartIndicatorKit = (function () {
     it.live = {
       series: made,
       pane: pane,
+      off: off,
       commit: cap.state || null,
       commitIdx: cap.state ? n - 2 : -1
     };
@@ -675,7 +907,7 @@ App.ChartIndicatorKit = (function () {
            확정 상태를 따로 들고 있어야 진행 중인 봉의 값이 확정값을
            오염시키지 않습니다(EMA 는 한 번 오염되면 계속 끌고 갑니다). */
         if (newBar && it.live.commitIdx === n - 3) {
-          var closed = barAt(n - 2);
+          var closed = barWithSrc(barAt(n - 2), it.params.src);
           var r0 = d.step(it.live.commit, closed, it.params);
           if (r0 && r0.state) {
             it.live.commit = r0.state;
@@ -683,13 +915,16 @@ App.ChartIndicatorKit = (function () {
           }
         }
 
-        var r = d.step(it.live.commit, lastBar, it.params);
+        var r = d.step(it.live.commit, barWithSrc(lastBar, it.params.src), it.params);
         if (!r || !r.values) continue;
+        /* 밀기가 있으면 그린 자리도 그만큼 옮겨야 합니다(자리가 없으면 건너뜀) */
+        var at = it.live.off ? timeAtIndex(n - 1 + it.live.off) : lastBar.time;
+        if (at === null) continue;
         for (var k in r.values) {
           if (!it.live.series[k]) continue;
           var v = r.values[k];
           if (typeof v !== "number" || !isFinite(v)) continue;
-          it.live.series[k].update({ time: lastBar.time, value: v });
+          it.live.series[k].update({ time: at, value: v });
         }
       } catch (e) {
         /* 한 인스턴스가 실패해도 나머지는 계속 그립니다.
@@ -793,6 +1028,122 @@ App.ChartIndicatorKit = (function () {
     return !!(insts[id] && insts[id].on);
   }
 
+  /* ---------------------------------------------------------------------
+   * 설정 바꾸기 - 인스턴스 ★하나만★ 다시 계산합니다.
+   * 값을 다듬는 곳(범위 · 색 목록 · 굵기)은 여기 한 곳뿐입니다.
+   * 화면(설정 창)은 값을 검사하지 않고 그대로 넘깁니다.
+   * ------------------------------------------------------------------- */
+  function updateInstance(id, patch) {
+    var it = insts[id];
+    if (!it || !patch) return false;
+    var d = defs[it.def];
+    if (!d) return false;
+
+    if (patch.params) {
+      var merged = copy(it.params);
+      for (var pk in patch.params) merged[pk] = patch.params[pk];
+      it.params = cleanParams(it.def, merged);
+    }
+    if (patch.colors) {
+      var hexes = colorHexes();
+      d.outputs.forEach(function (o) {
+        var want = patch.colors[o.key];
+        if (want && hexes.indexOf(want) >= 0) it.colors[o.key] = want;
+      });
+    }
+    if (patch.style && ALLOWED_STYLES.indexOf(patch.style) >= 0) it.style = patch.style;
+    if (patch.width && ALLOWED_WIDTHS.indexOf(patch.width | 0) >= 0) it.width = patch.width | 0;
+
+    if (it.on) {
+      turnOff(id);
+      turnOn(id);
+    }
+    saveState();
+    refreshLabels(id);
+    paintButtons();
+    paintMenu();
+    return true;
+  }
+
+  /** 정의의 기본값으로 되돌립니다(트레이딩뷰 Defaults 자리). */
+  function resetInstance(id) {
+    var it = insts[id];
+    var d = it && defs[it.def];
+    if (!d) return false;
+    it.params = copy(d.params);
+    it.style = null;
+    it.width = DEFAULT_WIDTH;
+    d.outputs.forEach(function (o) {
+      it.colors[o.key] = o.color;
+    });
+    if (it.on) {
+      turnOff(id);
+      turnOn(id);
+    }
+    saveState();
+    refreshLabels(id);
+    paintButtons();
+    paintMenu();
+    return true;
+  }
+
+  /** 아직 아무도 안 쓴 색을 하나 고릅니다(같은 색 두 줄을 막습니다). */
+  function suggestColor() {
+    var used = {};
+    instOrder.forEach(function (iid) {
+      used[mainColor(insts[iid])] = true;
+    });
+    for (var i = 0; i < LINE_COLORS.length; i++) {
+      if (!used[LINE_COLORS[i].hex]) return LINE_COLORS[i].hex;
+    }
+    return LINE_COLORS[instOrder.length % LINE_COLORS.length].hex;
+  }
+
+  /**
+   * 회원이 "지표 추가" 를 눌렀을 때. 인스턴스를 만들고 저장하고 화면까지
+   * 붙입니다. (addInstance 는 틀에 등록만 하고 화면은 안 건드립니다)
+   */
+  function createInstance(defId, opts) {
+    opts = copy(opts || {});
+    var want = !!opts.on;
+    opts.on = false;
+    var id = addInstance(defId, opts);
+    if (!id) return null;
+    saveState();
+    buildButtons();
+    injectMenuRows();
+    if (want) setOn(id, true);
+    paintButtons();
+    paintMenu();
+    return id;
+  }
+
+  /** 기간을 바꾸면 이름도 바뀝니다 - 버튼과 목록 줄의 글자를 다시 씁니다. */
+  function refreshLabels(id) {
+    var it = insts[id];
+    if (!it) return;
+    var nm = nameOfInst(it);
+    var col = mainColor(it);
+
+    if (barEl) {
+      var b = barEl.querySelector('.tl-kit-btn[data-kit="' + id + '"]');
+      if (b) {
+        b.setAttribute("data-color", col);
+        var last = b.lastChild;
+        if (last && last.nodeType === 3) last.nodeValue = nm;
+      }
+    }
+    var p = menuPanel();
+    if (p) {
+      var row = p.querySelector('.tl-fx-row[data-key="' + id + '"]');
+      if (row) {
+        row.setAttribute("data-color", col);
+        var t = row.querySelector(".tl-fx-name");
+        if (t) t.textContent = nm;
+      }
+    }
+  }
+
   function saveState() {
     try {
       if (!App.Storage || !isFn(App.Storage.save)) return;
@@ -830,6 +1181,9 @@ App.ChartIndicatorKit = (function () {
       var made = 0;
       saved.instances.forEach(function (s) {
         if (!s || !defs[s.def]) return; /* 정의가 사라졌으면 건너뜁니다 */
+        /* 저장소는 회원 브라우저에 있어 손댈 수 있습니다. 이름 검사는
+           addInstance 안에서 합니다(검사가 두 곳에 생기지 않게).
+           거부되면 그 줄만 버리고 나머지는 그대로 살립니다. */
         if (addInstance(s.def, s)) made++;
       });
       if (made) return;
@@ -865,15 +1219,20 @@ App.ChartIndicatorKit = (function () {
 
   function paintButtons() {
     if (!barEl) return;
+    /* 여기도 "달라진 것만" 씁니다 - 위 paintMenu 와 같은 이유입니다 */
     var kids = barEl.querySelectorAll(".tl-kit-btn");
     for (var i = 0; i < kids.length; i++) {
       var id = kids[i].getAttribute("data-kit");
       var on = isOn(id);
-      kids[i].setAttribute("aria-pressed", on ? "true" : "false");
-      kids[i].style.color = on ? "#E7ECF5" : "#838DA4";
-      kids[i].style.borderColor = on ? "#838DA4" : "#1D273B";
+      var press = on ? "true" : "false";
+      if (kids[i].getAttribute("aria-pressed") !== press) kids[i].setAttribute("aria-pressed", press);
+      var col = on ? "#E7ECF5" : "#838DA4";
+      var bor = on ? "#838DA4" : "#1D273B";
+      if (kids[i].style.color !== col) kids[i].style.color = col;
+      if (kids[i].style.borderColor !== bor) kids[i].style.borderColor = bor;
       var dot = kids[i].querySelector(".tl-kit-dot");
-      if (dot) dot.style.background = on ? kids[i].getAttribute("data-color") : "#1D273B";
+      var bg = on ? kids[i].getAttribute("data-color") : "#1D273B";
+      if (dot && dot.style.background !== bg) dot.style.background = bg;
     }
   }
 
@@ -1029,13 +1388,22 @@ App.ChartIndicatorKit = (function () {
     var p = menuPanel();
     if (!p) return;
 
+    /* 값이 이미 그러면 다시 쓰지 않습니다.
+       ★2026-09-02 실측으로 확인한 것★ - 같은 값이라도 setAttribute 를 하면
+       aria-pressed 를 보고 있는 이 창의 감시가 다시 불립니다. 그러면
+         감시 -> paintMenu -> setAttribute -> 감시 ...
+       가 끝없이 돌아 화면이 멈춥니다(브라우저가 응답을 안 합니다).
+       줄에 무엇을 하나라도 더 붙이면(설정 창의 아이콘 세 개처럼) 이 고리가
+       시작됩니다. 그래서 "달라진 것만" 쓰도록 못 박습니다. */
     var mine = p.querySelectorAll('.tl-fx-row[data-kit="1"]');
     for (var i = 0; i < mine.length; i++) {
       var id = mine[i].getAttribute("data-key");
       var on = isOn(id);
-      mine[i].setAttribute("aria-pressed", on ? "true" : "false");
+      var want2 = on ? "true" : "false";
+      if (mine[i].getAttribute("aria-pressed") !== want2) mine[i].setAttribute("aria-pressed", want2);
       var dot = mine[i].querySelector(".tl-fx-dot");
-      if (dot) dot.style.background = on ? mine[i].getAttribute("data-color") : GUIDE_COLOR;
+      var wantBg = on ? mine[i].getAttribute("data-color") : GUIDE_COLOR;
+      if (dot && dot.style.background !== wantBg) dot.style.background = wantBg;
     }
 
     var foot = p.querySelector(".tl-fx-foot");
@@ -1118,6 +1486,9 @@ App.ChartIndicatorKit = (function () {
     note: "지수이동평균",
     pane: "main",
     params: { p: 9 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    useOffset: true,
     nameOf: function (prm) {
       return "EMA(" + prm.p + ")";
     },
@@ -1125,20 +1496,21 @@ App.ChartIndicatorKit = (function () {
 
     seed: function (bs, prm, cap) {
       var p = Math.max(1, prm.p | 0);
-      var n = bs.close.length;
+      var src = bs.src || bs.close;   /* 값 종류(종가 · 시가 · HL2 ...) */
+      var n = src.length;
       var out = [];
       if (n < p) return { ema: out };
 
       var k = 2 / (p + 1);
       var sum = 0;
       var i;
-      for (i = 0; i < p; i++) sum += bs.close[i];
+      for (i = 0; i < p; i++) sum += src[i];
       var e = sum / p;
       out.push({ time: bs.time[p - 1], value: e });
       if (p - 1 === n - 2) cap.state = { e: e };
 
       for (i = p; i < n; i++) {
-        e = bs.close[i] * k + e * (1 - k);
+        e = src[i] * k + e * (1 - k);
         out.push({ time: bs.time[i], value: e });
         if (i === n - 2) cap.state = { e: e };
       }
@@ -1148,7 +1520,8 @@ App.ChartIndicatorKit = (function () {
     step: function (st, bar, prm) {
       var p = Math.max(1, prm.p | 0);
       var k = 2 / (p + 1);
-      var e = bar.close * k + st.e * (1 - k);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var e = x * k + st.e * (1 - k);
       return { values: { ema: e }, state: { e: e } };
     }
   });
@@ -1213,10 +1586,19 @@ App.ChartIndicatorKit = (function () {
     /* 틀 */
     define: define,
     addInstance: addInstance,
+    createInstance: createInstance,
+    updateInstance: updateInstance,
+    resetInstance: resetInstance,
     removeInstance: removeInstance,
     listDefs: listDefs,
     listInstances: listInstances,
+    inputsOf: inputsOf,
+    RESERVED_IDS: RESERVED_IDS,
+    suggestColor: suggestColor,
     LINE_COLORS: LINE_COLORS,
+    LINE_WIDTHS: ALLOWED_WIDTHS,
+    LINE_STYLES: ALLOWED_STYLES,
+    SOURCES: SOURCES,
     /* 켜기 / 끄기 */
     toggle: toggle,
     setOn: setOn,
