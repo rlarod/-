@@ -738,9 +738,32 @@ console.log("\n[7] 기본값 버튼을 눌러도 안 겹치는가");
     겹2.join(" / ")
   );
 
+  /* ⚠️⚠️ 2026-09-03 (기록팀) — ★이 아래 두 검사가 아무것도 안 지키고 있었습니다.★
+   *
+   * tests/_kit-harness.js 의 모양은  boot(candles, saved)  입니다.
+   * 그런데 여기서 `boot(makeCandles(160), { saved: saved })` 로 ★한 겹 감싸서★
+   * 넘기고 있었습니다. 그러면 저장칸에 `{ saved: {...} }` 가 들어가고, 틀이
+   * 판 번호를 못 찾아 ★저장분을 통째로 버리고 기본값으로 뜹니다.★
+   *
+   * 실측 — 회원이 ma-99 를 기간 44 로 바꿔 저장해 두고 다시 띄웠을 때
+   *        감싼 채  p = 99  (기본값. 저장분이 버려짐)
+   *        제대로   p = 44  (저장분이 실림)
+   * 그래서 「새로고침한 뒤에 눌러도」 와 「옛 저장분도」 두 줄은 새로고침도
+   * 옛 저장분도 아닌 ★그냥 기본값★ 을 확인하고 있었고, 무슨 짓을 해도 초록이었습니다.
+   * 겉이 멀쩡한데 안이 비어 있는 「조용한 고장」 이 봉인 쪽에서 난 것입니다.
+   *
+   * 고친 것 — 감싸는 것을 벗기고, ★저장분이 진짜 실렸는지 먼저 확인★ 한 뒤에
+   *           「기본값」 을 눌렀습니다. 그 확인 줄이 없으면 같은 실수가 또 조용히 납니다. */
   const saved = B.stored["chart-indicator-kit"];
-  const B2 = boot(makeCandles(160), { saved: saved });
+  const B2 = boot(makeCandles(160), saved);
   B2.K.updateInstance("ma-99", { params: { p: 4 }, colors: { ma: "#F0B429" } });
+  ok(
+    "★저장분이 진짜로 실렸다★ (안 실리면 아래 두 줄은 기본값만 보게 됩니다)",
+    B2.K.listInstances().length === B.K.listInstances().length &&
+      JSON.stringify(B2.stored["chart-indicator-kit"].instances.map((x) => x.id)) ===
+        JSON.stringify(saved.instances.map((x) => x.id)),
+    JSON.stringify(B2.K.listInstances().map((x) => x.id))
+  );
   B2.K.resetInstance("ma-99");
   const m99 = B2.K.listInstances().filter((x) => x.id === "ma-99")[0];
   ok(
@@ -757,7 +780,13 @@ console.log("\n[7] 기본값 버튼을 눌러도 안 겹치는가");
       x.colors = { ma: "#F0B429" };
     }
   });
-  const B3 = boot(makeCandles(160), { saved: 옛 });
+  const B3 = boot(makeCandles(160), 옛);
+  const 전99 = B3.K.listInstances().filter((x) => x.id === "ma-99")[0];
+  ok(
+    "★옛 저장분이 진짜로 실렸다★ (기간 5 · 금색으로 떠야 합니다 — 99 면 버려진 것)",
+    !!전99 && 전99.params.p === 5 && 전99.colors.ma === "#F0B429",
+    전99 ? 전99.params.p + " / " + 전99.colors.ma : "없음"
+  );
   B3.K.resetInstance("ma-99");
   const m99b = B3.K.listInstances().filter((x) => x.id === "ma-99")[0];
   ok(
