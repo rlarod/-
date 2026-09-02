@@ -166,12 +166,25 @@
  *              표준편차는 ★모집단★(÷p) 그대로입니다.
  *   옮기기      12.6절. 12.5절(MA)과 순서·안전장치가 같습니다.
  *   ⚠️ 아직 안 옮긴 것  거래량 · RSI · MACD.
+ *      ⭐ 이 중 ★RSI 는 2026-09-03 (12.7절) 에 옮겼습니다.★ 아래 블록 참조.
  *      거래량은 chart.js 가 만든 시리즈를 켜고 끄는 것이라 "우리가 그리는"
  *      이 틀과 뿌리가 다릅니다(새로 그리면 막대가 두 벌).
  *      RSI · MACD 는 이 틀에 아직 없는 것 셋을 씁니다 -
  *      ① 눈금 0~100 고정(autoscaleInfoProvider) ② 칸 이름표(값이 같이 뜸)
  *      ③ 표시 통화를 따라가는 숫자 형식(MACD 는 가격 차이라 원화로 봅니다).
  *      셋을 이 틀에 먼저 내지 않고 옮기면 회원 화면이 달라집니다.
+ *
+ * -- 2026-09-03 (12.7단계) 에 옮겨 온 것 - ★옛 RSI(14)★ ----------------
+ *   무엇을      정의 "rsi" ★하나★ + 인스턴스 ★하나★ (rsi-14).
+ *               ★옛 모듈이 다릅니다★ - js/chart-oscillators.js(3단계)가
+ *               그리던 것입니다. MA · 볼린저는 js/chart-indicators.js 였습니다.
+ *   안 바꾼 것  기간 14 · 색 #E7ECF5 · 실선 · 굵기 1 · 기준선 70 · 30 ·
+ *               눈금 0~100 고정 · 여백 0.12 · ★계산값(옛 computeRSI 와 오차 0)★
+ *   이제 되는 것 기간 · 값 종류 · 색 20 · 굵기 4 · 선 모양 3 을 회원이 고릅니다
+ *               (옛 RSI 는 전부 코드에 박혀 있어 하나도 못 바꿨습니다)
+ *   옮기기      12.7절. 12.5 · 12.6절과 순서·안전장치가 같습니다.
+ *   되돌리기    콘솔에서 App.ChartIndicatorKit.restoreLegacyRSI() 뒤 새로고침.
+ *   ⚠️ 아직 안 옮긴 것  거래량 · MACD.
  *
  * -- 2026-09-02 (10단계) 에 늘어난 것 - 지표 4개 + ★색 겹침 마무리★ ----
  *   Stochastic  %K 14 · 다듬기 1 · %D 3 · 기준선 20 · 80   (트레이딩뷰 내장)
@@ -222,6 +235,7 @@
  *   ⚠️ 11단계(MA 옮기기) 부터는 ★순서★ 가 있습니다.
  *   0) 먼저 콘솔에서  App.ChartIndicatorKit.restoreLegacyMA()  → 새로고침
  *      그리고     App.ChartIndicatorKit.restoreLegacyBB()  → 새로고침
+ *      그리고     App.ChartIndicatorKit.restoreLegacyRSI() → 새로고침
  *      (안 하면 옛 MA · 옛 볼린저가 꺼진 채로 남습니다 - 이 파일이 옛 모듈의
  *       setOn 으로 꺼 두었기 때문입니다. 회원마다 브라우저에서 한 번씩 해야
  *       합니다. 못 하면 회원이 fx 목록에서 다시 켜면 됩니다.)
@@ -910,6 +924,24 @@ App.ChartIndicatorKit = (function () {
       var s = DEFAULT_INSTANCES[i];
       if (s.id !== id || s.def !== defId) continue;
       return { params: s.params, colors: s.colors, style: s.style, width: s.width };
+    }
+    return movedDefaultsOf(defId, id);
+  }
+
+  /* ⭐ 옮겨 온 줄 중 ★기본 인스턴스 목록(DEFAULT_INSTANCES)에 없는 것★ 의 태생값.
+     12.7절 RSI 가 그렇습니다(왜 안 넣었는지는 그 절에 적었습니다).
+     "기본값" 버튼이 돌아갈 자리는 그래도 있어야 합니다 - 옮길 때 쓴 값 그대로
+     ★여기 한 곳★ 에서 답합니다(MOVED_RSI 를 다시 읽습니다. 값 두 벌 금지).
+     ⚠️ 이게 없으면 옛 저장값에 태생값이 없는 회원이 "기본값" 을 눌렀을 때
+        그때 화면에 있던 값이 태생값으로 굳습니다(어젯밤 P2 와 같은 계열). */
+  function movedDefaultsOf(defId, id) {
+    if (defId === "rsi" && id === MOVED_RSI.id) {
+      return {
+        params: { p: MOVED_RSI.p },
+        colors: { rsi: MOVED_RSI.hex },
+        style: "solid",
+        width: DEFAULT_WIDTH
+      };
     }
     return null;
   }
@@ -2643,7 +2675,7 @@ App.ChartIndicatorKit = (function () {
     /* ★옮겼다는 표시는 인스턴스보다 먼저 읽습니다.★ 저장된 인스턴스가
        하나도 없어도(회원이 전부 지웠어도) 다시 옮기면 안 됩니다 -
        두 번 옮기면 회원이 지운 MA 줄이 되살아납니다. */
-    if (saved && saved.v === STORE_VERSION && saved.moved && (saved.moved.ma || saved.moved.bb)) {
+    if (saved && saved.v === STORE_VERSION && saved.moved && (saved.moved.ma || saved.moved.bb || saved.moved.rsi)) {
       movedState = saved.moved;
     }
 
@@ -2743,7 +2775,7 @@ App.ChartIndicatorKit = (function () {
       btn.addEventListener("click", function () {
         toggle(id);
       });
-      var anchorChip = legacyAnchor(bar, id, ".tl-ind-btn");
+      var anchorChip = legacyAnchor(bar, id, "chip");
       if (anchorChip) bar.insertBefore(btn, anchorChip);
       else bar.appendChild(btn);
     });
@@ -2846,7 +2878,7 @@ App.ChartIndicatorKit = (function () {
       /* ★옮겨 온 MA 는 옛 줄이 있던 그 자리에★ 끼웁니다(순서가 바뀌면
          회원 눈에는 줄이 뒤섞인 것으로 보입니다). 옛 줄은 아래에서 뺍니다. */
       var placed = false;
-      var anchorRow = legacyAnchor(list, id, ".tl-fx-row");
+      var anchorRow = legacyAnchor(list, id, "row");
       if (anchorRow) {
         list.insertBefore(row, anchorRow);
         placed = true;
@@ -4921,6 +4953,112 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* -- RSI 상대강도지수 --------------------------------------------------
+   * ⭐ 2026-09-03 (12.7절) 에 ★옛 js/chart-oscillators.js 에서 옮겨 온★ 것입니다.
+   *    새로 만든 지표가 아닙니다 - 계산식도 색도 기준선도 옛 것 그대로입니다.
+   *
+   *   변화량 = 종가(t) - 종가(t-1)
+   *   평균상승 · 평균하락 = 와일더 평활(RMA)
+   *       첫 값은 앞 p개 변화량의 ★단순평균★ 으로 시작합니다
+   *       그 뒤   ((p-1)·이전평균 + 이번값) / p
+   *   RSI = 100 - 100/(1 + 평균상승/평균하락)
+   *
+   * ⚠️ 0 으로 나누는 자리를 ★옛 것과 똑같이★ 둡니다 (js/chart-oscillators.js:197)
+   *       평균하락 0 이고 평균상승 0    ->  50   (아예 안 움직인 구간)
+   *       평균하락 0 이고 평균상승 있음 ->  100
+   *    ⚠️ 같은 파일의 StochRSI(srsiOne)는 ★다르게★ 둡니다(0 · 100). 트레이딩뷰
+   *       ta.rsi 를 따른 것입니다. 여기서 그걸 따라가면 옛 RSI 와 값이 어긋나
+   *       회원 화면이 조용히 바뀝니다. ★옮기기는 값이 같은 것이 먼저입니다.★
+   *
+   * ⭐ 기본 기간 14 · 기준선 70 · 30 - 바이낸스 · 트레이딩뷰가 같습니다.
+   *    (옛 파일 주석에 그때 실측이 적혀 있습니다 - RSI_PERIOD 14 · 70 / 30)
+   * ⭐ 눈금 0~100 고정 - 13.1절. 안 고정하면 값이 40~60 에서 놀 때 눈금이
+   *    거기에 맞춰 좁아지고 ★70 · 30 기준선이 화면 밖으로 나갑니다.★
+   *    여백 0.12 도 옛 것 그대로입니다(js/chart-oscillators.js:709).
+   * ⚠️ unit 은 ★안 붙입니다★ - RSI 는 0~100 지수라 통화가 아닙니다.
+   *    붙이면 원화 회원 화면에 "₩56" 이 뜹니다(ATR 과 정반대의 조용한 고장).
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    와일더 평활은 이전 평균 둘(상승 · 하락)과 이전 종가 하나면 됩니다.
+   *    창을 훑지 않습니다. 상태가 { ag, al, pc } 셋뿐이고 배열이 없어서
+   *    "그 자리에서 고쳐 쓰기" 걱정도 없습니다 - 진행 중인 봉 때문에 같은
+   *    상태로 몇 번을 다시 불려도 답이 같습니다(새 객체를 돌려줍니다).
+   * ------------------------------------------------------------------- */
+
+  /** 와일더 한 걸음 - 옛 js/chart-oscillators.js:186 rsiStep 과 같은 식입니다. */
+  function rsiWilder(st, x, p) {
+    var ch = x - st.pc;
+    var gain = ch > 0 ? ch : 0;
+    var loss = ch < 0 ? -ch : 0;
+    return {
+      ag: (st.ag * (p - 1) + gain) / p,
+      al: (st.al * (p - 1) + loss) / p,
+      pc: x
+    };
+  }
+
+  /** 옛 rsiValue 와 같습니다 - 0 나눗셈 자리까지 그대로. */
+  function rsiValueOf(st) {
+    if (st.al === 0) return st.ag === 0 ? 50 : 100;
+    return 100 - 100 / (1 + st.ag / st.al);
+  }
+
+  define({
+    id: "rsi",
+    name: "RSI",
+    note: "상대강도",
+    pane: "sub",
+    /* 13.1 눈금 고정 - 위 주석 참조. 옛 autoscaleInfoProvider + scaleMargins */
+    scale: { min: 0, max: 100, top: 0.12, bottom: 0.12 },
+    params: { p: 14 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    nameOf: function (prm) {
+      return "RSI(" + prm.p + ")";
+    },
+    outputs: [{ key: "rsi", kind: "line", color: "#E7ECF5", style: "solid" }],
+    /* 기준선 70 · 30 - 옛 RSI_UPPER · RSI_LOWER 그대로. 색 · 굵기는 GUIDE_COLOR */
+    guides: [{ price: 70 }, { price: 30 }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      /* 옛 computeRSI 와 같은 조건 - 변화량이 p개는 있어야 첫 값이 나옵니다 */
+      if (n < p + 1) return { rsi: out };
+
+      var g = 0;
+      var l = 0;
+      var i;
+      var ch;
+      for (i = 1; i <= p; i++) {
+        ch = src[i] - src[i - 1];
+        if (ch > 0) g += ch;
+        else l -= ch;
+      }
+      var st = { ag: g / p, al: l / p, pc: src[p] };
+      out.push({ time: bs.time[p], value: rsiValueOf(st) });
+      if (p === n - 2) cap.state = { ag: st.ag, al: st.al, pc: st.pc };
+
+      for (i = p + 1; i < n; i++) {
+        st = rsiWilder(st, src[i], p);
+        out.push({ time: bs.time[i], value: rsiValueOf(st) });
+        /* 확정 상태 - "마지막으로 닫힌 봉까지" 입니다. 진행 중인 봉이
+           확정값을 오염시키면 평활이 계속 그 오차를 끌고 갑니다. */
+        if (i === n - 2) cap.state = { ag: st.ag, al: st.al, pc: st.pc };
+      }
+      return { rsi: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var ns = rsiWilder(st, x, p);
+      return { values: { rsi: rsiValueOf(ns) }, state: ns };
+    }
+  });
+
   /* ---------------------------------------------------------------------
    * 옛 MA 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다.
    *
@@ -4946,6 +5084,18 @@ App.ChartIndicatorKit = (function () {
    * 기간 20 · 배수 2 는 옛 BB_PERIOD · BB_MULT 그대로입니다.
    * ------------------------------------------------------------------- */
   var MOVED_BB = { old: "bb", id: "bb-20", p: 20, k: 2, hex: "#838DA4" };
+
+  /* ---------------------------------------------------------------------
+   * 옛 RSI 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다. (12.7절)
+   *
+   * 옛 이름 "rsi" 는 RESERVED_IDS 라 쓸 수 없습니다(MA · 볼린저와 같은 이유).
+   * 색은 ★지금 회원이 보던 그 색★ 입니다 - 본문색 #E7ECF5 실선 굵기 1.
+   * 기간 14 는 옛 RSI_PERIOD 그대로입니다. 바꾸지 마세요.
+   *
+   * ⚠️ 옛 RSI 는 js/chart-indicators.js 가 아니라 ★js/chart-oscillators.js★
+   *    가 그립니다. 그래서 켜짐/꺼짐을 묻는 곳도, 끄는 곳도 저 모듈입니다.
+   * ------------------------------------------------------------------- */
+  var MOVED_RSI = { old: "rsi", id: "rsi-14", p: 14, hex: "#E7ECF5" };
 
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
      정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 8단계의 증명이었습니다.
@@ -5094,12 +5244,14 @@ App.ChartIndicatorKit = (function () {
         }
       });
     }
-    /* ⚠️ movedState 를 통째로 비우면 ★볼린저 표시까지★ 지워져서, 다음
-       새로고침에 볼린저가 다시 옮겨집니다(회원이 지운 줄이 되살아납니다).
-       그래서 MA 표시만 내리고 볼린저 표시는 그대로 둡니다. */
-    movedState = movedState && movedState.bb
-      ? { ma: false, bb: true, bbAt: movedState.bbAt, legacyBB: movedState.legacyBB }
-      : null;
+    /* ⚠️ movedState 를 통째로 비우면 ★볼린저 · RSI 표시까지★ 지워져서, 다음
+       새로고침에 그것들이 다시 옮겨집니다(회원이 지운 줄이 되살아납니다).
+       그래서 ★자기 표시만★ 내리고 남의 표시는 그대로 둡니다.
+       ⚠️ 2026-09-03 (12.7절) 에 여기를 고쳤습니다 - 그전에는 볼린저 표시만
+          손으로 다시 만들어 담아서, RSI 표시가 조용히 사라졌습니다. */
+    movedState.ma = false;
+    movedState.legacy0 = null;
+    if (!movedState.bb && !movedState.rsi) movedState = null;
     saveState();
     /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
     return true;
@@ -5186,7 +5338,8 @@ App.ChartIndicatorKit = (function () {
   function moveLegacyAll() {
     var a = moveLegacyMA(true);
     var b = moveLegacyBB(true);
-    if (!a && !b) return false;
+    var c = moveLegacyRSI(true);   /* 12.7절 - 옛 모듈이 다릅니다(오실레이터) */
+    if (!a && !b && !c) return false;
     buildButtons();
     injectMenuRows();
     paintMenu();
@@ -5208,22 +5361,172 @@ App.ChartIndicatorKit = (function () {
     }
     movedState.bb = false;
     movedState.legacyBB = null;
-    if (!movedState.ma) movedState = null;
+    if (!movedState.ma && !movedState.rsi) movedState = null;
     saveState();
     return true;
   }
 
-  /** 지금 옮겨진 짝 목록 - [{ old, id }]. 아래 세 함수가 이것만 봅니다.
+  /* =====================================================================
+   * 12.7 ★옛 RSI(14) 를 이 틀로 옮기기★  - 한 번만
+   *
+   * 위 12.5절(MA) · 12.6절(볼린저)과 ★같은 순서·같은 안전장치★ 입니다.
+   * 다른 점만 적습니다.
+   *
+   *   · 옛 모듈이 ★다릅니다★ - js/chart-oscillators.js (App.ChartOscillators).
+   *     켜짐/꺼짐도 저쪽 getState() 에서 읽고, 끄는 것도 저쪽 setOn() 입니다.
+   *     저쪽 저장칸(btc_sim_v2_chart-oscillators)을 우리가 직접 열지 않습니다 -
+   *     한 칸의 주인은 하나여야 합니다.
+   *   · 옛 칩의 ★생김새가 다릅니다★ - 2단계 칩은 .tl-ind-btn[data-ind],
+   *     3단계 칩은 .tl-osc-btn[data-osc] 입니다(서로 색을 안 건드리려고 클래스를
+   *     따로 둔 것입니다). 그래서 아래 legacyChipSel() 이 짝마다 갈라 씁니다.
+   *     fx 목록 줄은 둘 다 .tl-fx-row[data-key] 라 같습니다.
+   *   · 옛 아래칸 이름표(.tl-osc-label "RSI 14  56.90")는 옛 모듈이 RSI 를
+   *     그릴 때만 만듭니다. 옮긴 뒤에는 안 그리므로 저절로 안 생깁니다.
+   *     대신 13.2절 칸 이름표가 같은 자리에 뜹니다.
+   *
+   * -- 안 바꾼 것 -------------------------------------------------------
+   *   기간 14 · 색 #E7ECF5 · 실선 · 굵기 1 · 기준선 70 · 30 (#1D273B 점선) ·
+   *   눈금 0~100 고정 · 칸 위아래 여백 0.12 · ★계산값(옛 computeRSI 와 오차 0)★
+   *   더하는 순서와 0 나눗셈 처리까지 옛 것과 같게 맞췄습니다(아래 rsi 정의).
+   *
+   * -- 달라진 것 (숫자로 적습니다) --------------------------------------
+   *   칩 글자   "RSI"      ->  "RSI(14)"        (MA · 볼린저를 옮길 때와 같습니다.
+   *                                              기간을 회원이 고칠 수 있게 돼서
+   *                                              이름에 기간이 들어갑니다)
+   *   칸 이름표 10px       ->  12px            (13.2절 - 옛 것보다 2px 큽니다)
+   *   칸 높이   0.30       ->  0.32            (PANE_RATIO. 틀이 쓰는 값 하나로
+   *                                              모읍니다 - KDJ · CCI 와 같은 높이)
+   *   설정 버튼 없음       ->  있음            (기간 · 값 종류 · 색 · 굵기 · 선모양)
+   *
+   * -- 왜 DEFAULT_INSTANCES 에 안 넣었나 --------------------------------
+   *   MA · 볼린저와 다르게 ★기본 인스턴스 목록에 넣지 않았습니다.★
+   *   넣으면 처음 오는 회원의 기본 줄에 ma-25(#E7ECF5 실선)와 rsi-14(#E7ECF5
+   *   실선)가 ★같은 색 같은 선모양★ 으로 나란히 서고, 그것을 세는 봉인
+   *   (tests/chart-indicator-color-collision.test.js [3] "기본 인스턴스끼리는
+   *   색이 안 겹친다")이 빨개집니다. 색을 바꾸면 봉인은 통과하지만 ★회원이
+   *   보던 RSI 선 색이 바뀝니다.★ 옮기기의 첫 번째 원칙(화면이 안 바뀌게)이
+   *   먼저라, 색을 그대로 두고 기본 목록에 안 넣는 쪽을 골랐습니다.
+   *   줄은 아래 moveLegacyRSI() 가 만들어 끼웁니다 - 회원이 보는 줄 수는
+   *   그대로입니다(옛 줄이 빠지고 우리 줄이 그 자리에 들어갑니다).
+   *   태생값("기본값" 버튼이 돌아갈 자리)은 movedDefaultsOf() 가 답합니다.
+   *
+   * -- 되돌리기 ---------------------------------------------------------
+   * 콘솔에서  App.ChartIndicatorKit.restoreLegacyRSI()  → 새로고침.
+   * 옮기기 직전의 옛 켜짐/꺼짐(legacyRSI)이 그대로 돌아옵니다.
+   * ===================================================================== */
+  function legacyOSC() {
+    return App.ChartOscillators || null;
+  }
+
+  function movedRSI() {
+    return !!(movedState && movedState.rsi);
+  }
+
+  /** 옛 RSI 켜짐/꺼짐. 아직 못 읽는 상태면 null(그때는 안 옮깁니다). */
+  function readLegacyRSI() {
+    var OSC = legacyOSC();
+    if (!OSC || !isFn(OSC.getState)) return null;
+    var g;
+    try {
+      g = OSC.getState();
+    } catch (e) {
+      return null;
+    }
+    if (!g || typeof g !== "object") return null;
+    /* 옛 모듈이 아직 init() 을 안 지났으면 state 가 null 이라 빈 객체가 옵니다 */
+    if (!("rsi" in g)) return null;
+    return { rsi: !!g.rsi };
+  }
+
+  function moveLegacyRSI(quiet) {
+    if (movedRSI()) return false;
+    var old = readLegacyRSI();
+    if (!old) return false;   /* 아직 못 읽음 - 다음 기회에 */
+
+    if (insts[MOVED_RSI.id]) {
+      insts[MOVED_RSI.id].on = !!old.rsi;
+    } else {
+      addInstance("rsi", {
+        id: MOVED_RSI.id,
+        params: { p: MOVED_RSI.p },
+        colors: { rsi: MOVED_RSI.hex },
+        style: "solid",
+        width: DEFAULT_WIDTH,
+        on: !!old.rsi
+      });
+    }
+
+    /* 옛 선 끄기 - ★우리 인스턴스를 만든 뒤에★ 합니다(안 끄면 두 벌) */
+    var OSC = legacyOSC();
+    if (OSC && isFn(OSC.setOn)) {
+      try {
+        OSC.setOn(MOVED_RSI.old, false);
+      } catch (e) {
+        /* 못 꺼도 화면은 돕니다 - 그 경우 선이 두 벌 보입니다 */
+      }
+    }
+
+    movedState = movedState || {};
+    movedState.rsi = true;
+    movedState.rsiAt = Date.now();
+    movedState.legacyRSI = { rsi: !!old.rsi };
+    saveState();
+
+    if (!quiet) {
+      buildButtons();
+      injectMenuRows();
+      paintMenu();
+    }
+    return true;
+  }
+
+  /** 되돌리기 - 우리 RSI 줄을 지우고 옛 켜짐/꺼짐을 되살립니다. */
+  function restoreLegacyRSI() {
+    if (!movedRSI()) return false;
+    var old = (movedState && movedState.legacyRSI) || { rsi: false };
+    if (insts[MOVED_RSI.id]) removeInstance(MOVED_RSI.id);
+    var OSC = legacyOSC();
+    if (OSC && isFn(OSC.setOn)) {
+      try {
+        OSC.setOn(MOVED_RSI.old, !!old.rsi);
+      } catch (e) {
+        /* 무시 */
+      }
+    }
+    movedState.rsi = false;
+    movedState.legacyRSI = null;
+    if (!movedState.ma && !movedState.bb) movedState = null;
+    saveState();
+    /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
+    return true;
+  }
+
+  /** 지금 옮겨진 짝 목록 - [{ old, id, who }]. 아래 세 함수가 이것만 봅니다.
    *  (옮긴 것이 늘어도 여기 한 곳만 늘면 됩니다 - 같은 목록 두 벌 금지) */
   function movedPairs() {
     var out = [];
     if (movedMA()) {
       for (var i = 0; i < MOVED_MA.length; i++) {
-        out.push({ old: MOVED_MA[i].old, id: MOVED_MA[i].id });
+        out.push({ old: MOVED_MA[i].old, id: MOVED_MA[i].id, who: "ind" });
       }
     }
-    if (movedBB()) out.push({ old: MOVED_BB.old, id: MOVED_BB.id });
+    if (movedBB()) out.push({ old: MOVED_BB.old, id: MOVED_BB.id, who: "ind" });
+    /* 12.7절 - 옛 RSI 는 오실레이터 모듈 것이라 칩 생김새가 다릅니다 */
+    if (movedRSI()) out.push({ old: MOVED_RSI.old, id: MOVED_RSI.id, who: "osc" });
     return out;
+  }
+
+  /** 그 짝의 ★옛 칩★ 을 가리키는 선택자 - 여기 한 곳에만 적습니다(두 벌 금지).
+   *  2단계 칩 .tl-ind-btn[data-ind] · 3단계 칩 .tl-osc-btn[data-osc] */
+  function legacyChipSel(m) {
+    return m.who === "osc"
+      ? '.tl-osc-btn[data-osc="' + m.old + '"]'
+      : '.tl-ind-btn[data-ind="' + m.old + '"]';
+  }
+
+  /** 그 짝의 ★옛 fx 목록 줄★ - 2단계도 3단계도 data-key 로 같습니다 */
+  function legacyRowSel(m) {
+    return '.tl-fx-row[data-key="' + m.old + '"]';
   }
 
   /** 옛 줄(fx 목록) 을 화면에서 뺍니다 - 옮긴 뒤에만 */
@@ -5233,7 +5536,7 @@ App.ChartIndicatorKit = (function () {
     var p = menuPanel();
     if (!p) return;
     pairs.forEach(function (m) {
-      var r = p.querySelector('.tl-fx-row[data-key="' + m.old + '"]');
+      var r = p.querySelector(legacyRowSel(m));
       if (r && r.parentNode) r.parentNode.removeChild(r);
     });
   }
@@ -5242,18 +5545,22 @@ App.ChartIndicatorKit = (function () {
   function dropLegacyChips(bar) {
     if (!bar) return;
     movedPairs().forEach(function (m) {
-      var b = bar.querySelector('.tl-ind-btn[data-ind="' + m.old + '"]');
+      var b = bar.querySelector(legacyChipSel(m));
       if (b && b.parentNode) b.parentNode.removeChild(b);
     });
   }
 
-  /** 우리 줄을 ★옛 줄이 있던 자리에★ 끼우려고 그 자리를 찾습니다 */
-  function legacyAnchor(root, id, sel) {
+  /** 우리 줄을 ★옛 줄이 있던 자리에★ 끼우려고 그 자리를 찾습니다.
+   *  kind - "row"(fx 목록) 또는 "chip"(차트 왼쪽 위 칩 줄)
+   *  ⚠️ 2026-09-03 (12.7절) 에 선택자를 짝이 들고 있게 바꿨습니다. 그전에는
+   *     "row 가 아니면 data-ind" 였는데, 옛 RSI 칩은 data-osc 라 못 찾습니다
+   *     (오류 0건 · 줄만 목록 맨 뒤로 밀리는 조용한 고장). */
+  function legacyAnchor(root, id, kind) {
     if (!root) return null;
     var pairs = movedPairs();
     for (var i = 0; i < pairs.length; i++) {
       if (pairs[i].id !== id) continue;
-      return root.querySelector(sel + '[data-' + (sel === ".tl-fx-row" ? "key" : "ind") + '="' + pairs[i].old + '"]');
+      return root.querySelector(kind === "row" ? legacyRowSel(pairs[i]) : legacyChipSel(pairs[i]));
     }
     return null;
   }
@@ -5344,6 +5651,11 @@ App.ChartIndicatorKit = (function () {
     isMovedBBForTest: movedBB,
     moveLegacyBBForTest: moveLegacyBB,
     MOVED_BB: MOVED_BB,
+    /* 옛 RSI 옮기기 (12.7절) */
+    restoreLegacyRSI: restoreLegacyRSI,
+    isMovedRSIForTest: movedRSI,
+    moveLegacyRSIForTest: moveLegacyRSI,
+    MOVED_RSI: MOVED_RSI,
     /** 라인(종가선) 모드에서 점선으로 바꿀 MA(7) 선.
      *  js/chart-ma-line-mode.js 가 옛 MA7 선 대신 이것을 봅니다 -
      *  옮긴 뒤에는 옛 선이 아예 안 그려지므로, 안 넘겨주면 라인 모드에서

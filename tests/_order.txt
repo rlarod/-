@@ -547,6 +547,7 @@ tests/chart-indicator-unit-registry-seal.test.js
 #   ⚠️ RSI 에는 unit 을 ★안 붙입니다★ — 지수라 통화가 아닙니다. 붙으면 원화
 #      회원 화면에 "₩56" 이 뜹니다(2026-09-03 ATR 사고와 정반대 방향).
 # 되돌리기: 이 줄과 tests/chart-indicator-rsi-move.test.js 삭제
+tests/chart-indicator-rsi-move.test.js
 
 # 2026-09-03 (차트팀) — 수직선 · 사각형 · 화살표 (18차)
 #   조사팀 아침 격차표 [A] — 트레이딩뷰에는 있고 우리에게만 없던 기본 도형 셋.
