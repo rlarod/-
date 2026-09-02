@@ -352,8 +352,10 @@ console.log("\n여러선(평행 채널) 봉인 (2026-08-28 차트팀 6차)");
 
   const s = t.도형()[0];
   ok("종류가 channel 이다", !!s && s.type === "channel", s && s.type);
-  ok("저장 모양이 { id, type, t1,p1, t2,p2, dp } 그대로다",
-    !!s && Object.keys(s).sort().join(",") === "dp,id,p1,p2,t1,t2,type",
+  /* 2026-09-02 (13차) — 그림마다 색(c)·굵기(w) 를 고를 수 있게 되어 두 칸이 늘었습니다.
+     자리 값(t1,p1,t2,p2,dp)은 그대로입니다. 그 다섯이 빠지거나 이름이 바뀌면 여기가 깨집니다. */
+  ok("저장 모양이 { id, type, t1,p1, t2,p2, dp } + 색·굵기(c,w) 다",
+    !!s && Object.keys(s).sort().join(",") === "c,dp,id,p1,p2,t1,t2,type,w",
     s && Object.keys(s).sort().join(","));
   ok("기준선 첫 점이 첫 번째 톡 자리다", 가깝나(s.t1, t.시각(300)) && 가깝나(s.p1, 79900), s.t1 + " / " + s.p1);
   ok("기준선 끝 점이 두 번째 톡 자리다", 가깝나(s.t2, t.시각(500)) && 가깝나(s.p2, 79800), s.t2 + " / " + s.p2);

@@ -250,6 +250,19 @@ App.ChartDrawings = (function () {
 
   var HIT_PX = 7; /* 이 거리 안에서 누르면 그 그림을 고른 것으로 봅니다 */
 
+  /* ---------------- 잡는 반경 (13차 2026-09-02) ----------------
+   * 그림을 끌어 옮기거나 끝점을 잡을 때 쓰는 거리입니다.
+   * 주의 — 마우스와 손가락에 같은 값을 쓰면 폰에서 못 씁니다.
+   *   마우스   화살표 끝이 1px 이라 8px 이면 넉넉합니다
+   *   손가락   접촉면이 굵어 지름 44px 짜리 과녁이 있어야 합니다(반경 22px)
+   * 360 에서 실제로 눌러 재고 정한 값입니다.
+   * 되돌리려면 GRAB_TOUCH 를 GRAB_MOUSE 와 같은 값으로 두면 됩니다.
+   * ------------------------------------------------------- */
+  var GRAB_MOUSE = 8;
+  var GRAB_TOUCH = 22;
+  /* 이만큼 움직이기 전에는 "끈 것" 으로 보지 않습니다 (톡 하다 손이 떨리는 것) */
+  var DRAG_SLOP = 3;
+
   /* ---------------- 브러시 (5차 2026-08-28) ----------------
    * 굵기 2px — 바이낸스(트레이딩뷰 모드) 브러시 기본값과 같습니다.
    *   실측 2026-08-26 shots/bnf-tv-1440.png 의 도구 설정칸 "2".
@@ -382,6 +395,67 @@ App.ChartDrawings = (function () {
   var BEEP_GAP = 0.22;
   var BEEP_VOL = 0.18;
 
+  /* =====================================================================
+   * 그린 것의 색 · 굵기 (13차 2026-09-02)
+   * ---------------------------------------------------------------------
+   * 색을 적는 곳은 여기 한 곳뿐입니다. 두 벌 금지.
+   * 대표 승인 2026-09-02 — "차트 지표에 한해 색을 새로 만들어도 될까요" -> "ㅇㅋ".
+   * 확정 팔레트 9색은 그대로입니다. 늘어난 것은 이 그리기 목록뿐입니다.
+   *
+   * -- 왜 늘렸나 -------------------------------------------------------
+   * 차트 위에 금색(#F0B429)이 네 겹이었습니다.
+   *   MA(7) · 그린 선 · 미체결 주문 · 알람
+   * 이번에 알람을 금색에서 떼어 세 겹으로 줄였습니다(ALERT_COLOR).
+   * 그린 선은 회원이 색을 고를 수 있게 했습니다(기본은 지금 쓰던 금색 그대로라
+   * 이미 그려 둔 선은 색이 안 바뀝니다 — 옛 그림에는 c 가 아예 없습니다).
+   *
+   * -- 어떻게 골랐나 (눈대중 아님 · 전수 계산) --------------------------
+   * 후보 13,595개(HSL 격자)를 만들어 아래를 모두 통과한 것만 남기고,
+   * "이미 있는 색과 가장 가까운 거리" 가 제일 먼 것부터 하나씩 골랐습니다.
+   *   조건 1  배경 #0A0F1C 과 명암비 5.0 이상
+   *   조건 2  js/chart-indicator-kit.js 의 지표선 20색과 ΔE2000 으로 떨어질 것
+   *           (그 파일은 읽기만 했습니다. 한 글자도 안 고쳤습니다)
+   *   조건 3  상승 #26C281 · 하락 #F0506E 와 ΔE2000 25 이상 · ΔE76 46.4 이상
+   *           손익 색과 헷갈리면 안 됩니다 (빨강은 손익 표시에만)
+   *   조건 4  색상환에서 28~62도 와 195~320도 안에서만 골랐습니다
+   *           숫자만 보면 통과하는 형광 연두 · 주홍이 회원 눈에는 초록 · 빨강입니다
+   *
+   * -- 실측 (2026-09-02) ------------------------------------------------
+   *   지표선 20색과의 최소 ΔE2000   10.48  (#E06900 진주황 / #FF8F3C 지표 주황)
+   *        참고 - 지표 20색끼리의 최소는 9.71 입니다. 그보다 멀리 잡았습니다
+   *   우리 9색끼리의 최소 ΔE2000    11.51  (#F0B429 금색 / #F8B877 살구)
+   *   배경 #0A0F1C 과의 최소 명암비  5.64  (#E06900)
+   *   상승 · 하락색과의 최소 ΔE2000 26.9 / 27.8
+   *   알람색과 금색                46.25  (금색 네 겹을 푸는 것이 이번 건의 핵심)
+   *   알람색과 그리기 8색의 최소    22.89
+   *
+   * 알람색은 그리기 목록에 넣지 않았습니다 — 연파랑 가로선은 언제나 알람입니다.
+   *
+   * -- 되돌리기 ---------------------------------------------------------
+   *   DRAW_COLORS 를 금색 한 줄로, DRAW_WIDTHS 를 [LINE_WIDTH] 한 줄로,
+   *   ALERT_COLOR 를 COLOR_DRAW 로 두면 화면이 12차와 같아집니다.
+   *   (이미 저장된 c · w 는 그냥 안 쓰이고 남습니다)
+   * ===================================================================== */
+  var DRAW_COLORS = [
+    { key: "gold", hex: COLOR_DRAW, name: "금색" }, /* 지금까지 쓰던 색 = 기본값 */
+    { key: "apricot", hex: "#F8B877", name: "살구" },
+    { key: "deeporange", hex: "#E06900", name: "진주황" },
+    { key: "mustard", hex: "#BB911B", name: "겨자" },
+    { key: "ochre", hex: "#CDBC7A", name: "황토" },
+    { key: "ivory", hex: "#EBE9CB", name: "미색" },
+    { key: "lilac", hex: "#BA94DB", name: "연보라" },
+    { key: "rose", hex: "#F1C6E2", name: "연분홍" }
+  ];
+  /* 굵기가 왜 네 개인가 — 바이낸스 선물(트레이딩뷰 모드)의 Style 판을 보고 맞췄습니다.
+     거기 Thickness 줄에 굵기 견본이 네 개 놓여 있습니다.
+     근거 캡처 shots/ct13-tv-colorpicker.png (2026-09-02 11:33, 차트팀. 로그인 안 한
+     공개 화면이라 값을 눌러 본 것은 아닙니다 — 눈으로 센 개수입니다).
+     같은 판에 Line style(실선·파선·점선) 세 개도 있는데, 그건 이번에 안 넣었습니다. */
+  var DRAW_WIDTHS = [1, 2, 3, 4];
+  var STYLE_BTN = 32; /* 고르는 창 단추 크기 — 폰에서 손가락으로 누릅니다 */
+  /* 알람 전용 색. 그리기 목록에 없습니다 — 연파랑 가로선은 언제나 알람입니다 */
+  var ALERT_COLOR = "#A3CEFF";
+
   var STORAGE_KEY = "chart-drawings";
   var STORE_VERSION = 1;
   var SPRITE_URL = "assets/icons/chart-tools.svg";
@@ -495,8 +569,13 @@ App.ChartDrawings = (function () {
   var stroke = null; /* 브러시로 지금 긋고 있는 획 { pts:[{t,p}], lastX, lastY } */
   var wavePts = null; /* 파동 — 지금까지 찍은 점들 [{t,p}]. 끝내면 그림이 됩니다 */
   var waveSet = "impulse"; /* 파동 이름표 묶음 — impulse(12345) / abc(ABC) */
-  var brushSaved = null; /* 브러시를 켜기 전 차트 옵션 (끌어 옮기기/확대) */
-  var brushTouch = null; /* 브러시를 켜기 전 컨테이너의 touch-action */
+  var drawColor = COLOR_DRAW; /* 앞으로 그릴 색 (store.ui 에 남습니다) */
+  var drawWidth = LINE_WIDTH; /* 앞으로 그릴 굵기 */
+  /* 차트를 잠깐 잠글 때 원래 값을 넣어두는 칸. 칸이 따로 있어야 합니다 —
+     브러시와 "그림 끌기" 가 한 칸을 같이 쓰면 남의 원래 값을 덮어써서
+     차트를 영영 못 끄는 조용한 고장이 납니다. */
+  var brushHold = { saved: null, touch: null }; /* 브러시를 켜기 전 차트 옵션 · touch-action */
+  var dragHold = { saved: null, touch: null }; /* 그림을 끄는 동안만 */
   var hover = null; /* 미리보기용 현재 위치 {t,p} */
   var selected = null; /* { kind:"hline"|"shape", id } */
 
@@ -543,6 +622,17 @@ App.ChartDrawings = (function () {
   function newId() {
     seq++;
     return "d" + Date.now().toString(36) + seq.toString(36);
+  }
+
+  /** 그림 하나의 색. 옛 그림에는 c 가 없습니다 — 그때 보시던 금색 그대로입니다 */
+  function shapeColor(s) {
+    return s && s.c ? s.c : COLOR_DRAW;
+  }
+
+  /** 그림 하나의 굵기. def 는 그 도구의 기본값(자 1 · 브러시 2 · 나머지 2) */
+  function shapeWidth(s, def) {
+    var d = def === undefined ? LINE_WIDTH : def;
+    return s && s.w ? s.w : d;
   }
 
   /* ---------------------------------------------------------------------
@@ -853,7 +943,7 @@ App.ChartDrawings = (function () {
    * 바이낸스는 파란 딱지(#2962FF, 글자 #FAFBFF)를 쓰는데, 그 파랑은 우리
    * 팔레트에 없어서 포인트색으로 대신했습니다. 자리·크기는 같습니다.
    * ------------------------------------------------------------------- */
-  function chipText(ctx, x, y, lines, center) {
+  function chipText(ctx, x, y, lines, center, bg) {
     var padX = 5;
     var lh = 14;
     var w = 0;
@@ -865,7 +955,7 @@ App.ChartDrawings = (function () {
     var bh = lines.length * lh + 6;
     var bx = Math.round(center ? x - bw / 2 : x);
     var by = Math.round(y - bh);
-    ctx.fillStyle = COLOR_DRAW;
+    ctx.fillStyle = bg || COLOR_DRAW;
     ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = C_INK;
     for (i = 0; i < lines.length; i++) ctx.fillText(lines[i], bx + padX, by + 3 + lh * i + lh / 2);
@@ -878,7 +968,8 @@ App.ChartDrawings = (function () {
     var y1 = priceToY(s.p1);
     var y2 = priceToY(s.p2);
     if (x1 === null || x2 === null || y1 === null || y2 === null) return;
-    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var lw = shapeWidth(s);
     var left = Math.min(x1, x2);
     var right = Math.max(x1, x2);
     var i;
@@ -886,7 +977,7 @@ App.ChartDrawings = (function () {
 
     /* 두 점을 잇는 안내선 — 바이낸스도 점선으로 그립니다 */
     ctx.strokeStyle = color;
-    ctx.lineWidth = LINE_WIDTH;
+    ctx.lineWidth = lw;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -900,7 +991,7 @@ App.ChartDrawings = (function () {
       if (y === null) continue;
       var edge = level === 0 || level === 1; /* 양 끝 두 줄만 실선 */
       ctx.strokeStyle = color;
-      ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+      ctx.lineWidth = on ? lw + 1 : lw;
       ctx.setLineDash(edge ? [] : [4, 3]);
       ctx.beginPath();
       ctx.moveTo(left, y);
@@ -944,7 +1035,8 @@ App.ChartDrawings = (function () {
     var y1 = priceToY(s.p1);
     var y2 = priceToY(s.p2);
     if (x1 === null || x2 === null || y1 === null || y2 === null) return;
-    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var lw = shapeWidth(s, RULER_WIDTH);
     var l = Math.min(x1, x2);
     var r = Math.max(x1, x2);
     var t = Math.min(y1, y2);
@@ -954,7 +1046,7 @@ App.ChartDrawings = (function () {
     ctx.fillRect(l, t, r - l, b - t);
     ctx.strokeStyle = color;
     /* 자만 RULER_WIDTH — 바이낸스에는 이 테두리가 아예 없습니다(위 주석 참고) */
-    ctx.lineWidth = on ? RULER_WIDTH + 1 : RULER_WIDTH;
+    ctx.lineWidth = on ? lw + 1 : lw;
     ctx.setLineDash(preview ? [4, 4] : []);
     ctx.strokeRect(l + 0.5, t + 0.5, Math.max(0, r - l - 1), Math.max(0, b - t - 1));
     ctx.setLineDash([]);
@@ -980,7 +1072,8 @@ App.ChartDrawings = (function () {
       t - 4,
       [sign + fmtPrice(Math.abs(diff)) + "  (" + sign + Math.abs(pct).toFixed(2) + "%)",
         bars + "봉 · " + fmtSpan(s.t2 - s.t1)],
-      true
+      true,
+      color
     );
     if (on) {
       handle(ctx, x1, y1);
@@ -1052,8 +1145,9 @@ App.ChartDrawings = (function () {
     }
     if (w && (maxX < -8 || minX > w + 8)) return;
 
-    ctx.strokeStyle = on ? COLOR_SELECTED : COLOR_DRAW;
-    ctx.lineWidth = on ? BRUSH_WIDTH + 1 : BRUSH_WIDTH;
+    var bw2 = shapeWidth(s, BRUSH_WIDTH);
+    ctx.strokeStyle = on ? COLOR_SELECTED : shapeColor(s);
+    ctx.lineWidth = on ? bw2 + 1 : bw2;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.setLineDash(preview ? [] : []);
@@ -1114,7 +1208,8 @@ App.ChartDrawings = (function () {
   }
 
   function drawChannel(ctx, s, on, preview) {
-    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var lw = shapeWidth(s, CHANNEL_WIDTH);
     var dp = s.dp || 0;
     var x1 = timeToX(s.t1);
     var x2 = timeToX(s.t2);
@@ -1139,7 +1234,7 @@ App.ChartDrawings = (function () {
 
     /* 위·아래 두 선 */
     ctx.strokeStyle = color;
-    ctx.lineWidth = on ? CHANNEL_WIDTH + 1 : CHANNEL_WIDTH;
+    ctx.lineWidth = on ? lw + 1 : lw;
     ctx.setLineDash(preview ? [4, 4] : []);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -1177,7 +1272,8 @@ App.ChartDrawings = (function () {
     var pts = s.pts;
     if (!pts || pts.length < 2) return;
     var names = WAVE_SETS[s.set] || WAVE_SETS.impulse;
-    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var lw = shapeWidth(s);
     var xs = [];
     var ys = [];
     var i;
@@ -1187,7 +1283,7 @@ App.ChartDrawings = (function () {
     }
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+    ctx.lineWidth = on ? lw + 1 : lw;
     ctx.setLineDash(preview ? [4, 4] : []);
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -1298,11 +1394,13 @@ App.ChartDrawings = (function () {
     var x = timeToX(s.t);
     var y = priceToY(s.p);
     if (x === null || y === null) return;
-    drawFaceOn(ctx, x, y, FACE_R, s.f, on ? COLOR_SELECTED : COLOR_DRAW, on ? LINE_WIDTH : LINE_WIDTH - 0.5);
+    var flw = shapeWidth(s);
+    drawFaceOn(ctx, x, y, FACE_R, s.f, on ? COLOR_SELECTED : shapeColor(s), on ? flw : flw - 0.5);
     if (on) handle(ctx, x, y);
   }
   function drawOne(ctx, s, on, preview) {
-    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var lw = shapeWidth(s);
 
     if (s.type === "trend") {
       var x1 = timeToX(s.t1);
@@ -1311,7 +1409,7 @@ App.ChartDrawings = (function () {
       var y2 = priceToY(s.p2);
       if (x1 === null || x2 === null || y1 === null || y2 === null) return;
       ctx.strokeStyle = color;
-      ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+      ctx.lineWidth = on ? lw + 1 : lw;
       ctx.setLineDash(preview ? [4, 4] : []);
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -1381,14 +1479,14 @@ App.ChartDrawings = (function () {
 
     /* 브러시로 지금 긋고 있는 획 — 손을 떼기 전에도 보여야 합니다 */
     if (stroke && stroke.pts.length > 1) {
-      drawOne(ctx, { type: "brush", pts: stroke.pts }, false, true);
+      drawOne(ctx, { type: "brush", pts: stroke.pts, c: drawColor, w: drawWidth }, false, true);
     }
 
     /* 파동 — 지금까지 찍은 점 + 마우스가 있는 자리까지 미리 보여줍니다 */
     if (wavePts && wavePts.length && tool === "wave") {
       var wp = wavePts.slice();
       if (hover) wp.push({ t: hover.t, p: hover.p });
-      drawOne(ctx, { type: "wave", set: waveSet, pts: wp }, false, true);
+      drawOne(ctx, { type: "wave", set: waveSet, pts: wp, c: drawColor, w: drawWidth }, false, true);
       for (var wi = 0; wi < wavePts.length; wi++) {
         var wx = timeToX(wavePts[wi].t);
         var wy = priceToY(wavePts[wi].p);
@@ -1404,11 +1502,11 @@ App.ChartDrawings = (function () {
         if (cdp !== null) {
           drawOne(ctx, {
             type: "channel", t1: chanBase.t1, p1: chanBase.p1,
-            t2: chanBase.t2, p2: chanBase.p2, dp: cdp
+            t2: chanBase.t2, p2: chanBase.p2, dp: cdp, c: drawColor, w: drawWidth
           }, false, true);
         }
       } else {
-        drawOne(ctx, { type: "trend", t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
+        drawOne(ctx, { type: "trend", t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p, c: drawColor, w: drawWidth }, false, true);
       }
       var cx = timeToX(pending.t);
       var cy = priceToY(pending.p);
@@ -1418,7 +1516,7 @@ App.ChartDrawings = (function () {
 
     /* 두 점 도구를 긋는 중이면 미리보기 */
     if (pending && hover && TWO_TAP[tool]) {
-      drawOne(ctx, { type: tool, t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p }, false, true);
+      drawOne(ctx, { type: tool, t1: pending.t, p1: pending.p, t2: hover.t, p2: hover.p, c: drawColor, w: drawWidth }, false, true);
       var ax = timeToX(pending.t);
       var ay = priceToY(pending.p);
       if (ax !== null && ay !== null) handle(ctx, ax, ay);
@@ -1491,8 +1589,8 @@ App.ChartDrawings = (function () {
     try {
       priceLines[h.id] = series.createPriceLine({
         price: h.price,
-        color: on ? COLOR_SELECTED : COLOR_DRAW,
-        lineWidth: LINE_WIDTH,
+        color: on ? COLOR_SELECTED : shapeColor(h),
+        lineWidth: shapeWidth(h),
         lineStyle: lc && lc.LineStyle ? lc.LineStyle.Dashed : 2,
         axisLabelVisible: true,
         title: ""
@@ -1507,7 +1605,8 @@ App.ChartDrawings = (function () {
     if (!pl) return;
     var on = !!(selected && selected.kind === "hline" && selected.id === h.id);
     try {
-      pl.applyOptions({ color: on ? COLOR_SELECTED : COLOR_DRAW, lineWidth: on ? LINE_WIDTH + 1 : LINE_WIDTH });
+      var hw = shapeWidth(h);
+      pl.applyOptions({ color: on ? COLOR_SELECTED : shapeColor(h), lineWidth: on ? hw + 1 : hw });
     } catch (e) {
       /* 무시 */
     }
@@ -1562,7 +1661,7 @@ App.ChartDrawings = (function () {
     try {
       alertLines[a.id] = series.createPriceLine({
         price: a.price,
-        color: on ? COLOR_SELECTED : COLOR_DRAW,
+        color: on ? COLOR_SELECTED : ALERT_COLOR,
         lineWidth: LINE_WIDTH,
         lineStyle: alertStyle(a),
         axisLabelVisible: true,
@@ -1580,7 +1679,7 @@ App.ChartDrawings = (function () {
     var on = !!(selected && selected.kind === "alert" && selected.id === a.id);
     try {
       pl.applyOptions({
-        color: on ? COLOR_SELECTED : COLOR_DRAW,
+        color: on ? COLOR_SELECTED : ALERT_COLOR,
         lineWidth: on ? LINE_WIDTH + 1 : LINE_WIDTH,
         lineStyle: alertStyle(a),
         title: a.done ? "알람 울림" : "알람"
@@ -1798,9 +1897,12 @@ App.ChartDrawings = (function () {
     return Math.sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy));
   }
 
-  function hitTest(x, y) {
+  function hitTest(x, y, rad) {
     var best = null;
-    var bestD = HIT_PX + 1;
+    /* rad 를 안 주면 지금까지와 똑같이 HIT_PX(7) 입니다.
+       손가락으로 잡을 때만 GRAB_TOUCH(22) 를 넘겨 받습니다. */
+    var R = rad || HIT_PX;
+    var bestD = R + 1;
     var list = shapes();
     var i;
 
@@ -1886,7 +1988,7 @@ App.ChartDrawings = (function () {
         if (ax === null || bx === null || ay === null || by === null) continue;
         var lo = Math.min(ax, bx);
         var hi = Math.max(ax, bx);
-        var dm = HIT_PX + 1;
+        var dm = R + 1;
         if (s.type === "fib") {
           for (var k = 0; k < FIB_LEVELS.length; k++) {
             var fy = priceToY(fibPrice(s, FIB_LEVELS[k]));
@@ -1986,7 +2088,8 @@ App.ChartDrawings = (function () {
       toast("파동을 껐습니다 — 점 두 개부터 그림이 됩니다");
       return false;
     }
-    shapes().push({ id: newId(), type: "wave", set: waveSet, pts: pts });
+    pushUndo();
+    shapes().push({ id: newId(), type: "wave", set: waveSet, pts: pts, c: drawColor, w: drawWidth });
     saveStore();
     paintChip();
     setTool("cursor");
@@ -2041,13 +2144,21 @@ App.ChartDrawings = (function () {
     var time = pointToTime(param);
 
     if (tool === "cursor") {
+      /* 방금 pointerdown 에서 손가락 반경(22px)으로 이미 고르고 끌었습니다.
+         여기서 마우스 반경(7px)으로 다시 재면 폰에서 고른 것이 그 자리에서
+         풀립니다. 그래서 그 한 번은 넘깁니다. */
+      if (nowMs() < swallowClickUntil) {
+        swallowClickUntil = 0;
+        return;
+      }
       setSelected(hitTest(x, y));
       return;
     }
     if (price === null) return;
 
     if (tool === "hline") {
-      hlines().push({ id: newId(), type: "hline", price: price });
+      pushUndo();
+      hlines().push({ id: newId(), type: "hline", price: price, c: drawColor, w: drawWidth });
       saveStore();
       syncPriceLines();
       paintChip();
@@ -2106,9 +2217,11 @@ App.ChartDrawings = (function () {
       }
       var dp = chanOffset(chanBase, time, price);
       if (dp === null) return;
+      pushUndo();
       shapes().push({
         id: newId(), type: "channel",
-        t1: chanBase.t1, p1: chanBase.p1, t2: chanBase.t2, p2: chanBase.p2, dp: dp
+        t1: chanBase.t1, p1: chanBase.p1, t2: chanBase.t2, p2: chanBase.p2, dp: dp,
+        c: drawColor, w: drawWidth
       });
       pending = null;
       chanBase = null;
@@ -2137,7 +2250,8 @@ App.ChartDrawings = (function () {
         repaint();
         zoomTo(zt1, time);
       } else {
-        shapes().push({ id: newId(), type: tool, t1: pending.t, p1: pending.p, t2: time, p2: price });
+        pushUndo();
+        shapes().push({ id: newId(), type: tool, t1: pending.t, p1: pending.p, t2: time, p2: price, c: drawColor, w: drawWidth });
         pending = null;
         hover = null;
         saveStore();
@@ -2340,6 +2454,8 @@ App.ChartDrawings = (function () {
       repaint();
       return true;
     }
+    /* 알람은 위에서 이미 돌아갔습니다 — 여기 오는 것은 그림뿐입니다 */
+    pushUndo();
     if (selected.kind === "hline") {
       var hs = hlines();
       for (i = 0; i < hs.length; i++) {
@@ -2370,6 +2486,7 @@ App.ChartDrawings = (function () {
   /* 그림만 지웁니다. 알람은 그림이 아니라서 남깁니다 —
      회원이 "그린 것" 을 치우려다 걸어 둔 알람까지 잃으면 조용한 고장입니다. */
   function clearAll() {
+    pushUndo();
     hlines().length = 0;
     shapes().length = 0;
     selected = null;
@@ -2378,12 +2495,136 @@ App.ChartDrawings = (function () {
     hover = null;
     wavePts = null;
     closeFacePicker();
+    closeStylePick();
     cancelStroke();
+    cancelDrag();
     saveStore();
     clearPriceLines();
     paintButtons();
     paintChip();
     repaint();
+  }
+
+  /* =====================================================================
+   * 되돌리기 / 다시하기 (13차 2026-09-02)
+   * ---------------------------------------------------------------------
+   * Ctrl+Z 되돌리기 · Ctrl+Shift+Z 또는 Ctrl+Y 다시하기.
+   *
+   * 무엇을 되돌리나 — 그림만입니다(수평선 · 추세선 · 획 · 채널 · 파동 ·
+   * 글자 · 표정 · 피보나치 · 자). 그리기 저장칸(chart-drawings) 한 벌을
+   * 통째로 찍어 두고 그대로 되돌립니다.
+   *
+   * 알람은 되돌리기에 넣지 않습니다.
+   *   알람은 저장칸이 따로입니다(chart-alerts). 걸어둔 알람이 Ctrl+Z 로
+   *   조용히 사라지면 회원은 "안 울렸다 = 가격이 안 닿았다" 로 읽습니다.
+   *   그게 조용한 고장이라 아예 대상에서 뺐습니다.
+   *
+   * 이미 있던 되돌리기 두 개와 싸우지 않게 정리했습니다.
+   *   브러시 칩의 "되돌리기"   마지막 획 하나 지우기. 그것도 여기에 기록해
+   *                            Ctrl+Z 로 다시 살릴 수 있습니다(한 벌로 이어집니다)
+   *   확대 칩의 "되돌리기"     화면 범위만. 그림이 아니라서 Ctrl+Z 는 건드리지
+   *                            않습니다. 두 기록은 서로 아무 관계가 없습니다
+   *   파동을 찍는 중의 Ctrl+Z  아직 그림이 아니라서 "점 하나 되돌리기" 입니다
+   *
+   * 입력칸에서는 가로채지 않습니다 — onKeyDown 첫 줄이 INPUT/TEXTAREA/
+   * contentEditable 이면 그냥 돌아갑니다. 채팅창·주문 입력칸에서 회원이
+   * 글자를 되돌리려 한 Ctrl+Z 는 브라우저 것으로 그대로 갑니다.
+   *
+   * 종목이나 봉 간격이 바뀌면 기록을 비웁니다 — 저장칸이 통째로 달라져서
+   * 옛 기록을 되돌리면 엉뚱한 봉의 그림이 나타납니다.
+   *
+   * 되돌리는 방법 — onKeyDown 의 ctrlKey 토막만 지우면 이 기능이 없어집니다.
+   * ===================================================================== */
+  var UNDO_MAX = 50;
+  var undoStack = [];
+  var redoStack = [];
+
+  /** 지금 이 종목·봉 간격의 그림 한 벌을 글자로 찍어 둡니다 */
+  function snapDraw() {
+    try {
+      return JSON.stringify({ h: hlines(), s: shapes() });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 그 한 벌로 되돌립니다. 배열 자체는 그대로 두고 안만 갈아 끼웁니다
+      (다른 곳에서 들고 있는 참조가 끊기면 안 됩니다) */
+  function restoreDraw(str) {
+    var o;
+    try {
+      o = JSON.parse(str);
+    } catch (e) {
+      return false;
+    }
+    var h = hlines();
+    h.length = 0;
+    Array.prototype.push.apply(h, o.h || []);
+    var s = shapes();
+    s.length = 0;
+    Array.prototype.push.apply(s, o.s || []);
+    return true;
+  }
+
+  /** 무엇을 바꾸기 직전에 부릅니다 */
+  function pushUndo() {
+    var m = snapDraw();
+    if (m === null) return;
+    undoStack.push(m);
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    redoStack.length = 0;
+  }
+
+  function afterHistory() {
+    /* 되돌린 뒤 없어진 것을 고른 채로 두면 "고른 것 지우기" 가 헛돕니다 */
+    if (selected && selected.kind === "shape" && !findShape(selected.id)) selected = null;
+    if (selected && selected.kind === "hline" && !findHLine(selected.id)) selected = null;
+    pending = null;
+    chanBase = null;
+    hover = null;
+    saveStore();
+    syncPriceLines();
+    paintButtons();
+    paintChip();
+    repaint();
+  }
+
+  function undo() {
+    /* 파동을 찍는 중이면 아직 그림이 아닙니다 — 점 하나를 무릅니다 */
+    if (wavePts && wavePts.length) {
+      undoWavePoint();
+      return true;
+    }
+    if (!undoStack.length) {
+      toast("되돌릴 것이 없습니다");
+      return false;
+    }
+    var now = snapDraw();
+    if (now !== null) redoStack.push(now);
+    if (redoStack.length > UNDO_MAX) redoStack.shift();
+    restoreDraw(undoStack.pop());
+    afterHistory();
+    toast("되돌렸습니다");
+    return true;
+  }
+
+  function redo() {
+    if (!redoStack.length) {
+      toast("다시 할 것이 없습니다");
+      return false;
+    }
+    var now = snapDraw();
+    if (now !== null) undoStack.push(now);
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    restoreDraw(redoStack.pop());
+    afterHistory();
+    toast("다시 했습니다");
+    return true;
+  }
+
+  function clearHistory() {
+    undoStack.length = 0;
+    redoStack.length = 0;
   }
 
   /* =====================================================================
@@ -2506,7 +2747,8 @@ App.ChartDrawings = (function () {
       toast("조금 더 길게 끌어주세요");
       return;
     }
-    shapes().push({ id: newId(), type: "brush", pts: pts });
+    pushUndo();
+    shapes().push({ id: newId(), type: "brush", pts: pts, c: drawColor, w: drawWidth });
     saveStore();
     paintChip();
     repaint();
@@ -2539,11 +2781,12 @@ App.ChartDrawings = (function () {
     return out;
   }
 
-  /** 브러시를 켜는 동안만 차트 끌기·페이지 스크롤을 멈춥니다 */
-  function applyBrushMode(on) {
+  /** 차트 끌기·페이지 스크롤을 잠깐 멈춥니다. h 는 원래 값을 넣어둘 칸입니다
+      (브러시 = brushHold · 그림 끌기 = dragHold). */
+  function holdChart(on, h) {
     if (!chart || !container) return;
     if (on) {
-      if (brushSaved) return;
+      if (h.saved) return;
       var saved = { handleScroll: undefined, handleScale: undefined };
       try {
         var co = chart.options();
@@ -2557,28 +2800,33 @@ App.ChartDrawings = (function () {
       } catch (e) {
         /* 못 읽으면 기본값(true)으로 되돌립니다 */
       }
-      brushSaved = saved;
+      h.saved = saved;
       try {
         chart.applyOptions({ handleScroll: false, handleScale: false });
       } catch (e) {
         /* 무시 — 못 막아도 그리기는 됩니다 */
       }
-      brushTouch = container.style.touchAction || "";
+      h.touch = container.style.touchAction || "";
       container.style.touchAction = "none";
       return;
     }
-    if (!brushSaved) return;
+    if (!h.saved) return;
     try {
       chart.applyOptions({
-        handleScroll: brushSaved.handleScroll === undefined ? true : brushSaved.handleScroll,
-        handleScale: brushSaved.handleScale === undefined ? true : brushSaved.handleScale
+        handleScroll: h.saved.handleScroll === undefined ? true : h.saved.handleScroll,
+        handleScale: h.saved.handleScale === undefined ? true : h.saved.handleScale
       });
     } catch (e) {
       /* 무시 */
     }
-    container.style.touchAction = brushTouch || "";
-    brushSaved = null;
-    brushTouch = null;
+    container.style.touchAction = h.touch || "";
+    h.saved = null;
+    h.touch = null;
+  }
+
+  /** 브러시를 켜는 동안만 차트 끌기·페이지 스크롤을 멈춥니다 */
+  function applyBrushMode(on) {
+    holdChart(on, brushHold);
   }
 
   /** 마지막 획 하나만 되돌립니다 (브러시를 켜 둔 동안 칩의 첫 단추) */
@@ -2586,6 +2834,7 @@ App.ChartDrawings = (function () {
     var ss = shapes();
     for (var i = ss.length - 1; i >= 0; i--) {
       if (ss[i].type === "brush") {
+        pushUndo();
         if (selected && selected.kind === "shape" && selected.id === ss[i].id) selected = null;
         ss.splice(i, 1);
         saveStore();
@@ -2608,6 +2857,401 @@ App.ChartDrawings = (function () {
   }
 
   /* =====================================================================
+   * 끌어서 옮기기 · 끝점 잡아 늘리기 (13차 2026-09-02)
+   * ---------------------------------------------------------------------
+   * 트레이딩뷰에는 당연히 있는데 우리에게 없던 것입니다. 그전에는 그은 선을
+   * 고쳐 그으려면 지우고 다시 그어야 했습니다.
+   *
+   * 어떻게 붙였나 — 브러시와 똑같은 길입니다(5차 2026-08-28).
+   *   1) 커서 도구일 때만 container 의 pointerdown 을 잡는 단계(capture)로 받습니다
+   *   2) 잡을 것이 없으면 그대로 흘려보냅니다 -> 차트 끌기가 지금 그대로입니다
+   *   3) 잡을 것이 있을 때만 holdChart() 로 차트를 잠그고, 손을 떼면 되돌립니다
+   *
+   * 폰에서 손가락으로 잡을 수 있어야 합니다 — 잡는 반경이 마우스와 다릅니다
+   * (GRAB_MOUSE 8px · GRAB_TOUCH 22px = 지름 44px 과녁).
+   *
+   * 옮긴 자리는 언제나 "시각·가격" 으로 저장합니다(픽셀이 아닙니다). 그래서
+   * 옮긴 뒤에 차트를 확대·이동해도 봉에 붙어 따라옵니다.
+   *
+   * 되돌리기 — 아래 세 곳만 지우면 옛 동작(고르기 + Delete)으로 돌아갑니다.
+   *   1) start() 의 pointerdown/pointermove/pointerleave 세 줄
+   *   2) onClick() 의 swallowClickUntil 넘기기 네 줄
+   *   3) setTool/rescope/clearAll 의 cancelDrag() 한 줄씩
+   * ===================================================================== */
+  var drag = null; /* { mode, kind, id, hk, orig, x0,y0, t0,p0, moved } */
+  var dragMovesOn = false;
+  var swallowClickUntil = 0; /* 이 시각까지 오는 click 한 번은 넘깁니다 */
+
+  function findShape(id) {
+    var list = shapes();
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  /** 그림의 끝점 목록 (시각·가격). 몸통만 옮기는 그림은 빈 배열입니다 */
+  function shapeHandles(s) {
+    var out = [];
+    var i;
+    if (!s) return out;
+    if (s.type === "trend" || s.type === "fib" || s.type === "ruler") {
+      out.push({ k: "a", t: s.t1, p: s.p1 });
+      out.push({ k: "b", t: s.t2, p: s.p2 });
+    } else if (s.type === "channel") {
+      /* 기준선 두 점 + 마주 보는 선의 두 점. 마주 보는 쪽을 끌면 폭(dp)만 바뀝니다 */
+      var dp = s.dp || 0;
+      out.push({ k: "a", t: s.t1, p: s.p1 });
+      out.push({ k: "b", t: s.t2, p: s.p2 });
+      out.push({ k: "c", t: s.t1, p: s.p1 + dp });
+      out.push({ k: "d", t: s.t2, p: s.p2 + dp });
+    } else if (s.type === "wave" && s.pts) {
+      for (i = 0; i < s.pts.length; i++) out.push({ k: "p" + i, t: s.pts[i].t, p: s.pts[i].p });
+    }
+    /* 브러시(획)·글자·표정은 끝점이 없습니다 — 몸통째로만 옮깁니다.
+       획은 점이 600개까지라 점마다 손잡이를 두면 화면이 손잡이로 덮입니다. */
+    return out;
+  }
+
+  /** 손가락이냐 마우스냐에 따라 잡는 반경이 다릅니다 */
+  function grabR(pointerType) {
+    /* 손가락·펜만 큰 과녁입니다. 마우스거나 모르는 것은 8px —
+       모르는 것을 큰 값으로 두면 마우스로 빈 곳을 눌러도 22px 안의 그림이
+       잡혀 차트를 못 끕니다. */
+    return pointerType === "touch" || pointerType === "pen" ? GRAB_TOUCH : GRAB_MOUSE;
+  }
+
+  /** (x,y) 에서 반경 r 안에 있는 끝점의 이름. 없으면 null */
+  function nearHandle(s, x, y, r) {
+    var hs = shapeHandles(s);
+    var best = null;
+    var bestD = r + 1;
+    for (var i = 0; i < hs.length; i++) {
+      var hx = timeToX(hs[i].t);
+      var hy = priceToY(hs[i].p);
+      if (hx === null || hy === null) continue;
+      var d = Math.sqrt((x - hx) * (x - hx) + (y - hy) * (y - hy));
+      if (d < bestD) {
+        bestD = d;
+        best = hs[i].k;
+      }
+    }
+    return best;
+  }
+
+  /** 자리 값만 베낍니다 (끌기 시작할 때의 원본) */
+  function geomOf(s) {
+    var o = {};
+    var i;
+    if (s.t1 !== undefined) {
+      o.t1 = s.t1;
+      o.p1 = s.p1;
+      o.t2 = s.t2;
+      o.p2 = s.p2;
+    }
+    if (s.dp !== undefined) o.dp = s.dp;
+    if (s.t !== undefined) {
+      o.t = s.t;
+      o.p = s.p;
+    }
+    if (s.pts) {
+      o.pts = [];
+      for (i = 0; i < s.pts.length; i++) o.pts.push({ t: s.pts[i].t, p: s.pts[i].p });
+    }
+    return o;
+  }
+
+  /** 원본 자리로 되돌립니다 — 끌 때마다 원본에서 다시 계산해 오차가 안 쌓입니다 */
+  function setGeom(s, o) {
+    var i;
+    if (o.t1 !== undefined) {
+      s.t1 = o.t1;
+      s.p1 = o.p1;
+      s.t2 = o.t2;
+      s.p2 = o.p2;
+    }
+    if (o.dp !== undefined) s.dp = o.dp;
+    if (o.t !== undefined) {
+      s.t = o.t;
+      s.p = o.p;
+    }
+    if (o.pts) {
+      s.pts = [];
+      for (i = 0; i < o.pts.length; i++) s.pts.push({ t: o.pts[i].t, p: o.pts[i].p });
+    }
+  }
+
+  /** 통째로 옮기기. 채널의 dp(폭)는 "가격 차이" 라 옮겨도 그대로입니다 */
+  function shiftGeom(s, dt, dpr) {
+    var i;
+    if (s.t1 !== undefined) {
+      s.t1 += dt;
+      s.p1 += dpr;
+      s.t2 += dt;
+      s.p2 += dpr;
+    }
+    if (s.t !== undefined) {
+      s.t += dt;
+      s.p += dpr;
+    }
+    if (s.pts) {
+      for (i = 0; i < s.pts.length; i++) {
+        s.pts[i].t += dt;
+        s.pts[i].p += dpr;
+      }
+    }
+  }
+
+  /** 끝점 하나만 옮기기 */
+  function setHandleAt(s, k, t, p) {
+    if (k === "a") {
+      s.t1 = t;
+      s.p1 = p;
+      return;
+    }
+    if (k === "b") {
+      s.t2 = t;
+      s.p2 = p;
+      return;
+    }
+    if (k === "c" || k === "d") {
+      var d = chanOffset({ t1: s.t1, p1: s.p1, t2: s.t2, p2: s.p2 }, t, p);
+      if (d !== null) s.dp = d;
+      return;
+    }
+    if (k.charAt(0) === "p" && s.pts) {
+      var i = parseInt(k.slice(1), 10);
+      if (s.pts[i]) {
+        s.pts[i].t = t;
+        s.pts[i].p = p;
+      }
+    }
+  }
+
+  /** 커서 모양 — 라이브러리가 캔버스에 crosshair 를 직접 걸어 두어서
+      컨테이너에 속성을 달고 CSS 로 캔버스까지 내려가 덮습니다 */
+  function setChartCursor(v) {
+    if (!container) return;
+    if (v) container.setAttribute("data-tlc-cursor", v);
+    else container.removeAttribute("data-tlc-cursor");
+  }
+
+  function onCursorDown(ev) {
+    if (tool !== "cursor" || drag) return;
+    if (typeof ev.button === "number" && ev.button > 0) return; /* 오른쪽 버튼은 무시 */
+    if (!countAll() && !alertCount()) return; /* 그린 것이 없으면 계산도 하지 않습니다 */
+    var pt = evPoint(ev);
+    if (!pt) return;
+    if (pt.x < 0 || pt.y < 0 || pt.x > pt.w || pt.y > pt.h) return; /* 가격축·시간축은 그대로 */
+    var t0 = xToTime(pt.x);
+    var p0 = yToPrice(pt.y);
+    if (t0 === null || p0 === null) return;
+    var r = grabR(ev.pointerType);
+    var target = null;
+    var sel;
+    var hk;
+
+    /* 1) 이미 고른 그림의 끝점부터 봅니다 (손잡이가 보일 때만 잡힙니다) */
+    if (selected && selected.kind === "shape") {
+      sel = findShape(selected.id);
+      hk = sel ? nearHandle(sel, pt.x, pt.y, r) : null;
+      if (hk) target = { mode: "handle", kind: "shape", id: sel.id, hk: hk, orig: geomOf(sel) };
+    }
+
+    /* 2) 몸통 */
+    if (!target) {
+      var hit = hitTest(pt.x, pt.y, r);
+      if (!hit) return; /* 빈 곳 — 차트를 그대로 끌게 둡니다 */
+      if (hit.kind === "shape") {
+        var s = findShape(hit.id);
+        if (!s) return;
+        target = { mode: "move", kind: "shape", id: s.id, orig: geomOf(s) };
+      } else if (hit.kind === "hline") {
+        var h = findHLine(hit.id);
+        if (!h) return;
+        target = { mode: "move", kind: "hline", id: h.id, orig: { price: h.price } };
+      } else {
+        var a = findAlert(hit.id);
+        if (!a) return;
+        target = { mode: "move", kind: "alert", id: a.id, orig: { price: a.price } };
+      }
+      if (!selected || selected.kind !== target.kind || selected.id !== target.id) {
+        setSelected({ kind: target.kind, id: target.id });
+      }
+    }
+
+    target.x0 = pt.x;
+    target.y0 = pt.y;
+    target.t0 = t0;
+    target.p0 = p0;
+    target.moved = false;
+    drag = target;
+    holdChart(true, dragHold);
+    attachDragMoves();
+    swallowClickUntil = nowMs() + 500;
+    if (ev.cancelable) ev.preventDefault();
+    ev.stopPropagation();
+    setChartCursor("grabbing");
+  }
+
+  function applyDragTo(t, p) {
+    var pl;
+    if (drag.kind === "hline") {
+      var h = findHLine(drag.id);
+      if (!h) return;
+      h.price = drag.orig.price + (p - drag.p0);
+      pl = priceLines[h.id];
+      if (pl) {
+        try {
+          pl.applyOptions({ price: h.price });
+        } catch (e) {
+          /* 무시 */
+        }
+      }
+      return;
+    }
+    if (drag.kind === "alert") {
+      var a = findAlert(drag.id);
+      if (!a) return;
+      a.price = drag.orig.price + (p - drag.p0);
+      pl = alertLines[a.id];
+      if (pl) {
+        try {
+          pl.applyOptions({ price: a.price });
+        } catch (e) {
+          /* 무시 */
+        }
+      }
+      return;
+    }
+    var s = findShape(drag.id);
+    if (!s) return;
+    setGeom(s, drag.orig);
+    if (drag.mode === "handle") setHandleAt(s, drag.hk, t, p);
+    else shiftGeom(s, t - drag.t0, p - drag.p0);
+  }
+
+  function onDragMove(ev) {
+    if (!drag) return;
+    var pt = evPoint(ev);
+    if (!pt) return;
+    var x = Math.max(0, Math.min(pt.w, pt.x));
+    var y = Math.max(0, Math.min(pt.h, pt.y));
+    if (!drag.moved) {
+      if (Math.abs(x - drag.x0) < DRAG_SLOP && Math.abs(y - drag.y0) < DRAG_SLOP) return;
+      drag.moved = true;
+      /* 알람은 되돌리기에 넣지 않습니다 — 걸어둔 알람이 Ctrl+Z 로 조용히
+         사라지면 회원은 "안 울렸다 = 가격이 안 닿았다" 로 읽습니다 */
+      if (drag.kind !== "alert") pushUndo();
+    }
+    var t = xToTime(x);
+    var p = yToPrice(y);
+    if (t === null || p === null) return;
+    applyDragTo(t, p);
+    if (ev.cancelable) ev.preventDefault();
+    strokeRepaint();
+  }
+
+  function onDragUp(ev) {
+    if (!drag) return;
+    var moved = drag.moved;
+    var kind = drag.kind;
+    drag = null;
+    detachDragMoves();
+    holdChart(false, dragHold);
+    setChartCursor("");
+    if (ev && ev.cancelable) ev.preventDefault();
+    if (moved) {
+      if (kind === "alert") saveAlerts();
+      else saveStore();
+      paintChip();
+    }
+    repaint();
+  }
+
+  /* 폰에서 페이지가 같이 밀리지 않게. touch-action 은 이미 시작된 손짓에는
+     늦습니다(브라우저가 touchstart 때 정합니다). 그래서 끄는 동안의 touchmove 를
+     직접 막습니다(passive:false 로 걸어야 preventDefault 가 먹습니다). */
+  function onDragTouchMove(ev) {
+    if (!drag) return;
+    if (ev.cancelable) ev.preventDefault();
+  }
+
+  function attachDragMoves() {
+    if (dragMovesOn) return;
+    dragMovesOn = true;
+    window.addEventListener("pointermove", onDragMove, true);
+    window.addEventListener("pointerup", onDragUp, true);
+    window.addEventListener("pointercancel", onDragUp, true);
+    try {
+      window.addEventListener("touchmove", onDragTouchMove, { passive: false, capture: true });
+    } catch (e) {
+      window.addEventListener("touchmove", onDragTouchMove, true);
+    }
+  }
+
+  function detachDragMoves() {
+    if (!dragMovesOn) return;
+    dragMovesOn = false;
+    window.removeEventListener("pointermove", onDragMove, true);
+    window.removeEventListener("pointerup", onDragUp, true);
+    window.removeEventListener("pointercancel", onDragUp, true);
+    try {
+      window.removeEventListener("touchmove", onDragTouchMove, { passive: false, capture: true });
+    } catch (e) {
+      window.removeEventListener("touchmove", onDragTouchMove, true);
+    }
+  }
+
+  /** 도구를 바꾸거나 종목이 바뀌면 끌던 것을 그 자리에서 끝냅니다 */
+  function cancelDrag() {
+    if (drag) onDragUp(null);
+  }
+
+  /* ---------------- 잡을 수 있는 자리에 오면 커서가 바뀝니다 ----------------
+   * 마우스에만 해당합니다(손가락에는 커서가 없습니다).
+   * 그린 것이 하나도 없으면 첫 줄에서 바로 돌아갑니다 — 계산 0회.
+   * ------------------------------------------------------- */
+  var hoverRaf = 0;
+  var hoverAt = null;
+
+  function hoverPaint() {
+    if (drag || tool !== "cursor" || !hoverAt) return;
+    var pt = evPoint(hoverAt);
+    if (!pt || pt.x < 0 || pt.y < 0 || pt.x > pt.w || pt.y > pt.h) {
+      setChartCursor("");
+      return;
+    }
+    if (selected && selected.kind === "shape") {
+      var sel = findShape(selected.id);
+      if (sel && nearHandle(sel, pt.x, pt.y, GRAB_MOUSE)) {
+        setChartCursor("grab");
+        return;
+      }
+    }
+    setChartCursor(hitTest(pt.x, pt.y, GRAB_MOUSE) ? "move" : "");
+  }
+
+  function onCursorHover(ev) {
+    if (drag || tool !== "cursor") return;
+    if (ev.pointerType && ev.pointerType !== "mouse") return;
+    if (!countAll() && !alertCount()) return;
+    hoverAt = { clientX: ev.clientX, clientY: ev.clientY };
+    if (hoverRaf) return;
+    if (!window.requestAnimationFrame) {
+      hoverPaint();
+      return;
+    }
+    hoverRaf = window.requestAnimationFrame(function () {
+      hoverRaf = 0;
+      hoverPaint();
+    });
+  }
+
+  function onCursorLeave() {
+    hoverAt = null;
+    if (!drag) setChartCursor("");
+  }
+
+  /* =====================================================================
    * 도구 고르기
    * ===================================================================== */
   function setTool(name) {
@@ -2619,7 +3263,9 @@ App.ChartDrawings = (function () {
     hover = null;
     wavePts = null;
     cancelStroke();
+    cancelDrag();
     closeFacePicker();
+    closeStylePick();
     /* 브러시일 때만 차트 끌기·페이지 스크롤을 멈춥니다(끄면 되돌립니다) */
     applyBrushMode(name === "brush");
     if (name !== "cursor") setSelected(null);
@@ -3042,6 +3688,9 @@ App.ChartDrawings = (function () {
       ".tl-draw-chip button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-draw-chip button[data-dim=1]{color:" + C_MUTED + ";}" +
       ".tl-draw-chip button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
+      /* 세 번째 단추를 색 딱지로 쓸 때 (13차 2026-09-02) */
+      ".tl-draw-chip button.sw{padding:1px 5px;}" +
+      ".tl-draw-chip button.sw span{display:block;width:14px;height:14px;border-radius:3px;}" +
       /* 확대 되돌리기 칩 — "그린 것" 칩과 같은 생김새, 자리만 오른쪽 아래 */
       ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
@@ -3059,8 +3708,27 @@ App.ChartDrawings = (function () {
       "align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;" +
       "background:" + C_BG + ";cursor:pointer;}" +
       ".tl-face-pick button:hover{border-color:" + COLOR_DRAW + ";}" +
+      /* 색·굵기 고르는 창 — 단추 32px (폰에서 손가락으로 누릅니다) */
+      ".tl-style-pick{position:fixed;left:0;top:0;z-index:7;padding:6px;border-radius:8px;" +
+      "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";}" +
+      ".tl-style-pick .hd{font-size:11px;line-height:1.6;color:" + C_MUTED + ";margin-bottom:4px;}" +
+      ".tl-style-pick .row{display:flex;gap:2px;}" +
+      ".tl-style-pick .wrow{margin-top:4px;}" +
+      ".tl-style-pick button{width:" + STYLE_BTN + "px;height:" + STYLE_BTN + "px;padding:0;display:flex;" +
+      "align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;" +
+      "background:" + C_BG + ";cursor:pointer;}" +
+      ".tl-style-pick .row button span{display:block;width:18px;height:18px;border-radius:3px;}" +
+      ".tl-style-pick .wrow button span{display:block;width:18px;border-radius:2px;background:" + C_TEXT + ";}" +
+      ".tl-style-pick button:hover{border-color:" + C_MUTED + ";}" +
+      ".tl-style-pick button.on{border-color:" + C_TEXT + ";}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
       "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}" +
+      /* 잡을 수 있는 자리에 오면 커서가 바뀝니다 (13차 2026-09-02).
+         라이브러리가 캔버스에 crosshair 를 직접 걸어 두어서 컨테이너에만
+         적으면 안 먹습니다. 캔버스까지 내려가 덮습니다. */
+      "[data-tlc-cursor=\"move\"] canvas{cursor:move;}" +
+      "[data-tlc-cursor=\"grab\"] canvas{cursor:grab;}" +
+      "[data-tlc-cursor=\"grabbing\"] canvas{cursor:grabbing;}" +
       /* 전체화면 — css/chart-toolbar.css 와 style.css 는 한 글자도 안 고쳤습니다.
          이 규칙은 data-tlc-full 이 붙었을 때만 걸립니다(평소엔 아무 영향 없음). */
       ".chart-panel[data-tlc-full=\"1\"]{position:fixed;left:0;top:0;right:0;bottom:0;width:100vw;" +
@@ -3184,12 +3852,14 @@ App.ChartDrawings = (function () {
     if (placeRaf) return;
     if (!window.requestAnimationFrame) {
       placeChips();
+      placeStyle();
       placeToast();
       return;
     }
     placeRaf = window.requestAnimationFrame(function () {
       placeRaf = 0;
       placeChips();
+      placeStyle();
       placeToast();
     });
   }
@@ -3264,7 +3934,12 @@ App.ChartDrawings = (function () {
     b3.type = "button";
     b3.style.display = "none";
     b3.addEventListener("click", function () {
-      if (tool === "wave") toggleWaveSet();
+      if (tool === "wave") {
+        toggleWaveSet();
+        return;
+      }
+      /* 커서일 때는 색·굵기 고르는 창을 여닫습니다 (13차 2026-09-02) */
+      toggleStylePick();
     });
     chip.appendChild(label);
     chip.appendChild(b1);
@@ -3289,6 +3964,22 @@ App.ChartDrawings = (function () {
     if (els.chipBtn3) els.chipBtn3.style.display = "none";
   }
 
+  /** 세 번째 단추를 색 딱지로 (커서 도구일 때). 글자를 안 넣어 360 에서도
+      칩이 넓어지지 않습니다 — 단추 폭 26px */
+  function showBtn3Swatch() {
+    var b = els.chipBtn3;
+    if (!b) return;
+    b.style.display = "";
+    b.className = "sw";
+    b.textContent = "";
+    b.setAttribute("title", "색 · 굵기");
+    b.setAttribute("aria-label", "색과 굵기 고르기");
+    var d = document.createElement("span");
+    d.style.background = currentColor();
+    b.appendChild(d);
+    paintStylePick();
+  }
+
   function paintChip() {
     if (!els.chip) return;
     var n = countAll();
@@ -3299,10 +3990,13 @@ App.ChartDrawings = (function () {
     if (!n && !an && !live) {
       askingClear = false;
       hideBtn3();
+      closeStylePick();
       els.chip.style.display = "none";
       return;
     }
     els.chip.style.display = "flex";
+    /* 색·굵기 창은 커서 도구에서만 씁니다 */
+    if (tool !== "cursor" || askingClear) closeStylePick();
     placeSoon();
 
     /* 파동을 찍는 중 — 점 되돌리기 · 끝내기 · 이름표 바꾸기 */
@@ -3368,6 +4062,168 @@ App.ChartDrawings = (function () {
     else els.chipBtn1.setAttribute("data-dim", "1");
     els.chipBtn2.textContent = "전체 지우기";
     els.chipBtn2.className = "";
+    showBtn3Swatch();
+  }
+
+  /* ---------------- 색·굵기 고르는 창 (13차 2026-09-02) ----------------
+   * 고른 그림이 있으면 그 그림에, 없으면 "앞으로 그릴 것" 에 걸립니다.
+   * 단추는 32px 입니다 — 폰에서 손가락으로 눌러야 해서 작게 잡지 않았습니다
+   * (색 8개 + 굵기 4개. 창 폭 282px 이라 360 에서도 차트 칸 안에 들어갑니다).
+   * 알람은 여기에 없습니다 — 알람 색은 하나로 고정입니다(ALERT_COLOR).
+   * ------------------------------------------------------------------- */
+  function closeStylePick() {
+    if (els.stylePick && els.stylePick.parentNode) els.stylePick.parentNode.removeChild(els.stylePick);
+    els.stylePick = null;
+  }
+
+  function styleOpen() {
+    return !!els.stylePick;
+  }
+
+  /** 색·굵기를 고칠 대상. 고른 그림이 있으면 그것, 없으면 null(= 앞으로 그릴 것) */
+  function styleTarget() {
+    if (!selected) return null;
+    if (selected.kind === "shape") return findShape(selected.id);
+    if (selected.kind === "hline") return findHLine(selected.id);
+    return null;
+  }
+
+  function currentColor() {
+    var t = styleTarget();
+    return t ? shapeColor(t) : drawColor;
+  }
+
+  function currentWidth() {
+    var t = styleTarget();
+    return t ? shapeWidth(t) : drawWidth;
+  }
+
+  function applyStyle(hex, w) {
+    var t = styleTarget();
+    if (t) {
+      pushUndo();
+      if (hex) t.c = hex;
+      if (w) t.w = w;
+      saveStore();
+      if (selected.kind === "hline") {
+        /* 가격축 선은 다시 만들어야 색·굵기가 바뀝니다 */
+        removePriceLine(t.id);
+        syncPriceLines();
+      }
+      repaint();
+      toast(hex ? "고른 것의 색을 바꿨습니다" : "고른 것의 굵기를 바꿨습니다");
+    } else {
+      if (hex) drawColor = hex;
+      if (w) drawWidth = w;
+      if (store) {
+        if (!store.ui) store.ui = {};
+        store.ui.drawColor = drawColor;
+        store.ui.drawWidth = drawWidth;
+        saveStore();
+      }
+      toast(hex ? "앞으로 그릴 색을 바꿨습니다" : "앞으로 그릴 굵기를 바꿨습니다");
+    }
+    paintStylePick();
+    paintChip();
+  }
+
+  function paintStylePick() {
+    var box = els.stylePick;
+    if (!box) return;
+    var t = styleTarget();
+    var hd = box.querySelector(".hd");
+    if (hd) hd.textContent = t ? "고른 것의 색 · 굵기" : "앞으로 그릴 색 · 굵기";
+    var c = currentColor();
+    var w = currentWidth();
+    var i;
+    var bs = box.querySelectorAll("button");
+    for (i = 0; i < bs.length; i++) {
+      var hex = bs[i].getAttribute("data-color");
+      var wid = bs[i].getAttribute("data-width");
+      var on = (hex && hex === c) || (wid && Number(wid) === w);
+      bs[i].className = on ? "on" : "";
+    }
+  }
+
+  function buildStylePick() {
+    closeStylePick();
+    if (!wrap) return;
+    injectStyle();
+    var box = document.createElement("div");
+    box.className = "tl-style-pick";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "색과 굵기 고르기");
+    var hd = document.createElement("div");
+    hd.className = "hd";
+    box.appendChild(hd);
+
+    var crow = document.createElement("div");
+    crow.className = "row";
+    DRAW_COLORS.forEach(function (c) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("data-color", c.hex);
+      b.setAttribute("title", c.name);
+      b.setAttribute("aria-label", c.name);
+      var dot = document.createElement("span");
+      dot.style.background = c.hex;
+      b.appendChild(dot);
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        applyStyle(c.hex, 0);
+      });
+      crow.appendChild(b);
+    });
+    box.appendChild(crow);
+
+    var wrow = document.createElement("div");
+    wrow.className = "row wrow";
+    DRAW_WIDTHS.forEach(function (w) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("data-width", String(w));
+      b.setAttribute("title", w + "px");
+      b.setAttribute("aria-label", "굵기 " + w + "px");
+      var bar = document.createElement("span");
+      bar.style.height = w + "px";
+      b.appendChild(bar);
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        applyStyle("", w);
+      });
+      wrow.appendChild(b);
+    });
+    box.appendChild(wrow);
+
+    wrap.appendChild(box);
+    els.stylePick = box;
+    box.style.display = "block";
+    paintStylePick();
+    placeSoon();
+  }
+
+  function toggleStylePick() {
+    if (styleOpen()) closeStylePick();
+    else buildStylePick();
+  }
+
+  /** 그린 것 칩 바로 위에 붙입니다 (칩과 같은 화면 기준 자리) */
+  function placeStyle() {
+    var box = els.stylePick;
+    if (!box) return;
+    var vis = visibleBox();
+    var chip = els.chip;
+    if (!vis || !chip || chip.style.display !== "flex") {
+      box.style.visibility = "hidden";
+      return;
+    }
+    box.style.visibility = "visible";
+    var left = vis.left + CHIP_EDGE;
+    var w = box.offsetWidth;
+    if (left + w > vis.right) left = Math.max(vis.left, vis.right - w);
+    var top = parseFloat(chip.style.top || "0") - box.offsetHeight - 6;
+    if (top < vis.top) top = vis.top;
+    putFixed(box, left, top);
   }
 
   /* ---------------- 알림 한 줄 ---------------- */
@@ -3435,7 +4291,8 @@ App.ChartDrawings = (function () {
       b.appendChild(facePickCanvas(f.k));
       b.addEventListener("click", function (ev) {
         ev.preventDefault();
-        shapes().push({ id: newId(), type: "face", t: time, p: price, f: f.k });
+        pushUndo();
+        shapes().push({ id: newId(), type: "face", t: time, p: price, f: f.k, c: drawColor, w: drawWidth });
         saveStore();
         closeFacePicker();
         paintChip();
@@ -3501,7 +4358,8 @@ App.ChartDrawings = (function () {
       if (ev.key === "Enter") {
         var v = inp.value.trim();
         if (v) {
-          shapes().push({ id: newId(), type: "text", t: time, p: price, s: v });
+          pushUndo();
+          shapes().push({ id: newId(), type: "text", t: time, p: price, s: v, c: drawColor, w: drawWidth });
           saveStore();
           paintChip();
         }
@@ -3530,6 +4388,24 @@ App.ChartDrawings = (function () {
   function onKeyDown(ev) {
     var t = ev.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    /* 되돌리기 / 다시하기 (13차 2026-09-02).
+       위 첫 줄에서 입력칸이면 이미 돌아갔습니다 — 채팅·주문칸의 Ctrl+Z 는
+       브라우저 것으로 그대로 갑니다. */
+    if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
+      var k = (ev.key || "").toLowerCase();
+      if (k === "z") {
+        ev.preventDefault();
+        if (ev.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (k === "y") {
+        ev.preventDefault();
+        redo();
+        return;
+      }
+      return;
+    }
     if (ev.key === "Escape") {
       /* 브라우저 전체화면일 때의 Esc 는 브라우저가 먼저 먹습니다(이 줄까지
          오지 않습니다). 우리 방식으로 덮고 있을 때만 여기서 빠져나옵니다. */
@@ -3548,6 +4424,7 @@ App.ChartDrawings = (function () {
       paintChip();
       closeTextInput();
       closeFacePicker();
+      closeStylePick();
       setTool("cursor");
       return;
     }
@@ -3569,7 +4446,9 @@ App.ChartDrawings = (function () {
     hover = null;
     wavePts = null;
     cancelStroke();
+    cancelDrag();
     closeFacePicker();
+    closeStylePick();
     askingClear = false;
     /* 알람은 종목 단위라 종목이 바뀌면 선을 다시 깔고, 교차를 재는 기준값은
        버립니다(다른 종목의 지난 시세와 견주면 엉뚱하게 울립니다) */
@@ -3577,6 +4456,8 @@ App.ChartDrawings = (function () {
     /* 봉 간격이 바뀌면 논리 번호의 뜻이 달라집니다(1분봉 300번째 != 1일봉 300번째).
        js/chart.js 가 새로 불러온 뒤 fitContent() 를 하므로 기록만 비웁니다. */
     zoomUndo.length = 0;
+    /* 그림 되돌리기 기록도 비웁니다 — 저장칸이 통째로 달라집니다 */
+    clearHistory();
     paintZoomChip();
     clearPriceLines();
     clearAlertLines();
@@ -3620,6 +4501,15 @@ App.ChartDrawings = (function () {
     } catch (e) {
       console.warn("[chart-drawings.js] 브러시를 붙이지 못했습니다:", e);
     }
+    /* 커서 도구로 그림을 끌어 옮기기 (13차 2026-09-02). 잡을 것이 없으면
+       아무 일도 하지 않고 흘려보내므로 차트 끌기는 지금 그대로입니다. */
+    try {
+      container.addEventListener("pointerdown", onCursorDown, true);
+      container.addEventListener("pointermove", onCursorHover, true);
+      container.addEventListener("pointerleave", onCursorLeave, true);
+    } catch (e) {
+      console.warn("[chart-drawings.js] 끌어 옮기기를 붙이지 못했습니다:", e);
+    }
 
     refreshMeta(true);
     syncPriceLines();
@@ -3657,6 +4547,15 @@ App.ChartDrawings = (function () {
     store = loadStore();
     alerts = loadAlerts();
     if (store && store.ui && store.ui.waveSet === "abc") waveSet = "abc";
+    /* 앞으로 그릴 색·굵기 — 목록에 있는 값만 받습니다(옛 저장본·손댄 값 방어) */
+    if (store && store.ui) {
+      DRAW_COLORS.forEach(function (c) {
+        if (store.ui.drawColor === c.hex) drawColor = c.hex;
+      });
+      DRAW_WIDTHS.forEach(function (w) {
+        if (store.ui.drawWidth === w) drawWidth = w;
+      });
+    }
     /* 껍데기는 차트가 만들어지기 전에 먼저 세웁니다.
        (차트 칸을 나중에 옮기면 차트가 한 번 다시 그려집니다) */
     restructure();
@@ -3694,6 +4593,16 @@ App.ChartDrawings = (function () {
     zoomBack: zoomBack,
     zoomReset: zoomReset,
     undoLastStroke: undoLastStroke,
+    /* 되돌리기 / 다시하기 */
+    undo: undo,
+    redo: redo,
+    getUndoDepth: function () {
+      return undoStack.length;
+    },
+    getRedoDepth: function () {
+      return redoStack.length;
+    },
+    UNDO_MAX: UNDO_MAX,
     getBrushCount: brushCount,
     /* 파동 */
     finishWave: finishWave,
@@ -3722,8 +4631,23 @@ App.ChartDrawings = (function () {
     onTickerForTest: onTicker,
     ALERT_KEY: ALERT_KEY,
     isBrushMode: function () {
-      return !!brushSaved;
+      return !!brushHold.saved;
     },
+    /* 끌어서 옮기기 — 확인용 */
+    isDragging: function () {
+      return !!drag;
+    },
+    getDragInfo: function () {
+      return drag ? { mode: drag.mode, kind: drag.kind, id: drag.id, hk: drag.hk || null, moved: !!drag.moved } : null;
+    },
+    getCursorHint: function () {
+      return container ? container.getAttribute("data-tlc-cursor") || "" : "";
+    },
+    shapeHandles: shapeHandles,
+    hitTestAt: hitTest,
+    GRAB_MOUSE: GRAB_MOUSE,
+    GRAB_TOUCH: GRAB_TOUCH,
+    DRAG_SLOP: DRAG_SLOP,
     BRUSH_WIDTH: BRUSH_WIDTH,
     BRUSH_MIN_PX: BRUSH_MIN_PX,
     BRUSH_MAX_PTS: BRUSH_MAX_PTS,
@@ -3769,7 +4693,23 @@ App.ChartDrawings = (function () {
     /* 여러선 계산부 — 테스트에서 그대로 씁니다 */
     lineYAt: lineYAt,
     CHANNEL: { width: CHANNEL_WIDTH, dash: CHANNEL_DASH, fill: FILL_CHANNEL },
-    COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED },
+    /* 색 · 굵기 (13차 2026-09-02). 색을 적은 곳은 DRAW_COLORS 한 곳뿐입니다 */
+    DRAW_COLORS: DRAW_COLORS,
+    DRAW_WIDTHS: DRAW_WIDTHS,
+    ALERT_COLOR: ALERT_COLOR,
+    STYLE_BTN: STYLE_BTN,
+    getDrawColor: function () {
+      return drawColor;
+    },
+    getDrawWidth: function () {
+      return drawWidth;
+    },
+    setDrawStyle: applyStyle,
+    toggleStylePick: toggleStylePick,
+    isStylePickOpen: styleOpen,
+    shapeColor: shapeColor,
+    shapeWidth: shapeWidth,
+    COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED, alert: ALERT_COLOR },
     STORAGE_KEY: STORAGE_KEY
   };
 })();

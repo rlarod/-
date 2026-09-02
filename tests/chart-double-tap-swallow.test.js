@@ -131,9 +131,21 @@ console.log("\n빠른 두 번 톡이 삼켜진다 — 지금 이렇다는 기록
   ok("캔버스에 click 을 직접 걸지 않는다",
     !/canvas\.addEventListener\(\s*["']click["']/.test(SRC),
     "캔버스 click 을 듣기 시작했다면 우회 장치입니다 — 다시 재고 이 파일을 고치세요");
-  ok("차트 칸에 거는 것은 브러시의 pointerdown 하나뿐이다 (톡 쪽에 새 입구가 생기면 여기가 깨집니다)",
-    (SRC.match(/container\.addEventListener\(/g) || []).length === 1,
-    "지금 " + (SRC.match(/container\.addEventListener\(/g) || []).length + "곳");
+  /* 2026-09-02 (13차) — 커서 도구의 "끌어 옮기기" 가 세 개를 더 걸었습니다.
+     개수만 세면 무엇을 거는지 모릅니다. 그래서 이름까지 못 박습니다(더 센 기준입니다).
+     톡(click) 쪽에 새 입구가 생기면 여기가 그대로 깨집니다. */
+  const 입구 = [];
+  const 입구RE = /container\.addEventListener\(\s*"([a-z]+)"\s*,\s*(\w+)/g;
+  let 입구M;
+  while ((입구M = 입구RE.exec(SRC))) 입구.push(입구M[1] + ":" + 입구M[2]);
+  ok("차트 칸에 거는 것은 아래 넷뿐이다 (톡 쪽에 새 입구가 생기면 여기가 깨집니다)",
+    입구.join(",") === [
+      "pointerdown:onBrushDown",
+      "pointerdown:onCursorDown",
+      "pointermove:onCursorHover",
+      "pointerleave:onCursorLeave"
+    ].join(","),
+    "지금 " + (입구.length ? 입구.join(", ") : "0곳"));
   ok("톡 사이 시간을 재는 장치가 없다",
     !/lastTap|lastClick|tapGap|TAP_MIN|TAP_GAP/.test(SRC),
     "톡 간격을 재기 시작했다면 우회 장치입니다 — 다시 재고 이 파일을 고치세요");

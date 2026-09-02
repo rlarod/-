@@ -219,16 +219,112 @@ const M = runModule();
   ok("아무것도 안 그린 상태의 계산 횟수가 0", perf.draws === 0 && perf.avgMs === 0);
 }
 
-/* ---------- 5) 확정 팔레트 ---------- */
+/* ---------- 5) 확정 팔레트 + 그리기 색 목록 ---------- */
 {
+  /* 2026-09-02 (13차) — 대표 승인 "차트 지표에 한해 색을 새로 만들어도 될까요" -> "ㅇㅋ".
+     확정 팔레트 9색은 그대로입니다. 늘어난 것은 "그리기 선 색 목록" 하나뿐입니다.
+     그래서 여기서 두 가지를 봅니다.
+       1) 코드에 쓰인 색이 [확정 팔레트 + 모듈이 스스로 밝힌 목록] 안인가
+          -> 목록에 안 적고 코드에 색을 슬쩍 넣으면 여기서 걸립니다
+       2) 그 목록이 규칙을 실제로 지키는가 (바로 아래 5-2 절에서 매번 다시 잽니다) */
   const ALLOWED = ["#0A0F1C", "#101727", "#0D1422", "#1D273B", "#E7ECF5", "#838DA4", "#26C281", "#F0506E", "#F0B429"];
+  const 그리기 = M.DRAW_COLORS.map((c) => c.hex.toUpperCase()).concat([M.ALERT_COLOR.toUpperCase()]);
   const used = (CODE.match(/#[0-9A-Fa-f]{6}/g) || []).map((c) => c.toUpperCase());
-  const bad = used.filter((c) => ALLOWED.indexOf(c) === -1);
-  ok("팔레트 밖의 색을 쓰지 않는다", bad.length === 0, bad.join(","));
-  ok("그린 선은 포인트색", M.COLORS.draw === "#F0B429");
-  ok("고른 것은 본문색", M.COLORS.selected === "#E7ECF5");
-  ok("상승 초록을 쓰지 않는다", used.indexOf("#26C281") === -1);
-  ok("하락 빨강을 쓰지 않는다 (청산가 선과 헷갈리지 않게)", used.indexOf("#F0506E") === -1);
+  const bad = used.filter((c) => ALLOWED.indexOf(c) === -1 && 그리기.indexOf(c) === -1);
+  ok("확정 팔레트 9색은 그대로다 (하나도 안 바뀌었다)",
+    ALLOWED.every((c) => c === c.toUpperCase()) && ALLOWED.length === 9);
+  ok("팔레트 밖 · 그리기 목록 밖의 색을 쓰지 않는다", bad.length === 0, bad.join(","));
+  ok("상승 · 하락색을 그리기 목록에 넣지 않았다 (손익 색과 헷갈립니다)",
+    그리기.indexOf("#26C281") === -1 && 그리기.indexOf("#F0506E") === -1, 그리기.join(","));
+  ok("알람 색은 그리기 목록에 없다 (연파랑 가로선은 언제나 알람입니다)",
+    M.DRAW_COLORS.every((c) => c.hex.toUpperCase() !== M.ALERT_COLOR.toUpperCase()), M.ALERT_COLOR);
+}
+
+/* ---------- 5-2) 그리기 색 목록이 규칙을 지키는가 (매번 다시 잽니다) ----------
+ * 눈대중이 아니라 계산으로 봅니다. js/chart-indicator-kit.js 의 지표선 20색을
+ * 읽기만 해서 견줍니다 — 지표팀이 우리 색과 가까운 색을 넣으면 여기가 깨집니다.
+ * 기준 10.48 은 2026-09-02 차트팀이 잰 값이고, 지표 20색끼리의 최소(9.71)보다
+ * 멀리 잡은 값입니다.
+ * -------------------------------------------------------------------------- */
+{
+  const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const lin = (c) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : Math.pow((c / 255 + 0.055) / 1.055, 2.4));
+  const lum = (h) => { const p = rgb(h).map(lin); return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]; };
+  const 명암비 = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const lab = (h) => {
+    const p = rgb(h).map(lin);
+    const g = (c) => (c > 0.008856 ? Math.cbrt(c) : 7.787 * c + 16 / 116);
+    const X = g((0.4124 * p[0] + 0.3576 * p[1] + 0.1805 * p[2]) / 0.95047);
+    const Y = g(0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]);
+    const Z = g((0.0193 * p[0] + 0.1192 * p[1] + 0.9505 * p[2]) / 1.08883);
+    return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
+  };
+  function de2000(h1, h2) {
+    const A = lab(h1), B = lab(h2);
+    const C1 = Math.hypot(A[1], A[2]), C2 = Math.hypot(B[1], B[2]), Cb = (C1 + C2) / 2;
+    const G = 0.5 * (1 - Math.sqrt(Math.pow(Cb, 7) / (Math.pow(Cb, 7) + Math.pow(25, 7))));
+    const a1 = (1 + G) * A[1], a2 = (1 + G) * B[1];
+    const Cp1 = Math.hypot(a1, A[2]), Cp2 = Math.hypot(a2, B[2]);
+    const hp = (x, y) => { if (x === 0 && y === 0) return 0; const t = (Math.atan2(y, x) * 180) / Math.PI; return t < 0 ? t + 360 : t; };
+    const h1p = hp(a1, A[2]), h2p = hp(a2, B[2]);
+    const dL = B[0] - A[0], dC = Cp2 - Cp1;
+    let dh = 0;
+    if (Cp1 * Cp2 !== 0) { dh = h2p - h1p; if (dh > 180) dh -= 360; else if (dh < -180) dh += 360; }
+    const dH = 2 * Math.sqrt(Cp1 * Cp2) * Math.sin((dh * Math.PI) / 360);
+    const Lb = (A[0] + B[0]) / 2, Cbp = (Cp1 + Cp2) / 2;
+    let hb;
+    if (Cp1 * Cp2 === 0) hb = h1p + h2p;
+    else { hb = h1p + h2p; if (Math.abs(h1p - h2p) > 180) hb += hb < 360 ? 360 : -360; hb /= 2; }
+    const T = 1 - 0.17 * Math.cos(((hb - 30) * Math.PI) / 180) + 0.24 * Math.cos((2 * hb * Math.PI) / 180)
+      + 0.32 * Math.cos(((3 * hb + 6) * Math.PI) / 180) - 0.2 * Math.cos(((4 * hb - 63) * Math.PI) / 180);
+    const dTh = 30 * Math.exp(-Math.pow((hb - 275) / 25, 2));
+    const Rc = 2 * Math.sqrt(Math.pow(Cbp, 7) / (Math.pow(Cbp, 7) + Math.pow(25, 7)));
+    const Sl = 1 + (0.015 * Math.pow(Lb - 50, 2)) / Math.sqrt(20 + Math.pow(Lb - 50, 2));
+    const Sc = 1 + 0.045 * Cbp, Sh = 1 + 0.015 * Cbp * T;
+    const Rt = -Math.sin((2 * dTh * Math.PI) / 180) * Rc;
+    return Math.sqrt(Math.pow(dL / Sl, 2) + Math.pow(dC / Sc, 2) + Math.pow(dH / Sh, 2) + Rt * (dC / Sc) * (dH / Sh));
+  }
+
+  const KIT = fs.readFileSync(path.join(REPO, "js", "chart-indicator-kit.js"), "utf8");
+  const 지표목록 = (KIT.slice(KIT.indexOf("var LINE_COLORS = ["), KIT.indexOf("var GUIDE_COLOR"))
+    .match(/#[0-9A-Fa-f]{6}/g) || []).map((c) => c.toUpperCase());
+  ok("지표선 색 목록을 읽어 왔다 (읽기만 합니다 — 고치지 않습니다)", 지표목록.length >= 12, 지표목록.length + "색");
+
+  const 새색 = M.DRAW_COLORS.map((c) => c.hex.toUpperCase())
+    .filter((c) => c !== "#F0B429").concat([M.ALERT_COLOR.toUpperCase()]);
+
+  let 최소 = Infinity, 짝 = "";
+  새색.forEach((c) => 지표목록.forEach((r) => {
+    const d = de2000(c, r);
+    if (d < 최소) { 최소 = d; 짝 = c + " / " + r; }
+  }));
+  ok("새로 만든 색이 지표선 20색과 ΔE2000 10 이상 떨어져 있다", 최소 >= 10,
+    "최소 " + 최소.toFixed(2) + " (" + 짝 + ")");
+
+  const 전부 = M.DRAW_COLORS.map((c) => c.hex.toUpperCase()).concat([M.ALERT_COLOR.toUpperCase()]);
+  let 서로 = Infinity, 서로짝 = "";
+  for (let i = 0; i < 전부.length; i++) {
+    for (let j = i + 1; j < 전부.length; j++) {
+      const d = de2000(전부[i], 전부[j]);
+      if (d < 서로) { 서로 = d; 서로짝 = 전부[i] + " / " + 전부[j]; }
+    }
+  }
+  ok("우리 색끼리도 ΔE2000 10 이상 떨어져 있다", 서로 >= 10, "최소 " + 서로.toFixed(2) + " (" + 서로짝 + ")");
+
+  let 대비 = Infinity, 대비색 = "";
+  전부.forEach((c) => { const v = 명암비(c, "#0A0F1C"); if (v < 대비) { 대비 = v; 대비색 = c; } });
+  ok("배경 #0A0F1C 위에서 다 읽힌다 (명암비 4.5 이상)", 대비 >= 4.5, "최소 " + 대비.toFixed(2) + " (" + 대비색 + ")");
+
+  let 손익 = Infinity, 손익짝 = "";
+  전부.forEach((c) => ["#26C281", "#F0506E"].forEach((r) => {
+    const d = de2000(c, r);
+    if (d < 손익) { 손익 = d; 손익짝 = c + " / " + r; }
+  }));
+  ok("상승 · 하락색과 ΔE2000 25 이상 떨어져 있다 (손익 색과 헷갈리면 안 됩니다)",
+    손익 >= 25, "최소 " + 손익.toFixed(2) + " (" + 손익짝 + ")");
+
+  ok("알람 색이 금색과 확실히 다르다 (금색 네 겹을 푼 것이 이번 건의 핵심)",
+    de2000(M.ALERT_COLOR, "#F0B429") >= 30, de2000(M.ALERT_COLOR, "#F0B429").toFixed(2));
 }
 
 /* ---------- 6) 저장 범위 ---------- */

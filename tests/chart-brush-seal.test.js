@@ -452,11 +452,22 @@ console.log("\n브러시 봉인 (2026-08-28 차트팀 5차)");
   ok("그리는 동안 touch-action 이 none 이다", t.container.style.touchAction === "none");
   ok("360 에서도 획이 저장된다", t.M.getBrushCount() === 1, "지금 " + t.M.getBrushCount() + "획");
 
+  /* 2026-09-02 (13차) — 커서 도구로 "그림을 끌어 옮기기" 가 생겼습니다.
+     그래서 기준을 나눕니다. 기준을 낮춘 것이 아니라 두 개로 쪼갠 것입니다.
+       빈 곳    가로채지 않는다 (차트 끌기가 그대로여야 합니다)  <- 원래 이 줄
+       그림 위  가로챈다 (안 그러면 그림을 못 끕니다)            <- 새로 더한 줄
+     획은 (100,100)~(190,200) 에 그어져 있습니다. */
   t.M.setTool("cursor");
+  const 빈곳 = new t.win.MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 320, clientY: 60 });
+  t.container.dispatchEvent(빈곳);
+  ok("브러시가 아닐 때 빈 곳을 누르면 가로채지 않는다 (차트 끌기를 막으면 안 됩니다)",
+    빈곳.defaultPrevented === false);
   const ev = new t.win.MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 100, clientY: 100 });
   t.container.dispatchEvent(ev);
-  ok("브러시가 아닐 때는 누름을 가로채지 않는다 (차트 끌기를 막으면 안 됩니다)",
-    ev.defaultPrevented === false);
+  ok("그림 위를 누르면 그때만 가로챈다 (끌어 옮기기)", ev.defaultPrevented === true);
+  ok("누른 그림을 잡고 있다", !!t.M.getDragInfo(), JSON.stringify(t.M.getDragInfo()));
+  t.win.dispatchEvent(new t.win.MouseEvent("pointerup", { bubbles: true, cancelable: true, clientX: 100, clientY: 100 }));
+  ok("손을 떼면 놓는다", t.M.isDragging() === false);
   t.닫기();
 }
 

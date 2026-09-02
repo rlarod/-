@@ -26,13 +26,28 @@
  *   회원은 자기 청산가를 모르는 채로 거래하게 됩니다. 전형적인 조용한 고장이고
  *   돈에 직결됩니다. 그래서 값으로 못 박습니다.
  *
- * ── 넷뿐인 이유 (2026-08-28 바이낸스 실측) ────────────────────────────
+ * ── ⭐ 기준이 바뀌었습니다 (2026-09-02 대표 지시) ─────────────────────
  *
- *   binance.com/en/futures/BTCUSDT 를 열어 Original 모드의 Chart Style 을
- *   세었더니 정확히 넷이었습니다 — Candle / Line / Bars / Area.
- *   하이킨아시 · 할로우 캔들은 **바이낸스 Original 에 없어서 뺐습니다.**
- *   "있으면 좋을 것 같아서" 넣지 않습니다. 늘리려면 바이낸스를 다시 열어
- *   확인하고 이 봉인의 숫자도 같이 고쳐야 합니다.
+ *   처음(2026-08-28)엔 **바이낸스 Original 실측**으로 넷이었습니다 —
+ *   Candle / Line / Bars / Area. 그때는 그게 맞았습니다.
+ *
+ *   그 뒤 대표가 **"트레이딩뷰 시스템을 따라간다 이상."** 이라고 정했고,
+ *   PM 이 **차트 시스템 전체**(지표·그리기·봉 종류)로 확인해 주었습니다.
+ *   그래서 이 봉인의 "넷뿐" 조항만 트레이딩뷰 기준으로 바꿉니다.
+ *   **나머지 조항(시리즈 안 갈아끼우기 · visible:false 금지 · 한 봉만 갱신 ·
+ *   기억하기)은 한 글자도 안 바뀌었습니다. 그게 돈에 닿는 부분입니다.**
+ *
+ * ── ⚠️⚠️ 하이킨아시는 진짜 가격이 아닙니다 ([3-2] 절) ────────────────
+ *
+ *   HA종가 = (시+고+저+종)/4 로 **평균낸 값**입니다. 그런데 진입가·청산가·
+ *   미체결 선은 **진짜 가격**입니다. 회원이 HA 봉값을 보고 주문을 내면
+ *   돈이 걸립니다. 그래서 아래를 값으로 못 박습니다 —
+ *     · 계산식이 트레이딩뷰 원문과 같은가 (손으로 푼 값과 대조)
+ *     · 얹은 시리즈가 오른쪽 축에 자기 값을 안 찍는가
+ *       (lastValueVisible / priceLineVisible 이 꺼져 있는가)
+ *     · 진짜 캔들이 pane 의 **첫 번째** Candlestick 인가
+ *       (범례·포지션선·그리기·지표가 전부 "첫 번째" 를 잡아갑니다)
+ *     · 화면에 경고 문구가 뜨는가
  *
  * 서버도 브라우저도 부르지 않습니다. 가짜 차트만 씁니다.
  * ========================================================================= */
@@ -101,30 +116,64 @@ function 가짜차트창(저장된) {
   ];
 
   const 기록 = { 만든것: [], 지운것: [], setData: 0, update: 0 };
-  const pane = { getSeries: () => [캔들] };
+  /* ⭐ 진짜 라이브러리와 같게 — getSeries() 는 **만든 순서대로** 돌려줍니다.
+     진짜 캔들이 먼저 만들어졌으니 언제나 첫 번째입니다.
+     범례·포지션선·그리기·지표가 전부 "첫 번째 Candlestick" 을 잡아가므로,
+     우리가 얹은 하이킨아시가 앞으로 끼어들면 안 됩니다. */
+  const 살아있는것 = [];
+  const pane = { getSeries: () => [캔들].concat(살아있는것) };
+
+  function 시리즈만들기(이름, 타입, opts) {
+    const s = {
+      __이름: 이름,
+      __opts: Object.assign({}, opts || {}),
+      seriesType: () => 타입,
+      options: () => Object.assign({}, s.__opts),
+      applyOptions: function (o) { Object.assign(s.__opts, o || {}); return true; },
+      setData: function (d) { s.__data = d; 기록.setData++; return true; },
+      update: function (b) { s.__last = b; 기록.update++; return true; },
+      data: () => s.__data || []
+    };
+    기록.만든것.push(s);
+    살아있는것.push(s);
+    return s;
+  }
 
   const chart = {
     panes: () => [pane],
     addSeries: function (형, opts) {
-      const s = {
-        __이름: (형 && 형.__이름) || "?",
-        __opts: Object.assign({}, opts || {}),
-        seriesType: () => (형 && 형.__타입) || "?",
-        applyOptions: function (o) { Object.assign(s.__opts, o || {}); return true; },
-        setData: function (d) { s.__data = d; 기록.setData++; return true; },
-        update: function (b) { s.__last = b; 기록.update++; return true; }
-      };
-      기록.만든것.push(s);
+      return 시리즈만들기((형 && 형.__이름) || "?", (형 && 형.__타입) || "?", opts);
+    },
+    addCustomSeries: function (뷰, opts) {
+      const s = 시리즈만들기("Custom", "Custom", opts);
+      s.__뷰 = 뷰;
       return s;
     },
-    removeSeries: function (s) { 기록.지운것.push(s); return true; }
+    removeSeries: function (s) {
+      기록.지운것.push(s);
+      const i = 살아있는것.indexOf(s);
+      if (i !== -1) 살아있는것.splice(i, 1);
+      return true;
+    },
+    timeScale: () => ({
+      getVisibleLogicalRange: () => null,
+      subscribeVisibleLogicalRangeChange: () => {}
+    })
   };
 
   win.LightweightCharts = {
     LineSeries: { __이름: "Line", __타입: "Line" },
     AreaSeries: { __이름: "Area", __타입: "Area" },
-    BarSeries: { __이름: "Bar", __타입: "Bar" }
+    BarSeries: { __이름: "Bar", __타입: "Bar" },
+    CandlestickSeries: { __이름: "Candlestick", __타입: "Candlestick" },
+    BaselineSeries: { __이름: "Baseline", __타입: "Baseline" },
+    HistogramSeries: { __이름: "Histogram", __타입: "Histogram" },
+    LineType: { Simple: 0, WithSteps: 1, Curved: 2 }
   };
+
+  /* 안내줄이 실제로 붙는지 보려면 붙일 자리가 있어야 합니다 */
+  win.document.body.innerHTML =
+    '<div class="chart-panel"><div class="tl-ohlc"></div><div class="tlc-body"></div></div>';
 
   const 저장소 = { 값: 저장된 === undefined ? null : 저장된, 쓴횟수: 0 };
   win.App = {
@@ -248,29 +297,186 @@ console.log("\n봉 종류 봉인 — 시리즈를 갈아끼우지 않는다 (202
 }
 
 /* =========================================================================
- * [3] 넷뿐이다 — 하이킨아시·할로우는 일부러 뺐다
+ * [3] 트레이딩뷰 목록을 따라간다 (2026-09-02 대표 지시)
  * ========================================================================= */
-절("[3] 고를 수 있는 것이 넷뿐이다 (바이낸스 Original 실측)");
+절("[3] 고를 수 있는 것 (트레이딩뷰 기준)");
 {
   const t = 가짜차트창();
   const 종류 = t.M.TYPES.map((x) => x.k);
-  ok("종류가 정확히 넷이다 (지금 " + 종류.length + "개)", 종류.length === 4, 종류.join(","));
-  ok("캔들·라인·바·영역 그대로다",
-    종류.slice().sort().join(",") === "area,bar,candle,line", 종류.join(","));
+  const 있어야할것 = [
+    "candle", "heikin", "bar", "highlow",
+    "line", "step", "area", "hlcarea", "baseline", "columns"
+  ];
+  ok("처음 넷(캔들·라인·바·영역)이 그대로 남아 있다 — 늘리면서 빼지 않았습니다",
+    ["candle", "line", "bar", "area"].every((k) => 종류.indexOf(k) !== -1), 종류.join(","));
+  있어야할것.forEach(function (k) {
+    ok("'" + k + "' 를 고를 수 있다", 종류.indexOf(k) !== -1, 종류.join(","));
+  });
+  ok("같은 것이 두 번 들어 있지 않다",
+    new Set(종류).size === 종류.length, 종류.join(","));
+  ok("이름·설명이 다 채워져 있다 (빈 줄이 보이면 안 됩니다)",
+    t.M.TYPES.every((x) => x.name && x.note), JSON.stringify(t.M.TYPES));
 
-  /* 바이낸스 Original 에 없는 것은 넣지 않습니다 */
-  ["heikin", "heikinashi", "hollow", "baseline", "histogram"].forEach(function (k) {
-    ok("'" + k + "' 는 없다 (바이낸스 Original 에 없어서 일부러 뺐습니다)",
+  /* 라이브러리에 없어 아직 못 만드는 것 — 목록에 넣지 않습니다 */
+  ["renko", "linebreak", "kagi", "pointfigure", "hollow", "volumecandle"].forEach(function (k) {
+    ok("'" + k + "' 는 아직 없다 (라이브러리에 없어서 못 만듭니다)",
       종류.indexOf(k) === -1);
   });
-  ok("모르는 종류를 넣으면 거절한다", t.M.setType("heikin") === false);
-  ok("거절된 뒤에도 종류가 안 바뀐다", t.M.getType() !== "heikin", t.M.getType());
+  ok("모르는 종류를 넣으면 거절한다", t.M.setType("renko") === false);
+  ok("거절된 뒤에도 종류가 안 바뀐다", t.M.getType() !== "renko", t.M.getType());
+
+  ok("기준이 왜 바뀌었는지 모듈에 적혀 있다 (2026-09-02 대표 지시)",
+    SRC.indexOf("2026-09-02 대표 지시") !== -1 &&
+    SRC.indexOf("트레이딩뷰 시스템을 따라간다") !== -1);
+  ok("처음 실측(2026-08-28 바이낸스)도 지우지 않고 남겼다",
+    SRC.indexOf("2026-08-28") !== -1 && SRC.indexOf("바이낸스 Original") !== -1);
+  ok("못 넣은 것을 왜 못 넣었는지 적혀 있다 (11개를 이름으로 적었는가)",
+    ["Hollow candles", "Volume candles", "Line with markers", "Volume footprint",
+     "Time price opportunity", "Session volume profile", "Renko", "Kagi",
+     "Point & figure", "Range"].every((n) => SRC.indexOf(n) !== -1),
+    "'다음 건입니다' 한 줄로 넘기면 다음 사람이 뭘 남겼는지 모릅니다");
+  ok("트레이딩뷰 목록을 어디서 쟀는지 적혀 있다 (주소·캡처)",
+    SRC.indexOf("tradingview.com/chart") !== -1 &&
+    SRC.indexOf("shots/ct18-hk-tv-style-menu.png") !== -1);
+
+  /* 순서도 트레이딩뷰 그대로여야 합니다 — 회원이 같은 자리에서 찾습니다 */
+  ok("목록 순서가 트레이딩뷰 Chart style 창 순서 그대로다",
+    종류.join(",") === "bar,candle,line,step,area,hlcarea,baseline,columns,highlow,heikin",
+    종류.join(","));
+
+  /* 열 가지를 다 눌러도 진짜 캔들이 살아 있고 첫 번째여야 합니다 */
+  있어야할것.forEach(function (k) {
+    t.M.setType(k);
+    ok(k + " 로 바꿔도 진짜 캔들이 pane 의 첫 Candlestick 이다",
+      t.pane.getSeries().filter((s) => s.seriesType() === "Candlestick")[0] === t.캔들,
+      "얹은 것이 앞으로 끼어들면 범례·포지션선이 평균값을 잡아갑니다");
+  });
+  t.M.setType("candle");
 
   ok("바이낸스를 어디서 쟀는지 적혀 있다 (주소·날짜·캡처)",
     SRC.indexOf("binance.com/en/futures/BTCUSDT") !== -1 &&
     SRC.indexOf("2026-08-28") !== -1 && SRC.indexOf("shots/ct5-bnf-charttype.png") !== -1);
-  ok("하이킨아시·할로우를 왜 뺐는지 적혀 있다",
+  ok("하이킨아시를 왜 뺐다가 왜 넣었는지 적혀 있다",
     SRC.indexOf("하이킨아시") !== -1 && SRC.indexOf("바이낸스 Original") !== -1);
+  t.닫기();
+}
+
+/* =========================================================================
+ * [3-2] ⚠️⚠️ 하이킨아시는 진짜 가격이 아니다 — 돈에 닿는 자리
+ * ========================================================================= */
+절("[3-2] 하이킨아시 — 평균낸 값이 진짜 가격인 척하면 안 된다");
+{
+  const t = 가짜차트창();
+
+  /* ---- 계산식 : 트레이딩뷰 고객센터 원문 ----
+     HA종가 = (시+고+저+종)/4
+     HA시가 = (앞 HA시가 + 앞 HA종가)/2      첫 봉은 (시+종)/2
+     HA고가 = max(고, HA시가, HA종가)
+     HA저가 = min(저, HA시가, HA종가)
+     아래 기대값은 손으로 풀어서 적은 것입니다(코드로 만들지 않았습니다). */
+  const 봉 = [
+    { time: 1, open: 100, high: 110, low: 90, close: 105 },
+    { time: 2, open: 105, high: 120, low: 100, close: 115 },
+    { time: 3, open: 115, high: 118, low: 95, close: 97 }
+  ];
+  const 손으로푼값 = [
+    { open: 102.5, high: 110, low: 90, close: 101.25 },
+    { open: 101.875, high: 120, low: 100, close: 110 },
+    { open: 105.9375, high: 118, low: 95, close: 106.25 }
+  ];
+  const 낸값 = t.M.heikinAshi(봉);
+  ok("하이킨아시 계산 결과가 3개다", 낸값.length === 3, String(낸값.length));
+  손으로푼값.forEach(function (기대, i) {
+    ok("봉 " + (i + 1) + " 의 HA 시·고·저·종이 손으로 푼 값과 같다",
+      낸값[i] && 낸값[i].open === 기대.open && 낸값[i].high === 기대.high &&
+      낸값[i].low === 기대.low && 낸값[i].close === 기대.close,
+      JSON.stringify(낸값[i]) + " != " + JSON.stringify(기대));
+  });
+  ok("첫 봉의 HA시가는 (시+종)/2 다 (앞 봉이 없으므로)",
+    낸값[0].open === (봉[0].open + 봉[0].close) / 2, String(낸값[0].open));
+  ok("계산식 출처(트레이딩뷰 원문 주소)가 모듈에 적혀 있다",
+    SRC.indexOf("tradingview.com/support/solutions/43000619436-heikin-ashi") !== -1);
+
+  /* ---- 한 봉씩 갱신해도 통째로 계산한 것과 같아야 합니다 ---- */
+  t.M.setType("heikin");
+  const 얹은것 = t.기록.만든것[t.기록.만든것.length - 1];
+  t.캔들.setData(봉);
+  ok("하이킨아시로 바꾸면 캔들 모양 시리즈를 하나 얹는다",
+    얹은것.seriesType() === "Candlestick", 얹은것.seriesType());
+  ok("통째로 넣은 값이 하이킨아시 값이다",
+    (얹은것.__data || []).length === 3 && 얹은것.__data[2].close === 106.25,
+    JSON.stringify(얹은것.__data && 얹은것.__data[2]));
+
+  /* 마지막 봉이 시세로 계속 바뀌는 상황 */
+  t.캔들.update({ time: 3, open: 115, high: 118, low: 95, close: 97 });
+  const 한봉씩 = 얹은것.__last;
+  ok("마지막 봉만 갱신해도 통째로 계산한 값과 같다 (틱마다 어긋나면 안 됩니다)",
+    한봉씩 && 한봉씩.open === 105.9375 && 한봉씩.close === 106.25,
+    JSON.stringify(한봉씩));
+
+  /* ---- 오른쪽 축에 평균값을 현재가처럼 찍지 않는다 ---- */
+  ok("얹은 시리즈가 마지막 값을 축에 안 찍는다 (lastValueVisible=false)",
+    얹은것.__opts.lastValueVisible === false, String(얹은것.__opts.lastValueVisible));
+  ok("얹은 시리즈가 자기 가격선을 안 그린다 (priceLineVisible=false)",
+    얹은것.__opts.priceLineVisible === false, String(얹은것.__opts.priceLineVisible));
+
+  /* ---- 진짜 캔들은 값이 그대로여야 합니다 ---- */
+  ok("진짜 캔들에는 하이킨아시 값이 안 들어갔다 (십자선 범례가 읽는 자리)",
+    t.캔들.__data === 봉 && t.캔들.__last.close === 97,
+    JSON.stringify(t.캔들.__last));
+
+  /* ---- 화면 경고 ---- */
+  const 안내 = t.win.document.getElementById(t.M.NOTICE_ID);
+  ok("하이킨아시일 때 화면에 안내줄이 뜬다", !!안내);
+  ok("안내줄에 '평균' 이라는 말이 있다",
+    !!안내 && 안내.textContent.indexOf("평균") !== -1, 안내 && 안내.textContent);
+  ok("안내줄에 '실제 가격' 이라는 말이 있다",
+    !!안내 && 안내.textContent.indexOf("실제 가격") !== -1, 안내 && 안내.textContent);
+  ok("안내줄이 청산가·진입가를 콕 집어 말한다",
+    !!안내 && 안내.textContent.indexOf("청산가") !== -1 &&
+    안내.textContent.indexOf("진입가") !== -1, 안내 && 안내.textContent);
+  ok("안내줄 글씨를 줄이지 않았다 (17px 이상)",
+    /#\s*"\s*\+\s*NOTICE_ID/.test(SRC) || /font-size:17px[^;]*;line-height:1\.35/.test(SRC),
+    "대표가 작은 글씨를 못 읽습니다");
+
+  t.M.setType("candle");
+  ok("캔들로 돌아오면 안내줄이 사라진다",
+    !t.win.document.getElementById(t.M.NOTICE_ID));
+
+  ok("하이킨아시만 '진짜 가격이 아닌 봉' 으로 표시돼 있다",
+    t.M.SYNTHETIC && t.M.SYNTHETIC.heikin === true &&
+    Object.keys(t.M.SYNTHETIC).length === 1, JSON.stringify(t.M.SYNTHETIC));
+  t.닫기();
+}
+
+/* =========================================================================
+ * [3-3] HLC 영역은 Custom 시리즈여야 한다
+ *   캔들 시리즈를 찾는 모듈이 8개 있습니다(범례·포지션선·그리기·지표…).
+ *   전부 "첫 번째 Candlestick" 을 잡아가므로, 우리가 얹는 것이 굳이
+ *   Candlestick 일 필요가 없으면 Custom 으로 두는 편이 안전합니다.
+ * ========================================================================= */
+절("[3-3] 얹는 시리즈의 종류");
+{
+  const t = 가짜차트창();
+  const 기대 = {
+    line: "Line", step: "Line", area: "Area", bar: "Bar",
+    heikin: "Candlestick", highlow: "Candlestick",
+    hlcarea: "Custom", baseline: "Baseline", columns: "Histogram"
+  };
+  Object.keys(기대).forEach(function (k) {
+    t.M.setType(k);
+    const s = t.기록.만든것[t.기록.만든것.length - 1];
+    ok(k + " 는 " + 기대[k] + " 시리즈로 얹는다", s && s.seriesType() === 기대[k],
+      s && s.seriesType());
+  });
+  t.M.setType("step");
+  const 계단 = t.기록.만든것[t.기록.만든것.length - 1];
+  ok("계단선은 lineType 을 WithSteps(1) 로 준다",
+    계단.__opts.lineType === 1, String(계단.__opts.lineType));
+  t.M.setType("line");
+  const 라인 = t.기록.만든것[t.기록.만든것.length - 1];
+  ok("그냥 라인에는 lineType 을 안 준다",
+    라인.__opts.lineType === undefined, String(라인.__opts.lineType));
   t.닫기();
 }
 
@@ -350,7 +556,7 @@ console.log("\n봉 종류 봉인 — 시리즈를 갈아끼우지 않는다 (202
   t2.닫기();
 
   /* 망가진 저장값이 들어와도 캔들로 물러서야 합니다 */
-  [{ type: "heikin" }, { type: 123 }, {}, null, "area"].forEach(function (나쁜값, i) {
+  [{ type: "renko" }, { type: 123 }, {}, null, "area"].forEach(function (나쁜값, i) {
     const t3 = 가짜차트창(나쁜값);
     ok("이상한 저장값 " + i + " 이면 캔들로 물러선다 (" + JSON.stringify(나쁜값) + ")",
       t3.M.getType() === "candle", t3.M.getType());
