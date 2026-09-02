@@ -18,9 +18,25 @@
  * ── 어떻게 세나 (이름을 손으로 안 적습니다) ───────────────────────────
  * 두 가지를 ★둘 다★ 하는 모듈이 「띄우는 것」 입니다.
  *   ㉠ CSS 를 주입하는데 position:fixed|absolute 와 z-index 가 같이 있다
- *   ㉡ JS 에서 style.top / bottom / left / right 를 실제로 정한다
+ *   ㉡ ★자리를 정한다★ — 아래 세 갈래 중 하나면 됩니다
+ *        ⓐ 명시   style.top / bottom / left / right 에 값을 넣는다
+ *        ⓑ cssText  style.cssText 한 줄에 자리까지 같이 적는다
+ *        ⓒ 덮개   inset:0  ★또는★  fixed 이면서 left/top/right/bottom 이 모두 0
  * 주석은 지우고 봅니다 — 주석에 "position:fixed" 라고 적어 둔 파일이 여럿이라
  * 안 지우면 오탐이 납니다(tests/_locked-hashes.js 를 md5 로 보는 것과 같은 이유).
+ *
+ * ── ⚠️ 2026-09-03 ★갈래를 ⓑⓒ 로 넓혔습니다★ (11 → 14개) ──────────────
+ * 처음 만들 때는 ⓐ 하나만 봤습니다. 그래서 ★세 모듈이 레이더 밖★ 이었습니다.
+ *   js/chart-style.js           화면 네 변을 0 으로 묶는 전체 덮개 (자리 잡는 코드가 아예 없음)
+ *   js/symbol-stream-switch.js  cssText 한 줄로 만드는 상단 경고 토스트
+ *   js/jitter-probe.js          cssText 한 줄로 만드는 오른쪽 아래 개발용 상자
+ *
+ * ⚠️ ★ⓒ 를 inset:0 만으로 두면 chart-style.js 는 여전히 안 잡힙니다★ —
+ *   그 파일은 inset 을 안 쓰고 left/top/right/bottom 을 따로 0 으로 적습니다.
+ *   실제로 확인하고 두 갈래를 ★둘 다★ 넣었습니다.
+ *
+ * ★기준을 무르게 한 것이 아닙니다.★ 걸리는 그물을 넓힌 것이고,
+ * 새로 걸린 셋은 6·7절에서 갈래별로 ★따로 더 엄하게★ 봅니다.
  *
  * 그다음 ★화면(viewport) 기준★ 인 것만 골라냅니다(innerHeight · clientHeight 를 읽는 것).
  * 이것들만 하단 바에 물릴 수 있습니다. 칸 좌표·문서 좌표로 띄우는 것은 다릅니다.
@@ -92,21 +108,45 @@ const 모든파일 = fs.readdirSync(JSDIR).filter((f) => /\.js$/.test(f)).sort()
 ok("js/ 를 실제로 읽었다 (" + 모든파일.length + "개)", 모든파일.length > 50,
   "파일이 너무 적습니다 — 경로가 틀렸을 수 있습니다");
 
-const 띄우는것 = [];
-모든파일.forEach((f) => {
-  const 코드 = 코드만(fs.readFileSync(path.join(JSDIR, f), "utf8"));
-  const 겹쳐뜸 = /position:\s*(fixed|absolute)/.test(코드) && /z-index/.test(코드);
-  const 자리정함 = /\.style\.(top|bottom|left|right)\s*=/.test(코드);
-  if (!겹쳐뜸 || !자리정함) return;
-  띄우는것.push({
-    파일: f,
-    화면기준: /innerHeight|clientHeight/.test(코드),
-    바를봄: /tl-order-bar/.test(코드)
+/* fixed 이면서 네 변이 모두 0 — 「화면 전체를 덮는 것」.
+   inset:0 과 뜻은 같지만 글자가 달라 따로 봅니다(★이것 없으면 chart-style.js 를 놓칩니다★).
+   사이에 다른 속성이 끼어도 잡히게 여유를 두되, 문자열 하나 안에서만 찾습니다. */
+const 네변0 = /position:\s*fixed[\s\S]{0,160}?left:\s*0[\s\S]{0,160}?top:\s*0[\s\S]{0,160}?right:\s*0[\s\S]{0,160}?bottom:\s*0/;
+
+/** js/ 전체를 훑어 「띄우는 것」 을 찾습니다.
+ *  갈래 = { 명시, cssText, 덮개 } — ★돌연변이 검사에서 갈래를 하나씩 꺼 봅니다★ */
+function 훑기(갈래) {
+  const 목록 = [];
+  모든파일.forEach((f) => {
+    const 코드 = 코드만(fs.readFileSync(path.join(JSDIR, f), "utf8"));
+    const 겹쳐뜸 = /position:\s*(fixed|absolute)/.test(코드) && /z-index/.test(코드);
+    if (!겹쳐뜸) return;
+    const 명시 = /\.style\.(top|bottom|left|right)\s*=/.test(코드);
+    const css텍스트 = /\.style\.cssText\s*=/.test(코드);
+    const inset0 = /inset:\s*0/.test(코드);
+    const 화면덮개 = 네변0.test(코드);
+    const 덮개 = inset0 || 화면덮개;
+    const 자리정함 =
+      (갈래.명시 && 명시) || (갈래.cssText && css텍스트) || (갈래.덮개 && 덮개);
+    if (!자리정함) return;
+    목록.push({
+      파일: f, 명시: 명시, cssText: css텍스트, 덮개: 덮개,
+      화면덮개: 화면덮개, 칸덮개: inset0 && !화면덮개,
+      화면기준: /innerHeight|clientHeight/.test(코드),
+      바를봄: /tl-order-bar/.test(코드)
+    });
   });
-});
+  return 목록;
+}
+
+const 갈래전부 = { 명시: true, cssText: true, 덮개: true };
+const 띄우는것 = 훑기(갈래전부);
 
 띄우는것.forEach((m) => {
-  console.log("      · " + m.파일 + "  화면기준=" + (m.화면기준 ? "O" : "-") +
+  console.log("      · " + m.파일.padEnd(30) +
+    " 갈래=" + [m.명시 ? "명시" : "", m.cssText ? "cssText" : "", m.덮개 ? "덮개" : ""]
+      .filter(Boolean).join("+").padEnd(18) +
+    " 화면기준=" + (m.화면기준 ? "O" : "-") +
     "  주문막대=" + (m.바를봄 ? "O" : "★안 봄★"));
 });
 
@@ -116,8 +156,9 @@ const 띄우는것 = [];
 const 알려진띄우는것 = [
   "chart-candle-type.js", "chart-drawings.js", "chart-goto-date.js",
   "chart-indicator-kit.js", "chart-indicator-menu.js", "chart-indicator-settings.js",
-  "chart-oscillators.js", "chart-replay.js", "chart-timezone.js",
-  "interval-more.js", "stream-loading-hint.js"
+  "chart-oscillators.js", "chart-replay.js", "chart-style.js", "chart-timezone.js",
+  "interval-more.js", "jitter-probe.js", "stream-loading-hint.js",
+  "symbol-stream-switch.js"
 ];
 ok("★띄우는 모듈이 알려진 " + 알려진띄우는것.length + "개 그대로다★",
   띄우는것.map((m) => m.파일).join(",") === 알려진띄우는것.join(","),
@@ -130,16 +171,73 @@ const 칸좌표 = 띄우는것.filter((m) => !m.화면기준);
 ok("화면(viewport) 기준으로 띄우는 것 " + 화면기준.length + "개 · 그 밖 " + 칸좌표.length + "개",
   화면기준.length + 칸좌표.length === 띄우는것.length);
 
-/* 칸·문서 좌표로 띄우는 것은 하단 바와 사정이 다릅니다.
-   ★그래도 여기 적어 둡니다★ — 표정 창이 바로 이 갈래에서 났습니다.
+/* ── 화면 기준이 아닌 것을 ★갈래별로 나눠★ 둡니다 ──────────────────────
+ * 하단 바와 사정이 저마다 달라서, 한 덩어리로 두면 "왜 안 봐도 되는지" 가 사라집니다.
+ * 2026-09-03 에 ⓑcssText·ⓒ덮개 를 넓히며 4 → 7 개가 됐습니다. */
+const 화면덮개군 = 칸좌표.filter((m) => m.화면덮개).map((m) => m.파일);
+const 칸덮개군 = 칸좌표.filter((m) => m.칸덮개).map((m) => m.파일);
+const cssText군 = 칸좌표.filter((m) => !m.덮개 && !m.명시 && m.cssText).map((m) => m.파일);
+const 칸문서좌표군 = 칸좌표.filter((m) => !m.덮개 && m.명시).map((m) => m.파일);
+
+ok("화면 기준이 아닌 " + 칸좌표.length + "개가 갈래 넷으로 다 나뉜다 " +
+  "(화면덮개 " + 화면덮개군.length + " · 칸덮개 " + 칸덮개군.length +
+  " · cssText " + cssText군.length + " · 칸/문서좌표 " + 칸문서좌표군.length + ")",
+  화면덮개군.length + 칸덮개군.length + cssText군.length + 칸문서좌표군.length === 칸좌표.length,
+  "어느 갈래에도 안 들어간 것이 있습니다 — 사람이 보고 갈래를 정해야 합니다: " +
+  칸좌표.map((m) => m.파일).join(","));
+
+/* ㉠ 화면 전체를 덮는 것 — 바를 ★가리는 게 아니라 덮습니다★ (6절에서 안전 근거를 봅니다) */
+ok("★화면 전체를 덮는 것이 알려진 1개 그대로다★ (" + 화면덮개군.join(" · ") + ")",
+  화면덮개군.join(",") === "chart-style.js",
+  "지금: " + 화면덮개군.join(",") + " → 새로 생겼으면 ★6절 형식으로★ " +
+  "z-index·안쪽 스크롤·키 묶임을 확인해야 합니다");
+
+/* ㉡ 차트 칸만 덮는 것 — 화면이 아니라 칸 안입니다 (2절에서 따로 봅니다) */
+ok("차트 칸만 덮는 것이 알려진 1개 그대로다 (" + 칸덮개군.join(" · ") + ")",
+  칸덮개군.join(",") === "chart-replay.js");
+
+/* ㉢ cssText 한 줄로 만드는 것 — 7절에서 갈래별로 봅니다 */
+ok("cssText 로만 자리를 정하는 것이 알려진 2개 그대로다 (" + cssText군.join(" · ") + ")",
+  cssText군.slice().sort().join(",") === "jitter-probe.js,symbol-stream-switch.js",
+  "지금: " + cssText군.join(",") + " → 새로 생겼으면 ★화면 아래쪽에 붙는지★ 를 " +
+  "먼저 보세요. 아래에 붙으면 매수·매도 바와 겹칩니다");
+
+/* ㉣ 칸·문서 좌표. ★여기 적어 둡니다★ — 표정 창이 바로 이 갈래에서 났습니다.
      chart-indicator-kit / chart-oscillators  칸 위끝에 붙는 이름표 (아래로 안 자람)
-     chart-replay                             차트 칸 안 조작막대·안내줄 (2절에서 따로 봅니다)
      stream-loading-hint                      문서 좌표. 페이지와 같이 스크롤됨 */
-ok("칸·문서 좌표로 띄우는 것이 알려진 4개 그대로다 (" + 칸좌표.map((m) => m.파일).join(" · ") + ")",
-  칸좌표.map((m) => m.파일).sort().join(",") ===
-    "chart-indicator-kit.js,chart-oscillators.js,chart-replay.js,stream-loading-hint.js",
+ok("칸·문서 좌표로 띄우는 것이 알려진 3개 그대로다 (" + 칸문서좌표군.join(" · ") + ")",
+  칸문서좌표군.slice().sort().join(",") ===
+    "chart-indicator-kit.js,chart-oscillators.js,stream-loading-hint.js",
   "새로 생겼으면 ★차트 칸 아래끝·화면 아래끝을 둘 다 보는지★ 사람이 확인해야 합니다 " +
   "(tests/chart-pane-popup-bottom-fit.test.js 가 그 갈래의 본보기입니다)");
+
+/* ── ★규칙 돌연변이★ — 갈래를 하나 끄면 그 파일이 레이더에서 사라져야 한다 ──
+ * 원본 파일을 안 건드리고 ★훑는 규칙만★ 꺼서 확인합니다(다른 팀이 파일을 잡고 있습니다).
+ * 안 사라지면 그 갈래는 아무것도 안 잡고 있는 것입니다. */
+{
+  const 덮개끔 = 훑기({ 명시: true, cssText: true, 덮개: false }).map((m) => m.파일);
+  ok("★ⓒ덮개 갈래를 끄면 chart-style.js 가 레이더에서 사라진다★",
+    덮개끔.indexOf("chart-style.js") < 0 && 덮개끔.length === 띄우는것.length - 1,
+    "덮개 갈래가 헛돌고 있습니다 — 지금: " + 덮개끔.length + "개");
+
+  const cssText끔 = 훑기({ 명시: true, cssText: false, 덮개: true }).map((m) => m.파일);
+  ok("★ⓑcssText 갈래를 끄면 jitter-probe.js · symbol-stream-switch.js 둘이 사라진다★",
+    cssText끔.indexOf("jitter-probe.js") < 0 &&
+    cssText끔.indexOf("symbol-stream-switch.js") < 0 &&
+    cssText끔.length === 띄우는것.length - 2,
+    "cssText 갈래가 헛돌고 있습니다 — 지금: " + cssText끔.length + "개");
+
+  /* ⚠️ inset:0 만으로는 chart-style.js 를 ★못 잡습니다★. 그 파일은 네 변을 따로 적습니다.
+     이 검사가 「네변0 갈래를 지우면 안 된다」 를 못 박습니다. */
+  const style코드 = 코드만(fs.readFileSync(path.join(JSDIR, "chart-style.js"), "utf8"));
+  ok("★chart-style.js 는 inset:0 을 안 써서 네변0 갈래가 없으면 못 잡는다★",
+    !/inset:\s*0/.test(style코드) && 네변0.test(style코드),
+    "저쪽이 inset:0 으로 바뀌었으면 이 주석을 고치세요 — 잡히는 것은 그대로입니다");
+
+  const 명시끔 = 훑기({ 명시: false, cssText: true, 덮개: true }).map((m) => m.파일);
+  ok("ⓐ명시 갈래를 끄면 " + (띄우는것.length - 명시끔.length) + "개가 사라진다 (갈래가 살아 있다)",
+    명시끔.length < 띄우는것.length);
+}
 
 /* =====================================================================
  * [2] 보호군 — 하단 바를 보는 모듈은 계속 봐야 한다 (회귀 봉인)
@@ -341,9 +439,112 @@ ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 �
 }
 
 /* =====================================================================
- * [5] 앞 봉인들과 겹치지 않게 — 무엇을 누가 보는지 적어 둔다
+ * [5] ★전체 덮개 갈래★ — js/chart-style.js
+ *
+ * 이 창은 「바를 가린다」 가 아니라 ★바 위를 통째로 덮습니다★. 갈래가 달라서
+ * 4절(가려짐 계산)이 아니라 여기서 따로 봅니다. 안전하려면 셋이 다 있어야 합니다.
+ *   ㉠ 바보다 ★위★ 에 있을 것        — 아니면 창이 떠 있는데 밑의 매수·매도가 눌립니다
+ *   ㉡ 화면 높이 안으로 ★묶일 것★     — 아니면 아래가 화면 밖으로 나갑니다
+ *   ㉢ 안에서 ★스크롤될 것★          — 넘치는 내용을 손으로 꺼낼 수 있어야 합니다
+ * ⚠️ ㉢ 이 없어서 실제로 당한 적이 있습니다 — js/chart-timezone.js 가
+ *   360x640 에서 +57px 넘쳤는데 스크롤이 안 생겨 밑을 못 꺼냈습니다(위 머리말 참조).
  * ===================================================================== */
-절("[5] 봉인 나눠 맡기 — 같은 것을 두 벌로 안 봅니다");
+절("[5] 전체 덮개 갈래 — js/chart-style.js (바를 가리는 게 아니라 덮는 쪽)");
+{
+  const F = "chart-style.js";
+  const 코드 = 코드만(fs.readFileSync(path.join(JSDIR, F), "utf8"));
+  const 바Z0 = Number((바CSS.match(/z-index:(\d+)/) || [])[1]);
+
+  ok(F + " — 화면 네 변(left·top·right·bottom)을 0 으로 묶어 전체를 덮는다",
+    네변0.test(코드), "덮개가 아니게 되면 1절 갈래 분류부터 다시 해야 합니다");
+
+  /* 덮개 자신의 z 는 「fixed 네 변 0」 이 적힌 그 규칙 안에서 읽습니다.
+     파일 안 다른 z-index(예: 안쪽 조각)를 잘못 집으면 비교가 무의미해집니다. */
+  const 덮개규칙 = (코드.match(/position:\s*fixed;[^"']*?bottom:\s*0;[^"']*/) || [])[0] || "";
+  const 덮개Z = Number((덮개규칙.match(/z-index:\s*(\d+)/) || [])[1]);
+  ok(F + " — 덮개 규칙에서 z-index 를 읽었다 (" + 덮개Z + ")", isFinite(덮개Z) && 덮개Z > 0,
+    "규칙 안에 z-index 가 없습니다: " + 덮개규칙.slice(0, 80));
+  ok("★" + F + " 덮개(z " + 덮개Z + ") 가 매수·매도 바(z " + 바Z0 + ")보다 위다★",
+    isFinite(덮개Z) && isFinite(바Z0) && 덮개Z > 바Z0,
+    "창이 떠 있는데 아래 매수·매도 단추가 눌립니다 — 폰에서 진짜 주문이 들어갑니다. " +
+    "지금 덮개 " + 덮개Z + " vs 바 " + 바Z0);
+  /* 로그인 게이트(1000)보다는 아래여야 합니다 — 원본 주석에 근거가 적혀 있습니다 */
+  ok(F + " — 그래도 로그인 게이트(1000)보다는 아래다 (" + 덮개Z + " < 1000)",
+    isFinite(덮개Z) && 덮개Z < 1000,
+    "게이트를 덮으면 로그인 안 한 사람이 설정을 만집니다");
+
+  ok("★" + F + " — 상자 키가 화면 안으로 묶인다 (max-height:100%)★",
+    /\.tl-cs-box\{[^"']*max-height:\s*100%/.test(코드),
+    "묶이지 않으면 내용이 길 때 아래가 화면 밖으로 나갑니다");
+  ok("★" + F + " — 안쪽 칸이 스크롤된다 (.tl-cs-pane overflow-y:auto)★",
+    /\.tl-cs-pane\{[^"']*overflow-y:\s*auto/.test(코드),
+    "스크롤이 없으면 넘친 부분을 손으로 못 꺼냅니다 (chart-timezone.js 가 그랬습니다)");
+
+  /* ★그래서 이 파일은 하단 바를 안 봐도 됩니다★ — 4절 미보호군에 안 넣는 근거입니다.
+     조건이 하나라도 깨지면 위 검사들이 먼저 빨개져서 사람이 다시 재게 됩니다. */
+  /* ★그래서 이 파일은 4절 「아직 안 보는 것」 에 안 들어갑니다★ —
+     4절은 화면 기준으로 ★자리를 잡는★ 창만 셉니다. 덮개는 자리를 안 잡습니다.
+     화면 높이를 읽기 시작하면(= 자리를 잡기 시작하면) 4절로 옮겨져 거기서 빨개집니다. */
+  ok(F + " — 4절 미보호군에 안 들어간다 (화면 높이를 읽어 자리를 잡지 않으므로)",
+    !/innerHeight|clientHeight/.test(코드) && 알려진미보호.indexOf(F) < 0,
+    "화면 높이를 읽기 시작했으면 자리를 잡는 창입니다 — 4절에서 하단 바를 봐야 합니다");
+}
+
+/* =====================================================================
+ * [6] ★cssText 갈래★ — 상단 토스트와 개발용 상자
+ * ===================================================================== */
+절("[6] cssText 갈래 — symbol-stream-switch(상단 토스트) · jitter-probe(개발용)");
+{
+  /* ── ㉠ js/symbol-stream-switch.js — 시세를 못 받았을 때 뜨는 경고 토스트 ──
+   * ★위에 붙습니다(top:8px).★ 아래로 자라지 않으니 하단 바와 만나지 않습니다.
+   * 면제 근거는 「위에 붙어 있다」 이므로, 그것이 바뀌면 여기가 빨개져야 합니다. */
+  const S = "symbol-stream-switch.js";
+  const s코드 = 코드만(fs.readFileSync(path.join(JSDIR, S), "utf8"));
+  const 토스트 = (s코드.match(/cssText\s*=\s*\[[\s\S]{0,700}?\]\.join\(";"\)/) || [])[0] || "";
+  ok(S + " — 경고 토스트를 cssText 로 만든다 (그래서 ⓐ명시 갈래로는 안 잡혔습니다)",
+    토스트.length > 0 && /position:fixed/.test(토스트),
+    "cssText 모양이 바뀌었습니다 — 아래 검사의 근거가 사라집니다");
+  ok("★" + S + " 토스트는 화면 ★위쪽★ 에 붙는다 (top 고정 · bottom 안 씀)★",
+    /"top:\s*\d+px"/.test(토스트) && !/"bottom:/.test(토스트),
+    "아래쪽에 붙게 바뀌었으면 ★매수·매도 바와 겹칩니다★ — 그때는 바를 봐야 합니다");
+  ok(S + " — 그래서 하단 바를 안 봐도 된다 (근거: 위에 붙고 아래로 안 자람)", true);
+
+  /* ── ㉡ js/jitter-probe.js — ★면제. 근거를 적습니다★ ──────────────────
+   * 이 상자는 right:10px · bottom:10px 라 ★아래쪽에 붙습니다★. 자리만 보면
+   * 매수·매도 바와 정면으로 겹칩니다. 그런데도 안 보는 이유는 하나뿐입니다 —
+   * ★주소에 ?jitter=1 을 붙였을 때만 켜지고, 회원에게는 절대 안 보입니다.★
+   * 개발자가 화면 흔들림을 잴 때 쓰는 도구입니다.
+   *
+   * ⚠️ ★면제를 그냥 믿지 않습니다.★ 그 「켜짐 조건」 이 살아 있는지를 검사합니다.
+   *    누가 조건을 지우면 회원 화면에 뜨게 되고, 그 순간 이 절이 빨개집니다.
+   *    그때 할 일은 면제를 지우고 하단 바를 보게 하는 것입니다. */
+  const J = "jitter-probe.js";
+  const j코드 = 코드만(fs.readFileSync(path.join(JSDIR, J), "utf8"));
+  ok("★" + J + " 는 아래쪽에 붙는다 (bottom · right) — 자리만 보면 바와 겹칩니다★",
+    /cssText\s*=\s*[\s\S]{0,200}?bottom:\s*\d+px/.test(j코드),
+    "자리가 바뀌었으면 아래 면제 근거를 다시 써야 합니다");
+  ok("★" + J + " 는 ?jitter=1 일 때만 켜진다 (회원 노출 없음) — ★이것이 면제 근거★",
+    /jitter=1/.test(j코드) && /location\.search/.test(j코드),
+    "켜짐 조건이 사라졌습니다 — ★회원 화면 오른쪽 아래에 개발용 상자가 뜹니다.★ " +
+    "면제를 지우고 하단 바를 보게 해야 합니다");
+  /* 꺼져 있을 때 상자를 아예 안 만드는지 — 조건만 있고 실행이 새면 소용없습니다 */
+  ok(J + " — 꺼져 있으면 아무것도 안 만든다 (ON 이 거짓이면 즉시 빠져나감)",
+    /if\s*\(\s*!\s*ON\s*\)\s*return/.test(j코드),
+    "ON 검사가 없으면 조건이 있어도 상자가 만들어질 수 있습니다");
+  /* ⚠️ index.html 에도 ★주석을 지우고★ 봅니다. 1147줄에 "?jitter=1 을 붙였을 때만
+     켜집니다" 라는 ★설명 주석★ 이 있어, 안 지우면 오탐으로 빨개집니다
+     (실제로 처음 쓸 때 이걸로 한 번 빨개졌습니다 — js 쪽 코드만() 과 같은 이유). */
+  const HTML = fs.readFileSync(path.join(REPO, "index.html"), "utf8")
+    .replace(/<!--[\s\S]*?-->/g, " ");
+  ok(J + " — 회원용 화면(index.html)이 스스로 ?jitter=1 을 켜지 않는다 (주석 뺀 뒤 확인)",
+    HTML.indexOf("jitter=1") < 0,
+    "index.html 이 스스로 ?jitter=1 을 켜면 ★회원 모두에게★ 개발용 상자가 보입니다");
+}
+
+/* =====================================================================
+ * [7] 앞 봉인들과 겹치지 않게 — 무엇을 누가 보는지 적어 둔다
+ * ===================================================================== */
+절("[7] 봉인 나눠 맡기 — 같은 것을 두 벌로 안 봅니다");
 {
   const 있다 = (f) => fs.existsSync(path.join(__dirname, f));
   ok("putFixed 갈래는 tests/chart-place-bottom-guard-seal.test.js 가 본다",
@@ -356,9 +557,9 @@ ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 �
 }
 
 /* =====================================================================
- * [6] 등록
+ * [8] 등록
  * ===================================================================== */
-절("[6] 등록");
+절("[8] 등록");
 {
   const order = fs.readFileSync(path.join(__dirname, "_order.txt"), "utf8");
   ok("tests/_order.txt 에 등록돼 있다",
