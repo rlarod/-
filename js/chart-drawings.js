@@ -5239,8 +5239,35 @@ App.ChartDrawings = (function () {
     var left = vis.left + CHIP_EDGE;
     var w = box.offsetWidth;
     if (left + w > vis.right) left = Math.max(vis.left, vis.right - w);
+    /* 세로 — 아래로 삐져나가지 않게 (placeToast 와 같은 규칙입니다).
+       「눌러 앉히기만 하면 안 됩니다」 — 폰에서 화면을 살짝 내리면(360·y=50)
+       차트 칸에서 쓸 수 있는 세로가 50px 남짓뿐이라, 240px 짜리 목록을
+       위로 올려봐야 이번엔 위가 잘립니다. 그래서 「키를 먼저 줄입니다」.
+       [주의] 글씨는 안 줄입니다 — .rows 가 이미 overflow-y:auto 라
+       키를 줄여도 항목은 하나도 안 사라지고 안에서 세로로 스크롤합니다.
+       바닥(vis.bottom)은 chipFloorY() 가 하단 주문 막대를 이미 피해서
+       잡아 둔 값이라, 아래를 막으면 주문 막대에 가리는 것도 같이 없어집니다. */
+    var rows = els.listRows;
+    var head = box.offsetHeight - (rows ? rows.offsetHeight : 0);
+    var room = vis.bottom - vis.top - 6;
+    if (rows) {
+      /* 자리가 넉넉해지면 스스로 LIST_MAX_H 로 되돌아옵니다.
+         한 줄(LIST_ROW_H)은 남깁니다 — 0 으로 만들면 목록이 사라집니다 */
+      rows.style.maxHeight =
+        Math.round(Math.max(LIST_ROW_H, Math.min(LIST_MAX_H, room - head))) + "px";
+    }
+    /* 막는 차례가 중요합니다 — placeToast(4480줄) 와 같은 차례입니다.
+       「아래 막기가 위 막기보다 나중」 이라 아래가 이깁니다.
+       최악(360·y=50)에는 차트 칸에 47px 밖에 안 남는데 목록은 아무리 줄여도
+       머리(70px) + 한 줄(34px) = 104px 입니다. 그때 위를 차트 칸 위끝으로
+       막으면 아래가 다시 주문 막대 밑으로 43px 내려가 단추 9개가 막힙니다
+       (실측). 그래서 위는 「화면 위끝」 까지만 막습니다 — placeToast 도
+       box.top 이 아니라 CHIP_EDGE 로 막습니다. 자리가 넉넉할 때는 첫 줄이
+       이겨서 지금까지처럼 차트 칸 안에 그대로 놓입니다. */
     var top = parseFloat(chip.style.top || "0") - box.offsetHeight - 6;
     if (top < vis.top) top = vis.top;
+    if (top + box.offsetHeight > vis.bottom) top = vis.bottom - box.offsetHeight;
+    if (top < CHIP_EDGE) top = CHIP_EDGE; /* 화면 위로는 안 나갑니다 */
     putFixed(box, left, top);
   }
 

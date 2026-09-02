@@ -112,6 +112,10 @@ App.ChartReplay = (function () {
   var reg = [];
   var priceLines = [];
   var liveLine = null;
+  /* 현재가 선을 알아보는 표식. js/chart.js:50 COLORS.current 와 같은 값입니다.
+     제목으로 찍으면 안 됩니다 — 회원이 그은 수평선도 title:"" 이고
+     (js/chart-drawings.js:1922) 저장된 것이 먼저 되살아나 그쪽이 잡혔습니다. */
+  var LIVE_LINE_COLOR = "#FF5252";
 
   function entryOf(s) {
     for (var i = 0; i < reg.length; i++) if (reg[i].s === s) return reg[i];
@@ -218,14 +222,14 @@ App.ChartReplay = (function () {
     reg.push(e);
 
     /* 가로선(진입가·현재가 등)이 만들어지는 것을 지켜봅니다.
-       chart.js 의 현재가 선은 제목이 빈 첫 번째 선입니다(js/chart.js:405). */
+       chart.js 의 현재가 선은 색이 LIVE_LINE_COLOR 인 선입니다(js/chart.js:405). */
     if (e.kind === "candle" && typeof s.createPriceLine === "function" && !s.__tlReplayPL) {
       var origPL = s.createPriceLine.bind(s);
       s.createPriceLine = function (opts) {
         var ln = origPL(opts);
         try {
-          priceLines.push({ line: ln, title: (opts && opts.title) || "" });
-          if (!liveLine && (!opts || !opts.title)) liveLine = ln;
+          priceLines.push({ line: ln, title: (opts && opts.title) || "", color: (opts && opts.color) || "" });
+          if (!liveLine && opts && String(opts.color).toUpperCase() === LIVE_LINE_COLOR) liveLine = ln;
         } catch (err2) { /* 무시 */ }
         return ln;
       };

@@ -404,3 +404,26 @@ tests/chart-replay-banner-ind-bar.test.js
 #   틀리면 아래 검사가 다 헛것이라 거기서 먼저 빨개집니다.
 # 되돌리기: 이 줄과 tests/chart-replay-scroll-restore.test.js 삭제
 tests/chart-replay-scroll-restore.test.js
+
+# 2026-09-03 (수리팀) — 리플레이가 감출 선을 ★색★ 으로 집는다.
+#   옛 코드는 "제목이 빈 첫 번째 가로선" 을 감췄는데, 회원이 그은 수평선도
+#   title:"" 이고 저장된 것이 먼저 되살아나서 ★엉뚱한 선★ 을 집었습니다.
+#   ① 빨간 현재가 선이 안 감춰짐  ② 회원 선 하나가 조용히 사라짐
+#   실측 1440 · 리플레이 ON · 그린 것 1개 —
+#     전: 빨강 584 · 축 2983 · 금색 0 → 후: 빨강 0 · 축 0 · 금색 584
+#   ⚠️ ★그린 것 0개로 재면 옛 코드도 통과합니다.★ 1절이 회원 선을 먼저
+#      만들어 두고 검사하는 이유입니다.
+# 되돌리기: 이 줄과 tests/chart-replay-live-line-pick.test.js 삭제
+tests/chart-replay-live-line-pick.test.js
+
+# 2026-09-03 (수리팀) — 「그린 것 목록」이 화면 아래로 넘치던 것.
+#   placeList 에 ★아래쪽 방어가 없었습니다★ (같은 파일 placeToast 에는 있음).
+#   실측(그린 것 3개 · 스크롤 25px 간격 전수) — 여섯 폭 중 여섯에서 넘침
+#     360/375 y=50  666~838  화면밖 +38px · 주문막대 밑으로 +111px · 막힌단추 9
+#     1440   y=0    745~917  화면밖 +117px
+#   고친 뒤 여섯 폭 모두 화면밖 0 · 주문막대 물림 0 · 막힌단추 0
+#   ★키를 줄이고(글씨 아님) 아래를 막습니다.★ 마지막 방어는 vis.top 이
+#   아니라 CHIP_EDGE 여야 합니다 — vis.top 으로 올리면 다시 막대에 물립니다.
+#   ⚠️ 1절이 ★흉내가 브라우저 실측과 같은지★ 를 먼저 봅니다.
+# 되돌리기: 이 줄과 tests/chart-draw-list-fit.test.js 삭제
+tests/chart-draw-list-fit.test.js

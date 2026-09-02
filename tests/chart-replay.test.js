@@ -164,11 +164,34 @@ console.log("\n리플레이 (트레이딩뷰 Bar replay)");
     "#0A0F1C", "#101727", "#0D1422", "#1D273B",
     "#E7ECF5", "#838DA4", "#26C281", "#F0506E", "#F0B429"
   ];
+  /* ─────────────────────────────────────────────────────────────────
+   * ⚠️ 예외 한 개 — #FF5252 (2026-09-03 수리팀)
+   *
+   * 이 파일은 #FF5252 를 ★칠하지 않습니다★. 감출 선을 ★알아보는 표식★
+   * 으로만 씁니다. 값은 js/chart.js:50 COLORS.current 의 것이고,
+   * 거기서 만든 현재가 선을 리플레이 중에 감추려면 그 선을 골라내야
+   * 합니다. 옛 코드는 "제목이 빈 첫 번째 선" 으로 골랐는데 회원이 그은
+   * 수평선도 title:"" 이라 엉뚱한 선을 집었습니다
+   * (tests/chart-replay-live-line-pick.test.js 참고).
+   *
+   * ★칠하는 색은 여전히 확정 팔레트 9색뿐입니다.★ 그것을 아래에서
+   * 따로 검사합니다 — 이 값이 화면을 칠하는 데 쓰이면 빨개집니다.
+   * ───────────────────────────────────────────────────────────────── */
+  const 표식 = "#FF5252";
   const found = (SRC.match(/#[0-9A-Fa-f]{6}\b/g) || []).map(function (h) { return h.toUpperCase(); });
-  const bad = found.filter(function (h) { return ALLOWED.indexOf(h) < 0; });
-  ok("확정 팔레트 9색만 쓴다", bad.length === 0, bad.join(","));
+  const bad = found.filter(function (h) { return ALLOWED.indexOf(h) < 0 && h !== 표식; });
+  ok("칠하는 색은 확정 팔레트 9색만 쓴다", bad.length === 0, bad.join(","));
   ok("빨강은 하락색 하나만 쓴다 (새 빨강을 만들지 않는다)",
     found.indexOf("#FF0000") < 0 && found.indexOf("#F6465D") < 0);
+
+  /* 예외가 예외로 남아 있는지 — 표식이 슬그머니 칠하는 데 쓰이면 안 됩니다 */
+  const 표식수 = found.filter(function (h) { return h === 표식; }).length;
+  ok("표식 " + 표식 + " 은 딱 한 번, 이름 붙은 상수로만 적는다",
+    표식수 <= 1 && (표식수 === 0 || /LIVE_LINE_COLOR\s*=\s*"#FF5252"/.test(SRC)),
+    표식수 + "곳");
+  ok("표식을 ★칠하는 데 쓰지 않는다★ (color: 값이나 CSS 문자열로 붙이지 않는다)",
+    !/(color|background|fill|stroke|border)\s*[:=]\s*LIVE_LINE_COLOR/i.test(SRC) &&
+    !/LIVE_LINE_COLOR\s*\+/.test(SRC) && !/\+\s*LIVE_LINE_COLOR/.test(SRC));
 }
 
 /* ===================================================================
