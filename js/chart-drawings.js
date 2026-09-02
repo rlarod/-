@@ -4928,8 +4928,27 @@ App.ChartDrawings = (function () {
     var left = vis.left + CHIP_EDGE;
     var w = box.offsetWidth;
     if (left + w > vis.right) left = Math.max(vis.left, vis.right - w);
+    /* 세로 — 아래로 삐져나가지 않게 (placeToast · placeList 와 같은 규칙입니다).
+       17차 2026-09-03: 위쪽만 막고 아래를 안 막아서, 폰에서 화면을 살짝
+       내리면(360·y=50) 창이 하단 주문 막대 밑으로 82px 내려가 단추 13개 중
+       5개가 막히고 화면 아래로도 9px 잘렸습니다(실측). 여섯 폭 중 다섯에서
+       났습니다 — 1440 만 멀쩡했습니다.
+       [주의] 이 창은 목록(.rows)과 달리 「줄일 곳이 없습니다」 — 색 줄·굵기
+       줄·계속 그리기 줄이 다 붙박이고 스크롤 칸이 없습니다(높이 143px 고정).
+       그래서 키를 줄이지 않고 「자리만」 막습니다. 단추 32px·글씨도 그대로입니다.
+       바닥(vis.bottom)은 chipFloorY() 가 하단 주문 막대를 이미 피해 잡아 둔
+       값이라, 아래를 막으면 주문 막대에 가리는 것도 같이 없어집니다. */
     var top = parseFloat(chip.style.top || "0") - box.offsetHeight - 6;
     if (top < vis.top) top = vis.top;
+    /* 막는 차례가 중요합니다 — placeToast · placeList 와 같은 차례입니다.
+       「아래 막기가 위 막기보다 나중」 이라 아래가 이깁니다.
+       최악(360·y=50)에는 차트 칸에 53px 밖에 안 남는데 창은 143px 입니다.
+       그때 위를 차트 칸 위끝(vis.top)으로 막으면 아래가 다시 주문 막대 밑으로
+       내려갑니다. 그래서 위는 「화면 위끝」 까지만 막습니다 — placeToast 도
+       box.top 이 아니라 CHIP_EDGE 로 막습니다. 자리가 넉넉할 때는 첫 줄이
+       이겨서 지금까지처럼 칩 바로 위에 그대로 놓입니다. */
+    if (top + box.offsetHeight > vis.bottom) top = vis.bottom - box.offsetHeight;
+    if (top < CHIP_EDGE) top = CHIP_EDGE; /* 화면 위로는 안 나갑니다 */
     putFixed(box, left, top);
   }
 
@@ -5358,7 +5377,33 @@ App.ChartDrawings = (function () {
     var top = o.y + y + 8;
     if (wr.width && left + bw > wr.width - 4) left = wr.width - bw - 4;
     if (left < 4) left = 4;
+    /* 바닥 — 「차트 칸 아래끝」 뿐 아니라 「하단 주문 막대 위끝」 도 같이 봅니다.
+       17차 2026-09-03: 차트 칸(560px)은 폰 화면보다 훨씬 길어서, 화면에 보이는
+       아래쪽을 누르면 창이 차트 칸 안에는 있는데 「매수·매도 바 밑에 깔려
+       통째로 안 보였습니다」 (360·스크롤50 에서 누른 곳 713 → 창 721~771,
+       막대 위끝 727 보다 44px 아래. 캡처로 확인 — 여섯 단추가 하나도 안 보임).
+       오류도 안 나고 화면도 멀쩡해서 회원은 「표정이 안 찍히네」 로만 느낍니다.
+       chipFloorY() 는 화면 기준이고 top 은 차트 칸 기준이라 wr.top 을 빼서 옮깁니다.
+       (전체화면이면 chipFloorY 가 막대를 안 세므로 저절로 화면 아래끝이 됩니다) */
+    /* ① 원래 있던 규칙 — 차트 칸 아래끝을 넘으면 누른 곳 위로 뒤집습니다.
+       (일부러 그대로 남겨 둡니다 — tests/chart-place-bottom-guard-seal.test.js 가
+        이 줄을 「아래쪽 방어가 살아 있는지」 의 표식으로 씁니다) */
     if (wr.height && top + bh > wr.height - 4) top = o.y + y - bh - 8;
+    /* ② 새로 넣은 규칙 — 「화면에 보이는 바닥」 도 같이 봅니다.
+       chipFloorY() 는 화면 기준이고 top 은 차트 칸 기준이라 wr.top 을 빼서 옮깁니다.
+       (전체화면이면 chipFloorY 가 막대를 안 세므로 저절로 화면 아래끝이 됩니다)
+       ⓐ 먼저 누른 곳 위로 뒤집고 ⓑ 그래도 안 들어가면 눌러 앉힙니다.
+       ⓒ 마지막은 차트 칸 위끝(4) — 이 창은 차트 칸 안에 있어야 합니다
+          (position:absolute 라 밖으로 내보내면 탭 줄 위에 뜹니다).
+       실측(360·스크롤50·누른 곳 713) — 전 721~771(막대 밑 +44px · 통째로 안 보임)
+       → 후 670~720(막대 위 −7px). ⓐ 만으로 들어옵니다. */
+    var 바닥 = wr.height ? wr.height - 4 : Infinity;
+    if (typeof wr.top === "number") {
+      var 화면바닥 = chipFloorY() - wr.top;
+      if (화면바닥 < 바닥) 바닥 = 화면바닥;
+    }
+    if (top + bh > 바닥) top = o.y + y - bh - 8;
+    if (top + bh > 바닥) top = 바닥 - bh;
     if (top < 4) top = 4;
     box.style.left = Math.round(left) + "px";
     box.style.top = Math.round(top) + "px";
@@ -5396,8 +5441,7 @@ App.ChartDrawings = (function () {
     inp.className = "tl-draw-input";
     inp.setAttribute("maxlength", "40");
     inp.setAttribute("placeholder", "글을 쓰고 Enter");
-    inp.style.left = Math.round(o.x + x) + "px";
-    inp.style.top = Math.round(o.y + y - 12) + "px";
+    /* 자리는 「띄운 뒤에」 잡습니다 (아래) — 붙이기 전에는 키·폭이 0 이라 못 잽니다 */
     inp.addEventListener("keydown", function (ev) {
       ev.stopPropagation();
       if (ev.key === "Enter") {
@@ -5417,6 +5461,33 @@ App.ChartDrawings = (function () {
       }
     });
     wrap.appendChild(inp);
+    /* 자리 — 누른 곳. 17차 2026-09-03 까지 「방어가 하나도 없었습니다」
+       차트 칸(560px)이 폰 화면보다 길어서, 화면에 보이는 아래쪽을 누르면
+       입력칸이 「하단 매수·매도 바 밑으로 내려갔습니다」 — 360·스크롤50 에서
+       누른 곳 725 → 칸 713~736, 막대 위끝 727 보다 9px 아래(실측).
+       오른쪽도 화면 끝(360)에 딱 붙어 여유가 0 이었습니다.
+       표정 고르는 창(openFacePicker)과 「같은 규칙」 으로 맞춥니다.
+       [주의] 글씨(12px)·폭(150px)은 안 건드립니다. 자리만 옮깁니다.
+       글자가 찍히는 자리는 누른 곳의 (시각, 가격) 이라 그대로입니다 —
+       입력칸만 보이는 데로 옮겨 놓는 것입니다. */
+    var wr2 = wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : { width: 0, height: 0 };
+    var iw = inp.offsetWidth || 164;
+    var ih = inp.offsetHeight || 23;
+    var ileft = o.x + x;
+    var itop = o.y + y - 12;
+    if (wr2.width && ileft + iw > wr2.width - 4) ileft = wr2.width - iw - 4;
+    if (ileft < 4) ileft = 4;
+    var i바닥 = wr2.height ? wr2.height - 4 : Infinity;
+    if (typeof wr2.top === "number") {
+      /* chipFloorY() 는 화면 기준, itop 은 차트 칸 기준이라 wr2.top 을 빼서 옮깁니다.
+         (전체화면이면 chipFloorY 가 막대를 안 세므로 저절로 화면 아래끝이 됩니다) */
+      var i화면바닥 = chipFloorY() - wr2.top;
+      if (i화면바닥 < i바닥) i바닥 = i화면바닥;
+    }
+    if (itop + ih > i바닥) itop = i바닥 - ih;
+    if (itop < 4) itop = 4;
+    inp.style.left = Math.round(ileft) + "px";
+    inp.style.top = Math.round(itop) + "px";
     els.input = inp;
     setTimeout(function () {
       try {

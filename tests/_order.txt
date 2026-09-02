@@ -436,6 +436,7 @@ tests/chart-draw-list-fit.test.js
 #   흉내가 브라우저 실측(360 615~719 · 1440 688~792)과 같은지 3절이 먼저 봅니다.
 #   5절 돌연변이 — 함수 본문의 .bottom 을 1e9 로 바꾸면 ★반드시 넘쳐야★ 합니다.
 # 되돌리기: 이 줄과 tests/chart-place-bottom-guard-seal.test.js 삭제
+tests/chart-place-bottom-guard-seal.test.js
 
 # 2026-09-03 (차트팀 13단계) — 아래 칸 지표에 틀이 낸 길 셋
 #   ① 눈금 고정(scale)  RSI 0~100. 없으면 30·70 기준선이 화면 밖으로 나갑니다
@@ -457,6 +458,7 @@ tests/chart-indicator-pane-kit.test.js
 #   두 곳이 어긋나면 리플레이 중에 현재가 선이 조용히 안 감춰집니다.
 #   6절 돌연변이 — 사본에서 GUARDED 목록의 한 이름을 빼면 그것이 안 막혀야 합니다.
 # 되돌리기: 이 줄과 tests/chart-replay-guard-scope.test.js 삭제
+tests/chart-replay-guard-scope.test.js
 
 # 2026-09-03 (수리팀) — 「색·굵기 고르는 창」이 화면 아래로 넘치던 것.
 #   placeStyle 에 ★아래쪽 방어가 없었습니다★ — placeList 와 글자 그대로 같은 병.
@@ -468,6 +470,19 @@ tests/chart-indicator-pane-kit.test.js
 #   마지막 방어는 vis.top 이 아니라 CHIP_EDGE 여야 합니다.
 #   5절이 ★putFixed 를 부르는 자리 개수(5)★ 를 잠급니다 — 세 번째가 또 안 생기게.
 # 되돌리기: 이 줄과 tests/chart-style-pick-fit.test.js 삭제
+tests/chart-style-pick-fit.test.js
+
+# 2026-09-03 (수리팀) — 「차트 칸 좌표로 띄우는 것」 둘도 주문 막대 밑으로 내려가던 것.
+#   표정 고르는 창 · 글자 입력칸은 position:absolute 라 putFixed 를 안 부릅니다 —
+#   그래서 chart-place-bottom-guard-seal 에 ★안 걸립니다.★ 따로 봅니다.
+#   실측(스크롤 25px 간격 전수 · 보이는 차트 바닥을 실제로 눌러서)
+#     표정 창  여섯 폭 전부 44px 내려감. 360 에서는 ★단추 6개가 통째로 안 보임★(캡처)
+#     입력칸  방어가 하나도 없었음. 360 에서 막대 밑 9px · 오른쪽은 화면 끝에 딱 붙음
+#   고친 뒤 여섯 폭 모두 막대 위 · 차트 칸 안. 글씨·단추 크기 그대로.
+#   ⚠️ openFacePicker 의 top + bh > wr.height 한 줄은 ★일부러 남겼습니다★ —
+#      chart-place-bottom-guard-seal 이 그 줄을 표식으로 씁니다. 지우면 그쪽이 빨개집니다.
+# 되돌리기: 이 줄과 tests/chart-pane-popup-bottom-fit.test.js 삭제
+tests/chart-pane-popup-bottom-fit.test.js
 
 # 2026-09-03 (기록팀) — ★차트 위에 겹쳐 뜨는 넷이 서로 안 싸우는가★ (팀 사이에 낀 자리)
 #   지금까지 봉인은 ★쌍★ 으로만 있었습니다 (안내줄↔칩줄 / 막대↔목록).
@@ -480,3 +495,4 @@ tests/chart-indicator-pane-kit.test.js
 #      그때 그 쌍을 3절 봐야하는쌍 으로 옮기면 됩니다.
 #   5절 돌연변이 — placeBanner·placeBar 를 빼거나 ★차례를 뒤집으면★ 겹쳐야 합니다.
 # 되돌리기: 이 줄과 tests/chart-overlay-4way-census.test.js 삭제
+tests/chart-overlay-4way-census.test.js
