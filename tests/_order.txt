@@ -321,6 +321,7 @@ tests/chart-replay-order-block-live.test.js
 #   "두 번 옮기지 않는다" 를 전부 못 박습니다. 값은 숫자를 박지 않고
 #   ★옛 js/chart-indicators.js 를 실제로 실행해★ 매번 다시 계산해 대조합니다.
 # 되돌리기: 이 줄과 tests/chart-indicator-ma-move.test.js 삭제
+tests/chart-indicator-ma-move.test.js
 
 # 2026-09-02 밤 — 팀 사이에 낀 자리. 차트 위 선 색이 ★반대 방향으로도★ 안 겹치는지.
 #   지금까지는 한쪽만 있었습니다 — tests/chart-drawings.test.js 가

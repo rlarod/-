@@ -110,13 +110,38 @@ App.ChartMaLineMode = (function () {
     return lines;
   }
 
+  /* ---------------------------------------------------------------------
+   * 지금 화면의 MA(7) 선 하나 — ★어느 모듈이 그렸든★ 찾아냅니다.
+   *
+   * 2026-09-02 (11단계) 에 MA(7) 이 js/chart-indicators.js 에서 지표 틀
+   * (js/chart-indicator-kit.js)로 옮겨졌습니다. 옮긴 뒤에는 옛 선이 아예
+   * 안 그려지므로, 여기서 옛 자리만 보고 있으면 라인 모드에서 시세선
+   * (금색 2px)과 MA(7)(금색 1px)이 ★다시 한 줄로 보입니다★ — 이 파일이
+   * 생긴 바로 그 사고입니다.
+   *
+   * ⚠️ 여기서 바꾼 것은 "어느 선인가" 하나뿐입니다. ★언제 점선으로 할지★
+   *    (DASH_WHEN) 는 그대로 이 파일 한 곳에만 있습니다. 두 벌 금지.
+   * 틀이 없거나(파일을 지웠거나) 아직 안 옮겼으면 옛 자리를 그대로 봅니다.
+   * ------------------------------------------------------------------- */
+  function ma7Series() {
+    var K = App.ChartIndicatorKit;
+    if (K && typeof K.getMovedMa7Series === "function") {
+      try {
+        var moved = K.getMovedMa7Series();
+        if (moved) return moved;
+      } catch (e) {
+        /* 틀이 아직 준비 전 — 옛 자리로 물러섭니다 */
+      }
+    }
+    var L = grabLines();
+    return L ? L.ma7 || null : null;
+  }
+
   /* 핵심 — 값싼 비교 두 번. 달라졌을 때만 손댑니다. */
   function sync() {
     if (!enabled) return false;
-    var L = grabLines();
-    if (!L) return false;
 
-    var s = L.ma7 || null;
+    var s = ma7Series();
     if (!s) {
       /* MA7 이 꺼져 있음 — 다음에 새로 켜지면 새 객체라 다시 걸립니다 */
       lastSeries = null;
@@ -198,10 +223,10 @@ App.ChartMaLineMode = (function () {
     enabled = false;
     stop();
     /* 실선으로 되돌려 놓습니다 */
-    var L = grabLines();
-    if (L && L.ma7) {
+    var s0 = ma7Series();
+    if (s0) {
       try {
-        L.ma7.applyOptions({ lineStyle: styleSolid() });
+        s0.applyOptions({ lineStyle: styleSolid() });
       } catch (e) {
         /* 무시 */
       }
@@ -247,7 +272,7 @@ App.ChartMaLineMode = (function () {
         type: currentType(),
         want: wantedStyle(),
         applied: lastStyle,
-        hasMa7: !!(grabLines() && grabLines().ma7),
+        hasMa7: !!ma7Series(),
         applyCount: applyCount,
         wrapped: { setType: wrapped.setType, setOn: wrapped.setOn, toggle: wrapped.toggle }
       };

@@ -24,11 +24,16 @@
  * 한 번 누를 때마다 수백 ms - 화면 한 장이 16.7ms 이니 못 씁니다.
  * 이 틀은 "켠 인스턴스 하나만" 다시 계산합니다.
  *
- * -- 기존 7개는 한 글자도 안 건드렸습니다 -----------------------------
+ * -- 기존 7개 파일은 한 글자도 안 건드렸습니다 -------------------------
  * js/chart-indicators.js (MA7 · MA25 · MA99 · 볼린저 · 거래량)
  * js/chart-oscillators.js (RSI · MACD)
  * js/chart-indicator-menu.js (fx 목록)
- * 셋 다 그대로입니다. 이 파일을 지우면 어제 화면 그대로 돌아갑니다.
+ * 셋 다 파일 자체는 그대로입니다. 이 파일을 지우면 원래 화면으로 돌아갑니다.
+ *
+ * ⚠️ 다만 2026-09-02 (11단계) 부터 ★MA 세 줄은 이 틀이 그립니다.★
+ *    옛 파일을 고친 것이 아니라, 켤 때 옛 모듈의 공개 함수(setOn)로 옛 선을
+ *    끄고 우리 줄을 옛 자리에 끼웁니다. 자세한 것은 아래 12.5절.
+ *    되돌리기 - 콘솔에서 App.ChartIndicatorKit.restoreLegacyMA() 뒤 새로고침.
  *
  * -- js/chart.js 도 한 글자도 안 건드렸습니다 -------------------------
  * js/chart-font.js 가 LightweightCharts.createChart 를 감싸 두었기 때문에
@@ -116,6 +121,19 @@
  *      봉 1000개 중 0 인 봉 0개. 실측값은 volumeAllZero() 위 주석에 있습니다.
  * ★기본 인스턴스는 이번에도 안 늘렸습니다★ - "지표 추가" 목록에만 나옵니다.
  *
+ * -- 2026-09-02 (11단계) - ★옛 MA 세 줄을 이 틀로 옮겼습니다★ ----------
+ *   왜         조사팀 [A] 최우선. fx 목록 9줄 중 설정 버튼이 붙은 줄이 2줄뿐
+ *              이었습니다. MA(7)·MA(25)·MA(99) 는 기간도 색도 굵기도 코드에
+ *              박혀 있어 회원이 하나도 못 바꿨습니다(트레이딩뷰는 전부 바꿈).
+ *   무엇을      정의 "ma" ★하나★ + 인스턴스 ★셋★ (ma-7 · ma-25 · ma-99).
+ *              이제 기간 · 값 종류 · 밀기 · 색 20 · 굵기 4 · 선 모양 3 을 고릅니다.
+ *   안 바꾼 것  기간 7·25·99 · 색 금/흰/회 · 굵기 1 · 실선 · ★계산값(오차 0)★
+ *              더하는 순서까지 옛 computeSMA 와 같게 맞췄습니다(아래 ma 정의).
+ *   옮기기      12.5절. 옛 켜짐/꺼짐을 옛 모듈에게 물어(getState) 그대로 옮기고,
+ *              옛 선을 끄고(setOn), fx 목록·칩 줄에서 옛 줄을 빼고 그 자리에
+ *              우리 줄을 끼웁니다. ★한 번만★ 하고 표시를 저장합니다.
+ *   아직 안 옮긴 것  볼린저 · 거래량 · RSI · MACD. 다음 단계입니다.
+ *
  * -- 2026-09-02 (10단계) 에 늘어난 것 - 지표 4개 + ★색 겹침 마무리★ ----
  *   Stochastic  %K 14 · 다듬기 1 · %D 3 · 기준선 20 · 80   (트레이딩뷰 내장)
  *   ADX / DMI   DI 14 · ADX 14 · 기준선 없음               (트레이딩뷰 도움말)
@@ -162,6 +180,11 @@
  *         ★색을 늘리지 않고 같은 바닥만 지키는 쪽★ 을 골랐습니다.
  *
  * -- 되돌리기 ---------------------------------------------------------
+ *   ⚠️ 11단계(MA 옮기기) 부터는 ★순서★ 가 있습니다.
+ *   0) 먼저 콘솔에서  App.ChartIndicatorKit.restoreLegacyMA()  → 새로고침
+ *      (안 하면 옛 MA 가 꺼진 채로 남습니다 - 이 파일이 옛 모듈의 setOn 으로
+ *       꺼 두었기 때문입니다. 회원마다 브라우저에서 한 번씩 해야 합니다.
+ *       못 하면 회원이 fx 목록에서 MA 를 다시 켜면 됩니다.)
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
  *   3) (테스트가 생겼다면) package.json 과 tests/_order.txt 의 해당 토막 삭제
@@ -1985,11 +2008,21 @@ App.ChartIndicatorKit = (function () {
     }
   }
 
+  /* ---------------------------------------------------------------------
+   * ★옛 MA 를 틀로 옮겼다는 표시★ - 저장칸은 ★새로 만들지 않았습니다.★
+   * 틀이 이미 쓰는 한 칸(btc_sim_v2_chart-indicator-kit) 안에 같이 넣습니다.
+   * 칸을 새로 만들면 "이 회원이 무엇을 켜 뒀나" 를 두 곳에서 읽게 됩니다.
+   *   { ma:true, at:옮긴시각, legacy0:{ma7,ma25,ma99} }
+   * legacy0 은 ★옮기기 직전 옛 켜짐/꺼짐★ 입니다 - 되돌릴 때 씁니다.
+   * ------------------------------------------------------------------- */
+  var movedState = null;
+
   function saveState() {
     try {
       if (!App.Storage || !isFn(App.Storage.save)) return;
       App.Storage.save(STORAGE_KEY, {
         v: STORE_VERSION,
+        moved: movedState,
         instances: instOrder.map(function (id) {
           var it = insts[id];
           return {
@@ -2016,6 +2049,13 @@ App.ChartIndicatorKit = (function () {
       if (App.Storage && isFn(App.Storage.load)) saved = App.Storage.load(STORAGE_KEY);
     } catch (e) {
       saved = null;
+    }
+
+    /* ★옮겼다는 표시는 인스턴스보다 먼저 읽습니다.★ 저장된 인스턴스가
+       하나도 없어도(회원이 전부 지웠어도) 다시 옮기면 안 됩니다 -
+       두 번 옮기면 회원이 지운 MA 줄이 되살아납니다. */
+    if (saved && saved.v === STORE_VERSION && saved.moved && saved.moved.ma) {
+      movedState = saved.moved;
     }
 
     if (saved && saved.v === STORE_VERSION && saved.instances && saved.instances.length) {
@@ -2107,8 +2147,13 @@ App.ChartIndicatorKit = (function () {
       btn.addEventListener("click", function () {
         toggle(id);
       });
-      bar.appendChild(btn);
+      var anchorChip = legacyAnchor(bar, id, ".tl-ind-btn");
+      if (anchorChip) bar.insertBefore(btn, anchorChip);
+      else bar.appendChild(btn);
     });
+
+    /* 옛 MA 칩도 우리 칩을 다 끼운 뒤에 뺍니다(위 fx 목록과 같은 이유) */
+    dropLegacyChips(bar);
 
     paintButtons();
     return true;
@@ -2202,9 +2247,15 @@ App.ChartIndicatorKit = (function () {
         });
       })(id);
 
-      /* "주 차트" 무리 끝에 넣습니다 - "아래 별도 칸" 머리 바로 앞입니다. */
+      /* ★옮겨 온 MA 는 옛 줄이 있던 그 자리에★ 끼웁니다(순서가 바뀌면
+         회원 눈에는 줄이 뒤섞인 것으로 보입니다). 옛 줄은 아래에서 뺍니다. */
       var placed = false;
-      if (it.pane === "main") {
+      var anchorRow = legacyAnchor(list, id, ".tl-fx-row");
+      if (anchorRow) {
+        list.insertBefore(row, anchorRow);
+        placed = true;
+      }
+      if (!placed && it.pane === "main") {
         var groups = list.querySelectorAll(".tl-fx-group");
         for (var g = 0; g < groups.length; g++) {
           if (groups[g].textContent === "아래 별도 칸") {
@@ -2216,6 +2267,10 @@ App.ChartIndicatorKit = (function () {
       }
       if (!placed) list.appendChild(row);
     }
+
+    /* 옛 MA 줄은 여기서 뺍니다 - ★우리 줄을 다 끼운 뒤★ 입니다.
+       먼저 빼면 끼울 자리를 잃습니다. */
+    dropLegacyMenuRows();
   }
 
   /**
@@ -2311,6 +2366,111 @@ App.ChartIndicatorKit = (function () {
    * 지표를 늘리려면 아래처럼 define() 한 덩어리를 더 적으면 끝입니다.
    * 위쪽 틀은 하나도 안 고칩니다.
    * ===================================================================== */
+
+  /* -- MA 단순이동평균 --------------------------------------------------
+   * ★2026-09-02 (11단계) 에 js/chart-indicators.js 에서 ★옮겨 온★ 것입니다.
+   *
+   *   MA(t) = 최근 p개 값의 산술평균
+   *
+   * -- 왜 옮겼나 (조사팀 [A] 최우선) ------------------------------------
+   * fx 목록 9줄 가운데 설정 버튼이 붙은 줄이 2줄뿐이었습니다. MA(7)·MA(25)·
+   * MA(99) 는 기간도 색도 굵기도 코드에 박혀 있어 회원이 하나도 못 바꿨습니다.
+   * 트레이딩뷰는 전부 바꿉니다. 틀로 옮기면 그날로 다 바뀝니다.
+   *
+   * -- 옮기면서 ★하나도 안 바꾼 것★ ------------------------------------
+   *   기간   7 · 25 · 99          (바이낸스 기본값 그대로)
+   *   색     #F0B429 · #E7ECF5 · #838DA4   (지금 회원이 보던 색 그대로)
+   *   굵기   1px                  (DEFAULT_WIDTH 와 같은 값)
+   *   모양   실선
+   *   계산   ★더하는 순서까지★ 옛 computeSMA 와 같습니다(아래 seed 주석).
+   *
+   * -- ⚠️ 더하는 순서를 왜 맞췄나 --------------------------------------
+   * 같은 평균이라도 어떤 순서로 더하느냐에 따라 마지막 자리 수가 달라집니다
+   * (부동소수점). 옛 js/chart-indicators.js:135 computeSMA 는
+   *     한 번 훑으며 sum += 종가[i], i>=p 이면 sum -= 종가[i-p]
+   * 였습니다. 여기서도 ★글자 그대로 같은 순서★ 로 더합니다. 그래서 옮기기
+   * 전후 값이 소수점 끝자리까지 같습니다 - 값 대조 테스트가 그것을 봅니다.
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *     합(t) = 합(t-1) + 값(t) - 값(t-p)
+   * 그래서 상태가 "곧 창에서 빠질 값(oldest)" 과 최근 p개(buf) 를 들고 다닙니다.
+   * WMA 와 같은 모양입니다(위 wmaState 주석에 왜 buf 를 그 자리에서 고쳐 써도
+   * 되는지 적어 두었습니다 - 덮어쓰는 칸이 st.head 하나뿐이라 그렇습니다).
+   * ------------------------------------------------------------------- */
+
+  /** i번째 봉까지 확정된 SMA 상태. buf 는 [i-p+1 .. i] 를 시간순으로 담고
+   *  head 는 "곧 빠질 칸"(= i-p+1) 을 가리킵니다. */
+  function smaState(sum, src, i, p) {
+    var buf = new Array(p);
+    for (var q = 0; q < p; q++) buf[q] = src[i - p + 1 + q];
+    return { S: sum, oldest: buf[0], buf: buf, head: 0 };
+  }
+
+  /* -- ⚠️ "지표 추가" 로 ★새로 얹을 때★ 의 기본 기간은 9 입니다 ---------
+   * 옮겨 온 세 줄(7 · 25 · 99)과 다릅니다. 헷갈리기 쉬워서 적어 둡니다.
+   *   옮겨 온 세 줄   7 · 25 · 99   ★바이낸스★ 기본값. 회원이 보던 그대로라
+   *                                 바꾸면 안 됩니다(아래 MOVED_MA).
+   *   새로 얹는 줄    9             ★트레이딩뷰★ "Moving Average" 기본값.
+   *                                 대표 지시 - 차트 시스템은 트레이딩뷰를
+   *                                 따라갑니다. 바로 위 WMA 도 같은 이유로 9.
+   *
+   * 트레이딩뷰 도움말 원문 확인 (2026-09-02)
+   *   https://www.tradingview.com/support/solutions/43000502589-moving-average/
+   *   Length "9 days is the default" · Source "Close is the default" ·
+   *   Offset "0 is the default"  -> 우리 설정 창의 세 칸과 같습니다
+   *   (기간 · 값 종류 · 앞뒤로 밀기). 모양 쪽도 트레이딩뷰가 색 · 굵기 ·
+   *   선 모양 셋을 주는데 우리도 셋 다 줍니다(색 20 · 굵기 4 · 모양 3).
+   * 설정 창의 "기본값" 을 누르면 9 로 돌아가는 것도 트레이딩뷰와 같습니다.
+   * 바이낸스처럼 보고 싶으면 7 · 25 · 99 세 줄을 얹으면 됩니다 - 이 틀이
+   * "정의 1개 + 인스턴스 N개" 인 이유가 그것입니다.
+   * ------------------------------------------------------------------- */
+  define({
+    id: "ma",
+    name: "MA",
+    note: "이동평균",
+    pane: "main",
+    params: { p: 9 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    useOffset: true,
+    nameOf: function (prm) {
+      return "MA(" + prm.p + ")";
+    },
+    outputs: [{ key: "ma", kind: "line", color: "#F0B429", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;   /* 값 종류(종가 · 시가 · HL2 ...) */
+      var n = src.length;
+      var out = [];
+      if (n < p) return { ma: out };
+
+      /* ★옛 computeSMA 와 같은 순서로 더합니다★ - 위 주석 참조 */
+      var sum = 0;
+      for (var i = 0; i < n; i++) {
+        sum += src[i];
+        if (i >= p) sum -= src[i - p];
+        if (i < p - 1) continue;
+        out.push({ time: bs.time[i], value: sum / p });
+        if (i === n - 2) cap.state = smaState(sum, src, i, p);
+      }
+      return { ma: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var sum = st.S + x - st.oldest;
+
+      var len = st.buf.length || 1;
+      st.buf[st.head] = x;                    /* 덮어쓰는 칸은 여기 하나뿐 */
+      var head = (st.head + 1) % len;
+      return {
+        values: { ma: sum / p },
+        state: { S: sum, oldest: st.buf[head], buf: st.buf, head: head }
+      };
+    }
+  });
 
   /* -- EMA 지수이동평균 -------------------------------------------------
    * EMA(t) = 종가(t) x k + EMA(t-1) x (1-k),   k = 2 / (기간+1)
@@ -4038,18 +4198,194 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* ---------------------------------------------------------------------
+   * 옛 MA 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다.
+   *
+   * 옛 이름(ma7 · ma25 · ma99)은 RESERVED_IDS 라 쓸 수 없습니다. 일부러
+   * 그렇게 막아 두었습니다 - 같은 이름이면 fx 목록의 다리가 갈라져서
+   * "MA(7) 스위치가 딴 것을 켜는" 조용한 고장이 납니다. 그래서 ma-7 입니다.
+   *
+   * 색 세 개는 ★지금 회원이 보던 그 색★ 입니다. 바꾸지 마세요.
+   *   MA(7)  #F0B429 금색   MA(25) #E7ECF5 흰색   MA(99) #838DA4 회색
+   * ------------------------------------------------------------------- */
+  var MOVED_MA = [
+    { old: "ma7", id: "ma-7", p: 7, hex: "#F0B429" },
+    { old: "ma25", id: "ma-25", p: 25, hex: "#E7ECF5" },
+    { old: "ma99", id: "ma-99", p: 99, hex: "#838DA4" }
+  ];
+
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
-     정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 이번 증명입니다. */
+     정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 8단계의 증명이었습니다.
+     ⭐ 2026-09-02 (11단계) 에 MA 세 줄이 늘었습니다 - ★늘린 것이 아니라
+        옛 js/chart-indicators.js 의 MA(7)·MA(25)·MA(99) 를 옮겨 온 것★ 입니다.
+        옛 줄은 fx 목록과 칩 줄에서 빼기 때문에(아래 12.5절) 회원이 보는
+        줄 수는 그대로입니다. 셋 다 ★꺼짐★ 으로 시작하는 것도 그대로입니다
+        (옮길 때 회원이 켜 두었던 것은 12.5절이 그대로 다시 켭니다). */
   var DEFAULT_INSTANCES = [
+    { def: "ma", id: "ma-7", params: { p: 7 }, colors: { ma: "#F0B429" }, style: "solid", on: false },
+    { def: "ma", id: "ma-25", params: { p: 25 }, colors: { ma: "#E7ECF5" }, style: "solid", on: false },
+    { def: "ma", id: "ma-99", params: { p: 99 }, colors: { ma: "#838DA4" }, style: "solid", on: false },
     { def: "ema", id: "ema-9", params: { p: 9 }, colors: { ema: "#49C9E9" }, style: "solid", on: false },
     { def: "ema", id: "ema-21", params: { p: 21 }, colors: { ema: "#BA6EED" }, style: "solid", on: false }
   ];
+
+  /* =====================================================================
+   * 12.5 ★옛 MA(7)·MA(25)·MA(99) 를 이 틀로 옮기기★  - 한 번만
+   *
+   * -- 이 절에서 제일 위험한 것 -----------------------------------------
+   * 회원 브라우저에는 이미 "MA7 켬 · 볼린저 끔" 같은 상태가 옛 칸
+   * (btc_sim_v2_chart-indicators)에 저장돼 있습니다. 틀로 옮기면 저장칸이
+   * 달라지므로, ★켜 두었던 것이 꺼진 채로 굳을 수★ 있습니다. 그래서
+   *   1) 옛 켜짐/꺼짐을 ★먼저 읽고★
+   *   2) 그대로 새 인스턴스에 옮겨 켜고
+   *   3) ★그 다음에★ 옛 선을 끕니다 (안 끄면 같은 선이 두 벌 그려집니다)
+   * 순서로만 합니다. 하나라도 못 하면 아무것도 안 하고 다음 기회를 봅니다.
+   *
+   * -- 옛 켜짐/꺼짐을 ★저장칸이 아니라 옛 모듈에게★ 묻습니다 -----------
+   * App.ChartIndicators.getState() 로 묻습니다. 옛 저장칸을 우리가 직접
+   * 열지 않습니다 - 한 칸의 주인은 하나여야 합니다(그 칸에 쓰지도 않습니다.
+   * 끄는 것도 저쪽 setOn() 을 불러 ★저쪽이 저쪽 칸에★ 쓰게 합니다).
+   * 아직 옛 모듈이 상태를 안 읽었으면(state 가 비어 있으면) ★옮기지 않고★
+   * 다음 기회를 봅니다 - 그때 옮기면 켜 두었던 것이 꺼짐으로 굳습니다.
+   *
+   * -- 회원이 보는 줄 수는 그대로입니다 ---------------------------------
+   * 옛 줄 셋을 fx 목록과 칩 줄에서 ★빼고★, 우리 줄 셋을 ★그 자리에★
+   * 끼웁니다(순서까지 같습니다). js/chart-indicator-menu.js 와
+   * js/chart-indicators.js 는 한 글자도 안 고쳤습니다 - 화면에 그려진 뒤에
+   * 우리가 DOM 을 정리합니다(인계문서 1-1 의 "DOM 후처리" 패턴).
+   *
+   * -- 되돌리기 ---------------------------------------------------------
+   * 콘솔에서  App.ChartIndicatorKit.restoreLegacyMA()  → 새로고침.
+   * 옮기기 직전의 옛 켜짐/꺼짐(legacy0)이 그대로 돌아옵니다.
+   * ===================================================================== */
+  function legacyIND() {
+    return App.ChartIndicators || null;
+  }
+
+  /** 이미 옮겼나 */
+  function movedMA() {
+    return !!(movedState && movedState.ma);
+  }
+
+  /** 옛 켜짐/꺼짐. 아직 못 읽는 상태면 null 을 돌려줍니다(그때는 안 옮깁니다). */
+  function readLegacyMA() {
+    var IND = legacyIND();
+    if (!IND || !isFn(IND.getState)) return null;
+    var g;
+    try {
+      g = IND.getState();
+    } catch (e) {
+      return null;
+    }
+    if (!g || typeof g !== "object") return null;
+    /* 옛 모듈이 아직 init() 을 안 지났으면 state 가 null 이라 빈 객체가 옵니다 */
+    if (!("ma7" in g)) return null;
+    return { ma7: !!g.ma7, ma25: !!g.ma25, ma99: !!g.ma99 };
+  }
+
+  function moveLegacyMA() {
+    if (movedMA()) return false;
+    var old = readLegacyMA();
+    if (!old) return false;   /* 아직 못 읽음 - 다음 기회에 */
+
+    MOVED_MA.forEach(function (m) {
+      if (insts[m.id]) {
+        insts[m.id].on = !!old[m.old];
+        return;
+      }
+      addInstance("ma", {
+        id: m.id,
+        params: { p: m.p },
+        colors: { ma: m.hex },
+        style: "solid",
+        width: DEFAULT_WIDTH,
+        on: !!old[m.old]
+      });
+    });
+
+    /* 옛 선 끄기 - ★우리 인스턴스를 다 만든 뒤에★ 합니다 */
+    var IND = legacyIND();
+    if (IND && isFn(IND.setOn)) {
+      MOVED_MA.forEach(function (m) {
+        try {
+          IND.setOn(m.old, false);
+        } catch (e) {
+          /* 못 꺼도 화면은 돕니다 - 그 경우 선이 두 벌 보이므로 아래 경고를 남깁니다 */
+        }
+      });
+    }
+
+    movedState = { ma: true, at: Date.now(), legacy0: old };
+    saveState();
+
+    /* 옮긴 직후에 화면도 맞춥니다(다음 감시를 기다리지 않게) */
+    buildButtons();
+    injectMenuRows();
+    paintMenu();
+    return true;
+  }
+
+  /** 되돌리기 - 우리 MA 줄 셋을 지우고 옛 켜짐/꺼짐을 되살립니다. */
+  function restoreLegacyMA() {
+    if (!movedMA()) return false;
+    var old = movedState.legacy0 || { ma7: false, ma25: false, ma99: false };
+    MOVED_MA.forEach(function (m) {
+      if (insts[m.id]) removeInstance(m.id);
+    });
+    var IND = legacyIND();
+    if (IND && isFn(IND.setOn)) {
+      MOVED_MA.forEach(function (m) {
+        try {
+          IND.setOn(m.old, !!old[m.old]);
+        } catch (e) {
+          /* 무시 */
+        }
+      });
+    }
+    movedState = null;
+    saveState();
+    /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
+    return true;
+  }
+
+  /** 옛 줄(fx 목록) 을 화면에서 뺍니다 - 옮긴 뒤에만 */
+  function dropLegacyMenuRows() {
+    if (!movedMA()) return;
+    var p = menuPanel();
+    if (!p) return;
+    MOVED_MA.forEach(function (m) {
+      var r = p.querySelector('.tl-fx-row[data-key="' + m.old + '"]');
+      if (r && r.parentNode) r.parentNode.removeChild(r);
+    });
+  }
+
+  /** 옛 칩(차트 왼쪽 위) 을 화면에서 뺍니다 - 옮긴 뒤에만 */
+  function dropLegacyChips(bar) {
+    if (!movedMA() || !bar) return;
+    MOVED_MA.forEach(function (m) {
+      var b = bar.querySelector('.tl-ind-btn[data-ind="' + m.old + '"]');
+      if (b && b.parentNode) b.parentNode.removeChild(b);
+    });
+  }
+
+  /** 우리 줄을 ★옛 줄이 있던 자리에★ 끼우려고 그 자리를 찾습니다 */
+  function legacyAnchor(root, id, sel) {
+    if (!movedMA() || !root) return null;
+    for (var i = 0; i < MOVED_MA.length; i++) {
+      if (MOVED_MA[i].id !== id) continue;
+      return root.querySelector(sel + '[data-' + (sel === ".tl-fx-row" ? "key" : "ind") + '="' + MOVED_MA[i].old + '"]');
+    }
+    return null;
+  }
 
   /* =====================================================================
    * 12. 시작
    * ===================================================================== */
   function init() {
     loadState(DEFAULT_INSTANCES);
+    /* 옛 MA 옮기기 - 옛 모듈이 이미 상태를 읽었으면 여기서 끝납니다.
+       아직이면 아래 준비 타이머가 될 때까지 다시 시도합니다(12.5절). */
+    moveLegacyMA();
 
     if (App.Bus && isFn(App.Bus.on)) {
       App.Bus.on("kline:update", onTick);
@@ -4070,6 +4406,7 @@ App.ChartIndicatorKit = (function () {
       }
       wrapMenuBridge();
       watchMenu(); /* .chart-panel 이 늦게 생길 수 있어 여기서도 다시 겁니다 */
+      moveLegacyMA(); /* 옛 모듈이 늦게 올라오는 경우 (12.5절) */
       if (!ensureChart()) return;
       if (!buildButtons()) return;
       if (!anyOn()) {
@@ -4115,6 +4452,21 @@ App.ChartIndicatorKit = (function () {
     toggle: toggle,
     setOn: setOn,
     isOn: isOn,
+    /* 옛 MA 옮기기 (12.5절) */
+    restoreLegacyMA: restoreLegacyMA,
+    isMovedForTest: movedMA,
+    moveLegacyMAForTest: moveLegacyMA,
+    MOVED_MA: MOVED_MA,
+    /** 라인(종가선) 모드에서 점선으로 바꿀 MA(7) 선.
+     *  js/chart-ma-line-mode.js 가 옛 MA7 선 대신 이것을 봅니다 -
+     *  옮긴 뒤에는 옛 선이 아예 안 그려지므로, 안 넘겨주면 라인 모드에서
+     *  시세선(금색 2px)과 MA(7)(금색 1px)이 다시 한 줄로 보입니다. */
+    getMovedMa7Series: function () {
+      if (!movedMA()) return null;
+      var it = insts[MOVED_MA[0].id];
+      if (!it || !it.live || !it.live.series) return null;
+      return it.live.series.ma || null;
+    },
     /* 확인용 */
     getPerf: function () {
       return {
