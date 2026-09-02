@@ -468,6 +468,16 @@ App.ChartDrawings = (function () {
   var LATE_BEEPS = 3; /* 늦은 알림 — 세 번 (지금 울린 것은 두 번) */
   var TOAST_MS = 1600;
   var TOAST_LONG_MS = 6000; /* 늦은 알림은 오래 띄웁니다 — 놓치면 또 놓칩니다 */
+  /* 알림줄 글씨 (15차 2026-09-02) — 12px 이던 것을 17px 로 올렸습니다.
+     「대표가 작은 글씨를 못 읽습니다.」 팝업창 글씨를 키우는 데 세 번 걸렸고,
+     그때 원인이 「바이낸스 글씨를 천장으로 삼은 것」 과 「안 들어가면 글씨를 줄인 것」
+     이었습니다. 같은 실수를 여기서 반복하지 않습니다.
+     기준은 OHLC 범례(17px) 입니다 — 같은 차트 안에서 글씨 크기가 갈리면 안 됩니다.
+     [주의] 좁아서 안 들어가면 「글씨를 줄이지 말고」 여러 줄로 접습니다.
+        placeToast() 가 차트 칸 안으로 폭을 묶어 두어 저절로 접힙니다. */
+  var TOAST_FONT = 17;
+  var TOAST_MIN_FONT = 15; /* 이 아래로는 내리지 않습니다 (봉인이 지킵니다) */
+  var TOAST_LINE = 1.45; /* 여러 줄로 접혔을 때 줄이 붙어 보이지 않게 */
   /* 알람 칩에 늘 띄우는 두 줄. 글자를 적는 곳은 여기 한 곳뿐입니다.
      「두 줄 다 있어야 합니다」 — 첫 줄만 있으면 "그럼 못 알리는구나" 로 끝나고,
      둘째 줄만 있으면 "자리를 비워도 제때 울리겠구나" 로 잘못 읽습니다. */
@@ -534,6 +544,53 @@ App.ChartDrawings = (function () {
   var STYLE_BTN = 32; /* 고르는 창 단추 크기 — 폰에서 손가락으로 누릅니다 */
   /* 알람 전용 색. 그리기 목록에 없습니다 — 연파랑 가로선은 언제나 알람입니다 */
   var ALERT_COLOR = "#A3CEFF";
+
+  /* =====================================================================
+   * 그린 것 목록 · 잠금 · 숨김 · 계속 그리기 (16차 2026-09-02)
+   * ---------------------------------------------------------------------
+   * 트레이딩뷰를 따라갑니다(대표 지시 — 차트 시스템 전체는 트레이딩뷰).
+   *   트레이딩뷰            우리
+   *   Object Tree           그린 것 목록 (칩의 "그린 것 n" 을 누르면 열립니다)
+   *   lock all / hide all   목록 머리의 "전체 잠금" · "전체 숨김"
+   *   Stay in Drawing Mode  "계속 그리기" (색·굵기 창 안)
+   *
+   * 저장 — 그림 하나에 칸 두 개가 늘어납니다.
+   *   h : 1 이면 숨김   (없으면 보임)
+   *   l : 1 이면 잠금   (없으면 안 잠김)
+   * [주의] 판 번호(STORE_VERSION)를 올리지 않았습니다. 올리면 loadStore 가
+   *        옛 저장본을 통째로 버려서 회원이 그려 둔 것이 그 자리에서 사라집니다.
+   *        (14차 알람 seen 칸을 늘릴 때와 같은 이유입니다)
+   *
+   * 잠그면 무엇이 막히나 — 「끌어 옮기기 · 고르기 · 지우기」 셋 다입니다.
+   *   화면에서 아예 안 잡힙니다(hitTest 가 건너뜁니다). 그래서 끌지도,
+   *   고르지도, "고른 것 지우기" 로 지우지도 못합니다.
+   *   "전체 지우기" 도 잠긴 것은 남깁니다 — 안 그러면 잠금이 뜻이 없습니다.
+   *   지우려면 목록에서 자물쇠를 먼저 풉니다.
+   * 숨기면 무엇이 막히나 — 안 그리고, 안 잡힙니다. 자료는 그대로 남습니다.
+   * ===================================================================== */
+  var LIST_MAX_H = 240; /* 목록 창 최대 높이. 넘으면 안에서 스크롤합니다 */
+  var LIST_ROW_H = 34; /* 한 줄 높이 — 폰에서 손가락으로 누릅니다 */
+  var LIST_FONT = 15; /* 목록 글씨. 12px 로 내리지 않습니다(대표가 못 읽습니다) */
+  var LIST_DOT = 10; /* 색 점 지름 */
+
+  /* 그림 종류 이름 — 회원이 목록에서 보는 말입니다. 적는 곳은 여기 한 곳뿐입니다 */
+  var SHAPE_NAMES = {
+    hline: "수평선",
+    trend: "추세선",
+    fib: "피보나치",
+    ruler: "자",
+    channel: "여러선",
+    wave: "파동",
+    brush: "브러시",
+    text: "글자",
+    face: "표정"
+  };
+
+  /* 계속 그리기를 걸지 않는 도구.
+     커서·돋보기는 그림이 아니고, 브러시는 원래부터 손을 떼도 그대로 있습니다.
+     알람은 그림이 아니라 소리가 나고 저장칸도 다릅니다 — 실수로 여러 개
+     걸리면 회원이 놀랍니다. 그래서 뺐습니다. */
+  var NO_STAY = { cursor: 1, zoom: 1, brush: 1, alert: 1 };
 
   var STORAGE_KEY = "chart-drawings";
   var STORE_VERSION = 1;
@@ -650,6 +707,8 @@ App.ChartDrawings = (function () {
   var waveSet = "impulse"; /* 파동 이름표 묶음 — impulse(12345) / abc(ABC) */
   var drawColor = COLOR_DRAW; /* 앞으로 그릴 색 (store.ui 에 남습니다) */
   var drawWidth = LINE_WIDTH; /* 앞으로 그릴 굵기 */
+  var stayMode = false; /* 계속 그리기 — 하나 긋고도 그 도구를 그대로 둡니다 */
+  var listOpen = false; /* 그린 것 목록 창이 열려 있나 */
   /* 차트를 잠깐 잠글 때 원래 값을 넣어두는 칸. 칸이 따로 있어야 합니다 —
      브러시와 "그림 끌기" 가 한 칸을 같이 쓰면 남의 원래 값을 덮어써서
      차트를 영영 못 끄는 조용한 고장이 납니다. */
@@ -824,6 +883,160 @@ App.ChartDrawings = (function () {
 
   function countAll() {
     return hlines().length + shapes().length;
+  }
+
+  /* ---------------------------------------------------------------------
+   * 숨김 · 잠금 (16차 2026-09-02)
+   * 없는 칸은 "안 숨김 · 안 잠김" 입니다. 옛 저장본이 그대로 열립니다.
+   * ------------------------------------------------------------------- */
+  function isHidden(o) {
+    return !!(o && o.h);
+  }
+
+  function isLocked(o) {
+    return !!(o && o.l);
+  }
+
+  /** 목록에 그대로 나가는 줄들. 수평선이 먼저, 그 다음 그린 순서 */
+  function listItems() {
+    var out = [];
+    var hs = hlines();
+    var ss = shapes();
+    var i;
+    for (i = 0; i < hs.length; i++) out.push({ kind: "hline", o: hs[i] });
+    for (i = 0; i < ss.length; i++) out.push({ kind: "shape", o: ss[i] });
+    return out;
+  }
+
+  function findShape(id) {
+    var ss = shapes();
+    for (var i = 0; i < ss.length; i++) if (ss[i].id === id) return ss[i];
+    return null;
+  }
+
+  /** kind 는 "hline" 또는 "shape". 없으면 null */
+  function findDrawing(kind, id) {
+    return kind === "hline" ? findHLine(id) : findShape(id);
+  }
+
+  /** 목록에 보이는 이름. 종류만으로는 어느 것인지 몰라서 짧은 꼬리를 붙입니다 */
+  function itemName(kind, o) {
+    if (!o) return "";
+    if (kind === "hline") return SHAPE_NAMES.hline + " " + fmtPrice(o.price);
+    var base = SHAPE_NAMES[o.type] || o.type;
+    if (o.type === "text") {
+      var t = String(o.s || "");
+      if (t.length > 12) t = t.slice(0, 12) + "...";
+      return base + " " + t;
+    }
+    if (o.type === "wave") return base + " " + (WAVE_SET_LABEL[o.set] || "");
+    if (o.type === "brush") return base + " " + ((o.pts && o.pts.length) || 0) + "점";
+    return base;
+  }
+
+  /** 목록 왼쪽 색 점. 그림에 색이 없으면 지금까지 쓰던 금색입니다 */
+  function itemColor(kind, o) {
+    return shapeColor(o);
+  }
+
+  function countFlag(key) {
+    var all = listItems();
+    var n = 0;
+    for (var i = 0; i < all.length; i++) if (all[i].o && all[i].o[key]) n++;
+    return n;
+  }
+
+  function hiddenCount() {
+    return countFlag("h");
+  }
+
+  function lockedCount() {
+    return countFlag("l");
+  }
+
+  /** 한 줄의 숨김/잠금을 뒤집습니다. key 는 "h" 또는 "l" */
+  function toggleFlag(kind, id, key) {
+    var o = findDrawing(kind, id);
+    if (!o) return false;
+    if (o[key]) delete o[key];
+    else o[key] = 1;
+    /* 숨기거나 잠근 것은 고른 상태로 두지 않습니다 —
+       고른 채로 두면 "고른 것 지우기" 로 지워집니다 */
+    if (selected && selected.kind === kind && selected.id === id) setSelected(null);
+    saveStore();
+    syncPriceLines();
+    paintChip(); /* 목록도 같이 다시 그려집니다 */
+    repaint();
+    return true;
+  }
+
+  /** 전체 숨김/보임 — 하나라도 안 숨은 것이 있으면 전부 숨깁니다 */
+  function toggleAllFlag(key) {
+    var all = listItems();
+    if (!all.length) return false;
+    var 켤까 = countFlag(key) < all.length;
+    for (var i = 0; i < all.length; i++) {
+      if (켤까) all[i].o[key] = 1;
+      else delete all[i].o[key];
+    }
+    if (켤까) setSelected(null);
+    saveStore();
+    syncPriceLines();
+    paintChip(); /* 목록도 같이 다시 그려집니다 */
+    repaint();
+    return 켤까;
+  }
+
+  function toggleHideAll() {
+    var on = toggleAllFlag("h");
+    toast(on ? "그린 것을 전부 숨겼습니다" : "숨긴 것을 전부 다시 보입니다");
+    return on;
+  }
+
+  function toggleLockAll() {
+    var on = toggleAllFlag("l");
+    toast(on ? "그린 것을 전부 잠갔습니다 — 옮기기·지우기가 안 됩니다" : "잠금을 전부 풀었습니다");
+    return on;
+  }
+
+  /* ---------------------------------------------------------------------
+   * 계속 그리기 (트레이딩뷰 Stay in Drawing Mode)
+   * 한 번 긋고 커서로 돌아오지 않고 같은 도구를 그대로 둡니다.
+   * ------------------------------------------------------------------- */
+  function stayOn() {
+    return !!stayMode;
+  }
+
+  function toggleStay() {
+    stayMode = !stayMode;
+    if (!store) store = emptyStore();
+    if (!store.ui) store.ui = {};
+    store.ui.stay = stayMode ? 1 : 0;
+    saveStore();
+    paintStylePick();
+    toast(stayMode ? "계속 그리기 켬 — 같은 도구로 계속 긋습니다" : "계속 그리기 끔 — 하나 긋면 커서로 돌아옵니다");
+    return stayMode;
+  }
+
+  /** 그림을 하나 끝냈을 때. 계속 그리기가 켜져 있으면 도구를 그대로 둡니다 */
+  function finishDraw() {
+    if (!stayMode || NO_STAY[tool] || !READY_TOOLS[tool]) {
+      setTool("cursor");
+      return;
+    }
+    /* 도구는 그대로 두고, 긋다 만 것만 치웁니다 (setTool 이 하던 것 중
+       도구를 바꾸는 부분만 뺀 것입니다) */
+    pending = null;
+    chanBase = null;
+    hover = null;
+    wavePts = null;
+    setSelected(null);
+    closeFacePicker();
+    closeTextInput();
+    closeStylePick();
+    paintButtons();
+    paintChip();
+    repaint();
   }
 
   /* =====================================================================
@@ -1591,6 +1804,8 @@ App.ChartDrawings = (function () {
     var i;
 
     for (i = 0; i < list.length; i++) {
+      /* 숨긴 것은 안 그립니다 (16차 2026-09-02). 자료는 그대로 남습니다 */
+      if (isHidden(list[i])) continue;
       drawOne(ctx, list[i], !!(selected && selected.kind === "shape" && selected.id === list[i].id), false);
     }
 
@@ -1750,6 +1965,9 @@ App.ChartDrawings = (function () {
     var i;
     var id;
     for (i = 0; i < list.length; i++) {
+      /* 숨긴 수평선은 선 자체를 없앱니다 (16차 2026-09-02).
+         want 에 넣지 않으면 아래 고리가 지웁니다 */
+      if (isHidden(list[i])) continue;
       want[list[i].id] = 1;
       if (!priceLines[list[i].id]) createPriceLineFor(list[i]);
       else paintPriceLine(list[i]);
@@ -2219,6 +2437,9 @@ App.ChartDrawings = (function () {
 
     for (i = 0; i < list.length; i++) {
       var s = list[i];
+      /* 숨김·잠금은 아예 안 잡힙니다 (16차 2026-09-02).
+         고르기·끌어 옮기기·"고른 것 지우기" 가 한꺼번에 막힙니다 */
+      if (isHidden(s) || isLocked(s)) continue;
       if (s.type === "trend") {
         var x1 = timeToX(s.t1);
         var x2 = timeToX(s.t2);
@@ -2325,6 +2546,7 @@ App.ChartDrawings = (function () {
 
     var hs = hlines();
     for (i = 0; i < hs.length; i++) {
+      if (isHidden(hs[i]) || isLocked(hs[i])) continue;
       var hy = priceToY(hs[i].price);
       if (hy === null) continue;
       var dd = Math.abs(hy - y);
@@ -2403,7 +2625,7 @@ App.ChartDrawings = (function () {
     shapes().push({ id: newId(), type: "wave", set: waveSet, pts: pts, c: drawColor, w: drawWidth });
     saveStore();
     paintChip();
-    setTool("cursor");
+    finishDraw();
     repaint();
     return true;
   }
@@ -2473,7 +2695,7 @@ App.ChartDrawings = (function () {
       saveStore();
       syncPriceLines();
       paintChip();
-      setTool("cursor");
+      finishDraw();
       return;
     }
 
@@ -2539,7 +2761,7 @@ App.ChartDrawings = (function () {
       hover = null;
       saveStore();
       paintChip();
-      setTool("cursor");
+      finishDraw();
       repaint();
       return;
     }
@@ -2567,7 +2789,7 @@ App.ChartDrawings = (function () {
         hover = null;
         saveStore();
         paintChip();
-        setTool("cursor");
+        finishDraw();
         repaint();
       }
       return;
@@ -2766,6 +2988,13 @@ App.ChartDrawings = (function () {
       return true;
     }
     /* 알람은 위에서 이미 돌아갔습니다 — 여기 오는 것은 그림뿐입니다 */
+    /* 잠근 것은 지우지 않습니다 (16차 2026-09-02).
+       화면에서는 hitTest 가 이미 막지만, 고른 뒤에 잠근 경우와
+       키보드 Delete 로 오는 길이 남아 있어 여기서 한 번 더 막습니다. */
+    if (isLocked(findDrawing(selected.kind, selected.id))) {
+      toast("잠긴 것입니다 — 목록에서 자물쇠를 먼저 푸세요");
+      return false;
+    }
     pushUndo();
     if (selected.kind === "hline") {
       var hs = hlines();
@@ -2794,12 +3023,25 @@ App.ChartDrawings = (function () {
     return true;
   }
 
+  /** 잠근 것만 남기고 나머지를 그 자리에서 지웁니다 (배열을 그대로 씁니다) */
+  function keepLocked(list) {
+    var kept = [];
+    var i;
+    for (i = 0; i < list.length; i++) if (isLocked(list[i])) kept.push(list[i]);
+    list.length = 0;
+    for (i = 0; i < kept.length; i++) list.push(kept[i]);
+    return kept.length;
+  }
+
   /* 그림만 지웁니다. 알람은 그림이 아니라서 남깁니다 —
      회원이 "그린 것" 을 치우려다 걸어 둔 알람까지 잃으면 조용한 고장입니다. */
   function clearAll() {
     pushUndo();
-    hlines().length = 0;
-    shapes().length = 0;
+    /* 잠근 것은 남깁니다 (16차 2026-09-02).
+       잠갔는데 "전체 지우기" 한 번에 같이 날아가면 잠금이 뜻이 없습니다.
+       지우려면 목록에서 자물쇠를 먼저 풉니다. */
+    keepLocked(hlines());
+    keepLocked(shapes());
     selected = null;
     pending = null;
     chanBase = null;
@@ -4002,6 +4244,12 @@ App.ChartDrawings = (function () {
       /* 세 번째 단추를 색 딱지로 쓸 때 (13차 2026-09-02) */
       ".tl-draw-chip button.sw{padding:1px 5px;}" +
       ".tl-draw-chip button.sw span{display:block;width:14px;height:14px;border-radius:3px;}" +
+      /* 이름표 단추 (16차 2026-09-02) — 눌러서 목록을 엽니다.
+         옛 span 과 같은 폭·높이로 보이게 테두리·여백을 없앴습니다
+         (칩 폭이 늘면 360 에서 화면 밖으로 나갑니다) */
+      ".tl-draw-chip button.lbl{border:none;background:none;padding:0;color:" + C_MUTED + ";" +
+      "text-decoration:underline;text-underline-offset:2px;}" +
+      ".tl-draw-chip button.lbl:hover{color:" + C_TEXT + ";}" +
       /* 확대 되돌리기 칩 — "그린 것" 칩과 같은 생김새, 자리만 오른쪽 아래 */
       ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
@@ -4011,7 +4259,12 @@ App.ChartDrawings = (function () {
       ".tl-zoom-chip button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-draw-toast{position:fixed;left:0;top:0;z-index:9;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";border-radius:6px;" +
-      "padding:3px 10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;}" +
+      "padding:7px 12px;font-size:" + TOAST_FONT + "px;line-height:" + TOAST_LINE + ";" +
+      /* 한글은 아무 글자에서나 줄이 갈립니다 — 360 실측에서 "09-" / "02" 와
+         "사" / "이)" 로 갈렸습니다. keep-all 로 낱말째 넘기고, 그래도 안 되는
+         긴 덩어리만 anywhere 로 풉니다 (한글 줄바꿈의 표준 조합입니다). */
+      "word-break:keep-all;overflow-wrap:anywhere;" +
+      "text-align:center;pointer-events:none;display:none;}" +
       /* 표정 고르는 창 — 단추 40px (폰에서 손가락으로 누릅니다) */
       ".tl-face-pick{position:absolute;z-index:9;display:flex;gap:2px;padding:4px;border-radius:8px;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";}" +
@@ -4032,6 +4285,46 @@ App.ChartDrawings = (function () {
       ".tl-style-pick .wrow button span{display:block;width:18px;border-radius:2px;background:" + C_TEXT + ";}" +
       ".tl-style-pick button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-style-pick button.on{border-color:" + C_TEXT + ";}" +
+      /* 그린 것 목록 (16차 2026-09-02) — 칩·알림줄과 같은 화면(viewport) 기준입니다.
+         자리는 JS(placeList)가 넣습니다. left/top 은 0 에서 시작합니다.
+         [주의] 글씨 15px 입니다. 좁다고 줄이지 말고 안에서 세로로 스크롤합니다. */
+      ".tl-draw-list{position:fixed;left:0;top:0;z-index:8;display:block;width:360px;" +
+      "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:8px;" +
+      "font-size:" + LIST_FONT + "px;line-height:1.4;color:" + C_TEXT + ";overflow:hidden;}" +
+      /* 머리 — 좁으면 제목과 단추가 두 줄로 갈립니다 (360 실측).
+         한 줄로 우겨 넣으면 제목이 "그린 것 6 · ..." 로 잘려서
+         숨김·잠금이 몇 개인지 안 보입니다. 글씨는 줄이지 않습니다. */
+      ".tl-draw-list .hd{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 8px;" +
+      "border-bottom:1px solid " + C_BORDER + ";}" +
+      ".tl-draw-list .hd .ttl{flex:1 1 100%;min-width:0;color:" + C_MUTED + ";" +
+      "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+      ".tl-draw-list .rows{max-height:" + LIST_MAX_H + "px;overflow-y:auto;overflow-x:hidden;}" +
+      ".tl-draw-list .row{display:flex;align-items:center;gap:5px;padding:0 8px;" +
+      "min-height:" + LIST_ROW_H + "px;cursor:pointer;border-bottom:1px solid " + C_BG + ";}" +
+      ".tl-draw-list .row:hover{background:" + C_BG + ";}" +
+      ".tl-draw-list .row.on{background:" + C_BG + ";}" +
+      ".tl-draw-list .row .dot{flex:0 0 auto;width:" + LIST_DOT + "px;height:" + LIST_DOT + "px;" +
+      "border-radius:50%;}" +
+      ".tl-draw-list .row .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;" +
+      "white-space:nowrap;}" +
+      ".tl-draw-list button{flex:0 0 auto;border:1px solid " + C_BORDER + ";background:" + C_BG + ";" +
+      "color:" + C_TEXT + ";border-radius:5px;font-size:" + LIST_FONT + "px;line-height:1.3;" +
+      "padding:4px 6px;cursor:pointer;font-family:inherit;}" +
+      ".tl-draw-list button:hover{border-color:" + C_MUTED + ";}" +
+      ".tl-draw-list button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
+      ".tl-draw-list button.off{color:" + C_MUTED + ";}" +
+      ".tl-draw-list button.dim{color:" + C_MUTED + ";}" +
+      ".tl-draw-list .sec{padding:7px 8px 5px;color:" + C_MUTED + ";" +
+      "border-top:1px solid " + C_BORDER + ";}" +
+      ".tl-draw-list .none{padding:10px 8px;color:" + C_MUTED + ";}" +
+      /* 계속 그리기 (16차 2026-09-02) — 색·굵기 창 맨 아래 한 줄.
+         [주의] 위 .tl-style-pick button 은 32x32 네모입니다. 여기서 덮습니다 */
+      ".tl-style-pick .srow{margin-top:6px;}" +
+      ".tl-style-pick .srow button{width:100%;height:auto;padding:6px 8px;" +
+      "font-size:" + LIST_FONT + "px;line-height:1.3;color:" + C_TEXT + ";" +
+      "border:1px solid " + C_BORDER + ";border-radius:6px;background:" + C_BG + ";" +
+      "font-family:inherit;justify-content:center;}" +
+      ".tl-style-pick .srow button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
       "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}" +
       /* 잡을 수 있는 자리에 오면 커서가 바뀝니다 (13차 2026-09-02).
@@ -4158,14 +4451,35 @@ App.ChartDrawings = (function () {
     els.toast.style.visibility = "visible";
     /* 늦은 알림은 글이 깁니다. 차트 칸보다 넓어지면 placeToast 가 왼쪽으로
        밀어내 화면 밖으로 나갑니다 — 미리 차트 칸 안으로 묶어 둡니다.
-       (묶어 두면 여러 줄로 접힙니다. 글씨는 그대로 12px 입니다) */
+       (묶어 두면 여러 줄로 접힙니다. 「글씨는 줄이지 않습니다」 — 17px 그대로.
+        15차 2026-09-02: 12px 이던 것을 17px 로 올렸고, 안 들어가는 것은
+        줄 수로 풉니다. 글씨 축소는 쓰지 않습니다) */
     var maxW = box.right - box.left - CHIP_EDGE * 2;
     els.toast.style.maxWidth = (maxW > 160 ? maxW : 160) + "px";
+    /* 「재기 전에 왼쪽 끝으로 되돌립니다」 (15차 2026-09-02 실측으로 잡힌 것)
+       알림줄은 폭을 안 정해 둔 position:fixed 라 「글에 맞춰 줄어드는」 칸입니다.
+       이런 칸의 폭은 「남은 자리 = 화면폭 - left」 에 따라 달라집니다.
+       그래서 지난번에 밀어 둔 left 를 그대로 둔 채 재면, 재는 값이 실제보다
+       좁게 나오고, 그 좁은 값으로 가운데를 맞추면 다시 오른쪽으로 밀립니다.
+       360 실측 — 재기: 268px -> left 46 -> 실제로 그려지고 나니 314px
+                  -> 오른쪽 끝 360 (화면 끝에 딱 붙고 차트 칸 345 를 15px 넘음).
+       left 를 0 으로 되돌리고 재면 남은 자리가 늘 화면폭이라 값이 흔들리지 않습니다.
+       [주의] 12px 때도 있던 문제입니다. 글씨를 키우면서 눈에 보이게 됐습니다. */
+    els.toast.style.left = "0px";
     var w = els.toast.offsetWidth;
     var x = (box.left + box.right) / 2 - w / 2;
     if (x < box.left) x = box.left;
     if (x + w > box.right) x = box.right - w;
-    putFixed(els.toast, x, box.top + CHIP_EDGE);
+    /* 위아래도 봅니다 (15차 2026-09-02). 글씨를 키워 세 줄(90px)이 되면서
+       360 에서 알림줄 아래끝이 하단 매수·매도 바(위끝 727) 밑으로 770 까지
+       내려가는 것이 실측으로 잡혔습니다. 「글씨를 줄이지 않고」 자리로 풉니다 —
+       평소엔 차트 칸 위쪽, 아래로 삐져나가면 위로 밀어 올립니다.
+       (box.bottom 은 이미 매수·매도 바 위끝 - 8 로 잡혀 있습니다) */
+    var h = els.toast.offsetHeight;
+    var y = box.top + CHIP_EDGE;
+    if (y + h > box.bottom) y = box.bottom - h;
+    if (y < CHIP_EDGE) y = CHIP_EDGE; /* 화면 위로는 안 나갑니다 */
+    putFixed(els.toast, x, y);
   }
 
   /* 화면이 움직이면 다시 잡습니다. 프레임당 한 번만 계산합니다. */
@@ -4175,6 +4489,7 @@ App.ChartDrawings = (function () {
     if (!window.requestAnimationFrame) {
       placeChips();
       placeStyle();
+      placeList();
       placeToast();
       return;
     }
@@ -4182,6 +4497,7 @@ App.ChartDrawings = (function () {
       placeRaf = 0;
       placeChips();
       placeStyle();
+      placeList();
       placeToast();
     });
   }
@@ -4200,7 +4516,22 @@ App.ChartDrawings = (function () {
     if (!wrap.style.position) wrap.style.position = "relative";
     var chip = document.createElement("div");
     chip.className = "tl-draw-chip";
+    /* 이름표를 눌러 "그린 것 목록" 을 엽니다 (16차 2026-09-02).
+       칩에 단추를 하나 더 붙이지 않았습니다 — 360 실측에서 단추 세 개면
+       칩이 362px 이 되어 화면(360) 밖으로 나갑니다(12차 기록).
+       이름표는 이미 있던 자리라 폭이 늘지 않습니다. */
+    var labelBtn = document.createElement("button");
+    labelBtn.type = "button";
+    labelBtn.className = "lbl";
+    labelBtn.setAttribute("aria-label", "그린 것 목록 열기");
+    labelBtn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      toggleList();
+    });
+    /* 글자는 그대로 span 에 둡니다 — 옛 자리 그대로라 글자를 읽는 쪽
+       (.tl-draw-chip span) 이 바뀌지 않습니다 */
     var label = document.createElement("span");
+    labelBtn.appendChild(label);
     var b1 = document.createElement("button");
     b1.type = "button";
     var b2 = document.createElement("button");
@@ -4263,7 +4594,7 @@ App.ChartDrawings = (function () {
       /* 커서일 때는 색·굵기 고르는 창을 여닫습니다 (13차 2026-09-02) */
       toggleStylePick();
     });
-    chip.appendChild(label);
+    chip.appendChild(labelBtn);
     chip.appendChild(b1);
     chip.appendChild(b2);
     chip.appendChild(b3);
@@ -4326,6 +4657,11 @@ App.ChartDrawings = (function () {
   }
 
   function paintChip() {
+    /* 목록이 열려 있으면 같이 다시 그립니다 (16차 2026-09-02).
+       칩과 목록은 같은 것을 세고 있어서 따로 놀면 숫자가 어긋납니다.
+       [주의] 여기는 시세 틱마다 불리는 자리가 아닙니다 —
+       알람이 실제로 울렸을 때·그림이 늘거나 줄었을 때만 불립니다. */
+    paintList();
     if (!els.chip) return;
     var n = countAll();
     var an = alertCount();
@@ -4483,10 +4819,18 @@ App.ChartDrawings = (function () {
     var i;
     var bs = box.querySelectorAll("button");
     for (i = 0; i < bs.length; i++) {
+      /* 계속 그리기 단추는 색·굵기와 상관없습니다 — 아래에서 따로 칠합니다 */
+      if (bs[i].getAttribute("data-stay")) continue;
       var hex = bs[i].getAttribute("data-color");
       var wid = bs[i].getAttribute("data-width");
       var on = (hex && hex === c) || (wid && Number(wid) === w);
       bs[i].className = on ? "on" : "";
+    }
+    var sb = box.querySelector("button[data-stay]");
+    if (sb) {
+      sb.textContent = stayMode ? "계속 그리기 켬" : "계속 그리기 끔";
+      sb.className = stayMode ? "on" : "";
+      sb.setAttribute("aria-pressed", stayMode ? "true" : "false");
     }
   }
 
@@ -4540,6 +4884,24 @@ App.ChartDrawings = (function () {
     });
     box.appendChild(wrow);
 
+    /* 계속 그리기 (16차 2026-09-02 · 트레이딩뷰 Stay in Drawing Mode).
+       왜 여기인가 — 도구 막대에 넣으려면 아이콘이 새로 있어야 합니다.
+       디자인팀 스프라이트 18개가 전부 쓰이고 있고, 아이콘을 우리가
+       새로 만들지 않기로 했습니다(지우기 칩 때와 같은 이유).
+       이 창은 "앞으로 그릴 색·굵기" 를 정하는 곳이라 "앞으로 어떻게
+       그릴지" 인 계속 그리기와 뜻이 맞습니다. */
+    var srow = document.createElement("div");
+    srow.className = "srow";
+    var sb = document.createElement("button");
+    sb.type = "button";
+    sb.setAttribute("data-stay", "1");
+    sb.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      toggleStay();
+    });
+    srow.appendChild(sb);
+    box.appendChild(srow);
+
     wrap.appendChild(box);
     els.stylePick = box;
     box.style.display = "block";
@@ -4563,6 +4925,317 @@ App.ChartDrawings = (function () {
       return;
     }
     box.style.visibility = "visible";
+    var left = vis.left + CHIP_EDGE;
+    var w = box.offsetWidth;
+    if (left + w > vis.right) left = Math.max(vis.left, vis.right - w);
+    var top = parseFloat(chip.style.top || "0") - box.offsetHeight - 6;
+    if (top < vis.top) top = vis.top;
+    putFixed(box, left, top);
+  }
+
+
+  /* =====================================================================
+   * 그린 것 목록 (트레이딩뷰 Object Tree) — 16차 2026-09-02
+   * ---------------------------------------------------------------------
+   * 칩의 "그린 것 n" 을 누르면 열립니다.
+   *   줄을 누르면      그 그림을 고르고 화면 안으로 데려옵니다
+   *   [보임]·[숨김]    한 줄씩 숨기고 다시 보입니다
+   *   [잠금]·[풀기]    한 줄씩 잠급니다 (옮기기·지우기가 막힙니다)
+   *   [지움]           한 줄씩 지웁니다 (잠긴 것은 먼저 풀어야 합니다)
+   * 머리에 "전체 숨김" · "전체 잠금" 이 있습니다 (트레이딩뷰 hide all · lock all).
+   *
+   * 알람도 같이 보여줍니다 — 단, 「그림이 아닙니다」 를 칸으로 갈라 적습니다.
+   *   왜 넣나 — 알람을 여러 개 걸면 지금은 캔버스에서 선을 하나씩 눌러야만
+   *   지울 수 있습니다. 어디에 걸었는지 한눈에 보는 곳이 없었습니다.
+   *   왜 가르나 — 알람은 저장칸이 다르고(chart-alerts) 되돌리기 대상도
+   *   아닙니다. 여기서 지우면 「그 자리에서 사라지고 되돌릴 수 없습니다」.
+   *   그래서 알람 칸에는 숨김·잠금을 두지 않았습니다 — 숨긴 알람은
+   *   회원이 "안 울렸다" 로 읽는 조용한 고장이 됩니다.
+   * ===================================================================== */
+  function closeList() {
+    if (els.list && els.list.parentNode) els.list.parentNode.removeChild(els.list);
+    els.list = null;
+    els.listRows = null;
+    listOpen = false;
+  }
+
+  function isListOpen() {
+    return !!els.list;
+  }
+
+  /** 그림 하나가 걸쳐 있는 시각 구간. 가로선처럼 시각이 없으면 null */
+  function timeSpan(o) {
+    if (!o) return null;
+    if (o.t1 !== undefined && o.t2 !== undefined) return [o.t1, o.t2];
+    if (o.pts && o.pts.length) {
+      var lo = o.pts[0].t;
+      var hi = o.pts[0].t;
+      for (var i = 1; i < o.pts.length; i++) {
+        if (o.pts[i].t < lo) lo = o.pts[i].t;
+        if (o.pts[i].t > hi) hi = o.pts[i].t;
+      }
+      return [lo, hi];
+    }
+    if (o.t !== undefined) return [o.t, o.t];
+    return null;
+  }
+
+  /** 이미 화면 안이면 아무것도 안 합니다. 밖이면 지금 배율 그대로 옮깁니다 */
+  function bringIntoView(ta, tb) {
+    refreshMeta(true);
+    if (meta.first === null || !meta.bar) return false;
+    var ts = tScale();
+    if (!ts || typeof ts.getVisibleLogicalRange !== "function") return false;
+    var cur = null;
+    try {
+      cur = ts.getVisibleLogicalRange();
+    } catch (e) {
+      cur = null;
+    }
+    var a = (Math.min(ta, tb) - meta.first) / meta.bar;
+    var b = (Math.max(ta, tb) - meta.first) / meta.bar;
+    if (cur && a >= cur.from && b <= cur.to) return true; /* 이미 보입니다 */
+    var span = cur ? cur.to - cur.from : b - a + 20;
+    if (span < b - a + 4) span = b - a + 4;
+    var mid = (a + b) / 2;
+    pushZoomUndo(); /* 되돌리기 칩으로 원래 자리로 돌아올 수 있게 */
+    if (!applyLogical(mid - span / 2, mid + span / 2)) {
+      zoomUndo.pop();
+      return false;
+    }
+    paintZoomChip();
+    return true;
+  }
+
+  /** 목록에서 한 줄을 눌렀을 때 — 고르고, 화면 밖이면 데려옵니다 */
+  function gotoItem(kind, id) {
+    var o = findDrawing(kind, id);
+    if (!o) return false;
+    if (isHidden(o)) {
+      toast("숨긴 것입니다 — [보임] 을 먼저 누르세요");
+      return false;
+    }
+    /* 잠긴 것은 고르지 않습니다 — 고른 채로 두면 지우기가 열립니다 */
+    if (!isLocked(o)) setSelected({ kind: kind, id: id });
+    var span = timeSpan(o);
+    if (!span) {
+      toast(itemName(kind, o) + " — 가로선이라 화면 전체에 걸쳐 있습니다");
+      paintList();
+      return true;
+    }
+    bringIntoView(span[0], span[1]);
+    paintList();
+    repaint();
+    return true;
+  }
+
+  function removeItem(kind, id) {
+    var o = findDrawing(kind, id);
+    if (!o) return false;
+    if (isLocked(o)) {
+      toast("잠긴 것입니다 — [풀기] 를 먼저 누르세요");
+      return false;
+    }
+    pushUndo();
+    var list = kind === "hline" ? hlines() : shapes();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) {
+        list.splice(i, 1);
+        break;
+      }
+    }
+    if (kind === "hline") removePriceLine(id);
+    if (selected && selected.kind === kind && selected.id === id) selected = null;
+    saveStore();
+    syncPriceLines();
+    paintButtons();
+    paintChip(); /* 목록도 같이 다시 그려집니다 */
+    repaint();
+    return true;
+  }
+
+  function removeAlertItem(id) {
+    var al = alertList();
+    for (var i = 0; i < al.length; i++) {
+      if (al[i].id === id) {
+        al.splice(i, 1);
+        break;
+      }
+    }
+    removeAlertLine(id);
+    if (selected && selected.kind === "alert" && selected.id === id) selected = null;
+    saveAlerts();
+    syncAlertLines();
+    paintChip(); /* 목록도 같이 다시 그려집니다 */
+    repaint();
+    toast("알람 하나를 지웠습니다");
+    return true;
+  }
+
+  /** 목록 안의 작은 글 단추 하나 */
+  function listBtn(text, label, cls, onClick) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.setAttribute("aria-label", label);
+    if (cls) b.className = cls;
+    b.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      onClick();
+    });
+    return b;
+  }
+
+  function buildList() {
+    if (!wrap) return;
+    closeStylePick();
+    closeList();
+    injectStyle();
+    var box = document.createElement("div");
+    box.className = "tl-draw-list";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "그린 것 목록");
+
+    var hd = document.createElement("div");
+    hd.className = "hd";
+    var ttl = document.createElement("span");
+    ttl.className = "ttl";
+    hd.appendChild(ttl);
+    hd.appendChild(listBtn("전체 숨김", "전체 숨김", "wide", function () {
+      toggleHideAll();
+    }));
+    hd.appendChild(listBtn("전체 잠금", "전체 잠금", "wide", function () {
+      toggleLockAll();
+    }));
+    hd.appendChild(listBtn("닫기", "목록 닫기", "wide", function () {
+      closeList();
+      placeSoon();
+    }));
+    box.appendChild(hd);
+
+    var rows = document.createElement("div");
+    rows.className = "rows";
+    box.appendChild(rows);
+
+    wrap.appendChild(box);
+    els.list = box;
+    els.listTitle = ttl;
+    els.listRows = rows;
+    listOpen = true;
+    paintList();
+    placeSoon();
+  }
+
+  function toggleList() {
+    if (isListOpen()) {
+      closeList();
+      placeSoon();
+    } else {
+      buildList();
+    }
+  }
+
+  /** 목록 한 줄 */
+  function listRow(it) {
+    var row = document.createElement("div");
+    row.className = "row" + (selected && selected.kind === it.kind && selected.id === it.o.id ? " on" : "");
+    var dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = itemColor(it.kind, it.o);
+    row.appendChild(dot);
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = itemName(it.kind, it.o);
+    row.appendChild(nm);
+    row.setAttribute("role", "button");
+    row.setAttribute("tabindex", "0");
+    row.addEventListener("click", function () {
+      gotoItem(it.kind, it.o.id);
+    });
+    row.appendChild(listBtn(isHidden(it.o) ? "보임" : "숨김",
+      itemName(it.kind, it.o) + (isHidden(it.o) ? " 다시 보이기" : " 숨기기"),
+      isHidden(it.o) ? "off" : "", function () {
+        toggleFlag(it.kind, it.o.id, "h");
+      }));
+    row.appendChild(listBtn(isLocked(it.o) ? "풀기" : "잠금",
+      itemName(it.kind, it.o) + (isLocked(it.o) ? " 잠금 풀기" : " 잠그기"),
+      isLocked(it.o) ? "on" : "", function () {
+        toggleFlag(it.kind, it.o.id, "l");
+      }));
+    row.appendChild(listBtn("지움", itemName(it.kind, it.o) + " 지우기",
+      isLocked(it.o) ? "dim" : "", function () {
+        removeItem(it.kind, it.o.id);
+      }));
+    return row;
+  }
+
+  function alertRow(a) {
+    var row = document.createElement("div");
+    row.className = "row al" + (selected && selected.kind === "alert" && selected.id === a.id ? " on" : "");
+    var dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = ALERT_COLOR;
+    row.appendChild(dot);
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = alertTitle(a) + " " + fmtPrice(a.price);
+    row.appendChild(nm);
+    row.setAttribute("role", "button");
+    row.setAttribute("tabindex", "0");
+    row.addEventListener("click", function () {
+      setSelected({ kind: "alert", id: a.id });
+      paintList();
+    });
+    row.appendChild(listBtn("지움", "알람 " + fmtPrice(a.price) + " 지우기", "", function () {
+      removeAlertItem(a.id);
+    }));
+    return row;
+  }
+
+  function paintList() {
+    if (!els.list || !els.listRows) return;
+    var items = listItems();
+    var al = alertList();
+    els.listTitle.textContent = "그린 것 " + items.length +
+      (hiddenCount() ? " · 숨김 " + hiddenCount() : "") +
+      (lockedCount() ? " · 잠금 " + lockedCount() : "");
+    var rows = els.listRows;
+    while (rows.firstChild) rows.removeChild(rows.firstChild);
+    var i;
+    if (!items.length) {
+      var none = document.createElement("div");
+      none.className = "none";
+      none.textContent = "아직 그린 것이 없습니다";
+      rows.appendChild(none);
+    }
+    for (i = 0; i < items.length; i++) rows.appendChild(listRow(items[i]));
+
+    if (al.length) {
+      var ah = document.createElement("div");
+      ah.className = "sec";
+      ah.textContent = "알람 " + al.length + " — 그림이 아닙니다. 여기서 지우면 알람이 사라집니다";
+      rows.appendChild(ah);
+      for (i = 0; i < al.length; i++) rows.appendChild(alertRow(al[i]));
+    }
+    placeSoon();
+  }
+
+  /** 목록 창 자리 — 칩 바로 위. 색·굵기 창과 같은 방식입니다 */
+  function placeList() {
+    var box = els.list;
+    if (!box) return;
+    var vis = visibleBox();
+    var chip = els.chip;
+    if (!vis || !chip || chip.style.display !== "flex") {
+      box.style.visibility = "hidden";
+      return;
+    }
+    box.style.visibility = "visible";
+    /* 폰에서 차트 칸보다 넓어지지 않게 먼저 묶습니다.
+       [주의] 글씨는 안 줄입니다 — 넘치면 목록 안에서 세로로 스크롤합니다 */
+    var maxW = vis.right - vis.left - CHIP_EDGE * 2;
+    box.style.maxWidth = (maxW > 200 ? maxW : 200) + "px";
     var left = vis.left + CHIP_EDGE;
     var w = box.offsetWidth;
     if (left + w > vis.right) left = Math.max(vis.left, vis.right - w);
@@ -4641,7 +5314,7 @@ App.ChartDrawings = (function () {
         saveStore();
         closeFacePicker();
         paintChip();
-        setTool("cursor");
+        finishDraw();
         repaint();
         toast("표정을 찍었습니다 — " + f.label);
       });
@@ -4709,7 +5382,7 @@ App.ChartDrawings = (function () {
           paintChip();
         }
         closeTextInput();
-        setTool("cursor");
+        finishDraw();
         repaint();
       } else if (ev.key === "Escape") {
         closeTextInput();
@@ -4770,6 +5443,7 @@ App.ChartDrawings = (function () {
       closeTextInput();
       closeFacePicker();
       closeStylePick();
+      closeList();
       setTool("cursor");
       return;
     }
@@ -4816,6 +5490,9 @@ App.ChartDrawings = (function () {
     syncPriceLines();
     syncAlertLines();
     paintButtons();
+    /* 목록은 닫지 않고 새 종목·새 봉 간격의 것으로 다시 그립니다
+       (닫아 버리면 종목을 바꿀 때마다 회원이 다시 열어야 합니다).
+       paintChip 이 목록도 같이 다시 그립니다. */
     paintChip();
     repaint();
   }
@@ -4913,6 +5590,8 @@ App.ChartDrawings = (function () {
       DRAW_WIDTHS.forEach(function (w) {
         if (store.ui.drawWidth === w) drawWidth = w;
       });
+      /* 계속 그리기 (16차 2026-09-02) — 켜 둔 채 새로고침해도 그대로입니다 */
+      stayMode = store.ui.stay === 1;
     }
     /* 껍데기는 차트가 만들어지기 전에 먼저 세웁니다.
        (차트 칸을 나중에 옮기면 차트가 한 번 다시 그려집니다) */
@@ -5005,6 +5684,10 @@ App.ChartDrawings = (function () {
       tiers: CATCHUP_TIERS,
       seenSaveMs: SEEN_SAVE_MS
     },
+    TOAST_FONT: TOAST_FONT,
+    TOAST_MIN_FONT: TOAST_MIN_FONT,
+    TOAST_MS: TOAST_MS,
+    TOAST_LONG_MS: TOAST_LONG_MS,
     ALERT_NOTE_1: ALERT_NOTE_1,
     ALERT_NOTE_2: ALERT_NOTE_2,
     LATE_HZ: LATE_HZ,
@@ -5091,6 +5774,47 @@ App.ChartDrawings = (function () {
     shapeColor: shapeColor,
     shapeWidth: shapeWidth,
     COLORS: { draw: COLOR_DRAW, selected: COLOR_SELECTED, alert: ALERT_COLOR },
+    /* 그린 것 목록 · 숨김 · 잠금 · 계속 그리기 (16차 2026-09-02) */
+    toggleList: toggleList,
+    closeList: closeList,
+    isListOpen: isListOpen,
+    getListItems: function () {
+      return listItems().map(function (it) {
+        return {
+          kind: it.kind,
+          id: it.o.id,
+          type: it.kind === "hline" ? "hline" : it.o.type,
+          name: itemName(it.kind, it.o),
+          color: itemColor(it.kind, it.o),
+          hidden: isHidden(it.o),
+          locked: isLocked(it.o)
+        };
+      });
+    },
+    toggleHidden: function (kind, id) {
+      return toggleFlag(kind, id, "h");
+    },
+    toggleLocked: function (kind, id) {
+      return toggleFlag(kind, id, "l");
+    },
+    toggleHideAll: toggleHideAll,
+    toggleLockAll: toggleLockAll,
+    getHiddenCount: hiddenCount,
+    getLockedCount: lockedCount,
+    removeItem: removeItem,
+    removeAlertItem: removeAlertItem,
+    gotoItem: gotoItem,
+    timeSpanForTest: timeSpan,
+    isHidden: isHidden,
+    isLocked: isLocked,
+    itemName: itemName,
+    SHAPE_NAMES: SHAPE_NAMES,
+    LIST_FONT: LIST_FONT,
+    LIST_ROW_H: LIST_ROW_H,
+    LIST_MAX_H: LIST_MAX_H,
+    toggleStay: toggleStay,
+    isStayOn: stayOn,
+    NO_STAY: NO_STAY,
     STORAGE_KEY: STORAGE_KEY
   };
 })();

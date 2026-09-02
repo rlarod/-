@@ -132,7 +132,9 @@ const CSS덩어리 = (function () {
   return out;
 })();
 
-const 대상선택자 = [".tl-draw-chip", ".tl-zoom-chip", ".tl-draw-toast"];
+/* 16차 2026-09-02 — "그린 것 목록"(.tl-draw-list)도 화면 기준으로 붙습니다.
+   같은 실수를 되풀이하지 않게 같은 줄에 세웁니다. */
+const 대상선택자 = [".tl-draw-chip", ".tl-zoom-chip", ".tl-draw-toast", ".tl-draw-list"];
 
 /** 이어붙인 CSS 에서 그 선택자 블록들을 전부 찾아 마지막 position 을 돌려줍니다 */
 function 최종position(sel) {

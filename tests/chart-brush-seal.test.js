@@ -236,7 +236,13 @@ function 띄우기(opts) {
     종목바꾸기(s) { 심볼 = s; win.App.Bus.emit("symbol:change", { symbol: s }); },
     간격바꾸기(v) { 간격 = v; win.App.Bus.emit("interval:change", { interval: v }); },
     칩() { return win.document.querySelector(".tl-draw-chip"); },
-    칩버튼() { return Array.from(win.document.querySelectorAll(".tl-draw-chip button")); },
+    /* 16차 2026-09-02 — 칩 이름표가 span 에서 button 으로 바뀌었습니다
+       (눌러서 "그린 것 목록" 을 엽니다). 이름표는 일하는 단추가 아니라서
+       여기서 뺍니다. 뜻은 그대로입니다 — 첫째/둘째 "일하는" 단추를 봅니다. */
+    칩버튼() {
+      return Array.from(win.document.querySelectorAll(".tl-draw-chip button"))
+        .filter((b) => b.className.indexOf("lbl") === -1);
+    },
     누르기(el) {
       el.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
     },

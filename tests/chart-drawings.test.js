@@ -677,6 +677,48 @@ const M = runModule();
     !/pushUndo\(\)[^]{0,400}applyCatchUp/.test(CODE) && !/applyCatchUp[^]{0,400}pushUndo\(\)/.test(CODE));
 }
 
+/* ---------- 7-6) 알림줄 글씨 (15차 2026-09-02) ----------
+ * 대표가 작은 글씨를 못 읽습니다. 팝업창 글씨를 키우는 데 세 번 걸렸고,
+ * 그때 원인이 「바이낸스 글씨를 천장으로 삼은 것」 과
+ * 「안 들어가면 글씨를 줄인 것」 이었습니다.
+ * 이 봉인은 「다시 줄이는 것」 을 막습니다.
+ * ------------------------------------------------------------------ */
+{
+  ok("알림줄 글씨는 15px 아래로 내려가지 않는다",
+    M.TOAST_FONT >= M.TOAST_MIN_FONT && M.TOAST_MIN_FONT >= 15,
+    M.TOAST_FONT + "px (하한 " + M.TOAST_MIN_FONT + "px)");
+  ok("알림줄 글씨는 OHLC 범례와 같은 17px 이다", M.TOAST_FONT === 17, String(M.TOAST_FONT));
+
+  /* 알림줄 CSS 한 덩어리를 떼어 봅니다 */
+  const TOAST_CSS = (SRC.match(/[.]tl-draw-toast\{[^]*?display:none;\}/) || [""])[0];
+  ok("알림줄 CSS 를 실제로 찾았다", TOAST_CSS.length > 0);
+
+  /* 값을 적는 곳이 한 곳이어야 합니다 — CSS 에 숫자를 또 박으면 두 벌이 됩니다 */
+  ok("알림줄 글씨 크기는 TOAST_FONT 한 곳에서만 나온다",
+    /font-size:" [+] TOAST_FONT [+] "px/.test(SRC) && !/font-size:\d/.test(TOAST_CSS),
+    TOAST_CSS.slice(0, 60));
+
+  /* 「안 들어가면 글씨를 줄인다」 를 코드에 다시 넣지 못하게 막습니다.
+     알림줄 자리를 잡는 placeToast 안에서 글씨 크기를 만지면 안 됩니다. */
+  const PLACE = (CODE.match(/function placeToast\(\)[^]*?\n  \}/) || [""])[0];
+  ok("placeToast 를 실제로 찾았다", PLACE.length > 0);
+  ok("자리를 잡을 때 글씨 크기를 줄이지 않는다 (줄 수·자리로 푼다)",
+    PLACE.length > 0 && PLACE.indexOf("fontSize") === -1 && PLACE.indexOf("font-size") === -1);
+  ok("좁으면 폭을 묶어 여러 줄로 접는다", /maxWidth/.test(PLACE));
+
+  /* 폭을 재기 전에 left 를 되돌립니다 — 안 그러면 잰 값이 실제보다 좁게 나와
+     알림줄이 오른쪽으로 밀립니다 (360 실측 268px 로 재고 실제로는 314px). */
+  ok("폭을 재기 전에 left 를 0 으로 되돌린다",
+    /style\.left = "0px";[^]{0,120}offsetWidth/.test(PLACE));
+  /* 아래로 삐져나가면 위로 올립니다 — 360 에서 하단 매수·매도 바를 덮었습니다 */
+  ok("아래로 삐져나가면 위로 밀어 올린다",
+    /offsetHeight/.test(PLACE) && /box\.bottom - h/.test(PLACE));
+
+  /* 한글 줄바꿈 — 낱말째 넘깁니다 */
+  ok("한글이 낱말 가운데서 갈리지 않는다 (word-break:keep-all)",
+    /word-break:keep-all/.test(TOAST_CSS));
+}
+
 /* ---------- 8) 화면이 없으면 아무것도 안 만든다 ---------- */
 {
   ok("차트가 없으면 도구 막대도 안 만든다 (오류 없이 조용히)", M.getTool() === "cursor");

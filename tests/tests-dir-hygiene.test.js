@@ -118,6 +118,10 @@ function section(t) {
    여기에 이름을 적는 것이 곧 "이건 임시 파일이 아니다" 라는 선언입니다. */
 const 도우미목록 = {
   "README.md": "테스트 폴더 설명",
+  /* 2026-09-02 16차 차트팀 — js/chart-drawings.js 를 브라우저 없이 띄우는 가짜 차트.
+     chart-channel-seal 안에 같은 뼈대가 이미 있는데 그 파일은 여러선 봉인이라
+     손대지 않았습니다. 새 봉인이 또 베끼면 가짜 차트가 두 벌이 됩니다. */
+  "_chart-drawings-boot.js": "차트 선긋기 모듈을 태우는 공용 가짜 차트(봉인이 읽습니다)",
   "_order.txt": "npm test 실행 순서 목록",
   "_run-all.js": "npm test 가 부르는 전체 실행기",
   "harness.js": "여러 테스트가 함께 쓰는 공용 부팅 도구",

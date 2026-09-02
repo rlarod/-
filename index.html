@@ -1260,6 +1260,13 @@
      순간을 가로채야 하므로 반드시 js/chart.js 앞에 있어야 합니다.
      이 한 줄을 지우면 원래대로 돌아갑니다. -->
 <script src="js/chart-position-symbol.js"></script>
+<!-- 리플레이 (트레이딩뷰 Bar replay) — 과거로 돌아가 봉을 하나씩 넘겨 봅니다.
+     chart.js 가 만드는 차트·시리즈를 만들어지는 순간 붙잡아야 해서
+     반드시 js/chart.js 앞에 있어야 합니다 (chart.js 무수정).
+     리플레이 중에는 주문이 막힙니다 — 과거 화면을 보며 지금 시세로
+     주문하는 것을 막기 위해서입니다(파일 첫 주석 참고).
+     이 한 줄을 지우면 버튼도 리플레이도 아예 안 생깁니다. -->
+<script src="js/chart-replay.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/orderbook.js"></script>
 <script src="js/orderbook-price-arrow.js"></script>

@@ -93,6 +93,7 @@ tests/docs-staleness.test.js
 tests/notices.test.js
 tests/chart-indicators.test.js
 tests/chart-drawings.test.js
+tests/chart-object-list-seal.test.js
 tests/chart-chip-viewport-seal.test.js
 tests/sql-on-conflict-guard.test.js
 tests/item-recharge-total-guard.test.js
@@ -280,3 +281,13 @@ tests/chart-fx-menu-regrow.test.js
 #   14칩이 129px(5줄)로 주 칸의 47.8%를 덮었습니다. 세 줄부터 접습니다.
 # 되돌리기: 이 줄과 tests/chart-ind-bar-fold.test.js 삭제
 tests/chart-ind-bar-fold.test.js
+
+# 2026-09-02 — 리플레이(트레이딩뷰 Bar replay). 과거로 돌아가 한 봉씩 넘겨 봅니다.
+#   ★이 봉인의 핵심은 "리플레이 중 주문 막기" 입니다.★ 회원은 과거 가격을 보는데
+#   주문·호가·손익은 지금 가격으로 돕니다. 트레이딩뷰는 이걸 안 막지만
+#   (고객센터 원문: "orders ... are executed based on real-time data")
+#   우리는 거래 사이트이고, 바이낸스 거래화면에는 리플레이가 아예 없습니다.
+#   그래서 포지션이 있으면 시작 자체를 막고, 리플레이 중에는 주문 함수 5개를 거부합니다.
+#   App.Bus 에 가짜 시세를 쏘지 않는 것도 여기서 못 박습니다(trading.js 가 믿어버립니다).
+# 되돌리기: 이 줄과 tests/chart-replay.test.js 삭제
+tests/chart-replay.test.js
