@@ -373,3 +373,34 @@ tests/chart-ohlc-legend.test.js
 #   ⚠️ 거래량(vol)은 이번에 ★안 옮겼습니다★ — 손대지 않았다는 것도 여기서 봅니다.
 # 되돌리기: 이 줄과 tests/chart-indicator-bb-move.test.js 삭제
 tests/chart-indicator-bb-move.test.js
+
+# 2026-09-02 (수리팀) — 리플레이 조작막대가 「그린 것 목록」의 숨김·잠금·지움
+#   세 단추를 막던 것. 목록이 열리면 막대가 ★위로 비키고★, 비킬 자리가
+#   없으면 ★잠깐 접습니다★ (닫으면 도로 나옵니다).
+#   실측 — 1440 겹침 220x52px → 0, 360 겹침 262x52px → 0, 막힌 단추 3 → 0.
+#   ⚠️ 접힘 CSS 를 ".tl-rp-bar{...}" 규칙 ★한가운데★ 에 끼워 넣어 막대
+#      규칙이 두 동강 났던 적이 있어(고치는 중 실측으로 발견) 6절이
+#      ★막대 규칙이 통째로 살아 있는지★ 를 따로 봅니다.
+# 되돌리기: 이 줄과 tests/chart-replay-draw-list-clash.test.js 삭제
+tests/chart-replay-draw-list-clash.test.js
+
+# 2026-09-02 (수리팀) — 리플레이 안내줄이 지표 칩 줄을 통째로 덮던 것.
+#   ⚠️ 안내줄은 pointer-events:none 이라 ★안 보이는데 뒤의 칩이 눌렸습니다★.
+#      회원은 안내줄을 눌렀는데 지표 목록이 펼쳐집니다 (조용한 고장).
+#   안내줄을 칩 줄 ★아래로★ 내립니다 — 칩 줄은 한 글자도 안 건드리고
+#   회원이 켜둔 지표를 우리가 접지도 않습니다. 글씨도 안 줄였습니다.
+#   실측 — 360 겹침 240x22.5px → 0. 여섯 폭 모두 0.
+#   ⚠️ 5절이 ★붙어 있을 때(sticky)★ 를 따로 봅니다. 여백만으로는
+#      1440 에서 2.4px 이 남았습니다.
+# 되돌리기: 이 줄과 tests/chart-replay-banner-ind-bar.test.js 삭제
+tests/chart-replay-banner-ind-bar.test.js
+
+# 2026-09-02 (수리팀) — 먼 과거에서 리플레이를 끄면 차트가 오른쪽 끝으로
+#   안 돌아오던 것. 값은 다 맞고 ★화면 자리만★ 안 돌아와서 회원은
+#   "봉이 없네" 로 읽습니다.
+#   실측 1440 — 끈 뒤 오른쪽 빈 칸 144px (scrollPosition 124.75) → 2px (0).
+#   켤 때의 가로 자리를 적어 뒀다가 끌 때 그대로 되돌립니다.
+#   2절이 ★흉내가 브라우저 실측(124.75봉)과 같은지★ 를 먼저 봅니다 —
+#   틀리면 아래 검사가 다 헛것이라 거기서 먼저 빨개집니다.
+# 되돌리기: 이 줄과 tests/chart-replay-scroll-restore.test.js 삭제
+tests/chart-replay-scroll-restore.test.js

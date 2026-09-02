@@ -93,7 +93,10 @@ App.ChartReplay = (function () {
     speed: 1,
     timer: null,
     symbol: null,
-    interval: null
+    interval: null,
+    /* 리플레이를 켤 때 차트가 보고 있던 가로 자리 (오른쪽 끝에서 몇 봉).
+       끌 때 이 값으로 되돌립니다 — 아래 「끄면 보던 자리로」 참조 */
+    scroll0: null
   };
 
   var perf = { steps: 0, stepMs: 0, stepMax: 0, applyMs: 0, applyMax: 0, ticks: 0, tickMs: 0 };
@@ -424,6 +427,7 @@ App.ChartReplay = (function () {
 
     ensureOutermost();
     state.on = true;
+    state.scroll0 = scrollPos();
     state.cutTime = timeOf(cand.data[i]);
     try {
       state.symbol = App.Config.getActiveSymbol();
@@ -452,6 +456,9 @@ App.ChartReplay = (function () {
       for (var i = 0; i < reg.length; i++) {
         try { reg[i].set(reg[i].data.slice()); } catch (e) { /* 무시 */ }
       }
+      restoreScroll(); /* 봉을 되돌린 다음에 자리를 되돌립니다 (순서 중요) */
+    } else {
+      state.scroll0 = null; /* 종목·봉간격이 바뀐 것이라 옛 자리는 버립니다 */
     }
     hideLiveLine(false);
     hideBars();
@@ -529,6 +536,47 @@ App.ChartReplay = (function () {
     refresh();
   }
 
+  /* =====================================================================
+   * 끄면 보던 자리로 (2026-09-02)
+   * ---------------------------------------------------------------------
+   * 먼 과거에서 리플레이를 끄면 차트가 오른쪽 끝으로 안 돌아왔습니다.
+   *
+   * 실측 (2026-09-02 · 1440 · localhost)
+   *   기준(리플레이 안 켬)            오른쪽 빈 칸   2px   scrollPosition 0
+   *   280봉 전 + 5봉 진행 (리플레이 중)              scrollPosition 124.75
+   *   그대로 끔                       오른쪽 빈 칸 144px   scrollPosition 124.75
+   *
+   * 왜 그런가 — 아래 keepInView 가 새 봉을 화면 안으로 데려올 때 마지막 봉을
+   * 가로 75% 자리에 둡니다. 그러면 오른쪽에 ★보이는 폭의 25%★ 만큼 빈
+   * 칸이 생기고(위 실측 124.75봉), 그 값은 시간축이 "오른쪽 끝에서 몇 봉"
+   * 으로 기억합니다. 리플레이를 끄고 봉을 다 되돌려도 그 빈 칸은 그대로
+   * 남습니다. 값은 다 맞고 화면 자리만 안 돌아오는 것이라 더 헷갈립니다.
+   *
+   * 그래서 켤 때의 자리를 적어 두었다가 끌 때 그대로 되돌립니다.
+   * 봉 개수가 늘어도(실시간으로 한 봉 더 생겨도) "오른쪽 끝에서 몇 봉" 은
+   * 그대로라 이 값을 씁니다.
+   * ===================================================================== */
+  function scrollPos() {
+    try {
+      var v = chart.timeScale().scrollPosition();
+      return typeof v === "number" && isFinite(v) ? v : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function restoreScroll() {
+    if (state.scroll0 === null) return false;
+    var to = state.scroll0;
+    state.scroll0 = null;
+    try {
+      chart.timeScale().scrollToPosition(to, false); /* false = 애니메이션 없이 */
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /* 새로 나온 봉이 화면 밖이면 따라갑니다 */
   function keepInView(lastLogical) {
     try {
@@ -587,6 +635,10 @@ App.ChartReplay = (function () {
       ".tl-rp-bar{position:sticky; bottom:14px; align-self:center; margin:0 0 14px; display:none;" +
       " align-items:center; gap:4px; pointer-events:auto; max-width:96%;" +
       " background:" + C.card + "; border:1px solid " + C.line + "; border-radius:10px; padding:6px 8px;}",
+      /* 「그린 것 목록」이 열리면 비켜 세우거나(위로) 잠깐 접습니다.
+         inline 의 display:flex 를 이겨야 해서 !important 를 씁니다
+         — 아래 「그린 것 목록과 자리 다툼」 주석을 보세요 */
+      ".tl-rp-bar.tl-rp-folded{display:none !important;}",
       ".tl-rp-b{width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center;" +
       " background:transparent; border:0; border-radius:6px; color:" + C.text + "; cursor:pointer; padding:0;}",
       ".tl-rp-b:hover{background:rgba(255,255,255,.06);}",
@@ -794,6 +846,7 @@ App.ChartReplay = (function () {
     ui.hint.textContent = "리플레이를 시작할 봉을 클릭하세요 (Esc 로 취소)";
     if (ui.fill) ui.layer.insertBefore(ui.hint, ui.fill);
     else ui.layer.appendChild(ui.hint);
+    placeBanner(); /* 도움말도 지표 칩 줄을 덮지 않게 */
   }
   function hideHint() {
     if (ui.hint && ui.hint.parentNode) ui.hint.parentNode.removeChild(ui.hint);
@@ -808,13 +861,234 @@ App.ChartReplay = (function () {
     try { document.documentElement.setAttribute("data-tl-replay", "on"); } catch (e) { /* 무시 */ }
     showLock();
     showMobileLock();
+    watchDrawList(true);
+    relayout();
   }
   function hideBars() {
+    watchDrawList(false);
+    unplaceBar();
     if (ui.bar) ui.bar.style.display = "none";
-    if (ui.banner) ui.banner.style.display = "none";
+    if (ui.banner) {
+      ui.banner.style.display = "none";
+      ui.banner.style.marginTop = "";
+      ui.banner.style.top = "";
+    }
     if (ui.menu) ui.menu.style.display = "none";
     try { document.documentElement.removeAttribute("data-tl-replay"); } catch (e) { /* 무시 */ }
     hideLock();
+  }
+
+  /* =====================================================================
+   * 「그린 것 목록」과 자리 다툼 (2026-09-02)
+   * ---------------------------------------------------------------------
+   * js/chart-drawings.js 의 그린 것 목록(.tl-draw-list · z-index 8)은 그리기
+   * 칩 바로 위에서 위로 자랍니다. 조작 막대는 차트 아래쪽 가운데에 붙어 있어
+   * 둘이 같은 자리를 씁니다. 리플레이 층은 z-index 18 이라 목록을 덮습니다.
+   *
+   * 실측 (2026-09-02 · 그린 것 3개 · localhost)
+   *   1440  목록 91,706~451,946   막대 231,834~652,886   겹침 220 x 52px
+   *   360   목록 23,652~337,824   막대  49,734~311,786   겹침 262 x 52px
+   *   두 폭 다 숨김·잠금·지움 세 단추가 막혔습니다
+   *   (elementFromPoint 가 tl-rp-bar · tl-rp-speed 를 잡습니다)
+   *
+   * js/chart-drawings.js 는 한 글자도 열지 않습니다. 나중에 생긴 리플레이가
+   * 비킵니다 — 목록은 늘 쓰는 것이고 리플레이는 껐다 켜는 것이라서입니다.
+   *
+   *   ① 목록 위로 올려서 피할 수 있으면 올립니다 (넓은 화면)
+   *      자리(sticky bottom:14px)는 그대로 두고 transform 으로만 밀어
+   *      올립니다. 그래야 목록을 닫으면 원래 자리로 정확히 돌아옵니다.
+   *   ② 올릴 자리가 없으면 잠깐 접습니다 (폰).
+   *      360 실측 — 차트에서 화면에 보이는 높이가 148px 인데 목록이 172px
+   *      이라 위로도 아래로도 비킬 곳이 없습니다.
+   *      목록을 닫으면 그 자리에서 도로 나옵니다.
+   *
+   * 접어도 없어지는 기능은 없습니다 — 도구막대의 리플레이 단추(끄기)와
+   * 키보드(← → Space)는 접힌 동안에도 그대로 듣습니다.
+   * 글씨는 한 글자도 줄이지 않았습니다.
+   * ===================================================================== */
+  var LIST_GAP = 8;      /* 목록과 막대 사이 최소 틈 */
+  var LIST_HEAD_GAP = 6; /* 안내줄 아래 최소 틈 */
+  var place = { folded: false, lift: 0, watching: false, raf: 0, mo: null };
+
+  /** 지금 화면에 실제로 떠 있는 「그린 것 목록」. 없거나 감춰져 있으면 null */
+  function drawListEl() {
+    var el = document.querySelector(".tl-draw-list");
+    if (!el) return null;
+    try {
+      var st = getComputedStyle(el);
+      if (st.display === "none" || st.visibility === "hidden") return null;
+    } catch (e) { /* 무시 */ }
+    var r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return el;
+  }
+
+  /** 막대가 올라갈 수 있는 맨 위 — 차트 칸 위끝과 안내줄 아래 중 더 아래쪽 */
+  function barTopLimit() {
+    var wrap = chartWrap();
+    var top = 0;
+    if (wrap) top = Math.max(wrap.getBoundingClientRect().top, 0);
+    var head = null;
+    if (ui.banner && ui.banner.style.display !== "none") head = ui.banner;
+    else if (ui.hint) head = ui.hint;
+    if (head) {
+      var r = head.getBoundingClientRect();
+      if (r.height) top = Math.max(top, r.bottom + LIST_HEAD_GAP);
+    }
+    return top;
+  }
+
+  function unplaceBar() {
+    place.folded = false;
+    place.lift = 0;
+    if (!ui.bar) return;
+    ui.bar.style.transform = "";
+    ui.bar.className = "tl-rp-bar";
+  }
+
+  /** 목록과 겹치면 위로 올리고, 올릴 자리가 없으면 접습니다 */
+  function placeBar() {
+    if (!ui.bar) return;
+    if (!state.on) { unplaceBar(); return; }
+    /* 지난번에 민 만큼이 섞이지 않게 먼저 제자리로 돌려놓고 잽니다 */
+    unplaceBar();
+
+    var list = drawListEl();
+    if (!list) return;
+    var b = ui.bar.getBoundingClientRect();
+    if (!b.width || !b.height) return;
+    var l = list.getBoundingClientRect();
+    if (Math.min(b.right, l.right) - Math.max(b.left, l.left) <= 0) return;
+    if (Math.min(b.bottom, l.bottom) - Math.max(b.top, l.top) <= 0) return;
+
+    var lift = Math.ceil(b.bottom - (l.top - LIST_GAP));
+    if (ui.menu) ui.menu.style.display = "none";
+    if (lift > 0 && b.top - lift >= barTopLimit()) {
+      place.lift = lift;
+      ui.bar.style.transform = "translateY(" + (-lift) + "px)";
+      return;
+    }
+    place.folded = true;
+    ui.bar.className = "tl-rp-bar tl-rp-folded";
+  }
+
+  /* =====================================================================
+   * 안내줄 ↔ 지표 칩 줄 (2026-09-02)
+   * ---------------------------------------------------------------------
+   * 지표 칩 줄(js/chart-indicators.js · .tl-ind-bar · z-index 6)은 차트 칸
+   * 왼쪽 위에 절대자리(top:6px)로 붙어 있습니다. 리플레이 안내줄도 같은
+   * 자리에서 시작해서 칩 줄을 통째로 덮었습니다.
+   *
+   * 실측 (2026-09-02 · 360 · localhost · 칩 줄 접힌 상태)
+   *   칩 줄   23,62~263,85 (23px)   안내줄 21,62~339,120 (58px)
+   *   겹침 240 x 22.5px = ★칩 줄 전체★
+   *
+   * ⚠️ 이게 왜 나쁘냐면 — 안내줄은 pointer-events:none 이라 ★누르면 뒤에
+   *    있는 칩이 눌립니다★. 회원은 안내줄을 눌렀는데 지표 목록이 펼쳐집니다.
+   *    "안 보이는데 눌린다" 라서 회원이 고장인 줄도 모릅니다.
+   *
+   * 고치는 법 — 안내줄을 칩 줄 ★아래로 내립니다★.
+   *   · 칩 줄은 한 글자도 안 건드립니다 (접지도 않습니다 — 회원이 켜둔 것)
+   *   · 안내줄 글씨도 안 줄입니다. 자리만 내립니다
+   *   · 칩 줄을 접고 펴면 높이가 23 ↔ 76px 로 바뀌므로 그때마다 다시 잽니다
+   * ===================================================================== */
+  var BANNER_GAP = 6;
+
+  /** 지금 화면에 떠 있는 지표 칩 줄. 없거나 감춰져 있으면 null */
+  function indBarEl() {
+    var el = document.querySelector(".tl-ind-bar");
+    if (!el) return null;
+    try {
+      var st = getComputedStyle(el);
+      if (st.display === "none" || st.visibility === "hidden") return null;
+    } catch (e) { /* 무시 */ }
+    var r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return el;
+  }
+
+  /** 지금 위쪽에 떠 있는 우리 줄 — 리플레이 중이면 안내줄, 고르는 중이면 도움말 */
+  function headEl() {
+    if (ui.banner && ui.banner.style.display !== "none") return ui.banner;
+    if (ui.hint) return ui.hint;
+    return null;
+  }
+
+  function overlaps(a, b) {
+    return Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 &&
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0;
+  }
+  function numStyle(el, name, dflt) {
+    try {
+      var v = parseFloat(getComputedStyle(el)[name]);
+      return isNaN(v) ? dflt : v;
+    } catch (e) {
+      return dflt;
+    }
+  }
+
+  /** 안내줄이 지표 칩 줄을 덮으면 그만큼 내립니다 */
+  function placeBanner() {
+    var head = headEl();
+    if (!head) return;
+    /* 지난번에 내린 만큼이 섞이지 않게 먼저 제자리로 돌려놓고 잽니다 */
+    head.style.marginTop = "";
+    head.style.top = "";
+    var ind = indBarEl();
+    if (!ind) return;
+    var h = head.getBoundingClientRect();
+    if (!h.width || !h.height) return;
+    if (!overlaps(h, ind.getBoundingClientRect())) return;
+
+    /* ① 차트 칸이 다 보일 때 — 위쪽 여백으로 내립니다 */
+    var i = ind.getBoundingClientRect();
+    var need = Math.ceil(i.bottom + BANNER_GAP - h.top);
+    if (need > 0) head.style.marginTop = (numStyle(head, "marginTop", 8) + need) + "px";
+
+    /* ② 페이지를 내려서 안내줄이 화면 위에 붙어 있을 때(sticky)는 ①이 안
+       먹습니다. 붙은 자리(top)를 그만큼 내려 줍니다. 칩 줄이 화면 밖으로
+       완전히 나가면 위에서 되돌려 놓으므로 원래 자리로 돌아옵니다. */
+    var h2 = head.getBoundingClientRect();
+    var i2 = ind.getBoundingClientRect();
+    if (!overlaps(h2, i2)) return;
+    var need2 = Math.ceil(i2.bottom + BANNER_GAP - h2.top);
+    if (need2 > 0) head.style.top = (numStyle(head, "top", 8) + need2) + "px";
+  }
+
+  /** 위(안내줄)부터 맞추고 아래(막대)를 맞춥니다 — 막대가 안내줄 자리를 봅니다 */
+  function relayout() {
+    placeBanner();
+    placeBar();
+  }
+
+  function placeBarSoon() {
+    if (place.raf) return;
+    place.raf = 1;
+    var run = function () { place.raf = 0; relayout(); };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+    else setTimeout(run, 16);
+  }
+
+  /* 목록은 생겼다 없어졌다 하고(단추를 누르면 안이 다시 그려집니다) 자리도
+     스크롤을 따라 움직입니다. 그래서 셋 다 봅니다 —
+     ① 차트 칸에 목록이 붙고 떨어지는 것  ② 페이지 스크롤  ③ 창 크기 */
+  function watchDrawList(on) {
+    on = !!on;
+    if (on === place.watching) return;
+    place.watching = on;
+    if (on) {
+      var wrap = chartWrap();
+      if (wrap && window.MutationObserver && !place.mo) {
+        place.mo = new MutationObserver(placeBarSoon);
+        place.mo.observe(wrap, { childList: true, subtree: true });
+      }
+      window.addEventListener("scroll", placeBarSoon, true);
+      window.addEventListener("resize", placeBarSoon, false);
+    } else {
+      if (place.mo) { try { place.mo.disconnect(); } catch (e) { /* 무시 */ } place.mo = null; }
+      window.removeEventListener("scroll", placeBarSoon, true);
+      window.removeEventListener("resize", placeBarSoon, false);
+    }
   }
 
   function showLock() {
@@ -921,6 +1195,8 @@ App.ChartReplay = (function () {
         '<span class="l2"><span class="w">과거 화면입니다. 지금 시세가 아니고, 주문할 수 없습니다.</span>' +
         '<span class="n">과거 화면 · 주문 불가</span></span>';
     }
+    /* 값이 바뀌면 안내줄 높이도 바뀝니다 — 지표 칩 줄을 다시 안 덮게 잽니다 */
+    placeBanner();
   }
 
   function esc(s) {
@@ -1013,6 +1289,7 @@ App.ChartReplay = (function () {
       if (!state.on) { scanSeries(); return; }
       /* 리플레이 중 — 덮개가 사라졌거나(다시 그려짐) 자리가 바뀌었으면 다시 붙입니다 */
       if (!ui.lock || !ui.lock.isConnected) { ui.lock = null; showLock(); }
+      relayout(); /* 목록·칩 줄이 바뀌는 것을 놓쳤을 때의 안전망 */
       var bar = document.querySelector(".tl-order-bar");
       if (bar) {
         var r = bar.getBoundingClientRect();
@@ -1086,6 +1363,14 @@ App.ChartReplay = (function () {
     SPEEDS: SPEEDS,
     GUARDED_FOR_TEST: GUARDED,
     getSeriesCountForTest: function () { return reg.length; },
+    /* 「그린 것 목록」과 자리 다툼 — 확인용 */
+    placeBarForTest: placeBar,
+    placeBannerForTest: placeBanner,
+    relayoutForTest: relayout,
+    getBarPlacementForTest: function () { return { folded: place.folded, lift: place.lift }; },
+    /* 끄면 보던 자리로 — 확인용 */
+    getScrollMarkForTest: function () { return state.scroll0; },
+    LIST_GAP: LIST_GAP,
     getEntriesForTest: function () { return reg.slice(); }
   };
 })();
