@@ -108,6 +108,21 @@
  *   되돌리고 READY_TOOLS 에서 alert 를, onButton() 에서 alert 토막을 지웁니다.
  *   회원 브라우저의 btc_sim_v2_chart-alerts 는 남지만 아무 동작도 안 합니다.
  *
+ * 14차(2026-09-02) — 알람의 P1 구멍을 막았습니다 (놓친 교차 되찾기)
+ *   12차 알람은 「다른 종목을 보는 동안 조용히 멈춰 있었습니다」.
+ *   BTC 에 알람을 걸고 나스닥으로 옮기면 그 사이 값을 지나가도 안 울리고,
+ *   돌아와도 아무 일이 없었습니다. 화면에 오류가 하나도 안 나서 회원은
+ *   "안 울렸다 = 가격이 안 닿았다" 로 읽습니다 — 조용한 고장(P1)입니다.
+ *   (PM 이 라이브에서 재현 · 점검팀 실측 2026-09-02 10:22~10:24)
+ *   ① 종목으로 돌아오면 그 사이 봉의 고가·저가를 훑어 지났는지 봅니다.
+ *      지났으면 「"늦은 알림"」 으로 따로 알립니다 — 알림줄 글·선 이름표·
+ *      소리 높이를 전부 갈라, 방금 지난 것처럼 보이지 않게 했습니다.
+ *   ② 알람 칩에 두 줄로 적습니다 — "이 창 · 이 종목만 울립니다" 와
+ *      "놓친 것은 돌아오면 알려드립니다".
+ *   ③ 모든 종목을 동시에 감시하지는 「않습니다」 (회선·부하는 팀 재량 밖).
+ *   자세한 것은 아래 CATCHUP_* 주석에 있습니다. 되돌리는 법도 거기 있습니다.
+ *   주의 — 되돌리기(Ctrl+Z)는 12차·13차 그대로 알람을 건드리지 않습니다.
+ *
  * 이제 준비중(disabled)인 버튼은 하나도 없습니다.
  *
  * ── js/chart.js 는 한 글자도 고치지 않았습니다 ────────────────────────
@@ -395,6 +410,70 @@ App.ChartDrawings = (function () {
   var BEEP_GAP = 0.22;
   var BEEP_VOL = 0.18;
 
+  /* ---------------- 놓친 교차 되찾기 (14차 2026-09-02) ----------------
+   * 왜 만들었나 — 12차 알람에 구멍이 하나 있었습니다.
+   *   BTC 에 알람을 걸어 두고 나스닥으로 옮기면 그동안 알람이 「멈춥니다」.
+   *   그 사이에 값을 지나가도 화면에 오류 한 줄 안 나고, 돌아와도 아무 일이
+   *   없었습니다. 회원은 "안 울렸다 = 가격이 안 닿았다" 로 읽습니다.
+   *   전형적인 조용한 고장이고, 알람은 회원 돈에 닿습니다.
+   *   (PM 이 라이브에서 재현 · 점검팀 실측 2026-09-02 10:22~10:24)
+   *
+   * 어떻게 고쳤나 — 종목으로 「돌아올 때」 그 사이 봉을 훑습니다.
+   *   봉 하나의 고가·저가 안에 알람가가 들어 있으면 그때 지난 것입니다.
+   *   지났으면 "늦은 알림" 으로 따로 알립니다(아래 「구분」 참고).
+   *
+   * 「모든 종목을 동시에 감시하지 않습니다」 — 종목 4개 시세를 한꺼번에
+   *   받아야 하고 그건 회선·부하 문제라 이 팀 재량 밖입니다. PM 에게 보고만
+   *   했습니다. 그래서 "실시간으로 우는 것" 은 지금 보는 종목 하나뿐입니다.
+   *
+   * 「지금 울린 것과 반드시 구분합니다」 — 방금 지난 것처럼 보이면
+   *   회원이 그 값으로 지금 주문을 냅니다.
+   *     알림줄   "늦은 알림 — ... 09-02 10:23 에 지났습니다 (자리를 비운 사이)"
+   *     선 이름표 "알람 울림(늦음)"      (지금 울린 것은 "알람 울림")
+   *     소리     낮은 소리 세 번          (지금 울린 것은 높은 소리 두 번)
+   *
+   * 어디서 봉을 받나 — App.Api.fetchKlines 입니다. js/chart.js 가 차트를
+   *   채울 때 쓰는 것과 같은 공개 REST(바이낸스 klines) 이고, 읽기만 합니다.
+   *   회원 정보를 보내지 않고 돈이 들지 않습니다. 차트가 이미 들고 있는 봉을
+   *   안 쓰고 따로 받는 이유는 — 회원이 보는 봉 간격이 1일봉이면 1일봉 하나로는
+   *   "언제 지났나" 를 못 잡고, 종목을 바꾼 직후엔 차트가 아직 옛 종목 봉을
+   *   들고 있기 때문입니다.
+   *
+   * 얼마나 거슬러 올라가나 — 비운 시간에 맞춰 봉 간격을 고릅니다.
+   *   한 번에 받는 봉을 500개 아래로 묶어 두려는 것입니다(요청 한 번).
+   *     8시간까지   1분봉     5일까지   15분봉     60일까지   4시간봉
+   *   60일보다 오래면 60일치만 봅니다. 그보다 옛 교차는 못 찾습니다.
+   *
+   * 「일부러 놓치는 것」 — 자리를 뜬 그 순간에 걸쳐 있던 봉은 안 봅니다
+   *   (봉이 「시작한」 시각이 "마지막으로 본 시각" 뒤인 것만 봅니다).
+   *   걸친 봉을 세면, 알람을 걸기 「전」 에 이미 지나간 값을 지금 지난 것처럼
+   *   알리게 됩니다. 헛알람보다 한 봉 못 잡는 쪽이 낫다고 판단했습니다.
+   *   못 잡는 폭은 봉 하나(1분 ~ 4시간)입니다.
+   *
+   * 되돌리려면 — start() · rescope() 의 catchUpSoon() 두 줄과 onTicker 의
+   *   noteSeen() 한 줄을 지우면 12차와 똑같이 돕니다. 저장칸의 seen 은
+   *   그냥 남고 아무 동작도 안 합니다.
+   * ------------------------------------------------------------------- */
+  var CATCHUP_MIN_MS = 3000; /* 이만큼도 안 비웠으면 실시간으로 이미 봤습니다 */
+  var CATCHUP_MAX_MS = 60 * 24 * 60 * 60 * 1000; /* 60일 */
+  var CATCHUP_DELAY = 400; /* 종목을 바꾼 뒤 숨 한 번 — 연달아 누를 때 요청을 아낍니다 */
+  var CATCHUP_TIERS = [
+    { maxMin: 480, iv: "1m", min: 1 },
+    { maxMin: 7200, iv: "15m", min: 15 },
+    { maxMin: 86400, iv: "4h", min: 240 }
+  ];
+  var CATCHUP_LIMIT = 500; /* 바이낸스 한 번 요청 상한 안쪽 */
+  var SEEN_SAVE_MS = 20000; /* "지켜본 시각" 을 저장칸에 굳히는 간격 */
+  var LATE_HZ = 587; /* 늦은 알림 — 낮은 소리 (지금 울린 것은 880) */
+  var LATE_BEEPS = 3; /* 늦은 알림 — 세 번 (지금 울린 것은 두 번) */
+  var TOAST_MS = 1600;
+  var TOAST_LONG_MS = 6000; /* 늦은 알림은 오래 띄웁니다 — 놓치면 또 놓칩니다 */
+  /* 알람 칩에 늘 띄우는 두 줄. 글자를 적는 곳은 여기 한 곳뿐입니다.
+     「두 줄 다 있어야 합니다」 — 첫 줄만 있으면 "그럼 못 알리는구나" 로 끝나고,
+     둘째 줄만 있으면 "자리를 비워도 제때 울리겠구나" 로 잘못 읽습니다. */
+  var ALERT_NOTE_1 = "이 창 · 이 종목만 울립니다";
+  var ALERT_NOTE_2 = "놓친 것은 돌아오면 알려드립니다";
+
   /* =====================================================================
    * 그린 것의 색 · 굵기 (13차 2026-09-02)
    * ---------------------------------------------------------------------
@@ -583,6 +662,16 @@ App.ChartDrawings = (function () {
   var alerts = null; /* { v, ui:{sound}, bySymbol:{ SYM:[ {id,price,done,at} ] } } */
   var alertLines = {}; /* 알람 id -> IPriceLine */
   var lastTick = null; /* 마지막으로 본 시세 — 교차를 재는 데만 씁니다 */
+  /* 놓친 교차 되찾기 (14차 2026-09-02) */
+  var liveWatch = null; /* 지금 실시간으로 지켜보는 종목. 되찾기가 끝나야 채웁니다 */
+  /* "지켜본 시각" 을 저장칸에 마지막으로 굳힌 때. 이것만 새로고침에 0 이 되지만
+     탈이 없습니다 — 진짜 기억(alerts.seen)은 App.Storage 에 남고, 이 값은 그저
+     "얼마 만에 한 번 쓸까" 를 재는 초시계라 0 이면 다음 시세에 한 번 더 쓸 뿐입니다. */
+  var watchWriteAt = 0;
+  var catchTimer = 0;
+  var catchSeq = 0; /* 늦게 온 응답을 버리는 표 */
+  var catchMs = 0; /* 실측용 — 되찾기 한 번에 걸린 시간 */
+  var catchBars = 0; /* 실측용 — 훑은 봉 개수 */
   var audioCtx = null; /* 소리를 낼 때 한 번만 만듭니다 */
   var requestUpdate = null; /* 프리미티브가 준 "다시 그려줘" 함수 */
 
@@ -750,7 +839,7 @@ App.ChartDrawings = (function () {
    * 읽습니다 — 조용한 고장입니다.
    * ===================================================================== */
   function emptyAlerts() {
-    return { v: ALERT_VERSION, ui: { sound: true }, bySymbol: {} };
+    return { v: ALERT_VERSION, ui: { sound: true }, bySymbol: {}, seen: {} };
   }
 
   function loadAlerts() {
@@ -762,6 +851,11 @@ App.ChartDrawings = (function () {
     }
     if (!a || typeof a !== "object" || a.v !== ALERT_VERSION || !a.bySymbol) return emptyAlerts();
     if (!a.ui) a.ui = { sound: true };
+    /* seen 은 14차에 늘어난 칸입니다. 판 번호(v)를 올리지 않았습니다 —
+       올리면 loadAlerts 가 옛 저장본을 통째로 버려서 회원이 걸어 둔 알람이
+       그 자리에서 사라집니다. 없으면 빈 칸으로 채우고 지나갑니다
+       (그 종목은 이번 한 번만 되찾기를 건너뜁니다). */
+    if (!a.seen || typeof a.seen !== "object") a.seen = {};
     return a;
   }
 
@@ -773,11 +867,34 @@ App.ChartDrawings = (function () {
     }
   }
 
-  function alertList() {
+  function listFor(symbol) {
     if (!alerts) alerts = emptyAlerts();
-    var k = sym();
-    if (!alerts.bySymbol[k]) alerts.bySymbol[k] = [];
-    return alerts.bySymbol[k];
+    if (!alerts.bySymbol[symbol]) alerts.bySymbol[symbol] = [];
+    return alerts.bySymbol[symbol];
+  }
+
+  function alertList() {
+    return listFor(sym());
+  }
+
+  /* -- "언제까지 지켜봤나" (14차 2026-09-02) ----------------------------
+   * 종목마다 "마지막으로 실시간으로 지켜본 시각" 을 적어 둡니다.
+   * 놓친 교차 되찾기는 이 시각부터 지금까지의 봉만 훑습니다.
+   * 이 칸이 없으면(옛 저장본) 되찾기를 하지 않습니다 — 언제부터 못 봤는지
+   * 모르는 채로 훑으면 한참 전 교차를 방금 지난 것처럼 알릴 수 있습니다. */
+  function seenMap() {
+    if (!alerts) alerts = emptyAlerts();
+    if (!alerts.seen || typeof alerts.seen !== "object") alerts.seen = {};
+    return alerts.seen;
+  }
+
+  function markSeen(symbol, ms) {
+    seenMap()[symbol] = typeof ms === "number" ? ms : Date.now();
+  }
+
+  function seenAt(symbol) {
+    var v = seenMap()[symbol];
+    return typeof v === "number" && isFinite(v) ? v : 0;
   }
 
   function alertCount() {
@@ -1649,6 +1766,12 @@ App.ChartDrawings = (function () {
    * formatter 가 알아서 바꿔줍니다. 우리가 환율을 다시 계산하지 않습니다.
    * 선 모양으로 다른 금색 선들과 구분합니다(위 ALERT_KEY 주석의 표 참고).
    * ===================================================================== */
+  /** 선 옆 이름표. 늦게 찾은 것은 "(늦음)" 을 붙여 지금 울린 것과 가릅니다 */
+  function alertTitle(a) {
+    if (!a || !a.done) return "알람";
+    return a.late ? "알람 울림(늦음)" : "알람 울림";
+  }
+
   function alertStyle(a) {
     var lc = LC();
     var LS = lc && lc.LineStyle ? lc.LineStyle : null;
@@ -1665,7 +1788,7 @@ App.ChartDrawings = (function () {
         lineWidth: LINE_WIDTH,
         lineStyle: alertStyle(a),
         axisLabelVisible: true,
-        title: a.done ? "알람 울림" : "알람"
+        title: alertTitle(a)
       });
     } catch (e) {
       console.warn("[chart-drawings.js] 알람 선을 긋지 못했습니다:", e);
@@ -1682,7 +1805,7 @@ App.ChartDrawings = (function () {
         color: on ? COLOR_SELECTED : ALERT_COLOR,
         lineWidth: on ? LINE_WIDTH + 1 : LINE_WIDTH,
         lineStyle: alertStyle(a),
-        title: a.done ? "알람 울림" : "알람"
+        title: alertTitle(a)
       });
     } catch (e) {
       /* 무시 */
@@ -1728,11 +1851,11 @@ App.ChartDrawings = (function () {
    * ===================================================================== */
 
   /** 소리 — 파일을 받지 않고 브라우저가 그 자리에서 만듭니다 (돈 0, 용량 0) */
-  function beepOnce(at) {
+  function beepOnce(at, hz) {
     var o = audioCtx.createOscillator();
     var g = audioCtx.createGain();
     o.type = "sine";
-    o.frequency.value = BEEP_HZ;
+    o.frequency.value = hz || BEEP_HZ;
     g.gain.setValueAtTime(0.0001, at);
     g.gain.exponentialRampToValueAtTime(BEEP_VOL, at + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, at + BEEP_LEN);
@@ -1742,16 +1865,19 @@ App.ChartDrawings = (function () {
     o.stop(at + BEEP_LEN + 0.02);
   }
 
-  function beep() {
+  /** 기본은 지금 울린 것 — 높은 소리(880) 두 번.
+      늦은 알림은 낮은 소리(587) 세 번이라 귀로도 갈립니다. */
+  function beep(hz, times) {
     if (!alertSoundOn()) return;
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    var f = hz || BEEP_HZ;
+    var n = times || 2;
     try {
       if (!audioCtx) audioCtx = new AC();
       if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
       var t0 = audioCtx.currentTime;
-      beepOnce(t0);
-      beepOnce(t0 + BEEP_GAP);
+      for (var i = 0; i < n; i++) beepOnce(t0 + i * BEEP_GAP, f);
     } catch (e) {
       /* 소리가 안 나도 알림줄은 그대로 뜹니다 */
     }
@@ -1786,11 +1912,188 @@ App.ChartDrawings = (function () {
     }
   }
 
+  /** 종목 이름 — 회원이 읽는 말로. 없으면 티커 그대로 */
+  function symLabel(symbol) {
+    try {
+      if (App.SymbolRegistry && typeof App.SymbolRegistry.getBySymbol === "function") {
+        var r = App.SymbolRegistry.getBySymbol(symbol);
+        if (r && r.name) return r.name;
+      }
+    } catch (e) {
+      /* 티커로 */
+    }
+    return symbol;
+  }
+
+  /** "09-02 10:23" — 이 컴퓨터 시각입니다(차트 시간대 설정과 별개).
+      늦은 알림은 "언제 지났나" 가 핵심이라 날짜까지 적습니다. */
+  function fmtWhen(ms) {
+    function p2(n) {
+      return (n < 10 ? "0" : "") + n;
+    }
+    var d = new Date(ms);
+    return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+  }
+
   function ringAlert(a) {
-    var msg = sym() + "  " + fmtPrice(a.price) + " 를 지났습니다";
+    var msg = symLabel(sym()) + "  " + fmtPrice(a.price) + " 를 지났습니다";
     toast("알람 — " + msg);
     beep();
     notify(msg);
+  }
+
+  /* =====================================================================
+   * 놓친 교차 되찾기 (14차 2026-09-02)
+   * ---------------------------------------------------------------------
+   * 위 CATCHUP_* 주석에 왜·어떻게가 다 적혀 있습니다. 여기는 계산부입니다.
+   * ===================================================================== */
+
+  /** 봉 목록에서 알람가를 지난 「첫 봉」 의 시각(ms). 없으면 null.
+   *  since 뒤에 「시작한」 봉만 봅니다 — 걸친 봉을 세면 알람을 걸기 전에
+   *  이미 지나간 값을 지금 지난 것처럼 알리게 됩니다.
+   *  순수 계산이라 테스트가 이 함수를 그대로 씁니다(그물망 없이). */
+  function findCross(bars, price, sinceMs) {
+    if (!bars || !bars.length) return null;
+    if (typeof price !== "number" || !isFinite(price)) return null;
+    for (var i = 0; i < bars.length; i++) {
+      var b = bars[i];
+      if (!b || typeof b.time !== "number") continue;
+      if (typeof b.low !== "number" || typeof b.high !== "number") continue;
+      var t = b.time * 1000;
+      if (t < sinceMs) continue;
+      if (price >= b.low && price <= b.high) return t;
+    }
+    return null;
+  }
+
+  /** 받아 온 봉으로 그 종목의 안 울린 알람을 훑습니다. 울린 것 목록을 냅니다.
+   *  base 는 「요청을 보내기 전에 잡아 둔」 "마지막으로 지켜본 시각" 입니다 —
+   *  기다리는 동안 시세가 들어와 그 값이 앞으로 밀리면 아무것도 못 찾습니다. */
+  function applyCatchUp(symbol, bars, base, coarse) {
+    var list = listFor(symbol);
+    var late = [];
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (a.done) continue;
+      /* 알람을 건 시각보다 앞선 교차는 세지 않습니다 */
+      var since = Math.max(base || 0, a.at || 0);
+      if (!since) continue;
+      var t = findCross(bars, a.price, since);
+      if (t === null) continue;
+      a.done = true;
+      a.late = true;
+      a.lateAt = t;
+      a.lateCoarse = !!coarse; /* 1분봉보다 성긴 봉으로 찾았으면 "무렵" 으로 씁니다 */
+      a.firedAt = Date.now();
+      late.push(a);
+    }
+    return late;
+  }
+
+  /** 비운 시간에 맞는 봉 간격 */
+  function catchTier(gapMin) {
+    for (var i = 0; i < CATCHUP_TIERS.length; i++) {
+      if (gapMin <= CATCHUP_TIERS[i].maxMin) return CATCHUP_TIERS[i];
+    }
+    return CATCHUP_TIERS[CATCHUP_TIERS.length - 1];
+  }
+
+  /** 늦은 알림 — 지금 울린 것과 확실히 갈라서 알립니다 */
+  function ringLate(late, symbol) {
+    if (!late || !late.length) return;
+    var a = late[0];
+    var when = fmtWhen(a.lateAt) + (a.lateCoarse ? " 무렵" : "");
+    var msg = symLabel(symbol) + "  " + fmtPrice(a.price) + " 를 " + when + " 에 지났습니다";
+    if (late.length > 1) msg += " 외 " + (late.length - 1) + "개";
+    msg += " (자리를 비운 사이)";
+    toast("늦은 알림 — " + msg, TOAST_LONG_MS);
+    beep(LATE_HZ, LATE_BEEPS);
+    notify("늦은 알림 — " + msg);
+  }
+
+  /** 지금 보는 종목을 실시간으로 지켜보고 있다고 적습니다(되찾기가 끝난 뒤에만).
+   *  저장칸에 굳히는 것은 20초에 한 번입니다 — 시세는 초당 오고,
+   *  매번 쓰면 다른 탭이 매초 알람을 다시 읽습니다. */
+  function noteSeen() {
+    var s2 = sym();
+    if (liveWatch !== s2) return;
+    var now = Date.now();
+    markSeen(s2, now);
+    if (now - watchWriteAt < SEEN_SAVE_MS) return;
+    watchWriteAt = now;
+    saveAlerts();
+  }
+
+  /** 자리를 뜨기 직전에 "여기까지 봤다" 를 굳힙니다 */
+  function flushSeen() {
+    if (!alerts) return;
+    watchWriteAt = Date.now();
+    saveAlerts();
+  }
+
+  function catchUpSoon() {
+    if (catchTimer) clearTimeout(catchTimer);
+    catchTimer = setTimeout(function () {
+      catchTimer = 0;
+      catchUpAlerts();
+    }, CATCHUP_DELAY);
+  }
+
+  function catchUpAlerts() {
+    if (!alerts) return;
+    var s2 = sym();
+    var list = listFor(s2);
+    var base = seenAt(s2);
+    var now = Date.now();
+    var since = 0;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].done) continue;
+      var st = Math.max(base, list[i].at || 0);
+      if (!st) continue;
+      if (!since || st < since) since = st;
+    }
+    /* 되찾을 것이 없습니다 — 여기서부터 실시간으로 지켜봅니다 */
+    if (!since || now - since < CATCHUP_MIN_MS) {
+      liveWatch = s2;
+      markSeen(s2, now);
+      return;
+    }
+    if (!App.Api || typeof App.Api.fetchKlines !== "function") return;
+    if (now - since > CATCHUP_MAX_MS) since = now - CATCHUP_MAX_MS;
+    var gapMin = (now - since) / 60000;
+    var tier = catchTier(gapMin);
+    var limit = Math.ceil(gapMin / tier.min) + 3;
+    if (limit > CATCHUP_LIMIT) limit = CATCHUP_LIMIT;
+    if (limit < 2) limit = 2;
+    var token = ++catchSeq;
+    var t0 = nowMs();
+    /* 바이낸스 공개 klines 읽기입니다 — js/chart.js 가 차트를 채울 때 쓰는 것과
+       같은 길이고, 읽기만 하며 회원 정보를 보내지 않습니다(돈 0). */
+    App.Api.fetchKlines(s2, tier.iv, limit)
+      .then(function (bars) {
+        if (token !== catchSeq) return; /* 그새 또 종목을 옮겼습니다 */
+        var late = applyCatchUp(s2, bars, base, tier.min > 1);
+        catchMs = nowMs() - t0;
+        catchBars = (bars && bars.length) || 0;
+        if (sym() === s2) {
+          liveWatch = s2;
+          markSeen(s2, Date.now());
+        }
+        saveAlerts();
+        if (!late.length) return;
+        if (sym() === s2) {
+          syncAlertLines();
+          paintChip();
+        }
+        ringLate(late, s2);
+      })
+      .catch(function (e) {
+        if (token !== catchSeq) return;
+        /* 못 받았으면 "지켜봤다" 로 적지 않습니다. 다음에 이 종목으로 돌아올 때
+           같은 구간을 다시 훑습니다(놓친 채로 넘어가지 않게). */
+        console.warn("[chart-drawings.js] 놓친 알람을 되찾지 못했습니다:", e);
+      });
   }
 
   /** 다른 탭이 벌써 울렸는지 저장칸을 다시 읽어 봅니다 (두 번 울리지 않게) */
@@ -1813,6 +2116,9 @@ App.ChartDrawings = (function () {
     if (!list.length) return;
     if (!d || typeof d.lastPrice !== "number" || !isFinite(d.lastPrice)) return;
     if (d.symbol && d.symbol !== sym()) return;
+    /* 여기까지 실시간으로 봤다고 적어 둡니다 — 되찾기의 출발선이 됩니다.
+       되찾기가 아직 안 끝난 종목이면 liveWatch 가 달라 그냥 지나갑니다. */
+    noteSeen();
     var p = d.lastPrice;
     var prev = lastTick;
     lastTick = p;
@@ -1853,11 +2159,16 @@ App.ChartDrawings = (function () {
     if (!alerts) alerts = emptyAlerts();
     var a = { id: newId(), price: price, cond: "cross", done: false, at: Date.now() };
     alertList().push(a);
+    /* 건 그 순간부터 지켜봅니다. 이 표가 없으면 되찾기가 "언제부터 못 봤는지"
+       를 몰라 아무것도 못 합니다. */
+    liveWatch = sym();
+    markSeen(sym(), a.at);
+    watchWriteAt = a.at;
     saveAlerts();
     syncAlertLines();
     askNotify();
     paintChip();
-    toast("알람을 걸었습니다 — 이 창을 닫으면 알려드리지 못합니다");
+    toast("알람을 걸었습니다 — " + ALERT_NOTE_1 + " · " + ALERT_NOTE_2, TOAST_LONG_MS);
     return a;
   }
 
@@ -3277,7 +3588,7 @@ App.ChartDrawings = (function () {
     if (name === "channel") toast("세 번 톡 — 기준선 두 점, 그 다음 폭");
     /* 파동·알람도 순서가 다른 도구라 한 줄 알려줍니다 */
     if (name === "wave") toast("점을 하나씩 톡 — " + WAVE_SET_LABEL[waveSet] + " · " + waveMax() + "점");
-    if (name === "alert") toast("알릴 가격을 톡 하세요 — 창을 닫으면 알려드리지 못합니다");
+    if (name === "alert") toast("알릴 가격을 톡 하세요 — " + ALERT_NOTE_1);
   }
 
   /* =====================================================================
@@ -3817,7 +4128,13 @@ App.ChartDrawings = (function () {
     var baseY = box.bottom - CHIP_EDGE;
     if (a) {
       a.style.visibility = "visible";
-      putFixed(a, box.left + CHIP_EDGE, baseY - a.offsetHeight);
+      /* 위로 삐져나가지 않게 막습니다 — 아래 확대 칩에는 원래 있던 것을
+         그린 것 칩에도 붙였습니다. 14차에서 알람 칩이 두 줄(43px)이 되면서
+         360 에서 차트 칸 위로 4px 넘어가는 것이 실측으로 잡혔습니다.
+         (보이는 칸이 47px 밖에 안 남는 자리까지 스크롤했을 때) */
+      var ay = baseY - a.offsetHeight;
+      if (ay < box.top) ay = box.top;
+      putFixed(a, box.left + CHIP_EDGE, ay);
     }
     if (b) {
       b.style.visibility = "visible";
@@ -3839,6 +4156,11 @@ App.ChartDrawings = (function () {
       return;
     }
     els.toast.style.visibility = "visible";
+    /* 늦은 알림은 글이 깁니다. 차트 칸보다 넓어지면 placeToast 가 왼쪽으로
+       밀어내 화면 밖으로 나갑니다 — 미리 차트 칸 안으로 묶어 둡니다.
+       (묶어 두면 여러 줄로 접힙니다. 글씨는 그대로 12px 입니다) */
+    var maxW = box.right - box.left - CHIP_EDGE * 2;
+    els.toast.style.maxWidth = (maxW > 160 ? maxW : 160) + "px";
     var w = els.toast.offsetWidth;
     var x = (box.left + box.right) / 2 - w / 2;
     if (x < box.left) x = box.left;
@@ -3953,6 +4275,29 @@ App.ChartDrawings = (function () {
     els.chipBtn3 = b3;
   }
 
+  /* 알람 칩 안내 — 「두 줄」 로 씁니다 (14차 2026-09-02)
+   * 왜 두 줄인가 — 칩은 white-space:nowrap 입니다(없으면 360 에서 스스로
+   *   되풀이하며 오른쪽에 달라붙습니다. 위 injectStyle 주석 참고).
+   *   한 줄로 이어 붙이면 360 에서 칩이 화면 밖으로 나갑니다.
+   *   nowrap 은 「저절로 접히는 것」 만 막고 <br> 로 끊는 것은 그대로 됩니다.
+   *   그래서 폭은 그대로 두고 높이만 한 줄 늘렸습니다.
+   *   주의 — 글씨 크기는 그대로 11px 입니다. 줄이지 않았습니다.
+   * 되돌리려면 — 이 함수를 지우고 부르는 자리를
+   *   els.chipLabel.textContent = "알람 " + n + " · 창을 닫으면 못 알립니다";
+   *   로 되돌리면 됩니다. */
+  function paintAlertNote(n) {
+    var el = els.chipLabel;
+    if (!el) return;
+    el.textContent = "";
+    var l1 = document.createElement("span");
+    l1.textContent = "알람 " + n + " · " + ALERT_NOTE_1;
+    var l2 = document.createElement("span");
+    l2.textContent = ALERT_NOTE_2;
+    el.appendChild(l1);
+    el.appendChild(document.createElement("br"));
+    el.appendChild(l2);
+  }
+
   function showBtn3(text, on) {
     if (!els.chipBtn3) return;
     els.chipBtn3.style.display = "";
@@ -4017,7 +4362,7 @@ App.ChartDrawings = (function () {
        회원이 걸어놓고 창을 닫으면 "안 울렸다" 가 아니라 "가격이 안 닿았다" 로
        읽습니다. 그게 조용한 고장이라 여기 한 줄을 상시로 둡니다. */
     if (tool === "alert" && !askingClear) {
-      els.chipLabel.textContent = "알람 " + an + " · 창을 닫으면 못 알립니다";
+      paintAlertNote(an);
       els.chipBtn1.textContent = alertSoundOn() ? "소리 켬" : "소리 끔";
       els.chipBtn1.className = alertSoundOn() ? "on" : "";
       els.chipBtn1.removeAttribute("data-dim");
@@ -4227,7 +4572,7 @@ App.ChartDrawings = (function () {
   }
 
   /* ---------------- 알림 한 줄 ---------------- */
-  function toast(msg) {
+  function toast(msg, ms) {
     if (!wrap) return;
     if (!els.toast) {
       injectStyle();
@@ -4241,7 +4586,7 @@ App.ChartDrawings = (function () {
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
       if (els.toast) els.toast.style.display = "none";
-    }, 1600);
+    }, ms || TOAST_MS);
   }
 
   /* ---------------- 표정 고르는 창 (11차 2026-09-02) ----------------
@@ -4453,6 +4798,11 @@ App.ChartDrawings = (function () {
     /* 알람은 종목 단위라 종목이 바뀌면 선을 다시 깔고, 교차를 재는 기준값은
        버립니다(다른 종목의 지난 시세와 견주면 엉뚱하게 울립니다) */
     lastTick = null;
+    /* 떠나기 전에 "여기까지 봤다" 를 저장칸에 굳히고, 새 종목에서는 그 사이
+       놓친 교차가 있는지 훑습니다 (14차 2026-09-02 — P1 조용한 고장) */
+    flushSeen();
+    liveWatch = null;
+    catchUpSoon();
     /* 봉 간격이 바뀌면 논리 번호의 뜻이 달라집니다(1분봉 300번째 != 1일봉 300번째).
        js/chart.js 가 새로 불러온 뒤 fitContent() 를 하므로 기록만 비웁니다. */
     zoomUndo.length = 0;
@@ -4516,6 +4866,8 @@ App.ChartDrawings = (function () {
     syncAlertLines();
     paintChip();
     repaint();
+    /* 창을 닫았다 다시 연 사이에 지나간 것도 같은 길로 되찾습니다 */
+    catchUpSoon();
 
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", function () {
@@ -4526,6 +4878,12 @@ App.ChartDrawings = (function () {
     window.addEventListener("scroll", placeSoon, true);
     /* 다른 탭이 알람을 바꾸면 이쪽도 다시 읽습니다 (두 번 울리는 것을 막습니다) */
     window.addEventListener("storage", onAlertStorage);
+    /* 창을 닫기 직전에 "여기까지 봤다" 를 굳힙니다 — 안 굳히면 마지막 20초가
+       비어, 다시 열었을 때 이미 본 구간을 늦은 알림으로 또 알립니다 */
+    window.addEventListener("pagehide", flushSeen);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") flushSeen();
+    });
 
     document.addEventListener("fullscreenchange", onFullChange);
     document.addEventListener("webkitfullscreenchange", onFullChange);
@@ -4630,6 +4988,29 @@ App.ChartDrawings = (function () {
     getAlertCount: alertCount,
     onTickerForTest: onTicker,
     ALERT_KEY: ALERT_KEY,
+    /* 놓친 교차 되찾기 (14차 2026-09-02) — 계산부를 그대로 내줍니다.
+       테스트가 그물망(fetch) 없이 이 두 개만으로 다 검사할 수 있습니다. */
+    findCross: findCross,
+    applyCatchUpForTest: applyCatchUp,
+    catchTier: catchTier,
+    markSeenForTest: markSeen,
+    getAlertSeen: seenAt,
+    getCatchUpPerf: function () {
+      return { ms: catchMs, bars: catchBars };
+    },
+    CATCHUP: {
+      minMs: CATCHUP_MIN_MS,
+      maxMs: CATCHUP_MAX_MS,
+      limit: CATCHUP_LIMIT,
+      tiers: CATCHUP_TIERS,
+      seenSaveMs: SEEN_SAVE_MS
+    },
+    ALERT_NOTE_1: ALERT_NOTE_1,
+    ALERT_NOTE_2: ALERT_NOTE_2,
+    LATE_HZ: LATE_HZ,
+    LATE_BEEPS: LATE_BEEPS,
+    BEEP_HZ: BEEP_HZ,
+    alertTitleForTest: alertTitle,
     isBrushMode: function () {
       return !!brushHold.saved;
     },

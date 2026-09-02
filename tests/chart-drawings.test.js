@@ -528,16 +528,62 @@ const M = runModule();
   const 주문말 = ["openPosition", "placeOrder", "submitOrder", "closePosition", "setLeverage", "market\u0042uy"];
   const 걸린것 = 주문말.filter((w) => CODE.indexOf(w) !== -1);
   ok("주문을 내는 이름을 아무것도 부르지 않는다", 걸린것.length === 0, 걸린것.join(","));
-  ok("바깥으로 무언가 보내지 않는다 (돈 드는 발송 서비스 금지)",
-    CODE.indexOf("XMLHttpRequest") === -1 && CODE.indexOf("sendBeacon") === -1 &&
-    (CODE.match(/fetch\(/g) || []).length === 1, /* 하나뿐인 fetch 는 아이콘 스프라이트입니다 */
-    String((CODE.match(/fetch\(/g) || []).length));
-  ok("그 하나뿐인 fetch 는 우리 아이콘 파일이다", /fetch\(SPRITE_URL\)/.test(CODE));
+  /* --- 바깥으로 나가는 길 (2026-09-02 14차에서 봉인을 더 세게 했습니다) ---
+   * 12차 검사는 "fetch( 가 하나뿐" 이라고 개수만 셌습니다.
+   * 14차에서 놓친 알람을 되찾으려고 App.Api.fetchKlines 를 부르게 됐는데,
+   * 그 글자 안에는 "fetch(" 가 없습니다("fetchKlines(" 입니다).
+   * 그래서 「옛 검사에 걸리지 않고 조용히 지나갔습니다」.
+   * 개수 세기를 버리고 「나가는 길을 이름까지 적어 대조」하는 방식으로 바꿉니다.
+   * 여기 안 적힌 길이 하나라도 생기면 그 자리에서 터집니다. */
+  {
+    const 길 = (CODE.match(/[\w.]*fetch\w*\s*\(/g) || []).map((c) => c.replace(/\s+/g, ""));
+    const 이름 = Array.from(new Set(길)).sort().join(" ");
+    ok("바깥으로 나가는 길은 적어 둔 두 개뿐이다 (아이콘 파일 · 바이낸스 공개 봉)",
+      이름 === "App.Api.fetchKlines( fetch(", 이름);
+    ok("그중 fetch( 는 우리 아이콘 파일이다", /fetch\(SPRITE_URL\)/.test(CODE));
+    /* 봉을 받는 길은 js/chart.js 가 차트를 채울 때 쓰는 것과 같은 공개 읽기입니다.
+       종목 · 봉간격 · 개수 세 가지만 넘깁니다 — 회원 정보를 보내지 않습니다. */
+    ok("봉을 받을 때 종목·봉간격·개수만 넘긴다 (회원 정보 0)",
+      /App\.Api\.fetchKlines\(\s*\w+\s*,\s*\w+\.iv\s*,\s*\w+\s*\)/.test(CODE));
+    /* 읽기만 합니다. 올려 보내는 흔적(방식 지정 · 인증 · 쿠키)이 없어야 합니다.
+       주의 — body 라는 낱말은 안 봅니다. 브라우저 알림 옵션이 body 를 쓰는데
+       그건 바깥으로 나가는 것이 아니라 화면에 띄우는 글입니다. */
+    ok("무언가 올려 보내지 않는다 (방식 지정 · 인증 · 쿠키가 없다)",
+      CODE.indexOf("XMLHttpRequest") === -1 && CODE.indexOf("sendBeacon") === -1 &&
+      CODE.indexOf("POST") === -1 && CODE.indexOf("Authorization") === -1 &&
+      !/\bmethod\s*:/.test(CODE) && !/\bcredentials\s*:/.test(CODE) &&
+      !/\bheaders\s*:/.test(CODE));
+  }
   ok("서버에 저장하지 않는다 (이 브라우저에만 남습니다)",
     CODE.indexOf("supabase") === -1 && CODE.indexOf("Supabase") === -1);
 
-  /* 창을 닫으면 못 알린다는 말이 화면에 있어야 합니다 (조용한 고장을 막는 장치) */
-  ok("창을 닫으면 못 알린다고 화면에 적는다", SRC.indexOf("창을 닫으면 못 알립니다") !== -1);
+  /* --- 화면에 적는 안내 (2026-09-02 14차에서 봉인을 더 세게 했습니다) ---
+   * 12차 검사는 SRC(설명글 포함)에 "창을 닫으면 못 알립니다" 가 있는지만 봤습니다.
+   * 그러면 그 말이 「주석에만 남아 있어도 통과」합니다 — 실제로 14차에서
+   * 문구를 바꾸자 화면에서는 사라졌는데 옛 검사는 초록으로 지나갔습니다.
+   * 이제 「진짜 코드에서, 두 가지 사실을 다 적는지」 를 봅니다.
+   *   1) 지금 보는 창·종목에서만 실시간으로 운다
+   *   2) 놓친 것은 돌아오면 알려준다
+   * 1만 있으면 "그럼 못 알리는구나" 로 끝나고, 2만 있으면 "자리를 비워도
+   * 제때 울리겠구나" 로 잘못 읽습니다. 둘 다 있어야 합니다. */
+  ok("안내가 두 줄로 있고 서로 다르다",
+    !!M.ALERT_NOTE_1 && !!M.ALERT_NOTE_2 && M.ALERT_NOTE_1 !== M.ALERT_NOTE_2,
+    M.ALERT_NOTE_1 + " / " + M.ALERT_NOTE_2);
+  ok("첫 줄 — 이 창 · 이 종목에서만 운다고 적는다",
+    /이 창/.test(M.ALERT_NOTE_1) && /이 종목/.test(M.ALERT_NOTE_1) && /울립니다/.test(M.ALERT_NOTE_1),
+    M.ALERT_NOTE_1);
+  ok("둘째 줄 — 놓친 것은 돌아오면 알려준다고 적는다",
+    /놓친/.test(M.ALERT_NOTE_2) && /돌아오면/.test(M.ALERT_NOTE_2) && /알려/.test(M.ALERT_NOTE_2),
+    M.ALERT_NOTE_2);
+  ok("칩이 그 두 줄을 실제로 그린다 (주석이 아니라 코드에서)",
+    /paintAlertNote\(an\)/.test(CODE) && /ALERT_NOTE_1/.test(CODE) && /ALERT_NOTE_2/.test(CODE));
+  /* 진짜 코드(설명글 제외)에서 한 번씩만 나와야 합니다 — 두 벌이 되면
+     한쪽만 고치고 화면과 검사가 어긋납니다. 설명글의 인용은 셈에서 뺍니다. */
+  ok("안내 글자를 적은 곳은 한 곳뿐이다 (두 벌 금지)",
+    (CODE.split(M.ALERT_NOTE_1).length - 1) === 1 && (CODE.split(M.ALERT_NOTE_2).length - 1) === 1,
+    (CODE.split(M.ALERT_NOTE_1).length - 1) + " / " + (CODE.split(M.ALERT_NOTE_2).length - 1));
+  ok("글씨를 줄이지 않았다 (칩은 그대로 11px)",
+    /\.tl-draw-chip\{[^}]*font-size:11px/.test(SRC));
   ok("브라우저 알림을 거절해도 화면 알림줄은 돈다 (권한 확인 뒤에만 알림을 만든다)",
     /Notification\.permission !== "granted"/.test(CODE));
   ok("소리는 파일을 받지 않고 브라우저가 만든다 (용량 0 · 돈 0)",
@@ -546,6 +592,89 @@ const M = runModule();
     /addEventListener\("storage", onAlertStorage\)/.test(CODE));
   ok("시세는 초당 한 번 오는 ticker:update 로만 받는다",
     CODE.indexOf("ticker:update") !== -1);
+}
+
+/* ---------- 7-5) 놓친 교차 되찾기 (2026-09-02 14차 · P1) ----------
+ * 무엇이 P1 이었나 — 다른 종목을 보는 동안 알람이 조용히 멈췄고, 그 사이
+ * 지나간 교차는 돌아와도 영영 사라졌습니다. 화면에 오류가 하나도 안 나서
+ * 회원은 "안 울렸다 = 가격이 안 닿았다" 로 읽습니다.
+ * (PM 이 라이브에서 재현 · 점검팀 실측 2026-09-02 10:22~10:24)
+ *
+ * 여기서는 그물망(REST) 없이 계산부만 봅니다 — findCross · applyCatchUp.
+ * 봉을 직접 만들어 넣으므로 바이낸스가 죽어 있어도 이 검사는 돕니다. */
+{
+  const 분 = 60000;
+  const 봉 = (t, lo, hi) => ({ time: Math.floor(t / 1000), open: lo, high: hi, low: lo, close: hi });
+
+  /* --- findCross : 봉 하나의 고가·저가 안에 알람가가 들어오면 지난 것 --- */
+  const 기준 = 1000000 * 분; /* 아무 시각이나 */
+  const 목록 = [
+    봉(기준 - 2 * 분, 100, 110), /* 지켜보던 때 — 세면 안 됩니다 */
+    봉(기준 + 1 * 분, 100, 101),
+    봉(기준 + 2 * 분, 100, 120), /* 여기서 지났습니다 */
+    봉(기준 + 3 * 분, 100, 130)
+  ];
+  ok("지나간 봉을 찾는다", M.findCross(목록, 115, 기준) === 기준 + 2 * 분,
+    String(M.findCross(목록, 115, 기준)));
+  ok("가장 먼저 지난 봉을 집는다 (나중 봉이 아니라)",
+    M.findCross(목록, 125, 기준) === 기준 + 3 * 분, String(M.findCross(목록, 125, 기준)));
+  ok("안 닿았으면 못 찾는다", M.findCross(목록, 200, 기준) === null);
+  ok("지켜보던 때의 봉은 안 센다 (알람을 걸기 전 값으로 헛알람이 납니다)",
+    M.findCross(목록, 105, 기준 + 4 * 분) === null);
+  ok("걸친 봉도 안 센다 — 봉이 시작한 시각이 기준 뒤인 것만 본다",
+    M.findCross([봉(기준 - 1 * 분, 100, 130)], 115, 기준) === null);
+  ok("봉이 없으면 조용히 null", M.findCross([], 115, 기준) === null && M.findCross(null, 115, 기준) === null);
+
+  /* --- applyCatchUp : 찾은 것을 "늦은 알림" 으로 표시 --- */
+  const 앞 = M.getAlertCount();
+  const b1 = M.addAlert(115);
+  b1.at = 기준; /* 이 알람은 기준 시각에 걸었다고 칩니다 */
+  const 늦은 = M.applyCatchUpForTest("BTCUSDT", 목록, 기준, false);
+  ok("놓친 교차를 되찾아 울린 것으로 바꾼다", 늦은.length === 1 && 늦은[0].id === b1.id,
+    String(늦은.length));
+  ok("늦게 찾은 것이라고 표시한다 (지금 울린 것과 갈라야 합니다)",
+    b1.done === true && b1.late === true && b1.lateAt === 기준 + 2 * 분,
+    JSON.stringify({ done: b1.done, late: b1.late, lateAt: b1.lateAt }));
+  ok("선 이름표가 다르다 — 늦은 것은 (늦음) 이 붙는다",
+    M.alertTitleForTest(b1) === "알람 울림(늦음)" &&
+    M.alertTitleForTest({ done: true }) === "알람 울림" &&
+    M.alertTitleForTest({ done: false }) === "알람",
+    M.alertTitleForTest(b1));
+  ok("소리도 다르다 — 늦은 것은 낮은 소리 세 번",
+    M.LATE_HZ !== M.BEEP_HZ && M.LATE_HZ < M.BEEP_HZ && M.LATE_BEEPS === 3,
+    M.LATE_HZ + "Hz x" + M.LATE_BEEPS);
+  ok("한 번 되찾은 것은 다시 안 울린다",
+    M.applyCatchUpForTest("BTCUSDT", 목록, 기준, false).length === 0);
+
+  /* 알람을 건 시각보다 앞선 교차는 세지 않습니다 (헛알람 방지) */
+  const b2 = M.addAlert(115);
+  b2.at = 기준 + 4 * 분; /* 다 지나간 뒤에 걸었습니다 — 이 뒤로는 봉이 없습니다 */
+  ok("알람을 건 뒤의 교차만 센다",
+    M.applyCatchUpForTest("BTCUSDT", 목록, 기준, false).length === 0 && b2.done === false);
+  b2.done = true;
+  M.clearFiredAlerts();
+  ok("정리했다", M.getAlertCount() === 앞, String(M.getAlertCount()));
+
+  /* --- 얼마나 거슬러 올라가나 --- */
+  ok("8시간까지는 1분봉으로 본다", M.catchTier(1).iv === "1m" && M.catchTier(480).iv === "1m");
+  ok("5일까지는 15분봉", M.catchTier(481).iv === "15m" && M.catchTier(7200).iv === "15m");
+  ok("그보다 오래면 4시간봉", M.catchTier(7201).iv === "4h" && M.catchTier(999999).iv === "4h");
+  ok("가장 오래 거슬러 올라가는 것은 60일이다",
+    M.CATCHUP.maxMs === 60 * 24 * 60 * 60 * 1000, String(M.CATCHUP.maxMs));
+  /* 어느 구간이든 한 번 요청으로 끝나야 합니다 — 바이낸스 상한 안쪽 */
+  {
+    const 넘침 = M.CATCHUP.tiers.filter((t) => Math.ceil(t.maxMin / t.min) + 3 > M.CATCHUP.limit);
+    ok("어느 구간이든 봉 요청 한 번으로 끝난다 (500개 안쪽)", 넘침.length === 0,
+      넘침.map((t) => t.iv).join(","));
+    const 끝 = M.CATCHUP.tiers[M.CATCHUP.tiers.length - 1];
+    ok("가장 성긴 봉이 60일을 덮는다", 끝.maxMin * 60000 >= M.CATCHUP.maxMs,
+      끝.maxMin + "분 vs " + M.CATCHUP.maxMs / 60000 + "분");
+  }
+
+  /* --- 되찾기도 주문을 내지 않습니다 (12차 경계 그대로) --- */
+  ok("되찾기가 주문을 내지 않는다", CODE.indexOf("App.Trading") === -1);
+  ok("되찾기는 봉을 읽기만 한다 (되돌리기 Ctrl+Z 와 얽히지 않는다)",
+    !/pushUndo\(\)[^]{0,400}applyCatchUp/.test(CODE) && !/applyCatchUp[^]{0,400}pushUndo\(\)/.test(CODE));
 }
 
 /* ---------- 8) 화면이 없으면 아무것도 안 만든다 ---------- */
