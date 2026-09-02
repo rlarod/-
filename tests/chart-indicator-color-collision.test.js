@@ -132,12 +132,76 @@ function 바닥(i) {
   return i.pane === "sub" ? "sub:" + i.id : "main";
 }
 
-/** 지금 화면에 있는 모든 선의 색 - [{id, key, hex, pane, 바닥}] */
+/* ⭐⭐⭐ 2026-09-02 (12단계) — ★무엇을 "겹쳤다" 고 부를 것인가★ 를 고쳤습니다
+ *        (PM 승인. 차트팀이 옛 볼린저를 틀로 옮기면서 드러난 것)
+ *
+ * ── 무엇이 드러났나 ─────────────────────────────────────────────────────
+ * 볼린저가 틀 밖(js/chart-indicators.js)에 있어서 이 봉인이 여태 못 봤습니다.
+ * 틀로 들어오자마자 10건이 빨개졌는데, 그 10건이 전부 ★지금 회원이 보고 있는
+ * 화면 그대로★ 였습니다.
+ *     main  ma-99.ma ↔ bb-20.upper / middle / lower   (넷 다 #838DA4)
+ *
+ * 그런데 그건 사고가 아니라 ★이 상품의 원래 설계★ 입니다. 옛 파일이 직접
+ * 그렇게 적어 두었습니다 —
+ *     js/chart-indicators.js:79
+ *       "볼린저는 #838DA4 점선 셋 — 실선인 MA(99)와 선 모양으로 구분됩니다."
+ * 즉 ★색은 같고 선 모양으로 가른다★ 가 처음부터의 약속이었습니다.
+ *
+ * ── 그래서 봉인을 ★넓힌 게 아니라 정확하게★ 만들었습니다 ─────────────────
+ *     봉인이 지키려던 것   "두 선이 ★한 줄로 보이는 것★"
+ *     옛 재는 방식         색만 봄       -> 점선/실선 차이를 ★못 봄★
+ *     새 재는 방식         색 + 선 모양  -> 진짜로 갈리는지를 봄
+ *
+ * ⚠️ ★굵기는 일부러 안 넣었습니다.★ PM 지시는 "색+선모양+굵기가 전부 같으면
+ *    실패" 였고, 아래 판정은 그보다 ★더 엄격합니다★ (굵기가 달라도 색·선모양이
+ *    같으면 실패). 굵기를 봐주면 2026-08-31 사고가 통과해 버립니다 —
+ *    그때 시세선(금색 2px)과 MA(7)(금색 1px)이 ★굵기가 달랐는데도★ 회원 화면의
+ *    62.7% 에서 한 줄로 보였습니다. 1px 과 2px 은 겹쳐 놓으면 안 갈립니다.
+ *    굵기는 실패 메시지에 ★적기만★ 합니다.
+ *
+ * ── 밴드(위/중간/아래)는 한 색이 맞습니다 ───────────────────────────────
+ * 볼린저의 위·중간·아래는 ★한 덩어리★ 라 트레이딩뷰도 같은 색으로 그립니다.
+ * 서로 겹칠 일도 없습니다(늘 위 > 중간 > 아래). 그래서 ★같은 인스턴스 안★ 에서만
+ * 봐줍니다. 아래 목록에 이름이 있는 정의에 ★한해서★ 입니다.
+ *
+ * ⚠️ 이 목록에 이름을 더하려면 ★근거를 날짜와 함께 여기에 적으세요.★
+ *    그리고 밴드로 선언하면 [2] 절이 거꾸로 ★색이 전부 같은지★ 를 요구합니다 —
+ *    "비슷하지만 다른 색" 을 슬쩍 넣는 길을 막으려는 것입니다.
+ *
+ *   bb   2026-09-02. 옛 js/chart-indicators.js 의 볼린저를 그대로 옮긴 것.
+ *        위·중간·아래 셋 다 #838DA4 점선. 회원이 몇 달째 보던 화면이고
+ *        PM 이 "색을 바꾸지 마세요 · 옮긴 뒤에도 회색 4개여야 합니다" 로 정했습니다.
+ */
+const 밴드정의 = ["bb"];
+
+function 밴드인가(defId) {
+  return 밴드정의.indexOf(defId) >= 0;
+}
+
+/** 그 선이 실제로 그려지는 선 모양. 인스턴스가 정한 것이 우선이고,
+ *  없으면 정의가 그 선에 준 기본값입니다(js/chart-indicator-kit.js addSeriesFor 와 같은 순서). */
+function 선모양(K, inst, outKey) {
+  if (inst.style) return inst.style;
+  const d = (K.getDefsForTest() || {})[inst.def];
+  const o = d && d.outputs ? d.outputs.filter((x) => x.key === outKey)[0] : null;
+  return (o && o.style) || "solid";
+}
+
+/** 지금 화면에 있는 모든 선 - [{id, def, key, hex, 선모양, 굵기, pane, 바닥}] */
 function 모든선(K) {
   const out = [];
   K.listInstances().forEach((i) => {
     Object.keys(i.colors).forEach((k) =>
-      out.push({ id: i.id, key: k, hex: i.colors[k], pane: i.pane, 바닥: 바닥(i) })
+      out.push({
+        id: i.id,
+        def: i.def,
+        key: k,
+        hex: i.colors[k],
+        선모양: 선모양(K, i, k),
+        굵기: i.width || 1,
+        pane: i.pane,
+        바닥: 바닥(i),
+      })
     );
   });
   return out;
@@ -161,13 +225,28 @@ function 바닥별겹침(선들) {
   return out;
 }
 
+/**
+ * ★한 줄로 보이는 쌍★ 을 찾습니다 (위 12단계 주석 참조).
+ *   · 색이 다르면          갈립니다
+ *   · 색이 같아도 선 모양이 다르면(점선 ↔ 실선) 갈립니다
+ *   · 색도 선 모양도 같으면 ★굵기가 달라도 한 줄로 보입니다★ -> 겹침
+ *   · 단, ★같은 인스턴스 안의 밴드★(볼린저 위/중간/아래)는 한 덩어리라 봐줍니다
+ */
 function 겹친쌍(선들) {
-  const 본것 = {};
   const 겹침 = [];
-  선들.forEach((s) => {
-    if (본것[s.hex]) 겹침.push(본것[s.hex] + " ↔ " + s.id + "." + s.key + " (" + s.hex + ")");
-    else 본것[s.hex] = s.id + "." + s.key;
-  });
+  for (let a = 0; a < 선들.length; a++) {
+    for (let b = a + 1; b < 선들.length; b++) {
+      const x = 선들[a];
+      const y = 선들[b];
+      if (x.hex !== y.hex) continue;
+      if (x.선모양 !== y.선모양) continue;
+      if (x.id === y.id && 밴드인가(x.def)) continue;
+      겹침.push(
+        x.id + "." + x.key + " ↔ " + y.id + "." + y.key +
+          " (" + x.hex + " " + x.선모양 + " " + x.굵기 + "px/" + y.굵기 + "px)"
+      );
+    }
+  }
   return 겹침;
 }
 
@@ -204,7 +283,16 @@ console.log("\n[2] 정의의 기본색 (KDJ 3선 · StochRSI 2선)");
   목록.forEach((d) => {
     const outs = (defs[d.id] && defs[d.id].outputs) || [];
     const 색들 = outs.map((o) => o.color);
-    if (색들.length > 1) {
+    if (색들.length > 1 && 밴드인가(d.id)) {
+      /* ⭐ 밴드로 선언한 정의는 ★거꾸로★ 봅니다 - 전부 같은 색이어야 합니다.
+         "다를 필요 없다" 로만 두면 "비슷하지만 다른 색" 을 슬쩍 넣을 수 있고,
+         그건 밴드도 아니고 구분도 안 되는 최악입니다. */
+      ok(
+        d.id + " 는 ★밴드★ 라 선 " + 색들.length + "개가 전부 같은 색이다",
+        new Set(색들).size === 1,
+        색들.join(" ")
+      );
+    } else if (색들.length > 1) {
       ok(
         d.id + " 는 선이 " + 색들.length + "개인데 서로 다른 색이다",
         new Set(색들).size === 색들.length,
@@ -329,11 +417,13 @@ console.log("\n[3] 회원이 지표를 하나씩 다 얹었을 때");
   K.listInstances().forEach((i) => {
     const 색들 = Object.keys(i.colors).map((k) => i.colors[k]);
     if (색들.length < 2) return;
-    ok(
-      i.id + " 안의 " + 색들.length + "개 선이 서로 다른 색이다",
-      new Set(색들).size === 색들.length,
-      Object.keys(i.colors).map((k) => k + "=" + i.colors[k]).join(" ")
-    );
+    const 글 = Object.keys(i.colors).map((k) => k + "=" + i.colors[k]).join(" ");
+    if (밴드인가(i.def)) {
+      /* 밴드는 한 덩어리 - 셋이 ★같은 색이어야★ 합니다(위 12단계 주석) */
+      ok(i.id + " 안의 " + 색들.length + "개 선이 ★밴드라 전부 같은 색★ 이다", new Set(색들).size === 1, 글);
+      return;
+    }
+    ok(i.id + " 안의 " + 색들.length + "개 선이 서로 다른 색이다", new Set(색들).size === 색들.length, 글);
   });
 
   /* 바닥 하나하나를 따로 봅니다. ★이건 절대 완화하면 안 됩니다.★ */
@@ -550,6 +640,225 @@ console.log("\n[5] 회원이 색을 손으로 고칠 때");
     K.listInstances().filter((i) => i.id === id)[0].colors.ema === 다른색,
     다른색
   );
+}
+
+/* =======================================================================
+ * [6] ⭐ 밴드 목록이 ★두 벌★ 이 아닌가
+ *
+ * 이 파일의 밴드정의 는 사람이 손으로 적은 목록입니다. 틀(js/chart-indicator-kit.js)
+ * 쪽에도 define({ band:true }) 표시가 있습니다. ★둘이 어긋나면★
+ *   · 틀에만 있고 여기 없으면  -> 누가 band:true 를 붙여 이 봉인을 몰래 피한 것
+ *   · 여기만 있고 틀에 없으면  -> 이 봉인이 있지도 않은 예외를 봐주고 있는 것
+ * 둘 다 조용한 고장이라 여기서 글자 단위로 맞춥니다.
+ * ===================================================================== */
+console.log("\n[6] 밴드 목록이 틀과 어긋나지 않는가");
+{
+  const B = boot(makeCandles(60));
+  const 틀밴드 = B.K.listDefs()
+    .filter((d) => d.band === true)
+    .map((d) => d.id)
+    .sort();
+  ok(
+    "틀이 밴드로 선언한 정의와 이 봉인의 목록이 같다",
+    틀밴드.join(",") === 밴드정의.slice().sort().join(","),
+    "틀 [" + 틀밴드.join(",") + "] vs 봉인 [" + 밴드정의.join(",") + "]"
+  );
+  ok("밴드는 아직 하나뿐이다 (늘리려면 위 주석에 근거를 적으세요)", 틀밴드.length === 1, String(틀밴드.length));
+
+  const 비밴드 = B.K.listDefs().filter((d) => !d.band);
+  const defs = B.K.getDefsForTest();
+  const 어긴것 = [];
+  비밴드.forEach((d) => {
+    const 색들 = ((defs[d.id] && defs[d.id].outputs) || []).map((o) => o.color);
+    if (색들.length > 1 && new Set(색들).size !== 색들.length) 어긴것.push(d.id);
+  });
+  ok("밴드가 아닌 정의는 전부 선마다 다른 색이다", 어긴것.length === 0, 어긴것.join(","));
+}
+
+/* =======================================================================
+ * [7] ⭐⭐ "기본값" 버튼을 눌러도 같은 바닥에서 안 겹치는가
+ *
+ * -- 2026-09-02 (13단계) 에 ★라이브에서★ 잡힌 것 -----------------------
+ * 설정 창의 "기본값" 이 ★정의(define)의 기본값★ 으로 되돌렸습니다. 옮겨 온
+ * 줄들은 자기만의 태생값이 따로 있는데 그걸 몰랐습니다.
+ *     ma-25   기간 25 · 흰 #E7ECF5  ->  기간 9 · ★금 #F0B429★
+ *     ma-99   기간 99 · 회 #838DA4  ->  기간 9 · ★금 #F0B429★
+ *     ema-21  기간 21 · #BA6EED     ->  기간 9 · ★#49C9E9★ (ema-9 와 같은 색)
+ * 되돌린 뒤 MA(7)(금색)과 ★한 줄로 보였습니다.★ 점검팀 실측 - 캔버스 표본
+ * 11열 중 5열(45%)에서 금색 덩어리가 하나로 보였습니다. 오류는 0건이었습니다.
+ *
+ * -- 왜 이 절이 따로 필요한가 -------------------------------------------
+ * 위 [3] 은 ★얹은 직후★ 만 봅니다. "기본값" 버튼은 그 뒤에 눌리는 ★다른 길★
+ * 이라 [3] 이 초록이어도 여기서 겹칠 수 있었습니다. 실제로 그랬습니다.
+ * ===================================================================== */
+console.log("\n[7] 기본값 버튼을 눌러도 안 겹치는가");
+{
+  const B = boot(makeCandles(160));
+  const K = B.K;
+
+  K.listInstances().forEach((i) => K.resetInstance(i.id));
+  const 선1 = 모든선(K);
+  const 겹1 = 바닥별겹침(선1);
+  ok("기본 인스턴스를 전부 되돌려도 같은 바닥에서 안 겹친다", 겹1.length === 0, 겹1.join(" / "));
+
+  const 태생 = {
+    "ma-7": [7, "#F0B429"],
+    "ma-25": [25, "#E7ECF5"],
+    "ma-99": [99, "#838DA4"],
+    "ema-9": [9, "#49C9E9"],
+    "ema-21": [21, "#BA6EED"],
+  };
+  Object.keys(태생).forEach((id) => {
+    const it = K.listInstances().filter((x) => x.id === id)[0];
+    const 첫 = it ? it.colors[Object.keys(it.colors)[0]] : null;
+    ok(
+      "기본값을 눌러도 " + id + " 이 기간 " + 태생[id][0] + " · " + 태생[id][1] + " 그대로다",
+      !!it && it.params.p === 태생[id][0] && 첫 === 태생[id][1],
+      it ? it.params.p + " / " + 첫 : "없음"
+    );
+  });
+
+  K.updateInstance("ma-25", { params: { p: 3 }, colors: { ma: "#F0B429" }, width: 4, style: "dotted" });
+  K.resetInstance("ma-25");
+  const m25 = K.listInstances().filter((x) => x.id === "ma-25")[0];
+  ok(
+    "회원이 금색 4px 점선으로 바꾼 뒤 눌러도 흰색 1px 실선 25 로 돌아온다",
+    m25.params.p === 25 && m25.colors.ma === "#E7ECF5" && m25.width === 1 && m25.style === "solid",
+    m25.params.p + " / " + m25.colors.ma + " / " + m25.width + " / " + m25.style
+  );
+
+  const 정의들 = K.listDefs().map((d) => d.id);
+  정의들.forEach((did) => 회원추가(K, did));
+  K.listInstances().forEach((i) => K.resetInstance(i.id));
+  const 선2 = 모든선(K);
+  const 겹2 = 바닥별겹침(선2);
+  ok(
+    "다 얹고 전부 되돌려도 같은 바닥에서 안 겹친다 (선 " + 선2.length + "개)",
+    겹2.length === 0,
+    겹2.join(" / ")
+  );
+
+  const saved = B.stored["chart-indicator-kit"];
+  const B2 = boot(makeCandles(160), { saved: saved });
+  B2.K.updateInstance("ma-99", { params: { p: 4 }, colors: { ma: "#F0B429" } });
+  B2.K.resetInstance("ma-99");
+  const m99 = B2.K.listInstances().filter((x) => x.id === "ma-99")[0];
+  ok(
+    "새로고침한 뒤에 눌러도 태생값(99 · #838DA4)으로 돌아온다",
+    m99.params.p === 99 && m99.colors.ma === "#838DA4",
+    m99.params.p + " / " + m99.colors.ma
+  );
+
+  const 옛 = JSON.parse(JSON.stringify(saved));
+  옛.instances.forEach((x) => delete x.born);
+  옛.instances.forEach((x) => {
+    if (x.id === "ma-99") {
+      x.params = { p: 5 };
+      x.colors = { ma: "#F0B429" };
+    }
+  });
+  const B3 = boot(makeCandles(160), { saved: 옛 });
+  B3.K.resetInstance("ma-99");
+  const m99b = B3.K.listInstances().filter((x) => x.id === "ma-99")[0];
+  ok(
+    "태생값이 없던 옛 저장분도 99 · #838DA4 로 돌아온다",
+    m99b.params.p === 99 && m99b.colors.ma === "#838DA4",
+    m99b.params.p + " / " + m99b.colors.ma
+  );
+}
+
+/* =======================================================================
+ * [8] ⭐⭐⭐ 돌연변이 검증 — ★이 봉인이 진짜로 터지는가★
+ *
+ * 12단계에서 판정을 "색만" 에서 "색 + 선 모양" 으로 바꿨습니다. 기준을 낮춘 게
+ * 아니라는 것을 ★일부러 틀리게 만들어서★ 확인합니다. 여기가 초록인데 위가
+ * 전부 초록이면, 위가 초록인 것에 뜻이 있습니다.
+ * ===================================================================== */
+console.log("\n[8] 돌연변이 검증 (일부러 틀리게 해서 터지는지)");
+{
+  const B = boot(makeCandles(60));
+  const K = B.K;
+
+  const id = K.createInstance("ema", { on: false, params: { p: 12 } });
+  K.updateInstance(id, { colors: { ema: "#F0B429" }, style: "solid" });
+  const 겹 = 바닥별겹침(모든선(K));
+  ok(
+    "★같은 색 · 둘 다 실선★ 이면 여전히 터진다 (2026-08-31 계열)",
+    겹.length > 0,
+    겹.length ? 겹.join(" / ") : "안 터졌습니다 — 봉인이 죽었습니다"
+  );
+  ok(
+    "터진 쌍이 금색 실선 두 줄이다",
+    겹.join(" ").indexOf("#F0B429") >= 0 && 겹.join(" ").indexOf("solid") >= 0,
+    겹.join(" / ")
+  );
+
+  K.updateInstance(id, { width: 3 });
+  const 겹굵기 = 바닥별겹침(모든선(K));
+  ok(
+    "굵기만 다르고 색·선 모양이 같으면 ★그래도★ 터진다 (1px ↔ 3px)",
+    겹굵기.length > 0,
+    겹굵기.length ? 겹굵기.join(" / ") : "안 터졌습니다 — 굵기로 빠져나갔습니다"
+  );
+
+  /* 반대쪽 — 선 모양이 다르면 봐줍니다. 이것이 12단계의 핵심입니다.
+     ★지금 회원 화면 그대로★ 를 씁니다 - MA(99) 회색 ★실선★ ↔ 볼린저 회색 ★점선★.
+     둘 다 진짜로 #838DA4 인지도 같이 확인합니다(아니면 이 검사가 헛돕니다). */
+  {
+    const B0 = boot(makeCandles(60));
+    const 선0 = 모든선(B0.K);
+    const m99 = 선0.filter((x) => x.id === "ma-99")[0];
+    const bbs = 선0.filter((x) => x.id === "bb-20");
+    ok("MA(99) 가 회색 실선이다", !!m99 && m99.hex === "#838DA4" && m99.선모양 === "solid",
+      m99 ? m99.hex + " " + m99.선모양 : "없음");
+    ok("볼린저 세 줄이 회색 점선이다",
+      bbs.length === 3 && bbs.every((x) => x.hex === "#838DA4" && x.선모양 === "dashed"),
+      bbs.map((x) => x.hex + " " + x.선모양).join(" / "));
+    const 겹점선 = 바닥별겹침(선0).filter((x) => x.indexOf("#838DA4") >= 0);
+    ok(
+      "색이 같아도 ★점선 ↔ 실선★ 이면 안 터진다 (볼린저 ↔ MA(99) 가 이 사이)",
+      겹점선.length === 0,
+      겹점선.join(" / ")
+    );
+    /* 그런데 ★점선끼리★ 같은 색이면 터져야 합니다 - 봐주는 범위가 넓지 않다는 증거 */
+    const eid = B0.K.createInstance("ema", { on: false });
+    B0.K.updateInstance(eid, { colors: { ema: "#838DA4" }, style: "dashed" });
+    const 겹점점 = 바닥별겹침(모든선(B0.K)).filter((x) => x.indexOf("#838DA4") >= 0);
+    ok(
+      "★점선끼리★ 같은 색이면 터진다 (봐주는 것은 선 모양이 다를 때뿐)",
+      겹점점.length > 0,
+      겹점점.length ? 겹점점.join(" / ") : "안 터졌습니다 — 너무 넓게 봐주고 있습니다"
+    );
+  }
+
+  const B2 = boot(makeCandles(60));
+  const 가짜 = B2.K.define({
+    id: "mut-band",
+    name: "돌연변이",
+    pane: "main",
+    params: { p: 5 },
+    outputs: [
+      { key: "a", kind: "line", color: "#49C9E9", style: "solid" },
+      { key: "b", kind: "line", color: "#49C9E9", style: "solid" },
+    ],
+    seed: function () {
+      return { a: [], b: [] };
+    },
+    step: function () {
+      return { values: {}, state: {} };
+    },
+  });
+  ok("돌연변이 정의가 등록됐다", 가짜 === true);
+  const d2 = B2.K.getDefsForTest()["mut-band"];
+  const 색2 = (d2.outputs || []).map((o) => o.color);
+  ok(
+    "밴드로 선언하지 않은 정의가 선 둘을 한 색으로 들면 [2] 절이 잡는다",
+    new Set(색2).size !== 색2.length && d2.band !== true,
+    색2.join(" ") + " band=" + d2.band
+  );
+
+  const 되돌림 = B2.K.resetInstance("ma-99");
+  ok("되돌리기 자체는 그대로 동작한다", 되돌림 === true);
 }
 
 console.log("\n통과 " + pass + " / 실패 " + fail);

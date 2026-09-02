@@ -34,6 +34,9 @@
  *    옛 파일을 고친 것이 아니라, 켤 때 옛 모듈의 공개 함수(setOn)로 옛 선을
  *    끄고 우리 줄을 옛 자리에 끼웁니다. 자세한 것은 아래 12.5절.
  *    되돌리기 - 콘솔에서 App.ChartIndicatorKit.restoreLegacyMA() 뒤 새로고침.
+ * ⚠️ 2026-09-02 (12단계) 부터 ★볼린저 한 줄도 이 틀이 그립니다.★ 아래 12.6절.
+ *    되돌리기 - 콘솔에서 App.ChartIndicatorKit.restoreLegacyBB() 뒤 새로고침.
+ *    ★거래량 · RSI · MACD 는 아직 옛 모듈이 그립니다.★
  *
  * -- js/chart.js 도 한 글자도 안 건드렸습니다 -------------------------
  * js/chart-font.js 가 LightweightCharts.createChart 를 감싸 두었기 때문에
@@ -134,6 +137,22 @@
  *              우리 줄을 끼웁니다. ★한 번만★ 하고 표시를 저장합니다.
  *   아직 안 옮긴 것  볼린저 · 거래량 · RSI · MACD. 다음 단계입니다.
  *
+ * -- 2026-09-02 (12단계) 에 옮겨 온 것 - ★옛 볼린저★ -------------------
+ *   무엇을      정의 "bb" ★하나★ + 인스턴스 ★하나★ (bb-20).
+ *              이제 기간 · 표준편차 배수 · 값 종류 · 밀기 · 색 · 굵기 ·
+ *              선 모양을 회원이 고칩니다(옛 것은 전부 코드에 박혀 있었습니다).
+ *   안 바꾼 것  기간 20 · 배수 2 · 색 #838DA4 셋 · ★점선★ · 굵기 1 ·
+ *              ★계산값(오차 0)★. 더하는 순서까지 옛 computeBB 와 같습니다.
+ *              표준편차는 ★모집단★(÷p) 그대로입니다.
+ *   옮기기      12.6절. 12.5절(MA)과 순서·안전장치가 같습니다.
+ *   ⚠️ 아직 안 옮긴 것  거래량 · RSI · MACD.
+ *      거래량은 chart.js 가 만든 시리즈를 켜고 끄는 것이라 "우리가 그리는"
+ *      이 틀과 뿌리가 다릅니다(새로 그리면 막대가 두 벌).
+ *      RSI · MACD 는 이 틀에 아직 없는 것 셋을 씁니다 -
+ *      ① 눈금 0~100 고정(autoscaleInfoProvider) ② 칸 이름표(값이 같이 뜸)
+ *      ③ 표시 통화를 따라가는 숫자 형식(MACD 는 가격 차이라 원화로 봅니다).
+ *      셋을 이 틀에 먼저 내지 않고 옮기면 회원 화면이 달라집니다.
+ *
  * -- 2026-09-02 (10단계) 에 늘어난 것 - 지표 4개 + ★색 겹침 마무리★ ----
  *   Stochastic  %K 14 · 다듬기 1 · %D 3 · 기준선 20 · 80   (트레이딩뷰 내장)
  *   ADX / DMI   DI 14 · ADX 14 · 기준선 없음               (트레이딩뷰 도움말)
@@ -182,9 +201,10 @@
  * -- 되돌리기 ---------------------------------------------------------
  *   ⚠️ 11단계(MA 옮기기) 부터는 ★순서★ 가 있습니다.
  *   0) 먼저 콘솔에서  App.ChartIndicatorKit.restoreLegacyMA()  → 새로고침
- *      (안 하면 옛 MA 가 꺼진 채로 남습니다 - 이 파일이 옛 모듈의 setOn 으로
- *       꺼 두었기 때문입니다. 회원마다 브라우저에서 한 번씩 해야 합니다.
- *       못 하면 회원이 fx 목록에서 MA 를 다시 켜면 됩니다.)
+ *      그리고     App.ChartIndicatorKit.restoreLegacyBB()  → 새로고침
+ *      (안 하면 옛 MA · 옛 볼린저가 꺼진 채로 남습니다 - 이 파일이 옛 모듈의
+ *       setOn 으로 꺼 두었기 때문입니다. 회원마다 브라우저에서 한 번씩 해야
+ *       합니다. 못 하면 회원이 fx 목록에서 다시 켜면 됩니다.)
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
  *   3) (테스트가 생겼다면) package.json 과 tests/_order.txt 의 해당 토막 삭제
@@ -369,7 +389,7 @@ App.ChartIndicatorKit = (function () {
    * ------------------------------------------------------------------- */
   var DEF_FIELDS = [
     "id", "name", "note", "pane", "params", "inputs", "outputs", "guides", "clouds",
-    "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset"
+    "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset", "band"
   ];
 
   var STORAGE_KEY = "chart-indicator-kit";
@@ -543,6 +563,13 @@ App.ChartIndicatorKit = (function () {
       guides: guides,
       clouds: clouds,
       nameOf: isFn(def.nameOf) ? def.nameOf : null,
+      /* ★밴드★ - 위·중간·아래처럼 ★같은 뜻의 선 묶음★ 이라 한 색으로 그립니다.
+         트레이딩뷰도 밴드는 한 덩어리로 봅니다. 이 표시가 있으면
+         autoColors 가 선마다 다른 색을 뿌리지 않고 ★한 색을 함께★ 줍니다.
+         ⚠️ 아무 지표에나 붙이면 안 됩니다 - KDJ 의 K·D·J 처럼 ★뜻이 다른★
+            선은 색으로 갈려야 합니다. tests/chart-indicator-color-collision.test.js
+            가 "밴드로 선언한 정의" 목록을 따로 들고 이 값과 대조합니다. */
+      band: !!def.band,
       seed: def.seed,
       step: def.step
     };
@@ -599,6 +626,7 @@ App.ChartIndicatorKit = (function () {
         name: d.name,
         note: d.note,
         pane: d.pane,
+        band: !!d.band,
         params: copy(d.params),
         inputs: inputsOf(d.id),
         guides: d.guides.map(function (g) {
@@ -700,8 +728,100 @@ App.ChartIndicatorKit = (function () {
        다른 선과 같아질 수 있습니다(회원 경로 · 저장소에서 되살릴 때). */
     fixDupColors(insts[id], opts.colors ? Object.keys(opts.colors) : []);
 
+    /* ⭐ ★태생값★ - 이 줄이 ★처음 얹혔을 때의 모습★ 입니다. 설정 창의
+       "기본값" 버튼이 되돌아갈 자리이고, 여기 말고 다른 곳에 두지 않습니다.
+       (자세한 것은 아래 defaultsOf / resetInstance 의 주석) */
+    insts[id].born = bornOf(id, opts.born);
+
     instOrder.push(id);
     return id;
+  }
+
+  /* =====================================================================
+   * ⭐⭐ 태생값(born) - "기본값" 버튼이 되돌아갈 자리
+   *
+   * -- 2026-09-02 (13단계) 에 라이브에서 잡힌 것 -------------------------
+   * 설정 창의 "기본값" 을 누르면 ★정의(define)의 기본값★ 으로 되돌아갔습니다.
+   * 그런데 옮겨 온 줄들은 ★자기만의 태생값★ 이 따로 있습니다.
+   *     ma-25   전 기간 25 · 흰 #E7ECF5   ->  후 기간 9 · ★금 #F0B429★
+   *     ma-99   전 기간 99 · 회 #838DA4   ->  후 기간 9 · ★금 #F0B429★
+   *     ema-21  전 기간 21 · #BA6EED      ->  후 기간 9 · ★#49C9E9★
+   * 되돌린 뒤 MA(7)(금색)과 ★한 줄로 보였습니다★ - 오류 0건 · 화면 멀쩡.
+   * 2026-08-31 "시세선과 MA7 이 둘 다 금색" 과 같은 계열입니다.
+   *
+   * -- 그래서 인스턴스가 자기 태생값을 들고 다닙니다 ---------------------
+   * 만들어질 때의 기간 · 색 · 굵기 · 선 모양을 그대로 적어 두고, "기본값" 은
+   * ★그 값★ 으로 되돌립니다. 회원이 새로 얹은 줄은 태생값이 곧 정의 기본값이라
+   * 지금과 똑같이 동작합니다.
+   *
+   * ⚠️ 회원이 바꿔 둔 값은 건드리지 않습니다 - "기본값" 을 누를 때만 돌아갑니다.
+   * ⚠️ 저장칸에 같이 넣습니다. 안 넣으면 새로고침 한 번에 태생값을 잊습니다.
+   *    ★옛 회원 브라우저에는 태생값이 없습니다★ - 그때는 아래 defaultsOf 가
+   *    기본 인스턴스 목록(DEFAULT_INSTANCES)에서 찾아 되살립니다.
+   * ===================================================================== */
+
+  /** 저장된(또는 갓 만든) 태생값을 깨끗하게 다듬습니다. */
+  function bornOf(id, raw) {
+    var it = insts[id];
+    var d = it && defs[it.def];
+    if (!d) return null;
+
+    /* 저장칸은 회원 브라우저에 있어 손댈 수 있습니다 - 그대로 믿지 않습니다 */
+    var src = raw && typeof raw === "object" ? raw : null;
+    if (!src) {
+      var seed = defaultsOf(it.def, id);
+      src = seed || { params: it.params, colors: it.colors, style: it.style, width: it.width };
+    }
+
+    var hexes = colorHexes();
+    var colors = {};
+    d.outputs.forEach(function (o) {
+      var want = src.colors && src.colors[o.key];
+      colors[o.key] = want && hexes.indexOf(want) >= 0 ? want : o.color;
+    });
+
+    return {
+      params: cleanParams(it.def, src.params),
+      colors: colors,
+      style: ALLOWED_STYLES.indexOf(src.style) >= 0 ? src.style : null,
+      width: ALLOWED_WIDTHS.indexOf(src.width | 0) >= 0 ? src.width | 0 : DEFAULT_WIDTH
+    };
+  }
+
+  /** 옛 회원 브라우저용 - 기본 인스턴스 목록에서 그 줄의 태생값을 찾습니다.
+   *  없으면 null(= 정의 기본값이 곧 태생값. 회원이 새로 얹은 줄이 그렇습니다). */
+  function defaultsOf(defId, id) {
+    for (var i = 0; i < DEFAULT_INSTANCES.length; i++) {
+      var s = DEFAULT_INSTANCES[i];
+      if (s.id !== id || s.def !== defId) continue;
+      return { params: s.params, colors: s.colors, style: s.style, width: s.width };
+    }
+    return null;
+  }
+
+  /** 그 선이 실제로 그려지는 선 모양 - 인스턴스가 정한 것이 우선입니다
+   *  (addSeriesFor 의 styleOf(it.style || out.style) 와 같은 순서). */
+  function styleKeyOf(it, out) {
+    return it.style || out.style || "solid";
+  }
+
+  /** 같은 칸에서 ★색도 선 모양도 같은★ 다른 줄이 쓰고 있는 색.
+   *  점선 ↔ 실선은 눈으로 갈리므로 한 줄로 안 봅니다(볼린저 ↔ MA(99)). */
+  function lookAlikeMap(it, styleKey) {
+    var group = paneGroupOf(it);
+    var m = {};
+    instOrder.forEach(function (iid) {
+      if (iid === it.id) return;
+      var o = insts[iid];
+      if (!o || paneGroupOf(o) !== group) return;
+      var od = defs[o.def];
+      if (!od) return;
+      od.outputs.forEach(function (x) {
+        if (styleKeyOf(o, x) !== styleKey) return;
+        m[o.colors[x.key]] = true;
+      });
+    });
+    return m;
   }
 
   function removeInstance(id) {
@@ -1699,12 +1819,42 @@ App.ChartIndicatorKit = (function () {
     var it = insts[id];
     var d = it && defs[it.def];
     if (!d) return false;
-    it.params = copy(d.params);
-    it.style = null;
-    it.width = DEFAULT_WIDTH;
+
+    /* ⭐ ★정의 기본값이 아니라 이 줄의 태생값★ 으로 되돌립니다 (위 born 주석).
+       태생값이 없는 옛 저장분은 bornOf 가 만들어 둡니다. */
+    var b = it.born || bornOf(id, null);
+    it.born = b;
+    it.params = cleanParams(it.def, b.params);
+    it.style = b.style;
+    it.width = b.width;
     d.outputs.forEach(function (o) {
-      it.colors[o.key] = o.color;
+      it.colors[o.key] = b.colors[o.key] || o.color;
     });
+
+    /* ⭐ 되돌린 색이 ★같은 칸 · 같은 선 모양★ 인 다른 줄과 같으면 빈 색으로
+       옮깁니다. 안 하면 "기본값을 눌렀더니 딴 지표와 한 줄로 보이는" 길이
+       그대로 남습니다(2026-08-31 부터 이 계열이 네 번째입니다).
+       ⚠️ 한 인스턴스 안에서 ★일부러 같은 색★ 인 것(볼린저 위·중간·아래)은
+          ★같은 색인 채로 함께★ 옮깁니다 - 밴드가 세 색으로 갈라지면 안 됩니다. */
+    var 옮김 = {};
+    var 찜 = {};
+    d.outputs.forEach(function (o) {
+      var c = it.colors[o.key];
+      if (옮김[c]) {
+        it.colors[o.key] = 옮김[c];
+        return;
+      }
+      if (!lookAlikeMap(it, styleKeyOf(it, o))[c]) {
+        옮김[c] = c;
+        찜[c] = true;
+        return;
+      }
+      var next = pickFreeColor(찜, it.id, paneGroupOf(it));
+      옮김[c] = next || c;
+      it.colors[o.key] = 옮김[c];
+      찜[옮김[c]] = true;
+    });
+
     if (it.on) {
       turnOff(id);
       turnOn(id);
@@ -1820,6 +1970,8 @@ App.ChartIndicatorKit = (function () {
   function fixDupColors(it, keep) {
     var d = defs[it.def];
     if (!d || d.outputs.length < 2) return false;
+    /* ★밴드는 일부러 한 색★ 입니다 - 여기서 갈라 놓으면 안 됩니다 */
+    if (d.band) return false;
 
     var keepMap = {};
     (keep || []).forEach(function (k) {
@@ -1884,6 +2036,28 @@ App.ChartIndicatorKit = (function () {
     var it = insts[id];
     var d = it && defs[it.def];
     if (!d) return false;
+
+    /* ★밴드★ - 선마다 다른 색을 뿌리지 않고 ★한 색을 셋 다★ 줍니다.
+       회원이 색을 하나라도 골랐으면 그 색으로 통일합니다. 안 골랐으면
+       정의 기본색이 비어 있을 때 그대로 쓰고, 이미 쓰이면 빈 색을 찾습니다. */
+    if (d.band) {
+      var pick = null;
+      if (given) {
+        for (var gk in given) {
+          if (it.colors[gk]) { pick = it.colors[gk]; break; }
+        }
+      }
+      if (!pick) {
+        var base = it.colors[d.outputs[0].key] || d.outputs[0].color;
+        pick = usedColorMap(id)[base] ? pickFreeColor({}, id, paneGroupOf(it)) || base : base;
+      }
+      var moved = false;
+      d.outputs.forEach(function (o) {
+        if (it.colors[o.key] !== pick) moved = true;
+        it.colors[o.key] = pick;
+      });
+      return moved;
+    }
 
     var givenMap = {};
     (given ? Object.keys(given) : []).forEach(function (k) {
@@ -1973,6 +2147,10 @@ App.ChartIndicatorKit = (function () {
     /* ★모든 선★ 에 아직 안 쓰인 색을 채웁니다(위 autoColors 주석 - 10단계).
        회원이 opts.colors 로 준 선은 그대로 둡니다. */
     autoColors(id, opts.colors);
+    /* ⚠️ 태생값을 ★여기서 다시★ 찍습니다 - autoColors 가 색을 바꾼 뒤라야
+       "기본값" 이 ★처음 화면에 나왔던 그 색★ 으로 돌아갑니다. 앞에서 찍은
+       값(정의 기본색)으로 두면 되돌릴 때 다른 줄과 같은 색이 될 수 있습니다. */
+    if (insts[id]) insts[id].born = bornOf(id, { params: insts[id].params, colors: insts[id].colors, style: insts[id].style, width: insts[id].width });
     saveState();
     buildButtons();
     injectMenuRows();
@@ -2033,7 +2211,8 @@ App.ChartIndicatorKit = (function () {
             style: it.style,
             width: it.width,
             pane: it.pane,
-            on: it.on
+            on: it.on,
+            born: it.born      /* ★태생값★ - 안 넣으면 새로고침 한 번에 잊습니다 */
           };
         })
       });
@@ -2054,7 +2233,7 @@ App.ChartIndicatorKit = (function () {
     /* ★옮겼다는 표시는 인스턴스보다 먼저 읽습니다.★ 저장된 인스턴스가
        하나도 없어도(회원이 전부 지웠어도) 다시 옮기면 안 됩니다 -
        두 번 옮기면 회원이 지운 MA 줄이 되살아납니다. */
-    if (saved && saved.v === STORE_VERSION && saved.moved && saved.moved.ma) {
+    if (saved && saved.v === STORE_VERSION && saved.moved && (saved.moved.ma || saved.moved.bb)) {
       movedState = saved.moved;
     }
 
@@ -2613,6 +2792,127 @@ App.ChartIndicatorKit = (function () {
       return {
         values: { wma: num / den },
         state: { N: num, S: sum, oldest: st.buf[head], buf: st.buf, head: head }
+      };
+    }
+  });
+
+  /* -- BOLL 볼린저밴드 --------------------------------------------------
+   * 중간선 = 기간 p 단순이동평균,  위/아래 = 중간선 ± k × 표준편차
+   *
+   * ⭐ 이것은 ★새 지표가 아니라 옮겨 온 것★ 입니다.
+   *    js/chart-indicators.js 의 computeBB() 가 그리던 그 선입니다.
+   *    회원이 지금 보고 있는 그대로여야 합니다 - 색 · 선모양 · 값 전부.
+   *      색      위 · 중간 · 아래 ★셋 다★ #838DA4 (보조색)
+   *      선모양  ★점선★ (실선인 MA(99) 와 모양으로 구분됩니다)
+   *      기본값  기간 20 · 배수 2   (바이낸스 BOLL 기본값 = 트레이딩뷰 기본값)
+   *    ⚠️ 색을 바꾸지 마세요. 회원이 바꾸고 싶으면 설정 창에서 바꿉니다.
+   *
+   * -- 표준편차는 ★모집단★ 입니다 (÷p, ÷(p-1) 아님) ---------------------
+   *    옛 stdevOfWindow() 가 Math.sqrt(acc / period) 였습니다. 트레이딩뷰
+   *    ta.stdev 도 모집단입니다. ÷(p-1) 로 바꾸면 밴드 폭이 미세하게 넓어져
+   *    회원 화면의 선 자리가 조용히 움직입니다.
+   *
+   * -- step 이 하는 일의 양 ---------------------------------------------
+   *    합계는 O(1) 입니다(빠질 값 하나 빼고 새 값 하나 더하기).
+   *    ★표준편차만 창 p개를 훑습니다★ - 평균이 매 틱 달라지므로 (x-평균)²
+   *    을 누적해 둘 수 없습니다. 기본 20이면 틱마다 뺄셈·곱셈 20번입니다.
+   *    ⚠️ 이것은 ★옛 모듈과 똑같은 양★ 입니다(js/chart-indicators.js:425
+   *       도 매 틱 stdevOfWindow 로 20개를 훑었습니다). 늘어난 게 아닙니다.
+   *       봉 1000개를 다시 계산하는 것과는 다릅니다.
+   *
+   * ⚠️ buf 를 그 자리에서 고쳐 쓰는 것은 위 MA · WMA 와 같은 이유로 안전합니다
+   *    (덮어쓰는 칸은 st.head 하나뿐이고 그 칸의 옛 값은 st.oldest 에 있습니다).
+   *    표준편차를 훑을 때는 ★쓴 뒤★ 의 buf 를 ★시간순★ 으로 읽습니다 -
+   *    새 head 부터 한 바퀴가 곧 오래된 것 → 새 것 순서입니다.
+   * ------------------------------------------------------------------- */
+
+  /** 창 [end-p+1 .. end] 의 모집단 표준편차. 옛 stdevOfWindow() 와 같은 순서. */
+  function stdevWindow(src, end, p, mean) {
+    var acc = 0;
+    for (var i = end - p + 1; i <= end; i++) {
+      var d = src[i] - mean;
+      acc += d * d;
+    }
+    return Math.sqrt(acc / p);
+  }
+
+  define({
+    id: "bb",
+    name: "BOLL",
+    note: "볼린저밴드",
+    pane: "main",
+    /* ★밴드★ - 위·중간·아래는 한 덩어리라 ★한 색★ 으로 그립니다.
+       회원이 지금 보고 있는 화면(#838DA4 점선 셋)이 그렇고, 트레이딩뷰도
+       밴드를 한 덩어리로 봅니다. 이 표시가 없으면 틀이 선마다 다른 색을
+       뿌려서, 회원이 볼린저를 새로 얹으면 알록달록해집니다. */
+    band: true,
+    params: { p: 20, k: 2 },
+    inputs: [
+      { key: "p", label: "기간", min: 1, max: 1000 },
+      { key: "k", label: "표준편차 배수", type: "float", min: 0.1, max: 50 }
+    ],
+    useSource: true,
+    useOffset: true,
+    nameOf: function (prm) {
+      /* ★옛 fx 목록 줄과 글자까지 같습니다★ - js/chart-indicator-menu.js:139
+         가 "BOLL(" + 기간 + ", " + 배수 + ")" 로 적고 있었습니다. */
+      return "BOLL(" + prm.p + ", " + prm.k + ")";
+    },
+    outputs: [
+      /* 옛 모듈이 만든 순서 그대로 - 위 · 중간 · 아래 (색이 셋 다 같아
+         겹쳐 보이는 순서는 화면에 안 드러나지만, 순서를 맞춰 둡니다) */
+      { key: "upper", kind: "line", color: "#838DA4", style: "dashed" },
+      { key: "middle", kind: "line", color: "#838DA4", style: "dashed" },
+      { key: "lower", kind: "line", color: "#838DA4", style: "dashed" }
+    ],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var k = typeof prm.k === "number" && isFinite(prm.k) ? prm.k : 2;
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var up = [], mid = [], lo = [];
+      if (n < p) return { upper: up, middle: mid, lower: lo };
+
+      /* ★옛 computeBB 와 같은 순서로 더합니다★ - 순서가 다르면 소수점
+         끝자리가 갈라져 "값이 조금 다른" 조용한 차이가 납니다. */
+      var sum = 0;
+      for (var i = 0; i < n; i++) {
+        sum += src[i];
+        if (i >= p) sum -= src[i - p];
+        if (i < p - 1) continue;
+        var mean = sum / p;
+        var sd = stdevWindow(src, i, p, mean);
+        mid.push({ time: bs.time[i], value: mean });
+        up.push({ time: bs.time[i], value: mean + k * sd });
+        lo.push({ time: bs.time[i], value: mean - k * sd });
+        if (i === n - 2) cap.state = smaState(sum, src, i, p);
+      }
+      return { upper: up, middle: mid, lower: lo };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var k = typeof prm.k === "number" && isFinite(prm.k) ? prm.k : 2;
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var sum = st.S + x - st.oldest;
+
+      var len = st.buf.length || 1;
+      st.buf[st.head] = x;                    /* 덮어쓰는 칸은 여기 하나뿐 */
+      var head = (st.head + 1) % len;
+
+      /* 새 head 부터 한 바퀴 = 오래된 것 → 새 것 (옛 stdevOfWindow 와 같은 순서) */
+      var mean = sum / p;
+      var acc = 0;
+      for (var q = 0; q < len; q++) {
+        var d = st.buf[(head + q) % len] - mean;
+        acc += d * d;
+      }
+      var sd = Math.sqrt(acc / p);
+
+      return {
+        values: { upper: mean + k * sd, middle: mean, lower: mean - k * sd },
+        state: { S: sum, oldest: st.buf[head], buf: st.buf, head: head }
       };
     }
   });
@@ -4214,6 +4514,16 @@ App.ChartIndicatorKit = (function () {
     { old: "ma99", id: "ma-99", p: 99, hex: "#838DA4" }
   ];
 
+  /* ---------------------------------------------------------------------
+   * 옛 볼린저를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다. (12.6절)
+   *
+   * 옛 이름 "bb" 는 RESERVED_IDS 라 쓸 수 없습니다(MA 와 같은 이유).
+   * 색 셋은 ★지금 회원이 보던 그 색★ 입니다 - 위 · 중간 · 아래 전부
+   * 보조색 #838DA4 에 ★점선★. 바꾸지 마세요.
+   * 기간 20 · 배수 2 는 옛 BB_PERIOD · BB_MULT 그대로입니다.
+   * ------------------------------------------------------------------- */
+  var MOVED_BB = { old: "bb", id: "bb-20", p: 20, k: 2, hex: "#838DA4" };
+
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
      정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 8단계의 증명이었습니다.
      ⭐ 2026-09-02 (11단계) 에 MA 세 줄이 늘었습니다 - ★늘린 것이 아니라
@@ -4225,6 +4535,17 @@ App.ChartIndicatorKit = (function () {
     { def: "ma", id: "ma-7", params: { p: 7 }, colors: { ma: "#F0B429" }, style: "solid", on: false },
     { def: "ma", id: "ma-25", params: { p: 25 }, colors: { ma: "#E7ECF5" }, style: "solid", on: false },
     { def: "ma", id: "ma-99", params: { p: 99 }, colors: { ma: "#838DA4" }, style: "solid", on: false },
+    {
+      /* ⭐ 2026-09-02 (12단계) - 옛 볼린저를 옮겨 온 줄입니다(아래 12.6절).
+         MA 세 줄과 같은 이유로 늘어난 것이 아닙니다 - 옛 줄이 빠집니다.
+         자리도 옛 fx 목록 그대로 MA(99) 다음입니다. */
+      def: "bb",
+      id: "bb-20",
+      params: { p: 20, k: 2 },
+      colors: { upper: "#838DA4", middle: "#838DA4", lower: "#838DA4" },
+      style: "dashed",
+      on: false
+    },
     { def: "ema", id: "ema-9", params: { p: 9 }, colors: { ema: "#49C9E9" }, style: "solid", on: false },
     { def: "ema", id: "ema-21", params: { p: 21 }, colors: { ema: "#BA6EED" }, style: "solid", on: false }
   ];
@@ -4283,7 +4604,7 @@ App.ChartIndicatorKit = (function () {
     return { ma7: !!g.ma7, ma25: !!g.ma25, ma99: !!g.ma99 };
   }
 
-  function moveLegacyMA() {
+  function moveLegacyMA(quiet) {
     if (movedMA()) return false;
     var old = readLegacyMA();
     if (!old) return false;   /* 아직 못 읽음 - 다음 기회에 */
@@ -4315,13 +4636,21 @@ App.ChartIndicatorKit = (function () {
       });
     }
 
-    movedState = { ma: true, at: Date.now(), legacy0: old };
+    movedState = movedState || {};
+    movedState.ma = true;
+    movedState.at = Date.now();
+    movedState.legacy0 = old;
     saveState();
 
-    /* 옮긴 직후에 화면도 맞춥니다(다음 감시를 기다리지 않게) */
-    buildButtons();
-    injectMenuRows();
-    paintMenu();
+    /* 옮긴 직후에 화면도 맞춥니다(다음 감시를 기다리지 않게).
+       ⚠️ quiet 이면 안 그립니다 - 아래 moveLegacyAll() 이 ★둘 다 옮긴 뒤★
+          한 번만 그리려고 씁니다. 하나씩 그리면 아직 안 옮긴 쪽의 줄이
+          "옛 자리" 를 못 찾아 목록 맨 뒤로 밀립니다(실제로 그랬습니다). */
+    if (!quiet) {
+      buildButtons();
+      injectMenuRows();
+      paintMenu();
+    }
     return true;
   }
 
@@ -4342,18 +4671,145 @@ App.ChartIndicatorKit = (function () {
         }
       });
     }
-    movedState = null;
+    /* ⚠️ movedState 를 통째로 비우면 ★볼린저 표시까지★ 지워져서, 다음
+       새로고침에 볼린저가 다시 옮겨집니다(회원이 지운 줄이 되살아납니다).
+       그래서 MA 표시만 내리고 볼린저 표시는 그대로 둡니다. */
+    movedState = movedState && movedState.bb
+      ? { ma: false, bb: true, bbAt: movedState.bbAt, legacyBB: movedState.legacyBB }
+      : null;
     saveState();
     /* 옛 줄·옛 칩은 ★새로고침하면★ 그대로 돌아옵니다(옛 모듈이 다시 그립니다) */
     return true;
   }
 
+  /* =====================================================================
+   * 12.6 ★옛 볼린저(BOLL 20, 2) 를 이 틀로 옮기기★  - 한 번만
+   *
+   * 위 12.5절(MA)과 ★같은 순서·같은 안전장치★ 입니다. 다른 점만 적습니다.
+   *   · 옛 켜짐/꺼짐도 같은 App.ChartIndicators.getState() 에서 읽습니다
+   *     (볼린저는 MA 와 같은 파일·같은 저장칸에 있습니다)
+   *   · 줄이 셋(위·중간·아래)이지만 회원에게는 ★스위치 하나★ 입니다 -
+   *     틀에서도 인스턴스 하나에 선 셋이라 그대로입니다
+   *   · 색·선모양을 안 바꿉니다 - #838DA4 점선 셋 그대로입니다
+   *
+   * -- 되돌리기 ---------------------------------------------------------
+   * 콘솔에서  App.ChartIndicatorKit.restoreLegacyBB()  → 새로고침.
+   * 옮기기 직전의 옛 켜짐/꺼짐(legacyBB)이 그대로 돌아옵니다.
+   * ===================================================================== */
+  function movedBB() {
+    return !!(movedState && movedState.bb);
+  }
+
+  /** 옛 볼린저 켜짐/꺼짐. 아직 못 읽는 상태면 null(그때는 안 옮깁니다). */
+  function readLegacyBB() {
+    var IND = legacyIND();
+    if (!IND || !isFn(IND.getState)) return null;
+    var g;
+    try {
+      g = IND.getState();
+    } catch (e) {
+      return null;
+    }
+    if (!g || typeof g !== "object") return null;
+    if (!("bb" in g)) return null;
+    return { bb: !!g.bb };
+  }
+
+  function moveLegacyBB(quiet) {
+    if (movedBB()) return false;
+    var old = readLegacyBB();
+    if (!old) return false;   /* 아직 못 읽음 - 다음 기회에 */
+
+    if (insts[MOVED_BB.id]) {
+      insts[MOVED_BB.id].on = !!old.bb;
+    } else {
+      addInstance("bb", {
+        id: MOVED_BB.id,
+        params: { p: MOVED_BB.p, k: MOVED_BB.k },
+        colors: { upper: MOVED_BB.hex, middle: MOVED_BB.hex, lower: MOVED_BB.hex },
+        style: "dashed",
+        width: DEFAULT_WIDTH,
+        on: !!old.bb
+      });
+    }
+
+    /* 옛 선 끄기 - ★우리 인스턴스를 만든 뒤에★ 합니다(안 끄면 두 벌) */
+    var IND = legacyIND();
+    if (IND && isFn(IND.setOn)) {
+      try {
+        IND.setOn(MOVED_BB.old, false);
+      } catch (e) {
+        /* 못 꺼도 화면은 돕니다 - 그 경우 선이 두 벌 보입니다 */
+      }
+    }
+
+    movedState = movedState || {};
+    movedState.bb = true;
+    movedState.bbAt = Date.now();
+    movedState.legacyBB = { bb: !!old.bb };
+    saveState();
+
+    if (!quiet) {
+      buildButtons();
+      injectMenuRows();
+      paintMenu();
+    }
+    return true;
+  }
+
+  /** 옮길 것을 ★다 옮긴 뒤★ 화면을 한 번만 맞춥니다.
+   *  순서가 중요합니다 - 줄을 하나 끼울 때마다 "옛 줄이 있던 자리" 를
+   *  찾는데, 아직 안 옮긴 쪽의 옛 줄이 살아 있어야 그 앞에 끼울 수 있습니다. */
+  function moveLegacyAll() {
+    var a = moveLegacyMA(true);
+    var b = moveLegacyBB(true);
+    if (!a && !b) return false;
+    buildButtons();
+    injectMenuRows();
+    paintMenu();
+    return true;
+  }
+
+  /** 되돌리기 - 우리 볼린저 줄을 지우고 옛 켜짐/꺼짐을 되살립니다. */
+  function restoreLegacyBB() {
+    if (!movedBB()) return false;
+    var old = (movedState && movedState.legacyBB) || { bb: false };
+    if (insts[MOVED_BB.id]) removeInstance(MOVED_BB.id);
+    var IND = legacyIND();
+    if (IND && isFn(IND.setOn)) {
+      try {
+        IND.setOn(MOVED_BB.old, !!old.bb);
+      } catch (e) {
+        /* 무시 */
+      }
+    }
+    movedState.bb = false;
+    movedState.legacyBB = null;
+    if (!movedState.ma) movedState = null;
+    saveState();
+    return true;
+  }
+
+  /** 지금 옮겨진 짝 목록 - [{ old, id }]. 아래 세 함수가 이것만 봅니다.
+   *  (옮긴 것이 늘어도 여기 한 곳만 늘면 됩니다 - 같은 목록 두 벌 금지) */
+  function movedPairs() {
+    var out = [];
+    if (movedMA()) {
+      for (var i = 0; i < MOVED_MA.length; i++) {
+        out.push({ old: MOVED_MA[i].old, id: MOVED_MA[i].id });
+      }
+    }
+    if (movedBB()) out.push({ old: MOVED_BB.old, id: MOVED_BB.id });
+    return out;
+  }
+
   /** 옛 줄(fx 목록) 을 화면에서 뺍니다 - 옮긴 뒤에만 */
   function dropLegacyMenuRows() {
-    if (!movedMA()) return;
+    var pairs = movedPairs();
+    if (!pairs.length) return;
     var p = menuPanel();
     if (!p) return;
-    MOVED_MA.forEach(function (m) {
+    pairs.forEach(function (m) {
       var r = p.querySelector('.tl-fx-row[data-key="' + m.old + '"]');
       if (r && r.parentNode) r.parentNode.removeChild(r);
     });
@@ -4361,8 +4817,8 @@ App.ChartIndicatorKit = (function () {
 
   /** 옛 칩(차트 왼쪽 위) 을 화면에서 뺍니다 - 옮긴 뒤에만 */
   function dropLegacyChips(bar) {
-    if (!movedMA() || !bar) return;
-    MOVED_MA.forEach(function (m) {
+    if (!bar) return;
+    movedPairs().forEach(function (m) {
       var b = bar.querySelector('.tl-ind-btn[data-ind="' + m.old + '"]');
       if (b && b.parentNode) b.parentNode.removeChild(b);
     });
@@ -4370,10 +4826,11 @@ App.ChartIndicatorKit = (function () {
 
   /** 우리 줄을 ★옛 줄이 있던 자리에★ 끼우려고 그 자리를 찾습니다 */
   function legacyAnchor(root, id, sel) {
-    if (!movedMA() || !root) return null;
-    for (var i = 0; i < MOVED_MA.length; i++) {
-      if (MOVED_MA[i].id !== id) continue;
-      return root.querySelector(sel + '[data-' + (sel === ".tl-fx-row" ? "key" : "ind") + '="' + MOVED_MA[i].old + '"]');
+    if (!root) return null;
+    var pairs = movedPairs();
+    for (var i = 0; i < pairs.length; i++) {
+      if (pairs[i].id !== id) continue;
+      return root.querySelector(sel + '[data-' + (sel === ".tl-fx-row" ? "key" : "ind") + '="' + pairs[i].old + '"]');
     }
     return null;
   }
@@ -4385,7 +4842,7 @@ App.ChartIndicatorKit = (function () {
     loadState(DEFAULT_INSTANCES);
     /* 옛 MA 옮기기 - 옛 모듈이 이미 상태를 읽었으면 여기서 끝납니다.
        아직이면 아래 준비 타이머가 될 때까지 다시 시도합니다(12.5절). */
-    moveLegacyMA();
+    moveLegacyAll(); /* 옛 MA(12.5절) · 옛 볼린저(12.6절) */
 
     if (App.Bus && isFn(App.Bus.on)) {
       App.Bus.on("kline:update", onTick);
@@ -4406,7 +4863,7 @@ App.ChartIndicatorKit = (function () {
       }
       wrapMenuBridge();
       watchMenu(); /* .chart-panel 이 늦게 생길 수 있어 여기서도 다시 겁니다 */
-      moveLegacyMA(); /* 옛 모듈이 늦게 올라오는 경우 (12.5절) */
+      moveLegacyAll(); /* 옛 모듈이 늦게 올라오는 경우 (12.5 · 12.6절) */
       if (!ensureChart()) return;
       if (!buildButtons()) return;
       if (!anyOn()) {
@@ -4457,6 +4914,11 @@ App.ChartIndicatorKit = (function () {
     isMovedForTest: movedMA,
     moveLegacyMAForTest: moveLegacyMA,
     MOVED_MA: MOVED_MA,
+    /* 옛 볼린저 옮기기 (12.6절) */
+    restoreLegacyBB: restoreLegacyBB,
+    isMovedBBForTest: movedBB,
+    moveLegacyBBForTest: moveLegacyBB,
+    MOVED_BB: MOVED_BB,
     /** 라인(종가선) 모드에서 점선으로 바꿀 MA(7) 선.
      *  js/chart-ma-line-mode.js 가 옛 MA7 선 대신 이것을 봅니다 -
      *  옮긴 뒤에는 옛 선이 아예 안 그려지므로, 안 넘겨주면 라인 모드에서

@@ -1,20 +1,27 @@
-/* tests/chart-indicator-ma-move.test.js
+/* tests/chart-indicator-bb-move.test.js
  * =========================================================================
- * 옛 MA(7)·MA(25)·MA(99) 를 지표 틀로 옮긴 것 — 봉인
+ * 옛 볼린저(BOLL 20, 2) 를 지표 틀로 옮긴 것 — 봉인
  * =========================================================================
- * 2026-09-02 (11단계). js/chart-indicators.js 가 그리던 MA 세 줄이
- * js/chart-indicator-kit.js 로 옮겨졌습니다. 이 파일은 그 옮김이 회원 화면을
- * 조용히 바꾸지 않았는지 지킵니다.
+ * 2026-09-02 (12단계). js/chart-indicators.js 가 그리던 볼린저 세 줄(위·중간·
+ * 아래)이 js/chart-indicator-kit.js 로 옮겨졌습니다. 이 파일은 그 옮김이 회원
+ * 화면을 조용히 바꾸지 않았는지 지킵니다.
+ *
+ * ⚠️ 11단계(MA)의 tests/chart-indicator-ma-move.test.js 와 ★같은 모양★ 입니다.
+ *    MA 쪽 봉인을 그대로 두고 볼린저만 따로 봅니다(한 파일에 두 건을 섞지 않음).
  *
  * ── 이 건에서 제일 위험한 것 ────────────────────────────────────────────
- *   ① 켜 두었던 것이 꺼진다   회원 브라우저의 옛 저장칸(chart-indicators)과
- *                             새 저장칸(chart-indicator-kit)이 다릅니다.
- *   ② 색이 바뀐다             금 #F0B429 · 흰 #E7ECF5 · 회 #838DA4 그대로여야 합니다.
- *   ③ 값이 달라진다           옛 computeSMA 와 ★소수점 끝자리까지★ 같아야 합니다.
+ *   ① 켜 두었던 것이 꺼진다   옛 저장칸(chart-indicators)과 새 칸이 다릅니다.
+ *   ② 색·선모양이 바뀐다      위·중간·아래 ★셋 다★ #838DA4 ★점선★ 이어야 합니다.
+ *                             (실선인 MA(99) 와 선 모양으로 구분됩니다)
+ *   ③ 값이 달라진다           옛 computeBB 와 ★소수점 끝자리까지★ 같아야 합니다.
  *                             숫자를 박지 않고 ★옛 파일을 실제로 실행해★ 대조합니다.
- *   ④ 선이 두 벌 그려진다     옛 MA 를 안 끄면 같은 자리에 두 번 그립니다.
- *   ⑤ 줄이 뒤섞인다           fx 목록·칩 줄에서 옛 자리를 그대로 이어받아야 합니다.
- *   ⑥ 두 번 옮긴다            회원이 지운 MA 줄이 새로고침마다 되살아납니다.
+ *                             표준편차는 ★모집단★(÷p) 입니다 - ÷(p-1) 로 바뀌면
+ *                             밴드 폭이 조용히 넓어집니다.
+ *   ④ 선이 두 벌 그려진다     옛 볼린저를 안 끄면 같은 자리에 여섯 줄이 됩니다.
+ *   ⑤ 자리가 바뀐다           옛 자리는 MA(99) 다음 · 거래량 앞입니다.
+ *                             실제로 옮기는 순서를 잘못 짜서 거래량 뒤로 밀렸었습니다.
+ *   ⑥ 두 번 옮긴다            회원이 지운 줄이 새로고침마다 되살아납니다.
+ *   ⑦ 거래량을 건드린다       ★거래량은 이번에 안 옮겼습니다.★ 기본 켜짐 그대로여야 합니다.
  *
  * ── 되돌리기 ────────────────────────────────────────────────────────────
  *   tests/_order.txt 의 이 줄과 이 파일을 지우면 끝입니다.
@@ -34,13 +41,14 @@ const OLD_SRC = fs.readFileSync(path.join(REPO, OLD_FILE), "utf8");
 
 let pass = 0;
 let fail = 0;
+const ESC = String.fromCharCode(27);
 function ok(name, cond, detail) {
   if (cond) {
     pass++;
-    console.log("  [32m✓[0m " + name);
+    console.log("  " + ESC + "[32m✓" + ESC + "[0m " + name);
   } else {
     fail++;
-    console.log("  [31m✗[0m " + name + (detail ? " — " + detail : ""));
+    console.log("  " + ESC + "[31m✗" + ESC + "[0m " + name + (detail ? " — " + detail : ""));
   }
 }
 
@@ -478,165 +486,158 @@ function 칩이름들(bar) {
     .map((b) => b.getAttribute("data-ind") || b.getAttribute("data-kit"));
 }
 
+
 const candles = makeCandles(160);
 const closes = candles.map((c) => c.close);
 const times = candles.map((c) => c.time);
 
-console.log("\n=== 옛 MA 를 틀로 옮긴 것 ===");
+console.log("\n=== 옛 볼린저를 틀로 옮긴 것 ===");
 
 /* =======================================================================
- * [1] ⭐ 값이 그대로인가 — 옛 computeSMA 와 소수점 끝자리까지
+ * [1] 값이 그대로인가 — 옛 computeBB 와 소수점 끝자리까지
+ *     숫자를 손으로 옮겨 적지 않습니다 — 옛 파일을 실제로 실행합니다.
  * ===================================================================== */
 console.log("\n[1] 값 대조 (옛 js/chart-indicators.js 를 실제로 실행해서)");
 {
   const 옛 = 옛계산();
-  ok("옛 모듈에서 computeSMA 를 꺼냈다", typeof 옛.computeSMA === "function");
-  ok(
-    "옛 기간이 7 · 25 · 99 그대로다",
-    옛.MA_PERIODS.ma7 === 7 && 옛.MA_PERIODS.ma25 === 25 && 옛.MA_PERIODS.ma99 === 99,
-    JSON.stringify(옛.MA_PERIODS)
-  );
-  ok(
-    "옛 색이 금 · 흰 · 회 그대로다",
-    옛.COLORS.ma7 === "#F0B429" && 옛.COLORS.ma25 === "#E7ECF5" && 옛.COLORS.ma99 === "#838DA4",
-    JSON.stringify(옛.COLORS)
-  );
+  ok("옛 모듈에서 computeBB 를 꺼냈다", typeof 옛.computeBB === "function");
+  ok("옛 기간이 20 그대로다", 옛.BB_PERIOD === 20, String(옛.BB_PERIOD));
+  ok("옛 배수가 2 그대로다", 옛.BB_MULT === 2, String(옛.BB_MULT));
+  ok("옛 색이 #838DA4 그대로다", 옛.COLORS.bb === "#838DA4", 옛.COLORS.bb);
 
-  const B = boot(candles, { 옛상태: { ma7: false, ma25: false, ma99: false } });
-  [
-    ["ma-7", 7],
-    ["ma-25", 25],
-    ["ma-99", 99],
-  ].forEach(([id, p]) => {
-    const n0 = B.addedSeries.length;
-    B.K.setOn(id, true);
-    const s = B.addedSeries[n0];
-    const 옛값 = 옛.computeSMA(closes, times, p);
+  const B = boot(candles, { 옛상태: { bb: false } });
+  const n0 = B.addedSeries.length;
+  B.K.setOn("bb-20", true);
+  const 만든선 = B.addedSeries.slice(n0);
+  ok("켜면 선이 정확히 3개 생긴다 (위·중간·아래)", 만든선.length === 3, String(만든선.length));
+
+  const 옛값 = 옛.computeBB(closes, times, 옛.BB_PERIOD, 옛.BB_MULT);
+  const 순서 = ["upper", "middle", "lower"];
+  순서.forEach((키, i) => {
+    const s = 만든선[i];
+    const 기대 = 옛값[키];
     ok(
-      "MA(" + p + ") 점 개수가 옛것과 같다",
-      !!s && s.data().length === 옛값.length,
-      (s ? s.data().length : "선없음") + " vs " + 옛값.length
+      "볼린저 " + 키 + " 점 개수가 옛것과 같다",
+      !!s && s.data().length === 기대.length,
+      (s ? s.data().length : "선없음") + " vs " + 기대.length
     );
-    const 오차 = s.data().reduce((m, q, i) => Math.max(m, Math.abs(q.value - 옛값[i].value)), 0);
-    ok("MA(" + p + ") 값이 옛것과 ★완전히★ 같다 (오차 0)", 오차 === 0, "최대오차 " + 오차);
+    const 오차 = s.data().reduce((m, q, k) => Math.max(m, Math.abs(q.value - 기대[k].value)), 0);
+    ok("볼린저 " + 키 + " 값이 옛것과 완전히 같다 (오차 0)", 오차 === 0, "최대오차 " + 오차);
     ok(
-      "MA(" + p + ") 점의 시각도 같다",
-      s.data().every((q, i) => q.time === 옛값[i].time)
+      "볼린저 " + 키 + " 점의 시각도 같다",
+      s.data().every((q, k) => q.time === 기대[k].time)
     );
-    B.K.setOn(id, false);
   });
+  ok(
+    "점 개수가 봉 수보다 기간-1 만큼 적다",
+    만든선[0].data().length === candles.length - 19,
+    만든선[0].data().length + " (봉 " + candles.length + ")"
+  );
 
   /* 진행 중인 봉 — O(1) step 이 전체 재계산과 같은 값을 내는가 */
-  const B2 = boot(candles);
-  B2.K.setOn("ma-7", true);
-  const s7 = B2.addedSeries[0];
+  const B2 = boot(candles, { 옛상태: { bb: false } });
+  const m0 = B2.addedSeries.length;
+  B2.K.setOn("bb-20", true);
+  const 선들 = B2.addedSeries.slice(m0);
   const last = candles[candles.length - 1];
   const 새종가 = last.close + 231.5;
   B2.sandbox.App.Bus.emit("kline:update", {
     symbol: "BTCUSDT",
-    candle: {
-      time: last.time,
-      open: last.open,
-      high: last.high,
-      low: last.low,
-      close: 새종가,
-      volume: 3,
-    },
+    candle: { time: last.time, open: last.open, high: last.high, low: last.low, close: 새종가, volume: 3 },
   });
   const 바뀐 = closes.slice(0, -1).concat([새종가]);
-  const 기대 = 옛.computeSMA(바뀐, times, 7);
-  const d7 = s7.data();
-  ok(
-    "진행 중인 봉을 갱신해도 옛 계산과 같다 (오차 1e-9 이하)",
-    Math.abs(d7[d7.length - 1].value - 기대[기대.length - 1].value) < 1e-9,
-    d7[d7.length - 1].value + " vs " + 기대[기대.length - 1].value
-  );
+  const 기대2 = 옛.computeBB(바뀐, times, 20, 2);
+  순서.forEach((키, i) => {
+    const d = 선들[i].data();
+    const e = 기대2[키];
+    ok(
+      "진행 중인 봉을 갱신해도 " + 키 + " 가 옛 계산과 같다 (오차 1e-9 이하)",
+      Math.abs(d[d.length - 1].value - e[e.length - 1].value) < 1e-9,
+      d[d.length - 1].value + " vs " + e[e.length - 1].value
+    );
+  });
 
-  /* 같은 봉이 여러 번 와도 값이 흔들리면 안 됩니다 */
-  for (let i = 0; i < 5; i++) {
+  const 전 = 순서.map((키, i) => 선들[i].data()[선들[i].data().length - 1].value);
+  for (let r = 0; r < 6; r++) {
     B2.sandbox.App.Bus.emit("kline:update", {
       symbol: "BTCUSDT",
-      candle: {
-        time: last.time,
-        open: last.open,
-        high: last.high,
-        low: last.low,
-        close: 새종가,
-        volume: 3,
-      },
+      candle: { time: last.time, open: last.open, high: last.high, low: last.low, close: 새종가, volume: 3 },
     });
   }
-  const d7b = s7.data();
-  ok(
-    "같은 봉을 여섯 번 갱신해도 값이 그대로다",
-    d7b.length === d7.length &&
-      Math.abs(d7b[d7b.length - 1].value - 기대[기대.length - 1].value) < 1e-9
-  );
+  순서.forEach((키, i) => {
+    const d = 선들[i].data();
+    ok(
+      "같은 봉이 여섯 번 더 와도 " + 키 + " 값이 그대로다",
+      d[d.length - 1].value === 전[i],
+      d[d.length - 1].value + " vs " + 전[i]
+    );
+    ok(
+      "같은 봉이 여섯 번 더 와도 " + 키 + " 점 개수가 안 늘어난다",
+      d.length === 기대2[키].length,
+      d.length + " vs " + 기대2[키].length
+    );
+  });
 
-  /* 새 봉이 와도 옛 계산과 같아야 합니다 */
-  const 새봉 = {
-    time: last.time + 60,
-    open: 새종가,
-    high: 새종가 + 5,
-    low: 새종가 - 5,
-    close: 새종가 + 3,
-    volume: 3,
-  };
-  B2.sandbox.App.Bus.emit("kline:update", { symbol: "BTCUSDT", candle: 새봉 });
-  const 기대2 = 옛.computeSMA(바뀐.concat([새봉.close]), times.concat([새봉.time]), 7);
-  const d7c = s7.data();
-  ok(
-    "새 봉이 생겨도 옛 계산과 같다 (오차 1e-9 이하)",
-    Math.abs(d7c[d7c.length - 1].value - 기대2[기대2.length - 1].value) < 1e-9,
-    d7c[d7c.length - 1].value + " vs " + 기대2[기대2.length - 1].value
-  );
+  const 마지막 = 순서.map((키, i) => 선들[i].data()[선들[i].data().length - 1].value);
+  ok("위 > 중간 > 아래 순서다", 마지막[0] > 마지막[1] && 마지막[1] > 마지막[2], 마지막.join(" > "));
+
+  /* 표준편차가 모집단(÷p) 인가 — ÷(p-1) 이면 밴드가 넓어집니다 */
+  {
+    const p = 20;
+    const 창 = closes.slice(closes.length - p);
+    const 평균 = 창.reduce((a, b) => a + b, 0) / p;
+    let acc = 0;
+    창.forEach((v) => (acc += (v - 평균) * (v - 평균)));
+    const 모집단 = Math.sqrt(acc / p);
+    const 표본 = Math.sqrt(acc / (p - 1));
+    const 반폭 = 옛값.upper[옛값.upper.length - 1].value - 옛값.middle[옛값.middle.length - 1].value;
+    ok(
+      "표준편차가 모집단(÷p) 이다 (÷(p-1) 아님)",
+      Math.abs(반폭 - 2 * 모집단) < 1e-9 && Math.abs(반폭 - 2 * 표본) > 1e-9,
+      "밴드 반폭 " + 반폭 + " / 모집단x2 " + 2 * 모집단 + " / 표본x2 " + 2 * 표본
+    );
+  }
 }
 
 /* =======================================================================
- * [2] ⭐⭐ 켜 두었던 것이 그대로 켜져 있는가
+ * [2] 켜짐/꺼짐 · 색 · 선모양이 그대로인가
  * ===================================================================== */
-console.log("\n[2] 옮겨도 켜짐 · 꺼짐 · 색이 그대로");
+console.log("\n[2] 켜 두었던 것 · 색 · 선모양");
 {
-  const B = boot(candles, { 옛상태: { ma7: true, ma25: false, ma99: true } });
-  ok("옮겼다는 표시가 남았다", B.K.isMovedForTest() === true);
-  ok("켜 뒀던 MA(7) 이 켜진 채로 왔다", B.K.isOn("ma-7") === true);
-  ok("꺼져 있던 MA(25) 는 꺼진 채로 왔다", B.K.isOn("ma-25") === false);
-  ok("켜 뒀던 MA(99) 도 켜진 채로 왔다", B.K.isOn("ma-99") === true);
+  [true, false].forEach((켬) => {
+    const B = boot(candles, { 옛상태: { bb: 켬 } });
+    ok("옮겼다는 표시가 남는다 (bb=" + 켬 + ")", B.K.isMovedBBForTest() === true);
+    const it = B.K.listInstances().filter((x) => x.id === "bb-20")[0];
+    ok("bb-20 인스턴스가 생겼다 (bb=" + 켬 + ")", !!it);
+    ok("옛 켜짐/꺼짐이 그대로 옮겨졌다 (bb=" + 켬 + ")", !!it && it.on === 켬, it ? String(it.on) : "없음");
+  });
 
-  const 목록 = B.K.listInstances();
-  const m = {};
-  목록.forEach((i) => (m[i.id] = i));
-  ok("MA(7) 색이 금색 그대로다", m["ma-7"].colors.ma === "#F0B429", m["ma-7"].colors.ma);
-  ok("MA(25) 색이 흰색 그대로다", m["ma-25"].colors.ma === "#E7ECF5", m["ma-25"].colors.ma);
-  ok("MA(99) 색이 회색 그대로다", m["ma-99"].colors.ma === "#838DA4", m["ma-99"].colors.ma);
-  const MA줄 = 목록.filter((x) => x.def === "ma");
-  ok("굵기가 1px 그대로다", MA줄.every((x) => x.width === 1), MA줄.map((x) => x.width).join(","));
-  ok("모양이 실선 그대로다", MA줄.every((x) => x.style === "solid"));
+  const B = boot(candles, { 옛상태: { bb: true } });
+  const it = B.K.listInstances().filter((x) => x.id === "bb-20")[0];
   ok(
-    "기간이 7 · 25 · 99 그대로다",
-    MA줄.map((x) => x.params.p).join(",") === "7,25,99",
-    MA줄.map((x) => x.params.p).join(",")
+    "위·중간·아래 색이 셋 다 #838DA4 다",
+    it.colors.upper === "#838DA4" && it.colors.middle === "#838DA4" && it.colors.lower === "#838DA4",
+    JSON.stringify(it.colors)
   );
+  ok("점선이다", it.style === "dashed", it.style);
+  ok("굵기가 1 이다", it.width === 1, String(it.width));
+  ok("기간 20 · 배수 2 다", it.params.p === 20 && it.params.k === 2, it.params.p + " / " + it.params.k);
+  ok("주 차트에 그린다 (아래 별도 칸 아님)", it.pane === "main", it.pane);
+  ok("이름이 옛 목록 글자 그대로다", it.name === "BOLL(20, 2)", it.name);
 
-  /* ④ 선이 두 벌 그려지면 안 됩니다 — 옛 것을 확실히 껐는가 */
-  /* ⚠️ 2026-09-02 (12단계) 에 ★bb=false 가 한 줄 늘었습니다.★
-     옛 볼린저도 이 틀로 옮겨 왔기 때문입니다(kit 12.6절). 옛 것을 안 끄면
-     볼린저 선이 두 벌 그려집니다. ★거래량(vol)은 여전히 안 건드립니다.★ */
-  ok(
-    "옛 MA 셋과 옛 볼린저를 전부 껐다",
-    B.calls.setOn.join(",") === "ma7=false,ma25=false,ma99=false,bb=false",
-    B.calls.setOn.join(",")
-  );
-  ok(
-    "옛 모듈 안에서도 꺼져 있다",
-    B.옛상태.ma7 === false && B.옛상태.ma25 === false && B.옛상태.ma99 === false
-  );
-  ok("★옛 거래량은 손대지 않았다 (지금도 켜짐)★", B.옛상태.vol === true);
-  ok("옛 볼린저는 껐다 (틀이 대신 그립니다)", B.옛상태.bb === false);
+  ok("옛 볼린저를 껐다", B.calls.setOn.indexOf("bb=false") >= 0, B.calls.setOn.join(","));
+  ok("옛 모듈 안에서도 볼린저가 꺼져 있다", B.옛상태.bb === false, String(B.옛상태.bb));
+  ok("거래량은 손대지 않았다 (지금도 켜짐)", B.옛상태.vol === true, String(B.옛상태.vol));
+  ok("거래량을 끄려 든 적이 없다", B.calls.setOn.indexOf("vol=false") < 0, B.calls.setOn.join(","));
   ok("옛 것을 toggle 로 뒤집지 않았다 (setOn 만 씁니다)", B.calls.toggle.length === 0);
+  ok("켜져 있던 볼린저가 실제로 3줄 그려졌다", B.addedSeries.length === 3, String(B.addedSeries.length));
 
-  /* 켜진 두 줄이 실제로 그려졌는가 */
-  ok("켜져 있던 두 줄이 실제로 그려졌다", B.addedSeries.length === 2, String(B.addedSeries.length));
+  const 점선 = B.addedSeries.every((s) => s.options().lineStyle === 2);
+  ok("그린 선 셋이 실제로 점선 옵션이다", 점선, B.addedSeries.map((s) => s.options().lineStyle).join(","));
+  const 색 = B.addedSeries.every((s) => s.options().color === "#838DA4");
+  ok("그린 선 셋이 실제로 #838DA4 다", 색, B.addedSeries.map((s) => s.options().color).join(","));
+  const 굵기 = B.addedSeries.every((s) => s.options().lineWidth === 1);
+  ok("그린 선 셋이 실제로 1px 이다", 굵기, B.addedSeries.map((s) => s.options().lineWidth).join(","));
 }
 
 /* =======================================================================
@@ -644,204 +645,145 @@ console.log("\n[2] 옮겨도 켜짐 · 꺼짐 · 색이 그대로");
  * ===================================================================== */
 console.log("\n[3] 저장칸");
 {
-  const B = boot(candles, { 옛상태: { ma7: true } });
-  ok(
-    "저장은 chart-indicator-kit 한 칸에만 한다",
-    B.storeWrites.every((k) => k === "chart-indicator-kit"),
-    B.storeWrites.join(",")
-  );
-  ok("옛 칸(chart-indicators)에 쓰지 않는다", B.storeWrites.indexOf("chart-indicators") < 0);
-  ok(
-    "옛 칸을 ★읽지도★ 않는다 (옛 모듈에게 물어봅니다)",
-    B.storeReads.indexOf("chart-indicators") < 0,
-    B.storeReads.join(",")
-  );
-
+  const B = boot(candles, { 옛상태: { bb: true } });
+  ok("옛 저장칸(chart-indicators)에 쓰지 않는다", B.storeWrites.indexOf("chart-indicators") < 0, B.storeWrites.join(","));
+  ok("옛 저장칸을 읽지도 않는다", B.storeReads.indexOf("chart-indicators") < 0, B.storeReads.join(","));
   const saved = B.stored["chart-indicator-kit"];
-  ok("옮겼다는 표시가 저장됐다", !!saved && !!saved.moved && saved.moved.ma === true);
-  ok(
-    "옮기기 직전 옛 상태를 적어 두었다 (되돌리기용)",
-    !!saved.moved.legacy0 && saved.moved.legacy0.ma7 === true && saved.moved.legacy0.ma25 === false,
-    JSON.stringify(saved.moved && saved.moved.legacy0)
-  );
-
-  /* ⑥ 두 번 옮기면 안 됩니다 */
-  const B2 = boot(candles, {
-    saved: saved,
-    옛상태: { ma7: false, ma25: false, ma99: false },
-  });
-  ok("새로고침하면 다시 옮기지 않는다", B2.calls.setOn.length === 0, B2.calls.setOn.join(","));
-  ok("새로고침해도 켠 것이 그대로다", B2.K.isOn("ma-7") === true);
-
-  /* 회원이 MA 줄을 지웠으면 다시 살아나면 안 됩니다 */
-  B2.K.removeInstance("ma-25");
-  const saved2 = B2.stored["chart-indicator-kit"];
-  const B3 = boot(candles, { saved: saved2 });
-  ok(
-    "회원이 지운 MA 줄은 되살아나지 않는다",
-    B3.K.listInstances().every((i) => i.id !== "ma-25"),
-    B3.K.listInstances()
-      .map((i) => i.id)
-      .join(",")
-  );
+  ok("새 칸에 옮겼다는 표시가 저장됐다", !!(saved && saved.moved && saved.moved.bb === true), JSON.stringify(saved && saved.moved));
+  ok("되돌릴 때 쓸 옛 상태도 같이 저장됐다", !!(saved && saved.moved && saved.moved.legacyBB && saved.moved.legacyBB.bb === true));
+  ok("MA 표시도 같은 칸에 그대로 있다", !!(saved && saved.moved && saved.moved.ma === true));
 }
 
 /* =======================================================================
- * [4] ⑤ 화면 — 옛 자리를 그대로 이어받는가
+ * [4] 줄 순서 — 옛 자리 그대로여야 합니다
  * ===================================================================== */
-console.log("\n[4] fx 목록과 칩 줄의 자리");
+console.log("\n[4] fx 목록 · 칩 줄에서 옛 자리 그대로");
 {
-  const B = boot(candles, { 옛상태: { ma7: true } });
+  const B = boot(candles, { 옛상태: { bb: true } });
   const 줄 = 줄이름들(B.menu);
+  ok("옛 bb 줄이 목록에서 빠졌다", 줄.indexOf("bb") < 0, 줄.join(" "));
+  ok("새 bb-20 줄이 들어왔다", 줄.indexOf("bb-20") >= 0, 줄.join(" "));
   ok(
-    "옛 MA 줄 셋이 목록에서 빠졌다",
-    ["ma7", "ma25", "ma99"].every((k) => 줄.indexOf(k) < 0),
-    줄.join(" ")
-  );
-  /* ⚠️ 2026-09-02 (12단계) — "bb" 가 이 목록에서 빠졌습니다. 옛 볼린저 줄도
-     이제 틀이 그리기 때문입니다(bb-20). ★거래량 · RSI · MACD 는 그대로★ 입니다. */
-  ok(
-    "옛 볼린저 줄도 목록에서 빠졌다 (틀의 bb-20 이 대신)",
-    줄.indexOf("bb") < 0 && 줄.indexOf("bb-20") >= 0,
-    줄.join(" ")
-  );
-  ok(
-    "옛 거래량 · RSI · MACD 줄은 그대로다",
-    ["vol", "rsi", "macd"].every((k) => 줄.indexOf(k) >= 0),
-    줄.join(" ")
-  );
-  ok(
-    "새 MA 줄이 ★옛 자리 그대로★ 맨 앞 셋이다",
-    줄.slice(0, 3).join(",") === "ma-7,ma-25,ma-99",
-    줄.join(" ")
-  );
-  /* ⭐ 여기가 12단계에서 제일 중요한 검사입니다 - ★자리가 안 바뀌었는가.★
-     bb-20 이 ★옛 bb 가 있던 자리(MA(99) 다음 · 거래량 앞)★ 그대로여야 합니다.
-     실제로 옮기는 순서를 잘못 짰을 때 bb-20 이 거래량 ★뒤★ 로 밀렸습니다. */
-  ok(
-    "주 차트 줄 순서가 옛것과 같다 (MA 셋 · 볼린저 · 거래량)",
+    "옛 자리 그대로 — MA(99) 다음 · 거래량 앞",
     줄.slice(0, 5).join(",") === "ma-7,ma-25,ma-99,bb-20,vol",
     줄.join(" ")
   );
-  ok("아래 칸 줄이 뒤에 그대로 있다", 줄.slice(-2).join(",") === "rsi,macd", 줄.join(" "));
+  ok("거래량 줄은 그대로 있다", 줄.indexOf("vol") >= 0, 줄.join(" "));
+  ok("아래 칸 줄(RSI · MACD)이 뒤에 그대로다", 줄.slice(-2).join(",") === "rsi,macd", 줄.join(" "));
   ok("목록 줄 수가 옮기기 전과 같다 (7 + 얹혀 있던 EMA 2)", 줄.length === 9, String(줄.length));
 
   const 칩 = 칩이름들(B.indBar);
-  ok("옛 MA 칩 셋이 빠졌다", ["ma7", "ma25", "ma99"].every((k) => 칩.indexOf(k) < 0), 칩.join(" "));
-  ok(
-    "새 MA 칩이 ★옛 자리 그대로★ 맨 앞 셋이다",
-    칩.slice(0, 3).join(",") === "ma-7,ma-25,ma-99",
-    칩.join(" ")
-  );
-  ok(
-    "볼린저 칩이 ★옛 자리 그대로★ 넷째다 (거래량 앞)",
-    칩[3] === "bb-20" && 칩[4] === "vol",
-    칩.join(" ")
-  );
+  ok("옛 bb 칩이 빠졌다", 칩.indexOf("bb") < 0, 칩.join(" "));
+  ok("새 bb-20 칩이 옛 자리 그대로 넷째다", 칩[3] === "bb-20" && 칩[4] === "vol", 칩.join(" "));
   ok("칩 개수가 옮기기 전과 같다 (5 + EMA 2)", 칩.length === 7, String(칩.length));
 }
 
 /* =======================================================================
- * [5] 옛 모듈이 늦거나 없을 때 — ★모르면 옮기지 않는다★
+ * [5] 옛 상태를 못 읽으면 옮기지 않는다
  * ===================================================================== */
-console.log("\n[5] 옛 상태를 못 읽으면 옮기지 않는다");
+console.log("\n[5] 모르면 옮기지 않는다");
 {
-  const B = boot(candles, { getState없음: true, 옛상태: { ma7: true } });
-  ok("옛 켜짐/꺼짐을 못 읽으면 옮기지 않는다", B.K.isMovedForTest() === false);
-  ok(
-    "그래도 오류로 죽지 않는다",
-    B.warns.filter((w) => w.indexOf("Cannot") >= 0).length === 0,
-    B.warns.join(" | ")
-  );
-  ok(
-    "못 옮겼으면 옛 줄을 화면에서 빼지도 않는다",
-    줄이름들(B.menu).indexOf("ma7") >= 0,
-    줄이름들(B.menu).join(" ")
-  );
-  ok("못 옮겼으면 옛 칩도 그대로 둔다", 칩이름들(B.indBar).indexOf("ma7") >= 0);
+  const B = boot(candles, { getState없음: true, 옛상태: { bb: true } });
+  ok("옛 켜짐/꺼짐을 못 읽으면 옮기지 않는다", B.K.isMovedBBForTest() === false);
+  const 줄 = 줄이름들(B.menu);
+  ok("옛 bb 줄이 그대로 남아 있다", 줄.indexOf("bb") >= 0, 줄.join(" "));
+  ok("옛 것을 끄지도 않았다", B.옛상태.bb === true, String(B.옛상태.bb));
 
   const B2 = boot(candles, { 옛모듈없음: true });
-  ok("옛 모듈에 setOn 이 없어도 죽지 않는다", !!B2.K);
+  ok("옛 모듈 자체가 없으면 옮기지 않는다", B2.K.isMovedBBForTest() === false);
 }
 
 /* =======================================================================
- * [6] 되돌리기
+ * [6] 두 번 옮기지 않는다 — 회원이 지운 줄이 되살아나면 안 됩니다
  * ===================================================================== */
-console.log("\n[6] 되돌리기 (restoreLegacyMA)");
+console.log("\n[6] 두 번 옮기지 않는다");
 {
-  const B = boot(candles, { 옛상태: { ma7: true, ma25: false, ma99: true } });
-  ok("되돌리기 함수가 있다", typeof B.K.restoreLegacyMA === "function");
-  const r = B.K.restoreLegacyMA();
-  ok("되돌렸다고 답한다", r === true);
-  ok(
-    "우리 MA 줄 셋이 사라졌다",
-    B.K.listInstances().every((i) => i.def !== "ma"),
-    B.K.listInstances()
-      .map((i) => i.id)
-      .join(",")
-  );
-  ok(
-    "옛 켜짐/꺼짐이 그대로 돌아왔다",
-    B.옛상태.ma7 === true && B.옛상태.ma25 === false && B.옛상태.ma99 === true,
-    JSON.stringify({ ma7: B.옛상태.ma7, ma25: B.옛상태.ma25, ma99: B.옛상태.ma99 })
-  );
-  ok("옮겼다는 표시가 지워졌다", B.K.isMovedForTest() === false);
+  const B = boot(candles, { 옛상태: { bb: true } });
+  ok("한 번은 옮겼다", B.K.isMovedBBForTest() === true);
+  ok("다시 부르면 아무것도 안 한다", B.K.moveLegacyBBForTest() === false);
+
+  B.K.removeInstance("bb-20");
   const saved = B.stored["chart-indicator-kit"];
-  ok("저장칸에서도 표시가 지워졌다", !saved.moved || saved.moved.ma !== true);
+  const B2 = boot(candles, { 옛상태: { bb: true }, saved: saved });
+  ok(
+    "회원이 지운 볼린저 줄이 새로고침해도 안 되살아난다",
+    B2.K.listInstances().every((i) => i.id !== "bb-20"),
+    B2.K.listInstances().map((i) => i.id).join(",")
+  );
 }
 
 /* =======================================================================
- * [7] 라인(종가선) 모드에서 MA(7) 을 점선으로 — 넘겨주는 자리
+ * [7] 되돌리기
  * ===================================================================== */
-console.log("\n[7] js/chart-ma-line-mode.js 에 MA(7) 선을 넘겨주는 자리");
+console.log("\n[7] 되돌리기 (restoreLegacyBB)");
 {
-  const B = boot(candles, { 옛상태: { ma7: false } });
-  ok("넘겨주는 함수가 있다", typeof B.K.getMovedMa7Series === "function");
-  ok("MA(7) 이 꺼져 있으면 없다고 답한다", B.K.getMovedMa7Series() === null);
-  B.K.setOn("ma-7", true);
-  const s = B.K.getMovedMa7Series();
-  ok("MA(7) 을 켜면 그 선을 내어준다", !!s && s === B.addedSeries[0]);
+  const B = boot(candles, { 옛상태: { bb: true } });
+  ok("되돌리기 함수가 있다", typeof B.K.restoreLegacyBB === "function");
+  ok("되돌렸다고 답한다", B.K.restoreLegacyBB() === true);
   ok(
-    "내어준 선이 금색 1px 이다",
-    s.options().color === "#F0B429" && s.options().lineWidth === 1,
-    s.options().color + " / " + s.options().lineWidth
+    "우리 볼린저 줄이 사라졌다",
+    B.K.listInstances().every((i) => i.def !== "bb"),
+    B.K.listInstances().map((i) => i.id).join(",")
   );
-  B.K.setOn("ma-7", false);
-  ok("다시 끄면 없다고 답한다", B.K.getMovedMa7Series() === null);
+  ok("옛 켜짐이 그대로 돌아왔다", B.옛상태.bb === true, String(B.옛상태.bb));
+  ok("옮겼다는 표시가 지워졌다", B.K.isMovedBBForTest() === false);
+  const saved = B.stored["chart-indicator-kit"];
+  ok("저장칸에서도 볼린저 표시가 지워졌다", !saved.moved || saved.moved.bb !== true, JSON.stringify(saved.moved));
+  ok(
+    "MA 표시는 그대로 남아 있다 (MA 가 다시 옮겨지면 안 됩니다)",
+    !!(saved.moved && saved.moved.ma === true),
+    JSON.stringify(saved.moved)
+  );
 
-  /* 한쪽만 고치는 것을 막습니다 */
-  const 모드 = fs.readFileSync(path.join(REPO, "js/chart-ma-line-mode.js"), "utf8");
-  ok("js/chart-ma-line-mode.js 가 그 함수를 본다", 모드.indexOf("getMovedMa7Series") >= 0);
-  ok("틀이 없을 때 옛 자리로 물러설 길이 남아 있다", 모드.indexOf("L.ma7") >= 0);
+  const B2 = boot(candles, { 옛상태: { bb: true, ma7: true } });
+  B2.K.restoreLegacyMA();
+  const s2 = B2.stored["chart-indicator-kit"];
+  ok("MA 만 되돌려도 볼린저 표시는 남는다", !!(s2.moved && s2.moved.bb === true), JSON.stringify(s2.moved));
+  ok(
+    "그때 볼린저 줄도 그대로 남는다",
+    B2.K.listInstances().some((i) => i.id === "bb-20"),
+    B2.K.listInstances().map((i) => i.id).join(",")
+  );
 }
 
 /* =======================================================================
- * [8] 옛 파일은 한 글자도 안 고쳤다
+ * [8] 꺼져 있으면 계산도 안 한다
  * ===================================================================== */
-console.log("\n[8] 옛 파일 무수정 · 새로 얹을 때의 기본값");
+console.log("\n[8] 꺼져 있으면 계산도 안 한다");
 {
-  /* ⚠️ 옮겨 온 세 줄(7·25·99 · 바이낸스)과 새로 얹을 때(9 · 트레이딩뷰)는
-     ★다릅니다.★ 헷갈려서 옮겨 온 줄을 9 로 바꾸는 일이 없게 못 박습니다. */
-  const B8 = boot(candles, { 옛상태: {} });
-  const 정의8 = B8.K.listDefs().filter((d) => d.id === "ma")[0];
-  ok("새로 얹는 MA 의 기본 기간이 9 다 (트레이딩뷰)", !!정의8 && 정의8.params.p === 9, 정의8 && String(정의8.params.p));
+  const B = boot(candles, { 옛상태: { bb: false } });
+  ok("꺼져 있으면 선을 안 만든다", B.addedSeries.length === 0, String(B.addedSeries.length));
+  const last = candles[candles.length - 1];
+  B.sandbox.App.Bus.emit("kline:update", {
+    symbol: "BTCUSDT",
+    candle: { time: last.time, open: last.open, high: last.high, low: last.low, close: last.close + 10, volume: 3 },
+  });
+  ok("꺼져 있으면 시세가 와도 선이 안 생긴다", B.addedSeries.length === 0, String(B.addedSeries.length));
+
+  B.K.setOn("bb-20", true);
+  const it = B.K.getInstancesForTest()["bb-20"];
   ok(
-    "그래도 옮겨 온 세 줄은 7 · 25 · 99 그대로다 (바이낸스)",
-    B8.K.listInstances()
-      .filter((i) => i.def === "ma")
-      .map((i) => i.params.p)
-      .join(",") === "7,25,99"
+    "켜면 확정 상태(commit)를 들고 있다 (틱마다 전체 재계산 안 함)",
+    !!(it && it.live && it.live.commit),
+    it && it.live ? String(!!it.live.commit) : "없음"
   );
-  ok("MA 가 지표 추가 목록 맨 앞이다", B8.K.listDefs()[0].id === "ma", B8.K.listDefs()[0].id);
-  ok("js/chart-indicators.js 가 아직 MA 를 계산할 줄 안다", OLD_SRC.indexOf("function computeSMA") >= 0);
   ok(
-    "js/chart-indicators.js 의 MA 색이 그대로다",
-    OLD_SRC.indexOf('ma7: "#F0B429"') >= 0 &&
-      OLD_SRC.indexOf('ma25: "#E7ECF5"') >= 0 &&
-      OLD_SRC.indexOf('ma99: "#838DA4"') >= 0
+    "확정 상태가 창(buf)을 들고 있다 (기간 20칸)",
+    !!(it.live.commit && it.live.commit.buf && it.live.commit.buf.length === 20),
+    it.live.commit && it.live.commit.buf ? String(it.live.commit.buf.length) : "없음"
   );
-  ok("틀이 옛 파일을 부르지 않는다 (감싸기만 합니다)", KIT_SRC.indexOf("require(") < 0);
 }
 
-console.log("\n통과 " + pass + " / 실패 " + fail);
+/* =======================================================================
+ * [9] 등록
+ * ===================================================================== */
+console.log("\n[9] 등록");
+{
+  const order = fs.readFileSync(path.join(REPO, "tests/_order.txt"), "utf8");
+  ok("tests/_order.txt 에 등록돼 있다", order.indexOf("tests/chart-indicator-bb-move.test.js") >= 0);
+  const me = fs.readFileSync(__filename, "utf8");
+  ok("되돌리는 방법이 이 파일에 적혀 있다", me.indexOf("되돌리기") >= 0);
+}
+
+console.log("\n  통과 " + pass + " / 실패 " + fail + "\n");
 process.exit(fail ? 1 : 0);

@@ -360,3 +360,16 @@ tests/chart-period-interval-cross-seal.test.js
 #      tests/chart-ha-real-price-seal.test.js 한 곳입니다(두 벌 금지).
 # 되돌리기: 이 줄과 tests/chart-ohlc-legend.test.js 삭제
 tests/chart-ohlc-legend.test.js
+
+# 2026-09-02 (12단계) — 옛 볼린저(BOLL 20, 2) 를 지표 틀로 옮긴 것.
+#   11단계(MA)와 같은 위험입니다 — 저장칸이 달라져 ★켜뒀던 것이 꺼지거나
+#   색·선모양이 바뀔 수★ 있습니다. 볼린저는 특히 ★세 줄이 한 스위치★ 라
+#   하나만 빠져도 회원이 못 알아챕니다.
+#   값은 숫자를 박지 않고 ★옛 js/chart-indicators.js 를 실제로 실행해★
+#   computeBB 와 대조합니다(실측 최대오차 0). 표준편차가 ★모집단(÷p)★ 인지도
+#   따로 봅니다 — ÷(p-1) 로 바뀌면 밴드가 조용히 넓어집니다.
+#   [4] 가 제일 중요합니다 — ★옛 자리(MA(99) 다음 · 거래량 앞)★ 그대로인지.
+#   실제로 옮기는 순서를 잘못 짜서 bb-20 이 거래량 뒤로 밀렸었고 이 검사가 잡았습니다.
+#   ⚠️ 거래량(vol)은 이번에 ★안 옮겼습니다★ — 손대지 않았다는 것도 여기서 봅니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-bb-move.test.js 삭제
+tests/chart-indicator-bb-move.test.js
