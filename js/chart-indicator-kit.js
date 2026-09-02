@@ -38,6 +38,26 @@
  *    되돌리기 - 콘솔에서 App.ChartIndicatorKit.restoreLegacyBB() 뒤 새로고침.
  *    ★거래량 · RSI · MACD 는 아직 옛 모듈이 그립니다.★
  *
+ * ⭐ 2026-09-03 (13단계) - RSI · MACD 를 옮기기 ★전에★ 틀에 없던 셋을 냈습니다.
+ *    그냥 옮기면 지금 화면보다 나빠지는 것들입니다. 아래 13.1 · 13.2 · 13.3 절.
+ *      13.1 scale     아래 칸 눈금 고정 (RSI 0~100). 없으면 30·70 기준선이
+ *                     화면 밖으로 나가고 눈금이 매 틱 출렁입니다
+ *      13.2 칸 이름표  "RSI(14)  56.9" 처럼 ★값이 같이 뜨는 줄★.
+ *                     아래 칸 지표 일곱 개(KDJ·ATR·StochRSI·CCI·OBV·
+ *                     Stochastic·ADX)에 이 줄이 없었습니다
+ *      13.3 unit      값이 ★가격★ 인 지표는 표시 통화를 따라갑니다.
+ *                     ★ATR 이 원화 회원 화면에 USDT 숫자로 떠 있었습니다★
+ *    되돌리기 (13단계만) - 아래 셋을 지우면 12단계 화면 그대로입니다.
+ *      1) DEF_FIELDS 에서 "scale" · "unit" 두 글자를 빼고,
+ *         define() 안의 13.1 · 13.3 검사 두 토막과 defs[] 의 scale · unit 두 줄을 지웁니다
+ *      2) 13.2 절(칸 이름표) 전체와, turnOn · turnOff · onTick · checkResync ·
+ *         refreshLabels 안의 ensurePaneLabel / dropPaneLabel / positionPaneLabels /
+ *         paintPaneLabels / refreshPaneLabelName 호출을 지웁니다
+ *         injectStyle 의 .tl-kit-plabel CSS 두 줄과 init 의 currency:change 한 줄도 같이
+ *      3) atr 정의의 unit: "price" 한 줄을 지웁니다
+ *    tests/chart-indicator-pane-kit.test.js 와 tests/_order.txt 의 그 줄도 같이 지웁니다.
+ *    ⚠️ 파일 전체를 되돌리면 11 · 12단계(MA · 볼린저 옮기기)까지 같이 풀립니다.
+ *
  * -- js/chart.js 도 한 글자도 안 건드렸습니다 -------------------------
  * js/chart-font.js 가 LightweightCharts.createChart 를 감싸 두었기 때문에
  * App.ChartFont.getCharts() 로 차트 객체를 받습니다. 캔들 · 거래량 시리즈는
@@ -389,8 +409,37 @@ App.ChartIndicatorKit = (function () {
    * ------------------------------------------------------------------- */
   var DEF_FIELDS = [
     "id", "name", "note", "pane", "params", "inputs", "outputs", "guides", "clouds",
-    "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset", "band"
+    "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset", "band",
+    /* 2026-09-03 (13단계) - 두 칸이 늘었습니다. 아래 13.1 · 13.3 절 참조.
+       scale  아래 칸의 세로 눈금을 고정합니다 (RSI 의 0~100)
+       unit   그 지표의 값이 ★가격★ 이라 표시 통화를 따라갑니다 (ATR · MACD) */
+    "scale", "unit"
   ];
+
+  /* ---------------------------------------------------------------------
+   * 13.3 ★값의 단위★ - 표시 통화를 따라갈 것인가
+   *
+   * 캔들 데이터는 ★항상 USDT★ 입니다(js/chart.js:155). 그런데 화면 표시 통화는
+   * 회원마다 다릅니다 - 원화로 보는 회원이 있습니다(App.Config.getDisplayCurrency).
+   *
+   * ⚠️ ATR 과 MACD 는 ★가격★ 입니다. ATR(14) 이 120.45 라면 "120.45 USDT" 라는
+   *    뜻인데, 원화로 보는 회원 화면에도 그냥 120.45 로 떴습니다 -
+   *    오류 0건 · 화면 멀쩡 · 회원은 그게 USDT 인 줄 모릅니다.
+   *    이 프로젝트가 "조용한 고장" 이라 부르는 그 모양입니다.
+   *
+   *    unit: "price" 를 적어 두면 눈금 라벨도 칸 이름표도 표시 통화를 따라가고,
+   *    통화를 바꾸면 그 자리에서 다시 씁니다(아래 applyCurrency).
+   *
+   * ⚠️ 아무 지표에나 붙이면 안 됩니다.
+   *      가격이다   (붙인다)   ATR · MACD
+   *      가격이 아니다         RSI · KDJ · CCI · Stochastic · ADX  (0~100 · 지수)
+   *                            OBV                                  (거래량 누적)
+   *    OBV 에 붙이면 거래량이 원화로 환산돼 ★뜻이 없는 숫자★ 가 됩니다.
+   *
+   * ⚠️ 주 칸(main)에는 붙이지 않습니다. 거기 선들은 캔들과 같은 가격축을 쓰고,
+   *    그 축의 글자는 js/chart.js 가 이미 통화에 맞춰 만듭니다(두 벌 금지).
+   * ------------------------------------------------------------------- */
+  var ALLOWED_UNITS = ["price"];
 
   var STORAGE_KEY = "chart-indicator-kit";
   var STORE_VERSION = 1;
@@ -500,6 +549,67 @@ App.ChartIndicatorKit = (function () {
       guides.push({ price: g.price, style: g.style || GUIDE_STYLE });
     }
 
+    /* =====================================================================
+     * 13.1 ★눈금 고정★ - scale: { min, max, top, bottom }
+     *
+     * 왜 필요한가 - RSI 는 0~100 이 정해진 지표입니다. 눈금을 데이터에만
+     * 맞추면 값이 40~60 사이에서 놀 때 눈금이 40~60 으로 좁아지고,
+     * 30 · 70 기준선이 ★화면 밖★ 으로 나갑니다. 기준선이 없으면 RSI 를
+     * 읽을 수가 없습니다(과매수 · 과매도가 그 두 줄이라서).
+     * 게다가 눈금이 매 틱 출렁여서 선이 위아래로 춤춥니다.
+     *
+     * 바이낸스 선물 · 트레이딩뷰 둘 다 RSI 칸을 0~100 으로 잡습니다.
+     * js/chart-oscillators.js:702 가 몇 달째 이 방식으로 돌고 있습니다 -
+     * ★같은 방식★ 을 틀로 옮겨온 것이고, 새로 만든 것이 아닙니다.
+     *
+     *   min · max    있으면 그 범위로 고정합니다(autoscaleInfoProvider)
+     *   top · bottom 칸 위 · 아래 여백 비율(0~0.45). 없으면 라이브러리 기본
+     *
+     * ⚠️ 주 칸(main)에는 못 씁니다 - 캔들과 같은 가격축이라 0~100 으로
+     *    고정하면 캔들이 사라집니다. 그래서 아래에서 거부합니다.
+     * ===================================================================== */
+    var scale = null;
+    if (def.scale !== undefined && def.scale !== null) {
+      var sc = def.scale;
+      if (typeof sc !== "object") return no("scale 은 객체여야 합니다: " + def.id);
+      if (def.pane !== "sub") return no("scale 은 아래 칸(sub) 지표에만 씁니다: " + def.id);
+      var hasMin = sc.min !== undefined && sc.min !== null;
+      var hasMax = sc.max !== undefined && sc.max !== null;
+      if (hasMin !== hasMax) return no("scale 의 min 과 max 는 같이 적어야 합니다: " + def.id);
+      if (hasMin) {
+        if (typeof sc.min !== "number" || !isFinite(sc.min)) return no("scale.min 이 숫자가 아닙니다: " + def.id);
+        if (typeof sc.max !== "number" || !isFinite(sc.max)) return no("scale.max 가 숫자가 아닙니다: " + def.id);
+        if (sc.max <= sc.min) return no("scale.max 가 scale.min 보다 커야 합니다: " + def.id);
+      }
+      var mar = {};
+      var mbad = null;
+      ["top", "bottom"].forEach(function (mk) {
+        if (sc[mk] === undefined || sc[mk] === null) return;
+        if (typeof sc[mk] !== "number" || !isFinite(sc[mk]) || sc[mk] < 0 || sc[mk] > 0.45) {
+          mbad = "scale." + mk + " 은 0 이상 0.45 이하여야 합니다";
+          return;
+        }
+        mar[mk] = sc[mk];
+      });
+      if (mbad) return no(mbad + ": " + def.id);
+      scale = {
+        min: hasMin ? sc.min : null,
+        max: hasMin ? sc.max : null,
+        top: mar.top === undefined ? null : mar.top,
+        bottom: mar.bottom === undefined ? null : mar.bottom
+      };
+    }
+
+    /* 13.3 값의 단위 - 위 ALLOWED_UNITS 주석 참조 */
+    var unit = null;
+    if (def.unit !== undefined && def.unit !== null) {
+      if (ALLOWED_UNITS.indexOf(def.unit) < 0) {
+        return no("unit 은 " + ALLOWED_UNITS.join(" · ") + " 중 하나여야 합니다(" + def.unit + "): " + def.id);
+      }
+      if (def.pane !== "sub") return no("unit 은 아래 칸(sub) 지표에만 씁니다: " + def.id);
+      unit = def.unit;
+    }
+
     /* 구름(면) - 선 두 개 ★사이를 칠하는 것★. 일목균형표의 구름입니다.
        색은 못 고릅니다 - 그 두 선의 색을 그대로 옅게 씁니다(아래 cloudFill).
        새 색을 만들지 않으려고 이렇게 했습니다. */
@@ -570,6 +680,9 @@ App.ChartIndicatorKit = (function () {
             선은 색으로 갈려야 합니다. tests/chart-indicator-color-collision.test.js
             가 "밴드로 선언한 정의" 목록을 따로 들고 이 값과 대조합니다. */
       band: !!def.band,
+      /* 13.1 눈금 고정 · 13.3 값의 단위 - 위 검사에서 다듬은 값만 담습니다 */
+      scale: scale,
+      unit: unit,
       seed: def.seed,
       step: def.step
     };
@@ -629,6 +742,8 @@ App.ChartIndicatorKit = (function () {
         band: !!d.band,
         params: copy(d.params),
         inputs: inputsOf(d.id),
+        unit: d.unit,
+        scale: d.scale ? copy(d.scale) : null,
         guides: d.guides.map(function (g) {
           return { price: g.price, style: g.style };
         })
@@ -1136,8 +1251,65 @@ App.ChartIndicatorKit = (function () {
     return p;
   }
 
+  /* ---------------------------------------------------------------------
+   * 13.3 표시 통화 - 값이 ★가격★ 인 지표(unit:"price")의 숫자 만들기
+   *
+   * js/chart-oscillators.js:604 macdPriceFormat() 과 ★같은 방식★ 입니다.
+   * 데이터는 그대로 두고(항상 USDT) 보이는 글자만 바꿉니다.
+   * 계산식을 우리가 다시 쓰지 않습니다 - App.Utils 하나만 부릅니다.
+   * ------------------------------------------------------------------- */
+  function isKRW() {
+    try {
+      return !!(App.Config && isFn(App.Config.getDisplayCurrency) && App.Config.getDisplayCurrency() === "KRW");
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** 가격 한 개를 표시 통화 글자로. App.Utils 가 없으면 숫자 그대로. */
+  function priceText(v) {
+    if (v === null || v === undefined || typeof v !== "number" || !isFinite(v)) return "-";
+    try {
+      if (App.Utils && isFn(App.Utils.formatCurrencyPlain)) return App.Utils.formatCurrencyPlain(v);
+    } catch (e) {
+      /* 아래 기본 표시로 */
+    }
+    return v.toFixed(2);
+  }
+
+  function priceUnitFormat() {
+    return {
+      type: "custom",
+      minMove: isKRW() ? 1 : 0.01,
+      formatter: priceText
+    };
+  }
+
+  /** 13.1 눈금 고정 - 데이터와 상관없이 늘 같은 범위를 돌려줍니다 */
+  function fixedScaleProvider(sc) {
+    return function () {
+      return { priceRange: { minValue: sc.min, maxValue: sc.max } };
+    };
+  }
+
+  /** 13.1 칸 위·아래 여백. 시리즈 하나에만 걸면 그 칸 전체에 걸립니다. */
+  function applyScaleMargins(host, d) {
+    if (!host || !d || !d.scale) return false;
+    var m = {};
+    if (d.scale.top !== null) m.top = d.scale.top;
+    if (d.scale.bottom !== null) m.bottom = d.scale.bottom;
+    if (m.top === undefined && m.bottom === undefined) return false;
+    try {
+      host.priceScale().applyOptions({ scaleMargins: m });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function addSeriesFor(it, out, pane) {
     var lc = LC();
+    var d = defs[it.def];
     var kind = out.kind || "line";
     var opts = {
       priceScaleId: "right",
@@ -1146,6 +1318,10 @@ App.ChartIndicatorKit = (function () {
       crosshairMarkerVisible: false,
       color: it.colors[out.key] || out.color
     };
+    /* 13.3 값이 가격이면 눈금 글자가 표시 통화를 따라갑니다 (ATR · MACD) */
+    if (d && d.unit === "price") opts.priceFormat = priceUnitFormat();
+    /* 13.1 눈금 고정 (RSI 0~100). 아래 칸에서만 - 위에서 main 은 거부합니다 */
+    if (d && d.scale && d.scale.min !== null) opts.autoscaleInfoProvider = fixedScaleProvider(d.scale);
     if (kind === "line") {
       opts.lineWidth = it.width || DEFAULT_WIDTH;
       opts.lineStyle = styleOf(it.style || out.style);
@@ -1235,6 +1411,209 @@ App.ChartIndicatorKit = (function () {
     L.guideHost = null;
     return gone;
   }
+
+  /* =====================================================================
+   * 13.2 ★칸 이름표★ - "RSI(14)  56.9" 처럼 ★값이 같이 뜨는 줄★
+   *
+   * -- 왜 필요한가 ------------------------------------------------------
+   * 아래 칸에 지표를 켜면 선만 뜨고 ★그 선이 무엇인지도, 지금 값이 얼마인지도★
+   * 안 보였습니다(KDJ · ATR · StochRSI · CCI · OBV · Stochastic · ADX 일곱 개).
+   * 칩 줄에 이름이 있긴 하지만 차트 맨 위라 아래 칸과 멀고, 값은 아예 없습니다.
+   * 트레이딩뷰는 칸마다 왼쪽 위에 "이름 + 지금 값" 을 띄웁니다. 차트 시스템은
+   * 트레이딩뷰를 따라간다는 지시(2026-09-02)에 맞춥니다.
+   *
+   * -- 라이브러리 DOM 을 건드리지 않습니다 -------------------------------
+   * js/chart-oscillators.js:521 이 몇 달째 쓰고 있는 방식 그대로입니다.
+   * pane.getHTMLElement() 는 이 번들에서 null 을 돌려줍니다(3단계 실측).
+   * 그래서 차트가 만든 표의 줄(tr) 위치를 ★재서★ .chart-wrap 위에 얹기만 합니다.
+   * 라이브러리가 만든 요소 안에 아무것도 넣지 않습니다.
+   *
+   * -- 글씨 크기 12px - ★재서 골랐습니다★ (2026-09-03 실측) ---------------
+   * 트레이딩뷰 실측(1920 · BINANCE:BTCUSDT.P) - 지표 상태줄 "Vol · BTC 117.26 K"
+   *   font-size 13px · weight 400 · 줄 높이 24px · 칸 왼쪽에서 8px
+   * 우리도 왼쪽 8px 은 같습니다. 글씨만 12px 입니다 - 13px 이 안 되는 이유는
+   * ★360 에서 가격축에 닿기 때문★ 입니다.
+   *   360 실측 (가장 긴 이름 StochRSI(14,14,3,3) + 값 2개 · 칸 폭 330px ·
+   *             가격축 왼끝 258.5px)
+   *     11px  글자폭 215.0  축까지 여유 35.5px
+   *     12px  글자폭 215.0  축까지 여유 35.5px   <- ★폭이 안 늘고 글자만 커집니다★
+   *     13px  글자폭 244.0  축까지 여유  6.5px   <- 이름이 조금만 길어도 물립니다
+   *   고정폭 글꼴이라 11px 과 12px 의 한 글자 폭이 둘 다 7px 입니다.
+   *   ★같은 자리에서 글씨만 커지는 공짜 한 칸★ 이라 12px 로 올렸습니다.
+   * 옛 아래칸 이름표(.tl-osc-label 10px)보다 2px 큽니다. ★줄인 것이 없습니다.★
+   * pointer-events:none 이라 눌러야 할 것을 가리지 않고, 한 줄 높이만 씁니다.
+   *
+   * -- 성능 -------------------------------------------------------------
+   * 글자는 ★초당 5번까지만★ 다시 씁니다(옛 모듈과 같은 200ms). 시세는 그보다
+   * 훨씬 자주 옵니다. 값 자체는 onTick 이 이미 계산한 것을 받아 적기만 합니다 -
+   * 이름표 때문에 다시 계산하는 것은 없습니다.
+   * ===================================================================== */
+  var paneLabelPaintAt = 0;
+
+  function chartWrap() {
+    return document.querySelector(".chart-panel .chart-wrap") || document.querySelector(".chart-wrap");
+  }
+
+  /** 칸마다 한 줄(tr). 맨 마지막 줄은 시간축이라 뺍니다. */
+  function paneRows() {
+    try {
+      var el = chart && isFn(chart.chartElement) ? chart.chartElement() : null;
+      if (!el) return [];
+      var rows = el.querySelectorAll("tr");
+      var out = [];
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].children && rows[i].children.length === 3) out.push(rows[i]);
+      }
+      if (out.length) out.pop();
+      return out;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /** 값 한 개를 글자로. 가격이면 표시 통화를 따라갑니다(13.3). */
+  function valueText(d, v) {
+    if (v === null || v === undefined || typeof v !== "number" || !isFinite(v)) return "-";
+    if (d && d.unit === "price") return priceText(v);
+    return v.toFixed(2);
+  }
+
+  /** 켤 때 seed 결과에서 "지금 값" 을 꺼냅니다(뒤에서부터 첫 숫자). */
+  function lastValueOf(arr) {
+    if (!arr || !arr.length) return null;
+    for (var i = arr.length - 1; i >= 0; i--) {
+      var v = arr[i] && arr[i].value;
+      if (typeof v === "number" && isFinite(v)) return v;
+    }
+    return null;
+  }
+
+  function ensurePaneLabel(it) {
+    if (!it || it.pane !== "sub" || !it.live || it.live.label) return;
+    var d = defs[it.def];
+    if (!d) return;
+    var wrap = chartWrap();
+    if (!wrap) return;
+    injectStyle();
+    try {
+      var el = document.createElement("div");
+      el.className = "tl-kit-plabel";
+      el.setAttribute("data-kit", it.id);
+      var nm = document.createElement("span");
+      nm.className = "tl-kit-pname";
+      nm.textContent = nameOfInst(it);
+      el.appendChild(nm);
+      var parts = {};
+      for (var i = 0; i < d.outputs.length; i++) {
+        var o = d.outputs[i];
+        var b = document.createElement("b");
+        b.style.color = it.colors[o.key] || o.color;
+        b.textContent = "-";
+        el.appendChild(b);
+        parts[o.key] = b;
+      }
+      wrap.appendChild(el);
+      it.live.label = { el: el, parts: parts };
+    } catch (e) {
+      /* 이름표를 못 만들어도 지표 자체는 그대로 그려집니다 */
+    }
+  }
+
+  function dropPaneLabel(it) {
+    if (!it || !it.live || !it.live.label) return;
+    var el = it.live.label.el;
+    it.live.label = null;
+    try {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    } catch (e) {
+      /* 무시 */
+    }
+  }
+
+  /** 칸이 늘거나 줄면 자리가 밀립니다. 그때마다 다시 잽니다. */
+  function positionPaneLabels() {
+    var i;
+    var any = false;
+    for (i = 0; i < instOrder.length; i++) {
+      var t = insts[instOrder[i]];
+      if (t && t.live && t.live.label) { any = true; break; }
+    }
+    if (!any) return;
+    var wrap = chartWrap();
+    if (!wrap) return;
+    var rows = paneRows();
+    if (!rows.length) return;
+    var wr;
+    try {
+      wr = wrap.getBoundingClientRect();
+    } catch (e) {
+      return;   /* 아직 화면에 안 붙었으면 다음 기회에 */
+    }
+    for (i = 0; i < instOrder.length; i++) {
+      var it = insts[instOrder[i]];
+      if (!it || !it.live || !it.live.label || !it.live.pane) continue;
+      var idx = -1;
+      try {
+        idx = isFn(it.live.pane.paneIndex) ? it.live.pane.paneIndex() : -1;
+      } catch (e) {
+        idx = -1;
+      }
+      if (idx < 0 || idx >= rows.length) continue;
+      var r = rows[idx].getBoundingClientRect();
+      it.live.label.el.style.top = Math.round(r.top - wr.top + 2) + "px";
+    }
+  }
+
+  /** 이름표의 숫자를 다시 씁니다. force 가 아니면 초당 5번까지만. */
+  function paintPaneLabels(force) {
+    var t = Date.now();
+    if (!force && t - paneLabelPaintAt < 200) return;
+    paneLabelPaintAt = t;
+    for (var i = 0; i < instOrder.length; i++) {
+      var it = insts[instOrder[i]];
+      if (!it || !it.on || !it.live || it.pane !== "sub") continue;
+      ensurePaneLabel(it);
+      if (!it.live.label) continue;
+      var d = defs[it.def];
+      var vals = it.live.vals || {};
+      var parts = it.live.label.parts;
+      for (var k in parts) {
+        var txt = valueText(d, vals[k]);
+        if (parts[k].textContent !== txt) parts[k].textContent = txt;
+      }
+    }
+  }
+
+  /** 이름표에 적힌 이름을 다시 씁니다(기간을 바꾸면 이름이 바뀝니다). */
+  function refreshPaneLabelName(it) {
+    if (!it || !it.live || !it.live.label) return;
+    var nm = it.live.label.el.querySelector(".tl-kit-pname");
+    if (nm) nm.textContent = nameOfInst(it);
+  }
+
+  /* ---------------------------------------------------------------------
+   * 13.3 표시 통화가 바뀌면 - 값이 가격인 지표만 다시 씁니다.
+   * 데이터는 한 점도 안 건드립니다. 눈금 글자와 이름표 글자만 바뀝니다.
+   * ------------------------------------------------------------------- */
+  function applyCurrency() {
+    var f = null;
+    for (var i = 0; i < instOrder.length; i++) {
+      var it = insts[instOrder[i]];
+      if (!it || !it.live) continue;
+      var d = defs[it.def];
+      if (!d || d.unit !== "price") continue;
+      if (!f) f = priceUnitFormat();
+      for (var k in it.live.series) {
+        try {
+          it.live.series[k].applyOptions({ priceFormat: f });
+        } catch (e) {
+          /* 하나가 실패해도 나머지는 바꿉니다 */
+        }
+      }
+    }
+    paintPaneLabels(true);
+  }
+
 
 
   /* ---------------------------------------------------------------------
@@ -1460,8 +1839,12 @@ App.ChartIndicatorKit = (function () {
     var pane = it.pane === "sub" ? makePane() : null;
     var made = {};
     var shown = {};
+    /* 13.2 칸 이름표에 적을 "지금 값" - 방금 계산한 것에서 꺼내 씁니다.
+       이름표 때문에 다시 계산하는 것은 한 번도 없습니다. */
+    var vals0 = {};
     for (var i = 0; i < d.outputs.length; i++) {
       var out = d.outputs[i];
+      vals0[out.key] = lastValueOf(outData[out.key]);
       try {
         made[out.key] = addSeriesFor(it, out, pane);
         shown[out.key] = shiftPoints(outData[out.key] || [], off + shiftOfOut(out, it.params), map);
@@ -1512,9 +1895,21 @@ App.ChartIndicatorKit = (function () {
       clouds: clouds,
       guides: addGuides(d, host),
       guideHost: host,
+      /* 13.2 칸 이름표 - 아래 칸 지표에만 붙습니다 */
+      label: null,
+      vals: vals0,
       commit: cap.state || null,
       commitIdx: cap.state ? n - 2 : -1
     };
+
+    /* 13.1 칸 위·아래 여백 (scale.top · scale.bottom 을 적은 지표만) */
+    applyScaleMargins(host, d);
+
+    /* 13.2 이름표를 붙이고 자리를 잡습니다. 칸이 하나 늘었으니 ★다른 칸의
+       이름표도★ 아래로 밀립니다 - 그래서 전부 다시 잽니다. */
+    ensurePaneLabel(it);
+    positionPaneLabels();
+    paintPaneLabels(true);
 
     var ms = now() - t0;
     perf.seeds++;
@@ -1527,6 +1922,10 @@ App.ChartIndicatorKit = (function () {
     var it = insts[id];
     if (!it || !it.live) return;
     var L = it.live;
+
+    /* 13.2 칸 이름표를 먼저 뗍니다 - 칸이 사라진 뒤에 떼면 "끈 지표의
+       이름표만 허공에 남는" 조용한 고장이 됩니다. */
+    dropPaneLabel(it);
 
     /* ★시리즈보다 먼저★ - 시리즈를 지운 뒤엔 removePriceLine 을 부를
        손잡이가 없습니다. */
@@ -1565,6 +1964,8 @@ App.ChartIndicatorKit = (function () {
       }
     }
     it.live = null;
+    /* 칸이 하나 줄었으니 남은 이름표들이 위로 올라옵니다 */
+    positionPaneLabels();
   }
 
   /** 켜진 것 전부를 다시 그립니다(봉 간격 · 종목이 바뀌었을 때만). */
@@ -1661,6 +2062,7 @@ App.ChartIndicatorKit = (function () {
             continue;
           }
           if (typeof v !== "number" || !isFinite(v)) continue;
+          it.live.vals[k] = v;   /* 13.2 이름표가 받아 적을 값 */
           it.live.series[k].update({ time: at, value: v });
         }
         /* 구름도 마지막 점 하나만 고칩니다 */
@@ -1679,6 +2081,9 @@ App.ChartIndicatorKit = (function () {
       }
     }
 
+    /* 13.2 이름표 숫자 - 초당 5번까지만 다시 씁니다 */
+    paintPaneLabels(false);
+
     if (t0) {
       var ms = now() - t0;
       perf.ticks++;
@@ -1696,6 +2101,9 @@ App.ChartIndicatorKit = (function () {
 
   function checkResync() {
     if (!anyOn() || !candleSeries) return;
+    /* 13.2 창 크기 · 칸 높이가 바뀌면 이름표 자리도 바뀝니다.
+       옛 모듈(js/chart-oscillators.js:899)도 같은 자리에서 같은 일을 합니다. */
+    positionPaneLabels();
     var data;
     try {
       data = candleSeries.data();
@@ -2184,6 +2592,8 @@ App.ChartIndicatorKit = (function () {
         if (t) t.textContent = nm;
       }
     }
+    /* 13.2 아래 칸 이름표에도 같은 이름이 적혀 있습니다 */
+    refreshPaneLabelName(it);
   }
 
   /* ---------------------------------------------------------------------
@@ -2270,7 +2680,14 @@ App.ChartIndicatorKit = (function () {
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-kit-btn:hover{opacity:1;border-color:#838DA4;}" +
       '.tl-kit-btn[aria-pressed="true"]{opacity:1;background:#101727;border-color:#838DA4;color:#E7ECF5;}' +
-      ".tl-kit-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}";
+      ".tl-kit-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
+      /* 13.2 칸 이름표 - 차트 위에 얹기만 합니다(라이브러리 DOM 은 안 건드립니다).
+         ⚠️ pointer-events:none - 이름표가 차트 조작을 먹으면 안 됩니다.
+         ⚠️ 글씨 11px - 칩 줄과 같은 크기. 좁은 화면에서 줄이지 않습니다. */
+      ".tl-kit-plabel{position:absolute;left:8px;z-index:3;pointer-events:none;" +
+      "font-size:12px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
+      "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
+      ".tl-kit-plabel b{font-weight:600;margin-left:6px;}";
     var st = document.createElement("style");
     st.id = "chart-indicator-kit-style";
     st.textContent = css;
@@ -3134,6 +3551,12 @@ App.ChartIndicatorKit = (function () {
     name: "ATR",
     note: "평균실체범위 (변동성)",
     pane: "sub",
+    /* ⭐ 2026-09-03 (13단계) ATR 값은 ★가격★ 입니다 - "ATR(14) = 120.45" 는
+       120.45 USDT 라는 뜻입니다. 그런데 원화로 보는 회원 화면에도 그냥
+       120.45 로 떴습니다(오류 0건 · 화면 멀쩡 · 회원은 모름).
+       unit 을 적으면 눈금 글자와 칸 이름표가 표시 통화를 따라갑니다.
+       계산값은 한 자리도 안 바뀝니다 - 보이는 글자만 바뀝니다. (13.3절) */
+    unit: "price",
     params: { p: 14 },
     inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
     nameOf: function (prm) {
@@ -4848,6 +5271,8 @@ App.ChartIndicatorKit = (function () {
       App.Bus.on("kline:update", onTick);
       App.Bus.on("symbol:change", scheduleResync);
       App.Bus.on("interval:change", scheduleResync);
+      /* 13.3 표시 통화가 바뀌면 값이 ★가격★ 인 지표의 글자만 다시 씁니다 */
+      App.Bus.on("currency:change", applyCurrency);
     }
 
     wrapMenuBridge();
@@ -4994,6 +5419,30 @@ App.ChartIndicatorKit = (function () {
       return n;
     },
     onTickForTest: onTick,
-    rebuildButtonsForTest: buildButtons
+    rebuildButtonsForTest: buildButtons,
+    /* 13.2 칸 이름표 - 화면에 몇 개 붙어 있고 무슨 글자가 적혔는지.
+       (끈 지표의 이름표만 남는 조용한 고장을 눈이 아니라 숫자로 잡습니다) */
+    getPaneLabelsForTest: function () {
+      var out = [];
+      for (var i = 0; i < instOrder.length; i++) {
+        var it = insts[instOrder[i]];
+        if (!it || !it.live || !it.live.label) continue;
+        var vals = {};
+        for (var k in it.live.label.parts) vals[k] = it.live.label.parts[k].textContent;
+        var nm = it.live.label.el.querySelector('.tl-kit-pname');
+        out.push({
+          id: it.id,
+          name: nm ? nm.textContent : '',
+          top: it.live.label.el.style.top,
+          values: vals
+        });
+      }
+      return out;
+    },
+    repositionPaneLabelsForTest: positionPaneLabels,
+    paintPaneLabelsForTest: paintPaneLabels,
+    /* 13.3 표시 통화가 바뀌었을 때 도는 곳 */
+    applyCurrencyForTest: applyCurrency,
+    priceUnitFormatForTest: priceUnitFormat
   };
 })();
