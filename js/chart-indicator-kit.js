@@ -116,6 +116,51 @@
  *      봉 1000개 중 0 인 봉 0개. 실측값은 volumeAllZero() 위 주석에 있습니다.
  * ★기본 인스턴스는 이번에도 안 늘렸습니다★ - "지표 추가" 목록에만 나옵니다.
  *
+ * -- 2026-09-02 (10단계) 에 늘어난 것 - 지표 4개 + ★색 겹침 마무리★ ----
+ *   Stochastic  %K 14 · 다듬기 1 · %D 3 · 기준선 20 · 80   (트레이딩뷰 내장)
+ *   ADX / DMI   DI 14 · ADX 14 · 기준선 없음               (트레이딩뷰 도움말)
+ *   Supertrend  ATR 10 · 배수 3 · ★뒤집히는 자리에서 선이 끊김★ (Pine ta.supertrend 원문)
+ *   Ichimoku    9 · 26 · 52 · 밀기 26 · ★구름(면) 포함★     (트레이딩뷰 도움말 + 실측)
+ * ★기본 인스턴스는 이번에도 안 늘렸습니다★ - "지표 추가" 목록에만 나옵니다.
+ *
+ *   ⭐ 틀에 새로 낸 길 세 가지
+ *      ① outputs[].shift   ★선 하나만★ 앞뒤로 밀기. 일목 선행스팬 +26 ·
+ *                          후행스팬 -26. 숫자 또는 설정값을 받는 함수.
+ *                          회원이 고르는 밀기(off)와 ★더해집니다.★
+ *                          "아직 없는 시간에 점 찍기" 는 3절 timeAtIndex 가
+ *                          이미 하던 일이라(마지막 봉 간격만큼 늘려 잡음)
+ *                          새로 만들 것이 없었습니다.
+ *      ② step 이 ★null★ 을 내면 "여기는 비운다"  Supertrend 가 뒤집히는
+ *                          자리에서 선을 끊는 데 씁니다. seed 는 값 없는 점
+ *                          ({time} 만)을 찍습니다.
+ *      ③ clouds            선 두 개 ★사이를 칠하는 면★. 라이브러리에 면
+ *                          시리즈가 없어서 ★공개 API 인 시리즈 덧그리개
+ *                          (attachPrimitive)★ 로 냈습니다. guides 와 같은
+ *                          모양으로 정의가 한 줄만 적습니다.
+ *                          ★색은 새로 안 만들었습니다★ - 그 두 선의 색을
+ *                          옅게(18%) 깝니다. 실측은 CLOUD_ALPHA 주석에.
+ *                          확인용 - getCloudCountForTest · getCloudStatForTest
+ *
+ *   ⭐ 색 겹침을 마저 잡았습니다 (기록팀이 찾아 준 것)
+ *      · 남아 있던 것 - ★얹는 순서★ 를 바꾸면 겹쳤습니다. 설정 창이 첫 선
+ *        색만 바꿔 줘서, 선이 여럿인 지표(KDJ 3선 · 일목 5선)를 나중에 얹으면
+ *        둘째 · 셋째 선이 정의 기본색 그대로 이미 쓰인 색을 집었습니다.
+ *      · 고친 곳 세 군데 (전부 이 파일)
+ *          autoColors()      createInstance 가 ★모든 출력선★ 을 채웁니다
+ *          paneGroupOf()     색이 다 찼을 때 ★같은 바닥★ 만 피하면 되게
+ *                            (아래 칸 지표는 켤 때 자기 칸을 새로 만듭니다)
+ *          suggestColor()    다 찼을 때 아무 색이나 내던 물러설 자리를,
+ *                            ★주 차트에 없는 색★ 으로 바꿨습니다
+ *      · 실측 (정의 13개 · 회원 경로 그대로 · 무작위 600순서)
+ *          고치기 전   같은 바닥 겹침 287 / 600
+ *          고친 뒤     같은 바닥 겹침   0 / 600  (결정적 순서 15가지도 0)
+ *      ⚠️ 선 26개 · 색 20개라 ★화면 전체★ 에서 다 다르게는 못 합니다.
+ *         다른 칸끼리 같은 색인 것은 남습니다 - 같은 눈금 위에 안 놓이므로
+ *         한 줄로 보이지 않습니다. 색을 더 늘리는 것도 재 봤는데,
+ *         조건을 지키며 10색을 더 뽑으면 ΔE2000 바닥이 9.71 -> ★6.61★ 로
+ *         내려앉습니다(사람 눈에 거의 같은 색 쌍이 생깁니다). 그래서
+ *         ★색을 늘리지 않고 같은 바닥만 지키는 쪽★ 을 골랐습니다.
+ *
  * -- 되돌리기 ---------------------------------------------------------
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
@@ -300,7 +345,7 @@ App.ChartIndicatorKit = (function () {
    *    쪽이 더 나쁩니다. 대신 ★반드시 콘솔에 남깁니다.★
    * ------------------------------------------------------------------- */
   var DEF_FIELDS = [
-    "id", "name", "note", "pane", "params", "inputs", "outputs", "guides",
+    "id", "name", "note", "pane", "params", "inputs", "outputs", "guides", "clouds",
     "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset"
   ];
 
@@ -386,6 +431,15 @@ App.ChartIndicatorKit = (function () {
         );
       }
       if (o.style && ALLOWED_STYLES.indexOf(o.style) < 0) return no("style 은 solid/dashed/dotted: " + def.id);
+      /* 선 하나만 앞뒤로 밀기 - 일목균형표의 선행스팬(+26) · 후행스팬(-26).
+         회원이 고치는 "앞뒤로 밀기(off)" 와 ★더해집니다.★ 이건 정의가 못 바꾸는
+         그 지표의 성질이고, off 는 회원 취향입니다. */
+      if (o.shift !== undefined && !isFn(o.shift)) {
+        if (typeof o.shift !== "number" || !isFinite(o.shift) || (o.shift | 0) !== o.shift) {
+          return no("outputs[" + i + "].shift 은 정수 봉 개수(또는 설정값을 받는 함수)여야 합니다: " + def.id);
+        }
+        if (o.shift > MAX_OFFSET || o.shift < -MAX_OFFSET) return no("shift 이 너무 큽니다: " + def.id);
+      }
     }
 
     /* 기준선 - 값이 아니라 배경입니다. 색 · 굵기는 정의가 못 고릅니다
@@ -401,6 +455,22 @@ App.ChartIndicatorKit = (function () {
         return no("guides[" + gi + "].style 은 solid/dashed/dotted: " + def.id);
       }
       guides.push({ price: g.price, style: g.style || GUIDE_STYLE });
+    }
+
+    /* 구름(면) - 선 두 개 ★사이를 칠하는 것★. 일목균형표의 구름입니다.
+       색은 못 고릅니다 - 그 두 선의 색을 그대로 옅게 씁니다(아래 cloudFill).
+       새 색을 만들지 않으려고 이렇게 했습니다. */
+    var clouds = [];
+    var outKeys = {};
+    for (var oi = 0; oi < def.outputs.length; oi++) outKeys[def.outputs[oi].key] = true;
+    var csrc = def.clouds || [];
+    for (var ci = 0; ci < csrc.length; ci++) {
+      var cl = csrc[ci];
+      if (!cl || !outKeys[cl.a] || !outKeys[cl.b]) {
+        return no("clouds[" + ci + "] 의 a · b 가 outputs 에 없습니다: " + def.id);
+      }
+      if (cl.a === cl.b) return no("clouds[" + ci + "] 의 a 와 b 가 같습니다: " + def.id);
+      clouds.push({ a: cl.a, b: cl.b });
     }
 
     /* 설정 창이 무엇을 보여줄지도 정의가 들고 있습니다. 화면 쪽 파일에
@@ -448,6 +518,7 @@ App.ChartIndicatorKit = (function () {
       inputs: inputs,
       outputs: def.outputs,
       guides: guides,
+      clouds: clouds,
       nameOf: isFn(def.nameOf) ? def.nameOf : null,
       seed: def.seed,
       step: def.step
@@ -797,7 +868,10 @@ App.ChartIndicatorKit = (function () {
     return m;
   }
 
-  /** 켤 때 한 번. off 가 0 이면 원본 배열을 그대로 씁니다(복사 안 함). */
+  /** 켤 때 한 번. off 가 0 이면 원본 배열을 그대로 씁니다(복사 안 함).
+   *  ⚠️ value 가 없는 점(빈 점)도 그대로 옮깁니다 - Supertrend 처럼 ★끊어 그려야★
+   *     하는 지표가 { time } 만 있는 점으로 구멍을 냅니다(라이브러리 whitespace).
+   *     값을 넣어 버리면 끊긴 자리가 이어져 화면을 가로지릅니다. */
   function shiftPoints(arr, off, map) {
     if (!off || !arr || !arr.length) return arr || [];
     var out = [];
@@ -806,9 +880,29 @@ App.ChartIndicatorKit = (function () {
       if (at === undefined) continue;
       var t = timeAtIndex(at + off);
       if (t === null) continue;
-      out.push({ time: t, value: arr[i].value });
+      if (typeof arr[i].value === "number") out.push({ time: t, value: arr[i].value });
+      else out.push({ time: t });
     }
     return out;
+  }
+
+  /** 정의가 그 선에만 걸어 둔 밀기 (일목 선행스팬 +26 · 후행스팬 -26).
+   *  밀기가 설정값을 따라가는 지표(일목의 "밀기 26")가 있어서 함수도 받습니다. */
+  function shiftOfOut(out, prm) {
+    if (!out) return 0;
+    var v = out.shift;
+    if (isFn(v)) {
+      try {
+        v = v(prm || {});
+      } catch (e) {
+        return 0;
+      }
+    }
+    if (typeof v !== "number" || !isFinite(v)) return 0;
+    v = v | 0;
+    if (v > MAX_OFFSET) return MAX_OFFSET;
+    if (v < -MAX_OFFSET) return -MAX_OFFSET;
+    return v;
   }
 
   /* =====================================================================
@@ -999,6 +1093,194 @@ App.ChartIndicatorKit = (function () {
     return gone;
   }
 
+
+  /* ---------------------------------------------------------------------
+   * 구름 - ★선 두 개 사이를 칠하는 것★. 일목균형표의 구름입니다.
+   *
+   * ⚠️ lightweight-charts 5.2.0 에는 "면" 시리즈가 없습니다. 대신 ★시리즈에
+   *    덧그리개(primitive)를 붙이는 길★ 이 열려 있습니다. 라이브러리 원본에서
+   *    확인한 것 (dist 안) -
+   *        attachPrimitive(t){this.ae.hl(t),t.attached&&t.attached({chart:...,series:this,...})}
+   *        detachPrimitive(t){...}
+   *    그리고 paneViews / zOrder / useMediaCoordinateSpace 가 다 들어 있습니다.
+   *    그래서 새 그리기 방식을 만들지 않고 ★공개 API 로만★ 칠합니다.
+   *
+   * ⭐ 색을 ★새로 만들지 않습니다.★ 트레이딩뷰는 구름을 초록 · 빨강으로 칠하는데
+   *    우리 규칙에서 상승 #26C281 · 하락 #F0506E 는 지표에 못 씁니다(손익 색과
+   *    헷갈립니다). 그래서 ★그 두 선이 이미 쓰고 있는 색★ 을 옅게(알파 0.13)
+   *    깔았습니다. 위에 있는 선의 색으로 칠하므로 "어느 쪽이 위인가" 는
+   *    트레이딩뷰와 똑같이 색으로 읽힙니다. 새 hex 는 한 개도 안 늘었습니다.
+   *
+   * ⚠️ 캔들 뒤에 깝니다(zOrder "bottom"). 캔들을 덮으면 시세를 가립니다.
+   * ------------------------------------------------------------------- */
+  /* ⭐ 얼마나 옅게 깔 것인가 - ★트레이딩뷰는 10% 입니다.★
+   *    내장 일목의 fill 이 color.rgb(67,160,71, ★90★) 인데, Pine 의 넷째 값은
+   *    "투명도" 라 0 이 불투명 · 100 이 안 보임입니다. 90 이면 알파 0.10 입니다.
+   *
+   * ⚠️ 우리는 ★18%★ 입니다. 더 진하게 한 이유가 있습니다 - 실측입니다.
+   *    트레이딩뷰의 두 구름색은 초록 · 빨강이라 ★색상환에서 정반대★ 입니다.
+   *    10% 만 깔아도 "초록 구름 / 빨강 구름" 이 갈라집니다.
+   *    우리는 그 둘을 지표에 못 씁니다(손익 색). 라벤더 · 주황으로 냈는데
+   *    같은 10% 로는 배경(#0A0F1C) 위에서 ★둘 다 회색★ 으로 보였습니다.
+   *
+   *    ⚠️ 깔리는 바닥은 #0A0F1C 가 아니라 ★카드색 #101727★ 입니다 - 차트
+   *       캔버스 자체는 투명하고(실측 rgba(0,0,0,0)) 그 뒤 .chart-panel 의
+   *       배경이 비칩니다. 그래서 아래 숫자는 #101727 위에 깐 값입니다.
+   *
+   *        짙기   라벤더가 위        주황이 위        두 색 차이
+   *        10%    (34, 39, 59)      (40, 35, 41)     ( 6, -4, -18)  <- 둘 다 회색
+   *        18%    (48, 52, 76)      (59, 45, 43)     (11, -8, -33)  <- 갈라집니다
+   *       처음에 주황 대신 모래(#F5D7B8)를 썼을 때는 18% 라도
+   *        18%    (48, 52, 76)      (57, 58, 65)     ( 9,  6, -11)  <- 여전히 회색
+   *       이라 색을 바꿨습니다. 짙기만 올려서는 안 됐습니다.
+   *
+   *    브라우저 실측(2026-09-02 · 봉 1000개 전체 · 1920) - 캔버스에서 실제로
+   *        194,188,244 알파 46/255(=0.18)  7,628 픽셀   (라벤더 구름)
+   *        255,144,61  알파 46/255(=0.18)  6,715 픽셀   (주황 구름)
+   *
+   *    ★색을 새로 만들지 않고★ 짙기만 올려서 트레이딩뷰가 색으로 주는 정보
+   *    ("A 가 위냐 B 가 위냐")를 그대로 살렸습니다. */
+  var CLOUD_ALPHA = 0.18;
+
+  function rgba(hex, a) {
+    var h = String(hex).replace("#", "");
+    if (h.length !== 6) return "rgba(120,120,120," + a + ")";
+    var r = parseInt(h.slice(0, 2), 16);
+    var g = parseInt(h.slice(2, 4), 16);
+    var b = parseInt(h.slice(4, 6), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  }
+
+  /** 점들을 "위아래가 안 바뀌는 토막" 으로 끊습니다. 색이 거기서 바뀝니다. */
+  function cloudRuns(pts) {
+    var runs = [];
+    var cur = null;
+    var sign = 0;
+    for (var i = 0; i < pts.length; i++) {
+      var q = pts[i];
+      if (typeof q.a !== "number" || typeof q.b !== "number") {
+        if (cur && cur.length > 1) runs.push({ up: sign > 0, pts: cur });
+        cur = null;
+        continue;
+      }
+      var sg = q.a >= q.b ? 1 : -1;
+      if (!cur) {
+        cur = [q];
+        sign = sg;
+      } else if (sg === sign) {
+        cur.push(q);
+      } else {
+        cur.push(q);                       /* 넘어가는 봉은 양쪽에 다 넣습니다 */
+        runs.push({ up: sign > 0, pts: cur });
+        cur = [q];
+        sign = sg;
+      }
+    }
+    if (cur && cur.length > 1) runs.push({ up: sign > 0, pts: cur });
+    return runs;
+  }
+
+  function makeCloud(getPts, getColors) {
+    var host = null;
+    var stat = { draws: 0, ms: 0, maxMs: 0 };
+
+    function draw(target) {
+      if (!host || !host.chart || !host.series) return;
+      var pts = getPts();
+      if (!pts || pts.length < 2) return;
+      var ts;
+      try {
+        ts = host.chart.timeScale();
+      } catch (e) {
+        return;
+      }
+      if (!ts) return;
+      var t0 = now();
+      var col = getColors();
+      var runs = cloudRuns(pts);
+
+      target.useMediaCoordinateSpace(function (scope) {
+        var ctx = scope.context;
+        for (var r = 0; r < runs.length; r++) {
+          var run = runs[r].pts;
+          var xs = [], ya = [], yb = [];
+          for (var i = 0; i < run.length; i++) {
+            var x = ts.timeToCoordinate(run[i].time);
+            var pa = host.series.priceToCoordinate(run[i].a);
+            var pb = host.series.priceToCoordinate(run[i].b);
+            if (x === null || pa === null || pb === null) continue;
+            xs.push(x); ya.push(pa); yb.push(pb);
+          }
+          if (xs.length < 2) continue;
+          ctx.beginPath();
+          ctx.moveTo(xs[0], ya[0]);
+          for (var j = 1; j < xs.length; j++) ctx.lineTo(xs[j], ya[j]);
+          for (var k = xs.length - 1; k >= 0; k--) ctx.lineTo(xs[k], yb[k]);
+          ctx.closePath();
+          ctx.fillStyle = rgba(runs[r].up ? col.a : col.b, CLOUD_ALPHA);
+          ctx.fill();
+        }
+      });
+
+      var ms = now() - t0;
+      stat.draws++;
+      stat.ms += ms;
+      if (ms > stat.maxMs) stat.maxMs = ms;
+    }
+
+    var view = {
+      renderer: function () {
+        return { draw: draw };
+      },
+      zOrder: function () {
+        return "bottom";
+      }
+    };
+
+    return {
+      paneViews: function () {
+        return [view];
+      },
+      attached: function (h) {
+        host = h;
+      },
+      detached: function () {
+        host = null;
+      },
+      statForTest: stat
+    };
+  }
+
+  /** 두 선의 점 배열을 시각으로 맞춰 { time, a, b } 로 잇습니다(켤 때 한 번). */
+  function joinCloudPoints(arrA, arrB) {
+    var mb = {};
+    var i;
+    for (i = 0; i < arrB.length; i++) {
+      if (typeof arrB[i].value === "number") mb[arrB[i].time] = arrB[i].value;
+    }
+    var out = [];
+    for (i = 0; i < arrA.length; i++) {
+      var v = arrA[i].value;
+      var w = mb[arrA[i].time];
+      if (typeof v !== "number" || typeof w !== "number") continue;
+      out.push({ time: arrA[i].time, a: v, b: w });
+    }
+    return out;
+  }
+
+  /** 마지막 점 하나만 고쳐 씁니다(틱마다). 새 시각이면 뒤에 붙입니다. */
+  function upsertCloudPoint(pts, time, a, b) {
+    if (typeof a !== "number" || typeof b !== "number") return;
+    var last = pts.length ? pts[pts.length - 1] : null;
+    if (last && last.time === time) {
+      last.a = a;
+      last.b = b;
+      return;
+    }
+    if (last && time < last.time) return;
+    pts.push({ time: time, a: a, b: b });
+  }
+
   /** 인스턴스 하나를 그립니다. 다른 인스턴스는 건드리지 않습니다. */
   function turnOn(id) {
     var it = insts[id];
@@ -1025,15 +1307,22 @@ App.ChartIndicatorKit = (function () {
     if (!outData) return;
 
     var off = offOf(it.params);
-    var map = off ? timeIndexMap() : null;
+    /* 정의가 선마다 따로 걸어 둔 밀기가 있으면 off 가 0 이어도 자리표가 필요합니다 */
+    var anyShift = false;
+    for (var si = 0; si < d.outputs.length; si++) {
+      if (shiftOfOut(d.outputs[si], it.params)) anyShift = true;
+    }
+    var map = off || anyShift ? timeIndexMap() : null;
 
     var pane = it.pane === "sub" ? makePane() : null;
     var made = {};
+    var shown = {};
     for (var i = 0; i < d.outputs.length; i++) {
       var out = d.outputs[i];
       try {
         made[out.key] = addSeriesFor(it, out, pane);
-        made[out.key].setData(shiftPoints(outData[out.key] || [], off, map));
+        shown[out.key] = shiftPoints(outData[out.key] || [], off + shiftOfOut(out, it.params), map);
+        made[out.key].setData(shown[out.key]);
       } catch (e2) {
         console.warn("[chart-indicator-kit] 선을 못 그렸습니다: " + id + "." + out.key, e2);
       }
@@ -1043,10 +1332,41 @@ App.ChartIndicatorKit = (function () {
        화면은 같습니다. 첫 선을 못 만들었으면(위 catch) 기준선도 건너뜁니다. */
     var host = made[d.outputs[0].key] || null;
 
+    /* 구름 - 두 선 사이를 칠합니다. 붙이는 자리는 a 선입니다(그 선의 눈금을 씁니다) */
+    var clouds = [];
+    for (var q = 0; q < d.clouds.length; q++) {
+      var spec = d.clouds[q];
+      var hs = made[spec.a];
+      if (!hs) continue;
+      try {
+        var pts = joinCloudPoints(shown[spec.a] || [], shown[spec.b] || []);
+        var prim = makeCloud(
+          (function (arr) {
+            return function () { return arr; };
+          })(pts),
+          (function (sp) {
+            return function () {
+              return { a: it.colors[sp.a], b: it.colors[sp.b] };
+            };
+          })(spec)
+        );
+        hs.attachPrimitive(prim);
+        clouds.push({ spec: spec, prim: prim, host: hs, pts: pts });
+      } catch (ec) {
+        console.warn("[chart-indicator-kit] 구름을 못 그렸습니다: " + id, ec);
+      }
+    }
+
     it.live = {
       series: made,
       pane: pane,
       off: off,
+      shifts: (function () {
+        var m = {};
+        d.outputs.forEach(function (o) { m[o.key] = shiftOfOut(o, it.params); });
+        return m;
+      })(),
+      clouds: clouds,
       guides: addGuides(d, host),
       guideHost: host,
       commit: cap.state || null,
@@ -1068,6 +1388,18 @@ App.ChartIndicatorKit = (function () {
     /* ★시리즈보다 먼저★ - 시리즈를 지운 뒤엔 removePriceLine 을 부를
        손잡이가 없습니다. */
     dropGuides(L);
+
+    /* 구름도 시리즈보다 먼저 뗍니다 - 기준선과 같은 이유입니다 */
+    if (L.clouds) {
+      for (var ci = 0; ci < L.clouds.length; ci++) {
+        try {
+          L.clouds[ci].host.detachPrimitive(L.clouds[ci].prim);
+        } catch (ec) {
+          /* 이미 없으면 무시 */
+        }
+      }
+      L.clouds = [];
+    }
 
     var k;
     for (k in L.series) {
@@ -1170,14 +1502,33 @@ App.ChartIndicatorKit = (function () {
 
         var r = d.step(it.live.commit, barWithSrc(lastBar, it.params.src), it.params);
         if (!r || !r.values) continue;
-        /* 밀기가 있으면 그린 자리도 그만큼 옮겨야 합니다(자리가 없으면 건너뜀) */
-        var at = it.live.off ? timeAtIndex(n - 1 + it.live.off) : lastBar.time;
-        if (at === null) continue;
+        /* 밀기가 있으면 그린 자리도 그만큼 옮겨야 합니다(자리가 없으면 건너뜀).
+           선마다 다른 밀기(일목 선행 +26 · 후행 -26)도 여기서 더해집니다. */
+        var base = it.live.off;
         for (var k in r.values) {
           if (!it.live.series[k]) continue;
+          var sh = base + (it.live.shifts[k] || 0);
+          var at = sh ? timeAtIndex(n - 1 + sh) : lastBar.time;
+          if (at === null) continue;
           var v = r.values[k];
+          /* ★null 은 "여기는 비운다"★ 입니다 - Supertrend 가 뒤집히는 자리에서
+             선을 끊는 데 씁니다. 값을 안 보내면 지난 값이 그대로 남습니다. */
+          if (v === null) {
+            it.live.series[k].update({ time: at });
+            continue;
+          }
           if (typeof v !== "number" || !isFinite(v)) continue;
           it.live.series[k].update({ time: at, value: v });
+        }
+        /* 구름도 마지막 점 하나만 고칩니다 */
+        if (it.live.clouds && it.live.clouds.length) {
+          for (var cq = 0; cq < it.live.clouds.length; cq++) {
+            var cc = it.live.clouds[cq];
+            var csh = base + (it.live.shifts[cc.spec.a] || 0);
+            var cat = csh ? timeAtIndex(n - 1 + csh) : lastBar.time;
+            if (cat === null) continue;
+            upsertCloudPoint(cc.pts, cat, r.values[cc.spec.a], r.values[cc.spec.b]);
+          }
         }
       } catch (e) {
         /* 한 인스턴스가 실패해도 나머지는 계속 그립니다.
@@ -1352,14 +1703,41 @@ App.ChartIndicatorKit = (function () {
       순서를 못 바꿉니다. 그래서 목록이 아니라 고르는 쪽에서 미룹니다) */
   var LEGACY_HEXES = ["#F0B429", "#E7ECF5", "#838DA4"];
 
-  /** 지금 화면의 모든 선이 쓰고 있는 색 (선이 셋인 지표까지 전부 셉니다) */
-  function usedColorMap() {
+  /** 지금 화면의 모든 선이 쓰고 있는 색 (선이 셋인 지표까지 전부 셉니다)
+   *  skipId 를 주면 그 인스턴스만 빼고 셉니다 - 방금 만든 줄이 "아직 안 정한
+   *  기본색" 으로 제 자리를 스스로 막는 것을 피하려고 씁니다(아래 autoColors). */
+  function usedColorMap(skipId, group) {
     var used = {};
     instOrder.forEach(function (iid) {
+      if (iid === skipId) return;
       var it = insts[iid];
+      if (group && paneGroupOf(it) !== group) return;
       for (var ck in it.colors) used[it.colors[ck]] = true;
     });
     return used;
+  }
+
+  /* ---------------------------------------------------------------------
+   * ★한 칸(그리는 바닥) 에 실제로 같이 놓이는 선이 어느 것인가★
+   *
+   * 색이 겹쳐서 회원이 손해를 보는 것은 ★두 선이 같은 눈금 위에 나란히★
+   * 있을 때입니다. 서로 다른 칸에 있으면 같은 색이어도 한 선으로 안 보입니다.
+   *
+   * 실측(2026-09-02 · 5절 turnOn) - 아래 칸 지표는 켤 때마다 makePane() 으로
+   * ★자기 칸을 새로 만듭니다.★ 그래서 아래 칸 지표끼리는 절대 같은 칸에
+   * 안 놓입니다. 같은 바닥을 나눠 쓰는 것은 ★주 차트에 얹는 것들끼리★ 입니다.
+   *
+   *     주 차트   EMA · WMA · SAR · VWAP · Supertrend(2선) · 일목(5선)
+   *               + 기존 MA7 · MA25 · MA99 · 볼린저    -> 다 같은 바닥
+   *     아래 칸   KDJ · ATR · StochRSI · CCI · OBV · Stochastic · DMI
+   *               -> ★하나에 칸 하나★. 이웃이 자기 선들뿐입니다
+   *
+   * ⚠️ 그래도 ★먼저는 화면 전체에서 안 겹치는 색★ 을 찾습니다. 목록 창의
+   *    점 색이 줄마다 달라야 고르기 쉽기 때문입니다. 칸을 보는 것은 색이
+   *    다 떨어졌을 때의 ★물러설 자리★ 입니다(아래 pickFreeColor 3 · 4번째 훑기).
+   * ------------------------------------------------------------------- */
+  function paneGroupOf(it) {
+    return it.pane === "sub" ? "sub:" + it.id : "main";
   }
 
   /* ---------------------------------------------------------------------
@@ -1380,9 +1758,10 @@ App.ChartIndicatorKit = (function () {
    *    (다른 줄과 겹치는 것은 눈으로 구분이 되지만, 한 칸 안 두 선이 같은 색이면
    *     아예 한 선으로 보입니다)
    * ------------------------------------------------------------------- */
-  function pickFreeColor(banned) {
-    var used = usedColorMap();
+  function pickFreeColor(banned, skipId, group) {
+    var used = usedColorMap(skipId);
     var i, h;
+    /* 1 · 2 - 화면 어디에서도 안 쓰는 색 (기존 MA 색은 맨 뒤로 미룹니다) */
     for (i = 0; i < LINE_COLORS.length; i++) {
       h = LINE_COLORS[i].hex;
       if (!banned[h] && !used[h] && LEGACY_HEXES.indexOf(h) < 0) return h;
@@ -1391,6 +1770,22 @@ App.ChartIndicatorKit = (function () {
       h = LINE_COLORS[i].hex;
       if (!banned[h] && !used[h]) return h;
     }
+    /* 3 · 4 - 색이 다 찼습니다. ★같은 칸에만 없으면★ 씁니다(위 paneGroupOf).
+       ⚠️ 선이 색보다 빨리 늡니다 - 정의 13개면 선이 26개인데 색은 20개입니다.
+          여기서 그냥 아무 색이나 집으면 ★같은 칸 안에서★ 두 선이 한 줄로
+          보입니다. 다른 칸과 겹치는 것은 눈으로 구분이 됩니다. */
+    if (group) {
+      var mine = usedColorMap(skipId, group);
+      for (i = 0; i < LINE_COLORS.length; i++) {
+        h = LINE_COLORS[i].hex;
+        if (!banned[h] && !mine[h] && LEGACY_HEXES.indexOf(h) < 0) return h;
+      }
+      for (i = 0; i < LINE_COLORS.length; i++) {
+        h = LINE_COLORS[i].hex;
+        if (!banned[h] && !mine[h]) return h;
+      }
+    }
+    /* 5 - 같은 칸에도 자리가 없습니다. 적어도 ★제 줄 안에서는★ 안 겹치게 */
     for (i = 0; i < LINE_COLORS.length; i++) {
       h = LINE_COLORS[i].hex;
       if (!banned[h]) return h;
@@ -1425,11 +1820,83 @@ App.ChartIndicatorKit = (function () {
         return;
       }
       if (keepMap[k]) return; /* 회원이 고른 선은 안 옮깁니다 */
-      var next = pickFreeColor(seen);
+      var next = pickFreeColor(seen, it.id, paneGroupOf(it));
       if (!next || next === c) return;
       it.colors[k] = next;
       seen[next] = true;
       changed = true;
+    });
+    return changed;
+  }
+
+  /* ---------------------------------------------------------------------
+   * ⭐ 2026-09-02 (10단계) 에 잡은 것 - ★얹는 순서를 바꾸면 나던 색 겹침★
+   *
+   * 9단계에서 고친 것은 "★한 줄 안에서★ 두 선이 같은 색" 뿐이었습니다.
+   * 남아 있던 것은 ★줄과 줄 사이★ 입니다.
+   *
+   *   회원이 "지표 추가" 로 얹으면 설정 창이 이 순서로 부릅니다.
+   *       suggestColor()  ->  createInstance()  ->  updateInstance(★첫 선만★)
+   *   즉 ★둘째 · 셋째 선은 정의에 적힌 기본색 그대로★ 얹힙니다. 그 기본색을
+   *   앞서 얹은 다른 줄이 이미 쓰고 있으면 두 선이 한 줄로 보입니다.
+   *
+   *   제일 짧은 재현 - ATR -> SAR -> CCI -> KDJ (네 번)
+   *       CCI 가 자동으로 #E1ED97 을 받고, 뒤에 얹은 KDJ 의 D 선이 정의
+   *       기본색 #E1ED97 그대로 -> ★둘 다 아래 칸에서 같은 색★
+   *   실측(2026-09-02 · 기록팀) - 무작위 순서 600가지 중 같은 칸 겹침 131 ·
+   *       어디서든 겹침 214 / 결정적 순서 11가지 중 같은 칸 7 · 전체 8
+   *
+   * ⚠️ 왜 설정 창(js/chart-indicator-settings.js)이 아니라 여기서 고치나
+   *    ① 저쪽은 이번 작업에서 손대지 않기로 한 파일입니다
+   *    ② 설정 창 말고 다른 경로로 얹어도(스크립트 · 나중에 생길 화면) 같이
+   *       안전해야 합니다. 색을 고르는 규칙이 두 곳에 생기면 또 어긋납니다
+   *
+   * ⚠️ ★회원이 직접 고른 색은 안 건드립니다.★ given(opts.colors 로 들어온 키)
+   *    은 그대로 두고, 자동으로 준 나머지 선만 비켜 줍니다.
+   * ⚠️ ★저장소에서 되살릴 때(loadState)는 부르지 않습니다.★ 저장된 색은 회원이
+   *    보던 색이라, 새로고침할 때마다 색이 바뀌면 그게 더 나쁜 고장입니다.
+   *    그래서 addInstance 가 아니라 createInstance("지표 추가")에만 답니다.
+   * ------------------------------------------------------------------- */
+  function autoColors(id, given) {
+    var it = insts[id];
+    var d = it && defs[it.def];
+    if (!d) return false;
+
+    var givenMap = {};
+    (given ? Object.keys(given) : []).forEach(function (k) {
+      givenMap[k] = true;
+    });
+
+    /* 회원이 정한 선의 색부터 자리를 잡습니다(그 색은 이 줄 안에서 금지색) */
+    var banned = {};
+    d.outputs.forEach(function (o) {
+      if (givenMap[o.key]) banned[it.colors[o.key]] = true;
+    });
+
+    var group = paneGroupOf(it);
+    var changed = false;
+    d.outputs.forEach(function (o) {
+      if (givenMap[o.key]) return;
+      /* ⭐ ★정의가 정해 둔 기본색이 비어 있으면 그대로 씁니다.★
+         정의의 색은 아무렇게나 고른 것이 아닙니다 - DMI 는 트레이딩뷰와 같은
+         파랑 · 주황이고, 일목의 선행스팬 두 색은 ★구름 색으로도 쓰입니다★
+         (밝고 옅어야 캔들 뒤에 깔았을 때 읽힙니다). 자리가 비어 있는데도
+         목록 앞에서부터 다시 고르면 그 뜻이 다 없어집니다.
+         ⚠️ 나 자신은 빼고 셉니다 - 아직 안 정한 내 기본색이 내 자리를 막지 않게. */
+      var cur = it.colors[o.key];
+      var used = usedColorMap(id);
+      if (cur && !banned[cur] && !used[cur]) {
+        banned[cur] = true;
+        return;
+      }
+      var next = pickFreeColor(banned, id, group);
+      if (!next) {
+        banned[cur] = true;                /* 색을 다 썼으면 있는 색 그대로 */
+        return;
+      }
+      if (next !== cur) changed = true;
+      it.colors[o.key] = next;
+      banned[next] = true;
     });
     return changed;
   }
@@ -1450,6 +1917,23 @@ App.ChartIndicatorKit = (function () {
     for (i = 0; i < LINE_COLORS.length; i++) {
       if (!used[LINE_COLORS[i].hex]) return LINE_COLORS[i].hex;
     }
+    /* ⭐ 색이 ★다 찼을 때★ (2026-09-02 10단계에 고친 자리)
+       설정 창은 이 값을 받아서 createInstance ★뒤에★ 첫 선에 덮어씌웁니다
+       (js/chart-indicator-settings.js:601-611). 그래서 여기서 아무 색이나
+       돌려주면 틀이 방금 잘 골라 준 색을 ★도로 망칩니다.★
+       실측(2026-09-02 · 정의 13개 · 무작위 600순서) - 고치기 전 같은 바닥
+       겹침 287, 고친 뒤 0.
+       ★제일 붐비는 바닥(주 차트)에 없는 색★ 을 고릅니다. 아래 칸 지표는
+       켤 때 자기 칸을 새로 만들어서 이웃이 자기 선들뿐입니다(paneGroupOf). */
+    var onMain = usedColorMap(null, "main");
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      if (!onMain[LINE_COLORS[i].hex] && LEGACY_HEXES.indexOf(LINE_COLORS[i].hex) < 0) {
+        return LINE_COLORS[i].hex;
+      }
+    }
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      if (!onMain[LINE_COLORS[i].hex]) return LINE_COLORS[i].hex;
+    }
     return LINE_COLORS[instOrder.length % LINE_COLORS.length].hex;
   }
 
@@ -1463,6 +1947,9 @@ App.ChartIndicatorKit = (function () {
     opts.on = false;
     var id = addInstance(defId, opts);
     if (!id) return null;
+    /* ★모든 선★ 에 아직 안 쓰인 색을 채웁니다(위 autoColors 주석 - 10단계).
+       회원이 opts.colors 로 준 선은 그대로 둡니다. */
+    autoColors(id, opts.colors);
     saveState();
     buildButtons();
     injectMenuRows();
@@ -2876,6 +3363,681 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+
+  /* -- 굴러가는 최고 · 최저 창 (Stochastic · 일목균형표가 같이 씁니다) -------
+   * "지금 봉을 포함한 최근 p봉의 최고가 · 최저가" 를 O(1) 로 들고 다닙니다.
+   * 최고가 어느 칸인지(hiIdx)를 같이 적어 두어, 보통은 비교 한 번입니다.
+   * 최고이던 봉이 창에서 빠질 때만 훑는데 그때도 ★봉 개수 n 이 아니라 기간 p★
+   * 입니다. KDJ · StochRSI 가 쓰던 방식과 같은 것을 함수로 뽑았습니다.
+   *
+   * ⚠️ 그 자리에서 고쳐 쓰는 칸은 hb[head] · lb[head] ★두 칸뿐★ 이고 둘 다
+   *    들어온 상태(st)로 정해지는 자리라, 진행 중인 봉으로 몇 번을 다시 불러도
+   *    답이 같습니다(KDJ 주석과 같은 이유).
+   * ⚠️ ★KDJ 와 다른 점★ - KDJ 는 "직전 p-1봉" 창이라 지금 봉을 따로 비교하는데,
+   *    여기는 ta.stoch · 일목처럼 ★지금 봉을 창에 넣고 나서★ 읽습니다.
+   * --------------------------------------------------------------------- */
+
+  function rollInit(p) {
+    return {
+      hb: new Array(p), lb: new Array(p), head: 0, cnt: 0,
+      hiMax: -Infinity, hiIdx: -1, loMin: Infinity, loIdx: -1
+    };
+  }
+
+  function rollCopy(st) {
+    return {
+      hb: st.hb.slice(), lb: st.lb.slice(), head: st.head, cnt: st.cnt,
+      hiMax: st.hiMax, hiIdx: st.hiIdx, loMin: st.loMin, loIdx: st.loIdx
+    };
+  }
+
+  /** 봉 하나를 창에 넣습니다. 돌려주는 상태의 hiMax · loMin 이 "지금 봉 포함" 값입니다. */
+  function rollPush(st, high, low, p) {
+    var head = st.head;
+    var hiMax = st.hiMax, hiIdx = st.hiIdx;
+    var loMin = st.loMin, loIdx = st.loIdx;
+    var a, v;
+
+    st.hb[head] = high;
+    st.lb[head] = low;
+
+    if (high >= hiMax) {
+      hiMax = high;
+      hiIdx = head;
+    } else if (hiIdx === head) {
+      hiMax = -Infinity;
+      hiIdx = -1;
+      for (a = 0; a < p; a++) {
+        v = st.hb[a];
+        if (v === undefined) continue;
+        if (v > hiMax) { hiMax = v; hiIdx = a; }
+      }
+    }
+
+    if (low <= loMin) {
+      loMin = low;
+      loIdx = head;
+    } else if (loIdx === head) {
+      loMin = Infinity;
+      loIdx = -1;
+      for (a = 0; a < p; a++) {
+        v = st.lb[a];
+        if (v === undefined) continue;
+        if (v < loMin) { loMin = v; loIdx = a; }
+      }
+    }
+
+    return {
+      hb: st.hb, lb: st.lb,
+      head: (head + 1) % p,
+      cnt: st.cnt < p ? st.cnt + 1 : p,
+      hiMax: hiMax, hiIdx: hiIdx, loMin: loMin, loIdx: loIdx
+    };
+  }
+
+  /* -- Stochastic 스토캐스틱 --------------------------------------------
+   * "지금 종가가 최근 p봉의 폭에서 어디쯤인가" 를 0~100 으로 봅니다. 위쪽에
+   * 붙으면 최근 고점 근처, 아래쪽에 붙으면 최근 저점 근처입니다.
+   *
+   * ⭐ 계산식 - ★트레이딩뷰 Pine 참고서 ta.stoch 원문★ (2026-09-02 브라우저로
+   *    직접 열어 읽었습니다)
+   *        "Stochastic. It is calculated by a formula:
+   *         100 * (close - lowest(low, length)) / (highest(high, length) - lowest(low, length))"
+   *    창에 ★지금 봉이 들어갑니다★ (lowest/highest 가 현재 봉을 포함합니다).
+   *
+   * ⭐ 기본값 14 · 1 · 3 - 트레이딩뷰 내장 Stochastic 의 기본입니다.
+   *        %K Length 14 · %K Smoothing 1 · %D Smoothing 3
+   *        k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+   *        d = ta.sma(k, periodD)
+   *    ⚠️ Smoothing 이 1 이면 평균을 안 낸 날것입니다(트레이딩뷰의 "Fast").
+   *       그래서 %K 가 톱니처럼 보입니다 - 고장이 아닙니다.
+   *    ⚠️ 바이낸스에는 그냥 Stochastic 이 ★없습니다★ - 2026-09-02 앞 팀이 센
+   *       Sub 10개(VOL · MACD · RSI · MFI · KDJ · OBV · CCI · StochRSI · WR · DMI)
+   *       에 KDJ 와 StochRSI 만 있었습니다. 차트 시스템은 트레이딩뷰 관할이라 넣습니다.
+   *
+   * ⭐ 기준선 20 · 80 - 트레이딩뷰 내장이 hline(80) · hline(20) 을 그립니다.
+   *    (RSI 의 30/70 과 다릅니다)
+   *
+   * ⚠️ 창이 평평하면(고 == 저) 나눌 것이 없습니다. 0 으로 둡니다 - 같은 파일의
+   *    StochRSI 와 같은 처리입니다(두 지표가 다르게 굴면 그게 더 헷갈립니다).
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    최고 · 최저는 위 rollPush(보통 비교 한 번), %K · %D 는 굴러가는 합입니다.
+   *    ⚠️ 덮어쓰는 칸은 hb[head] · lb[head] · kb[kh] · db[dh] 네 칸뿐이고,
+   *       "곧 빠질 값" 은 버퍼가 아니라 kold · dold 에 따로 적어 두었습니다.
+   *       그래서 진행 중인 봉으로 몇 번을 다시 불러도 답이 같습니다.
+   * --------------------------------------------------------------------- */
+
+  function stochInit(p, kp, dp) {
+    return {
+      w: rollInit(p),
+      kb: new Array(kp), kh: 0, kc: 0, ks: 0, kold: 0,
+      db: new Array(dp), dh: 0, dc: 0, ds: 0, dold: 0
+    };
+  }
+
+  function stochCopy(st) {
+    return {
+      w: rollCopy(st.w),
+      kb: st.kb.slice(), kh: st.kh, kc: st.kc, ks: st.ks, kold: st.kold,
+      db: st.db.slice(), dh: st.dh, dc: st.dc, ds: st.ds, dold: st.dold
+    };
+  }
+
+  /** 봉 하나. seed 와 step 이 ★같은 함수★ 를 씁니다. */
+  function stochOne(st, high, low, close, p, kp, dp) {
+    var w = rollPush(st.w, high, low, p);
+    var vals = null;
+
+    var kb = st.kb, kh = st.kh, kc = st.kc, ks = st.ks, kold = st.kold;
+    var db = st.db, dh = st.dh, dc = st.dc, ds = st.ds, dold = st.dold;
+
+    if (w.cnt >= p) {
+      var raw = w.hiMax > w.loMin ? ((close - w.loMin) / (w.hiMax - w.loMin)) * 100 : 0;
+
+      ks = ks + raw - (kc >= kp ? kold : 0);
+      kb[kh] = raw;
+      kh = (kh + 1) % kp;
+      if (kc < kp) kc++;
+      kold = kb[kh];                    /* 다음에 빠질 값 - ★쓴 뒤에★ 읽습니다 */
+
+      if (kc >= kp) {
+        var kv = ks / kp;
+        /* ⚠️ %K 는 %D 보다 (다듬기 - 1)봉 ★먼저★ 나옵니다. 트레이딩뷰도 그렇게
+           그립니다(plot 이 둘로 나뉘어 있고 각자 na 가 끝나는 자리가 다릅니다).
+           기본값 1 · 3 이면 %K 가 두 봉 먼저 시작합니다. */
+        vals = { k: kv };
+        ds = ds + kv - (dc >= dp ? dold : 0);
+        db[dh] = kv;
+        dh = (dh + 1) % dp;
+        if (dc < dp) dc++;
+        dold = db[dh];
+        if (dc >= dp) vals.d = ds / dp;
+      }
+    }
+
+    return {
+      values: vals,
+      state: {
+        w: w,
+        kb: kb, kh: kh, kc: kc, ks: ks, kold: kold,
+        db: db, dh: dh, dc: dc, ds: ds, dold: dold
+      }
+    };
+  }
+
+  define({
+    id: "stoch",
+    name: "Stochastic",
+    note: "최근 폭에서 종가의 자리 (%K · %D)",
+    pane: "sub",
+    params: { p: 14, k: 1, d: 3 },
+    inputs: [
+      { key: "p", label: "%K 기간", min: 1, max: 1000 },
+      { key: "k", label: "%K 다듬기", min: 1, max: 100 },
+      { key: "d", label: "%D 다듬기", min: 1, max: 100 }
+    ],
+    nameOf: function (prm) {
+      return "Stoch(" + prm.p + "," + prm.k + "," + prm.d + ")";
+    },
+    outputs: [
+      { key: "k", kind: "line", color: "#499EE9", style: "solid" },
+      { key: "d", kind: "line", color: "#FF8F3C", style: "solid" }
+    ],
+    guides: [{ price: 80 }, { price: 20 }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var kp = Math.max(1, prm.k | 0);
+      var dp = Math.max(1, prm.d | 0);
+      var n = bs.close.length;
+      var outK = [], outD = [];
+      var st = stochInit(p, kp, dp);
+
+      for (var i = 0; i < n; i++) {
+        var r = stochOne(st, bs.high[i], bs.low[i], bs.close[i], p, kp, dp);
+        st = r.state;
+        if (r.values) {
+          if (typeof r.values.k === "number") outK.push({ time: bs.time[i], value: r.values.k });
+          if (typeof r.values.d === "number") outD.push({ time: bs.time[i], value: r.values.d });
+        }
+        if (i === n - 2) cap.state = stochCopy(st);
+      }
+      return { k: outK, d: outD };
+    },
+
+    step: function (st, bar, prm) {
+      var r = stochOne(
+        st, bar.high, bar.low, bar.close,
+        Math.max(1, prm.p | 0), Math.max(1, prm.k | 0), Math.max(1, prm.d | 0)
+      );
+      return { values: r.values || {}, state: r.state };
+    }
+  });
+
+
+  /* -- 와일더 평활(RMA) - ADX · Supertrend 가 같이 씁니다 -----------------
+   *   첫 값은 앞 len개의 단순평균, 그 뒤로는 ((len-1)·이전 + 새값) / len.
+   *   트레이딩뷰 ta.rma 와 같습니다(이 파일의 ATR 이 쓰던 식을 함수로 뽑았습니다).
+   *   ⚠️ 상태를 ★새 객체로★ 돌려줍니다 - 진행 중인 봉으로 몇 번을 다시 불러도
+   *      들어온 상태가 안 바뀌어 답이 같습니다.
+   * --------------------------------------------------------------------- */
+  function rmaInit() {
+    return { v: 0, n: 0 };
+  }
+
+  function rmaPush(st, x, len) {
+    var n = st.n + 1;
+    var v;
+    if (n < len) v = st.v + x;              /* 아직 모으는 중(합) */
+    else if (n === len) v = (st.v + x) / len;
+    else v = ((len - 1) * st.v + x) / len;
+    return { v: v, n: n };
+  }
+
+  function rmaVal(st, len) {
+    return st.n >= len ? st.v : null;
+  }
+
+  /* -- ADX / DMI 방향성지수 ---------------------------------------------
+   * "추세가 있느냐(ADX)" 와 "어느 쪽이냐(+DI · -DI)" 를 같이 봅니다.
+   * ADX 는 방향을 안 봅니다 - 세기만 봅니다. J. Welles Wilder 가 만들었습니다.
+   *
+   *   UpMove   = 지금 고가 - 직전 고가
+   *   DownMove = 직전 저가 - 지금 저가
+   *   +DM = (UpMove > DownMove 그리고 UpMove > 0) 이면 UpMove, 아니면 0
+   *   -DM = (DownMove > UpMove 그리고 DownMove > 0) 이면 DownMove, 아니면 0
+   *   +DI = 100 · RMA(+DM, len) / RMA(TR, len)
+   *   -DI = 100 · RMA(-DM, len) / RMA(TR, len)
+   *   DX  = |+DI - -DI| / (+DI + -DI)          (합이 0 이면 1 로 나눕니다)
+   *   ADX = 100 · RMA(DX, sig)
+   *
+   * ⭐ 기본값 14 · 14 - ★트레이딩뷰 기준★ 입니다.
+   *    (2026-09-02 트레이딩뷰 도움말 "Directional Movement Index (DMI)" -
+   *     Default Input Values : ADX Length 14 · DI Length 14)
+   *    ⚠️ 그 도움말은 평활을 "Exponential Moving Average" 라고 뭉뚱그려 적었는데,
+   *       ★와일더 평활(RMA)★ 이 맞습니다. Pine 참고서 ta.rma 가 alpha = 1/length
+   *       이고, ta.ema 는 alpha = 2/(length+1) 로 ★다른 함수★ 입니다. 원래
+   *       와일더가 정의한 것이 1/length 이고 트레이딩뷰 내장도 ta.rma 를 씁니다.
+   *    ⚠️ Pine 참고서 ta.dmi 항목에는 ★계산식 예제가 없습니다★ (2026-09-02
+   *       브라우저로 열어 확인 - SYNTAX · ARGUMENTS · EXAMPLE 만 있고 pine_dmi
+   *       같은 "같은 것을 파인으로 쓰면" 토막이 없습니다). 그래서 위 식은
+   *       도움말 문서 + ta.rma 정의를 맞춰 쓴 것입니다.
+   *    ⚠️ 참고서 EXAMPLE 의 17 · 14 는 ★예제용 숫자★ 이지 기본값이 아닙니다
+   *       (input.int(17, title="DI Length")). 기본값은 도움말의 14 · 14 입니다.
+   *    ⚠️ 바이낸스에도 DMI 가 있습니다(Sub Indicator 목록). 차트 시스템은
+   *       트레이딩뷰 관할이라 트레이딩뷰 값을 따릅니다.
+   *
+   * ⚠️ 기준선을 ★안 그립니다★ - 트레이딩뷰 내장 DMI 에는 hline 이 하나도
+   *    없습니다(Stochastic 의 20 · 80, RSI 의 30 · 70 과 다릅니다).
+   *    "ADX 25 위면 추세" 는 널리 쓰이는 관습이지 트레이딩뷰가 그려 주는 선이
+   *    아닙니다. 그리고 싶으면 정의에 guides 한 줄이면 됩니다.
+   *
+   * ⚠️ TR 이 0 인 구간(고 == 저 == 직전 종가)에서는 나눌 수가 없습니다.
+   *    트레이딩뷰가 fixnan 으로 ★직전 값을 그대로 끌고 갑니다.★ 같게 했습니다.
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    RMA 네 개(+DM · -DM · TR · DX)와 직전 봉의 고 · 저 · 종뿐입니다.
+   *    배열이 하나도 없어서 창을 훑는 일이 아예 없습니다.
+   * --------------------------------------------------------------------- */
+
+  function dmiInit() {
+    return {
+      ph: null, pl: null, pc: null,
+      dp: rmaInit(), dm: rmaInit(), tr: rmaInit(), ax: rmaInit(),
+      lp: null, lm: null
+    };
+  }
+
+  /** 봉 하나. seed 와 step 이 ★같은 함수★ 를 씁니다. */
+  function dmiOne(st, high, low, close, len, sig) {
+    if (st.ph === null) {
+      /* 첫 봉은 직전 봉이 없어 +DM · -DM · TR 이 없습니다(트레이딩뷰도 na) */
+      return {
+        values: null,
+        state: {
+          ph: high, pl: low, pc: close,
+          dp: st.dp, dm: st.dm, tr: st.tr, ax: st.ax, lp: st.lp, lm: st.lm
+        }
+      };
+    }
+
+    var up = high - st.ph;
+    var down = st.pl - low;
+    var pdm = up > down && up > 0 ? up : 0;
+    var mdm = down > up && down > 0 ? down : 0;
+
+    var dpS = rmaPush(st.dp, pdm, len);
+    var dmS = rmaPush(st.dm, mdm, len);
+    var trS = rmaPush(st.tr, trueRange(high, low, st.pc), len);
+    var axS = st.ax;
+    var lp = st.lp, lm = st.lm;
+    var vals = null;
+
+    var trur = rmaVal(trS, len);
+    if (trur !== null) {
+      var plus = trur > 0 ? (100 * rmaVal(dpS, len)) / trur : lp;
+      var minus = trur > 0 ? (100 * rmaVal(dmS, len)) / trur : lm;
+      if (plus !== null && minus !== null) {
+        lp = plus;
+        lm = minus;
+        vals = { plus: plus, minus: minus };
+        var sum = plus + minus;
+        axS = rmaPush(st.ax, Math.abs(plus - minus) / (sum === 0 ? 1 : sum), sig);
+        var av = rmaVal(axS, sig);
+        if (av !== null) vals.adx = 100 * av;
+      }
+    }
+
+    return {
+      values: vals,
+      state: {
+        ph: high, pl: low, pc: close,
+        dp: dpS, dm: dmS, tr: trS, ax: axS, lp: lp, lm: lm
+      }
+    };
+  }
+
+  define({
+    id: "dmi",
+    name: "ADX / DMI",
+    note: "추세의 세기와 방향 (+DI · -DI · ADX)",
+    pane: "sub",
+    params: { len: 14, sig: 14 },
+    inputs: [
+      { key: "len", label: "DI 기간", min: 1, max: 1000 },
+      { key: "sig", label: "ADX 다듬기", min: 1, max: 1000 }
+    ],
+    nameOf: function (prm) {
+      return "DMI(" + prm.len + "," + prm.sig + ")";
+    },
+    /* 트레이딩뷰 예제가 +DI 파랑 · -DI 주황 · ADX 빨강입니다. 앞의 둘은 그대로
+       두고 ADX 만 노랑으로 바꿨습니다 - ★빨강은 손익 표시에만★ 쓰는 규칙 때문입니다. */
+    outputs: [
+      { key: "plus", kind: "line", color: "#499EE9", style: "solid" },
+      { key: "minus", kind: "line", color: "#FF8F3C", style: "solid" },
+      { key: "adx", kind: "line", color: "#F2DF0D", style: "solid" }
+    ],
+
+    seed: function (bs, prm, cap) {
+      var len = Math.max(1, prm.len | 0);
+      var sig = Math.max(1, prm.sig | 0);
+      var n = bs.close.length;
+      var oP = [], oM = [], oA = [];
+      var st = dmiInit();
+
+      for (var i = 0; i < n; i++) {
+        var r = dmiOne(st, bs.high[i], bs.low[i], bs.close[i], len, sig);
+        st = r.state;
+        if (r.values) {
+          oP.push({ time: bs.time[i], value: r.values.plus });
+          oM.push({ time: bs.time[i], value: r.values.minus });
+          if (typeof r.values.adx === "number") oA.push({ time: bs.time[i], value: r.values.adx });
+        }
+        if (i === n - 2) cap.state = st;
+      }
+      return { plus: oP, minus: oM, adx: oA };
+    },
+
+    step: function (st, bar, prm) {
+      var r = dmiOne(st, bar.high, bar.low, bar.close, Math.max(1, prm.len | 0), Math.max(1, prm.sig | 0));
+      return { values: r.values || {}, state: r.state };
+    }
+  });
+
+  /* -- Supertrend -------------------------------------------------------
+   * ATR 만큼 떨어진 자리에 "따라오는 선" 을 하나 긋습니다. 선이 캔들 아래면
+   * 오름세, 위면 내림세입니다. 뒤집히는 봉에서 선이 반대쪽으로 건너뜁니다.
+   *
+   * ⭐ 계산식 - ★트레이딩뷰 Pine 참고서 ta.supertrend 원문 pine_supertrend()★
+   *    을 한 줄씩 옮겼습니다 (2026-09-02 브라우저로 직접 열어 읽은 원문).
+   *        src = hl2
+   *        atr = ta.atr(atrPeriod)
+   *        upperBand = src + factor * atr
+   *        lowerBand = src - factor * atr
+   *        lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+   *        upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+   *        if na(atr[1])                            _direction := 1
+   *        else if prevSuperTrend == prevUpperBand  _direction := close > upperBand ? -1 : 1
+   *        else                                     _direction := close < lowerBand ? 1 : -1
+   *        superTrend := _direction == -1 ? lowerBand : upperBand
+   *    ⚠️ 직접 짜면 어긋납니다 - 자주 빠지는 것이 ★밴드를 한쪽으로만 조이는★
+   *       두 줄(:= 로 다시 대입하는 부분)입니다. 이걸 빼면 선이 캔들을 파고듭니다.
+   *
+   * ⭐ 기본값 ATR 10 · 배수 3 - 같은 문서의 예제가 ta.supertrend(3, 10) 입니다.
+   *    ⚠️ 바이낸스에도 SUPER 가 있습니다(Main Indicator). 차트 시스템은
+   *       트레이딩뷰 관할이라 트레이딩뷰 값을 따릅니다.
+   *
+   * ⚠️⚠️ ★뒤집히는 자리에서 선이 끊어져야 합니다.★ 이어 그리면 화면을 가로지르는
+   *    큰 사선이 생겨 아예 다른 그림이 됩니다. 트레이딩뷰도 ★선을 둘로 나눠★
+   *    그립니다 - plot(direction < 0 ? supertrend : na, "Up direction", ...) 과
+   *    plot(direction > 0 ? supertrend : na, "Down direction", ...), 둘 다
+   *    style=plot.style_linebr(선 끊기) 입니다. 우리도 선 두 개로 냅니다.
+   *    비는 자리에는 ★값 없는 점({time} 만)★ 을 찍어 구멍을 냅니다.
+   *
+   * ⚠️ 색 - 트레이딩뷰는 초록 · 빨강인데 우리는 그 둘을 지표에 못 씁니다
+   *    (손익 색과 헷갈립니다). 하늘 · 분홍으로 냈습니다. 방향은 여전히 색으로
+   *    구분되고, 어차피 두 선이 ★같은 자리에 같이 있는 일이 없습니다.★
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    상태가 전부 숫자입니다 - ATR 하나, 위 · 아래 밴드, 방향, 지금 선, 직전 종가.
+   *    창을 훑지 않고 배열도 없습니다.
+   * --------------------------------------------------------------------- */
+
+  function superInit() {
+    return { atr: rmaInit(), pc: null, upper: 0, lower: 0, dir: 0, st: null, on: false };
+  }
+
+  /** 봉 하나. seed 와 step 이 ★같은 함수★ 를 씁니다. */
+  function superOne(state, high, low, close, p, f) {
+    var atrS = rmaPush(state.atr, trueRange(high, low, state.pc), p);
+    var atr = rmaVal(atrS, p);
+
+    if (atr === null) {
+      /* ATR 이 아직 없습니다. 트레이딩뷰도 이 구간엔 아무것도 안 그립니다. */
+      return {
+        values: null,
+        state: { atr: atrS, pc: close, upper: 0, lower: 0, dir: 0, st: null, on: false }
+      };
+    }
+
+    var src = (high + low) / 2;
+    var rawUp = src + f * atr;
+    var rawLo = src - f * atr;
+    var pUp = state.upper;
+    var pLo = state.lower;
+    var pc = state.pc;
+
+    var lower = rawLo > pLo || pc < pLo ? rawLo : pLo;
+    var upper = rawUp < pUp || pc > pUp ? rawUp : pUp;
+
+    var dir;
+    if (!state.on) dir = 1;                       /* na(atr[1]) 인 첫 봉 */
+    else if (state.st === pUp) dir = close > upper ? -1 : 1;
+    else dir = close < lower ? 1 : -1;
+
+    var line = dir === -1 ? lower : upper;
+
+    return {
+      values: { up: dir < 0 ? line : null, dn: dir > 0 ? line : null },
+      state: { atr: atrS, pc: close, upper: upper, lower: lower, dir: dir, st: line, on: true }
+    };
+  }
+
+  define({
+    id: "supertrend",
+    name: "Supertrend",
+    note: "ATR 로 따라오는 추세선",
+    pane: "main",
+    params: { p: 10, f: 3 },
+    inputs: [
+      { key: "p", label: "ATR 기간", min: 1, max: 1000 },
+      { key: "f", label: "배수", type: "float", min: 0.1, max: 100 }
+    ],
+    nameOf: function (prm) {
+      return "Supertrend(" + prm.p + "," + prm.f + ")";
+    },
+    outputs: [
+      { key: "up", kind: "line", color: "#49C9E9", style: "solid" },
+      { key: "dn", kind: "line", color: "#F292DE", style: "solid" }
+    ],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var f = fnum(prm.f, 3);
+      var n = bs.close.length;
+      var oU = [], oD = [];
+      var state = superInit();
+
+      for (var i = 0; i < n; i++) {
+        var r = superOne(state, bs.high[i], bs.low[i], bs.close[i], p, f);
+        state = r.state;
+        if (r.values) {
+          /* 값이 없는 쪽에는 ★값 없는 점★ 을 찍습니다 - 여기서 끊어야
+             뒤집히는 자리에 사선이 안 생깁니다(위 주석). */
+          if (r.values.up === null) oU.push({ time: bs.time[i] });
+          else oU.push({ time: bs.time[i], value: r.values.up });
+          if (r.values.dn === null) oD.push({ time: bs.time[i] });
+          else oD.push({ time: bs.time[i], value: r.values.dn });
+        }
+        if (i === n - 2) cap.state = state;
+      }
+      return { up: oU, dn: oD };
+    },
+
+    step: function (state, bar, prm) {
+      var r = superOne(state, bar.high, bar.low, bar.close, Math.max(1, prm.p | 0), fnum(prm.f, 3));
+      return { values: r.values || {}, state: r.state };
+    }
+  });
+
+
+  /* -- Ichimoku Cloud 일목균형표 ---------------------------------------
+   * 선 다섯 개와 ★구름★ 하나로 이뤄집니다. 1960년대에 호소다 고이치가
+   * 만들었습니다(트레이딩뷰 도움말 History 절).
+   *
+   *   전환선 (Conversion) = (최근 9봉 최고 + 최근 9봉 최저) / 2
+   *   기준선 (Base)       = (최근 26봉 최고 + 최근 26봉 최저) / 2
+   *   선행스팬A (Span A)  = (전환선 + 기준선) / 2        ★26봉 앞으로 밀어★ 그림
+   *   선행스팬B (Span B)  = (최근 52봉 최고 + 최저) / 2   ★26봉 앞으로 밀어★ 그림
+   *   후행스팬 (Lagging)  = 종가                          ★26봉 뒤로 밀어★ 그림
+   *   구름 (Kumo)         = 선행스팬A 와 B ★사이를 칠한 면★
+   *
+   * ⭐ 기본값 9 · 26 · 52 · 26 과 미는 방향 - ★트레이딩뷰 도움말 원문★ 입니다
+   *    (2026-09-02 · "Ichimoku Cloud" 지원 문서를 브라우저로 열어 읽었습니다)
+   *        "calculate the Leading Span A ... plot this data point 26 periods
+   *         in the future."
+   *        "calculate Leading Span B, and again, plot this data point 26
+   *         periods in the future as well."
+   *        "plot the closing price 26 periods in the past on your chart."
+   *        "the cloud is green when Leading Span A is above Leading Span B
+   *         and is red when Leading Span B is above Leading Span A."
+   *    ⚠️ 바이낸스에는 일목균형표가 ★없습니다★ - 2026-09-02 앞 팀이 Original
+   *       차트의 Main 9개 · Sub 10개를 다 세었는데 거기 없었습니다.
+   *       차트 시스템은 트레이딩뷰 관할이라 트레이딩뷰만 보고 맞췄습니다.
+   *
+   * ⚠️⚠️ ★처음 해 보는 것 두 가지가 여기 있습니다.★
+   *
+   *  ① 앞으로 밀어 그리기 (아직 없는 시간에 점 찍기)
+   *     선행스팬은 ★지금 마지막 봉보다 26봉 미래★ 에 그려집니다. 그 시각은
+   *     아직 봉이 없습니다. 틀은 이미 그 길이 있었습니다 - timeAtIndex() 가
+   *     봉 끝을 넘어가면 ★마지막 봉 간격만큼 늘려★ 시각을 만들어 줍니다
+   *     (3절. "앞뒤로 밀기(Offset)" 를 만들 때 낸 길입니다).
+   *     이번에 새로 낸 것은 ★선마다 다른 밀기★ 입니다 - outputs[].shift.
+   *     회원이 고르는 밀기(off)와 ★더해집니다.★ off 는 취향이고 shift 는
+   *     그 지표의 성질입니다.
+   *
+   *  ② 구름 (두 선 사이를 칠하기)
+   *     틀의 outputs 에는 "면" 이 없었습니다. 라이브러리에도 면 시리즈가
+   *     없습니다. 대신 ★시리즈에 덧그리개를 붙이는 공개 API★ 가 있어서
+   *     (attachPrimitive / paneViews / zOrder / useMediaCoordinateSpace -
+   *      dist 안에서 직접 확인) 그걸로 칠했습니다. 정의는 clouds 한 줄만 적습니다.
+   *     ⭐ ★색을 새로 만들지 않았습니다.★ 트레이딩뷰는 초록 · 빨강인데 우리는
+   *        그 둘을 지표에 못 씁니다. 그래서 ★선행스팬 두 선이 이미 쓰는 색★ 을
+   *        알파 0.13 으로 깔았습니다. 위에 있는 쪽 색으로 칠하므로 "A 가 위냐
+   *        B 가 위냐" 는 트레이딩뷰와 똑같이 색으로 읽힙니다.
+   *
+   * ⭐ ★밀기가 26 이냐 25 냐 - 재서 26 으로 확인했습니다★ (2026-09-02)
+   *    내장 소스에 plot(..., offset = displacement ★- 1★) 이라 화면상 25봉이라는
+   *    말이 돌아서, 넘겨짚지 않고 ★트레이딩뷰 차트를 열어 픽셀로 쟀습니다.★
+   *    (로그인 없이 되는 위젯 - s.tradingview.com/widgetembed 에 BINANCE:BTCUSDT
+   *     1시간봉 + IchimokuCloud@tv-basicstudies. 범례가 "Ichimoku 9 26 52 26" 이라
+   *     기본값 9 · 26 · 52 · 26 도 같이 확인됐습니다)
+   *
+   *        봉 간격                     5.5924 px  (캔들 212개를 양끝으로 나눔)
+   *        마지막 캔들 x               1181       (전환선 · 기준선이 끝나는 자리와 같음)
+   *        후행스팬이 끝나는 x         1035
+   *        뒤처진 거리                 146 px  =  ★26.11 봉★
+   *          25봉이면 1041.2 (7px 어긋남) · 26봉이면 1035.6 (0.6px)  ->  ★26★
+   *        구름 오른쪽 끝 x            1325  =  마지막 캔들에서 25.75봉 앞
+   *          (26봉이면 1326.4. 그림 영역 오른쪽 끝에 걸려 잘린 값이라 아래쪽 값입니다)
+   *
+   *    그래서 ★26★ 이 맞습니다. 도움말 문장("plot this data point 26 periods in
+   *    the future")과도 같습니다. 회원이 설정에서 고칠 수 있게 열어 두었습니다.
+   *
+   * ⚠️ 선이 다섯이라 색을 다섯 씁니다. 트레이딩뷰 기본색과 맞춰 보면 -
+   *        전환선 파랑(#2962FF -> #499EE9)          같은 계열
+   *        기준선 진빨강(#B71C1C -> #BB81AC 연자주)  ★빨강 금지라 바꿈★
+   *        후행스팬 초록(#43A047 -> #9FA329 카키)    ★초록 금지라 바꿈★
+   *        선행A 연초록(#A5D6A7 -> #C1BAF3 라벤더)   ★초록 금지라 바꿈★
+   *        선행B 연빨강(#EF9A9A -> #FF8F3C 주황)     ★빨강 금지라 바꿈★
+   *    ⚠️ 선행 두 색만은 ★구름 색으로도 쓰입니다.★ 그래서 서로 ★색상환에서
+   *       멀리★ 떨어진 것으로 골랐습니다(라벤더는 찬 쪽 · 주황은 따뜻한 쪽).
+   *       처음엔 라벤더 · 모래(#F5D7B8)로 했는데 브라우저에서 보니 ★구름이
+   *       둘 다 회색★ 이었습니다 - 두 색이 다 옅고 가까워서입니다.
+   *       실측은 CLOUD_ALPHA 주석에 적어 두었습니다.
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    최고 · 최저 창 세 개(9 · 26 · 52)뿐이고 전부 위 rollPush 입니다.
+   *    보통 비교 한 번, 극값이 창에서 빠질 때만 그 창 길이만큼 훑습니다.
+   * --------------------------------------------------------------------- */
+
+  function ichiInit(a, b, c) {
+    return { wa: rollInit(a), wb: rollInit(b), wc: rollInit(c) };
+  }
+
+  function ichiCopy(st) {
+    return { wa: rollCopy(st.wa), wb: rollCopy(st.wb), wc: rollCopy(st.wc) };
+  }
+
+  /** 봉 하나. seed 와 step 이 ★같은 함수★ 를 씁니다. */
+  function ichiOne(st, high, low, close, a, b, c) {
+    var wa = rollPush(st.wa, high, low, a);
+    var wb = rollPush(st.wb, high, low, b);
+    var wc = rollPush(st.wc, high, low, c);
+
+    var vals = { lag: close };                       /* 후행스팬은 종가 그대로 */
+    var conv = wa.cnt >= a ? (wa.hiMax + wa.loMin) / 2 : null;
+    var base = wb.cnt >= b ? (wb.hiMax + wb.loMin) / 2 : null;
+
+    if (conv !== null) vals.conv = conv;
+    if (base !== null) vals.base = base;
+    if (conv !== null && base !== null) vals.spanA = (conv + base) / 2;
+    if (wc.cnt >= c) vals.spanB = (wc.hiMax + wc.loMin) / 2;
+
+    return { values: vals, state: { wa: wa, wb: wb, wc: wc } };
+  }
+
+  define({
+    id: "ichimoku",
+    name: "Ichimoku Cloud",
+    note: "일목균형표 (전환 · 기준 · 구름 · 후행)",
+    pane: "main",
+    params: { conv: 9, base: 26, spanB: 52, disp: 26 },
+    inputs: [
+      { key: "conv", label: "전환선", min: 1, max: 1000 },
+      { key: "base", label: "기준선", min: 1, max: 1000 },
+      { key: "spanB", label: "선행스팬B", min: 1, max: 1000 },
+      { key: "disp", label: "밀기", min: 1, max: 500 }
+    ],
+    nameOf: function (prm) {
+      return "Ichimoku(" + prm.conv + "," + prm.base + "," + prm.spanB + "," + prm.disp + ")";
+    },
+    outputs: [
+      { key: "conv", kind: "line", color: "#499EE9", style: "solid" },
+      { key: "base", kind: "line", color: "#BB81AC", style: "solid" },
+      {
+        key: "spanA", kind: "line", color: "#C1BAF3", style: "solid",
+        shift: function (prm) { return Math.max(1, prm.disp | 0); }
+      },
+      {
+        key: "spanB", kind: "line", color: "#FF8F3C", style: "solid",
+        shift: function (prm) { return Math.max(1, prm.disp | 0); }
+      },
+      {
+        key: "lag", kind: "line", color: "#9FA329", style: "solid",
+        shift: function (prm) { return -Math.max(1, prm.disp | 0); }
+      }
+    ],
+    clouds: [{ a: "spanA", b: "spanB" }],
+
+    seed: function (bs, prm, cap) {
+      var a = Math.max(1, prm.conv | 0);
+      var b = Math.max(1, prm.base | 0);
+      var c = Math.max(1, prm.spanB | 0);
+      var n = bs.close.length;
+      var out = { conv: [], base: [], spanA: [], spanB: [], lag: [] };
+      var st = ichiInit(a, b, c);
+
+      for (var i = 0; i < n; i++) {
+        var r = ichiOne(st, bs.high[i], bs.low[i], bs.close[i], a, b, c);
+        st = r.state;
+        var t = bs.time[i];
+        for (var k in r.values) out[k].push({ time: t, value: r.values[k] });
+        if (i === n - 2) cap.state = ichiCopy(st);
+      }
+      return out;
+    },
+
+    step: function (st, bar, prm) {
+      var r = ichiOne(
+        st, bar.high, bar.low, bar.close,
+        Math.max(1, prm.conv | 0), Math.max(1, prm.base | 0), Math.max(1, prm.spanB | 0)
+      );
+      return { values: r.values, state: r.state };
+    }
+  });
+
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
      정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 이번 증명입니다. */
   var DEFAULT_INSTANCES = [
@@ -2983,6 +4145,32 @@ App.ChartIndicatorKit = (function () {
     },
     /** 지금 화면에 붙어 있는 기준선 개수 - 켰다 껐다 한 뒤 0 인지 세는 용도.
      *  (끈 지표의 기준선만 남는 조용한 고장을 눈이 아니라 숫자로 잡습니다) */
+    /** 지금 화면에 붙어 있는 구름 개수 - 껐을 때 0 인지 세는 용도.
+     *  (끈 지표의 구름만 남는 조용한 고장을 눈이 아니라 숫자로 잡습니다) */
+    getCloudCountForTest: function () {
+      var n = 0;
+      for (var i = 0; i < instOrder.length; i++) {
+        var L = insts[instOrder[i]].live;
+        if (L && L.clouds) n += L.clouds.length;
+      }
+      return n;
+    },
+    /** 구름을 한 번 칠하는 데 걸린 시간 - 화면이 다시 그려질 때마다 도는 곳이라
+     *  숫자로 지켜봅니다. { draws, ms, maxMs } */
+    getCloudStatForTest: function () {
+      var acc = { draws: 0, ms: 0, maxMs: 0 };
+      for (var i = 0; i < instOrder.length; i++) {
+        var L = insts[instOrder[i]].live;
+        if (!L || !L.clouds) continue;
+        for (var j = 0; j < L.clouds.length; j++) {
+          var st = L.clouds[j].prim.statForTest;
+          acc.draws += st.draws;
+          acc.ms += st.ms;
+          if (st.maxMs > acc.maxMs) acc.maxMs = st.maxMs;
+        }
+      }
+      return acc;
+    },
     getGuideCountForTest: function () {
       var n = 0;
       for (var i = 0; i < instOrder.length; i++) {

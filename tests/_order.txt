@@ -228,3 +228,28 @@ tests/closed-trades-cap-seal.test.js
 # 거래기록이 지워지고 되돌릴 수 없습니다). 그래서 App.Bus 로 쏘지 않고 안전한 3개만 직접 부릅니다.
 # 되돌리기: index.html 에서 js/auth-changed-bridge.js 한 줄 삭제
 tests/auth-changed-bridge.test.js
+# 2026-09-02 — 지표 6개(EMA·WMA·KDJ·ATR·StochRSI·CCI)가 하루에 늘면서 오늘 세 번 난 사고.
+# 셋 다 사람 눈으로 잡았고 테스트가 없었습니다.
+#
+# ① 새 지표가 이미 있는 지표와 ★같은 색★ 으로 나오던 것.
+#    2026-08-31 "시세선과 MA7 이 둘 다 금색이라 회원 화면의 62.7% 에서 한 줄로 보였다" 와 같은 종류입니다.
+#    제일 중요한 것은 [3] — ★회원 경로(지표 추가)로 하나씩 다 얹었을 때 어느 두 선도 같은 색이 아니다★
+#    (실제로 이 검사가 KDJ 의 K 와 D 가 둘 다 #E1ED97 이 되는 것을 잡아냈고, 그날 고쳐졌습니다)
+#    ⚠️ 색 개수를 안 셉니다 — "목록 길이보다 하나 더" 로 봅니다. 색은 12 → 20 으로 이미 늘었습니다.
+#    ⚠️ 색 목록 자체의 규칙(ΔE 거리 · 명암비 · 초록/빨강 구간)은 ★여기 없습니다★ —
+#       tests/chart-indicator-kit-seal.test.js [1] 절 한 곳에만 둡니다(두 벌 금지).
+# 되돌리기: 이 줄과 tests/chart-indicator-color-collision.test.js 삭제
+tests/chart-indicator-color-collision.test.js
+# 2026-09-02 — ② 정의에 모르는 칸(guides)을 적으면 ★true 를 돌려주고 경고 0건인데 화면엔 안 그려지던 것★
+#    ③ 끈 지표의 기준선이 ★다음에 다시 그릴 때까지 화면에 남던 것★ (removeSeries 만으로는 안 지워집니다)
+#    제일 중요한 것은 [4] — ★켰다 껐다 5회 뒤 남은 기준선 0 · 만든 수 == 지운 수★.
+#    ⭐ 순서까지 잡습니다 — tests/_kit-harness.js 의 가짜 시리즈는 지워진 뒤 removePriceLine 을
+#       부르면 던집니다. 그래서 dropGuides 를 removeSeries ★뒤로★ 옮기면 그 자리에서 빨강이 됩니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-guides.test.js 삭제
+tests/chart-indicator-guides.test.js
+# 2026-09-02 — 지표 6개의 계산이 맞는가. ★숫자를 박지 않고 참조식을 따로 짜서 대조합니다.★
+#    제일 중요한 것은 [5] — ★CCI 반올림★. 굴러가는 합(O(1))으로 되돌리면 기간 2 에서 값이
+#    어긋납니다(그때 실측 4.3e-6). 돌연변이로 그 코드를 되살려 보니 [5] 가 절대오차 3.15e-7 로 잡았습니다.
+#    [4] 는 참조식 없이 "step 값 == 처음부터 seed 한 값" 을 봅니다 — ★앞으로 늘 지표에도 자동으로★ 걸립니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-math.test.js 삭제
+tests/chart-indicator-math.test.js
