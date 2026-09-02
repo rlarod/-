@@ -1392,6 +1392,12 @@
      지표 계산·그리기는 위 두 파일이 이미 하고, 이 파일은 켜고 끄는 목록만 만듭니다.
      이 한 줄을 지우면 fx 는 다시 "준비중" 으로 돌아갑니다(지표는 그대로 동작). -->
 <script src="js/chart-indicator-menu.js"></script>
+<!-- 차트 지표 틀 - 정의 1개 + 인스턴스 N개 (chart.js 무수정).
+     트레이딩뷰 실측(2026-09-02)에서 MA7/25/99 가 서로 다른 지표가 아니라
+     "MA" 정의 하나를 기간만 달리해 세 번 얹은 것이라 확인해 같은 모양으로 만들었습니다.
+     기존 7개(chart-indicators / chart-oscillators / chart-indicator-menu)는 안 건드립니다.
+     이 한 줄을 지우면 EMA 두 개가 사라지고 그 전 화면으로 그대로 돌아갑니다. -->
+<script src="js/chart-indicator-kit.js"></script>
 <!-- 가로 막대의 "봉 종류" 버튼 — 캔들 / 라인 / 바 / 영역 (chart.js 무수정).
      바이낸스 선물 Original 차트의 Chart Style 에 있는 것이 정확히 이 넷입니다.
      캔들 시리즈를 갈아끼우지 않고 색만 투명으로 만든 뒤 위에 얹는 방식이라

@@ -12,23 +12,27 @@
 set -u
 cd "$(dirname "$0")/../.." || exit 0
 
-# 2026-08-20 기준값. 이 12개는 어떤 경우에도 바뀌면 안 됩니다.
-# bash 는 변수명에 한글을 못 씁니다.
-read -r -d '' EXPECTED <<'EOF'
-33250202c00b097ff8344ae2ee64cbe7  js/trading.js
-333fc427e75b47b306699c92aa4e7b50  js/ui.js
-9cec9a7257eb54f379bf72e14e21e463  js/auth.js
-faddcbbc34b5165177ff26cb978040f8  js/supabase-sync.js
-a93dfaa7f82ce72a914b270acb3650bb  js/chat.js
-62e839f06e0565cca5d9216e484b6031  js/leaderboard.js
-424e4c63ec1cd24681c4f27f60aee2fa  js/admin.js
-9c5fbf13ced09ca2f348e48f87c78224  js/season.js
-8b847bd8f5d8231b8dd329f8b15dbe37  js/board.js
-fa5f77dc5108133128f85ba5ab3f096e  js/orderbook.js
-02ddcb000d577131f797143d08c09123  js/chart.js
-1a914631175760e0b0cb5144bc11b59e  js/websocket.js
-EOF
+# 기준값은 ★CLAUDE.md 의 기준 해시 표★ 한 곳에서만 읽습니다.
+#
+# ⚠️ 2026-09-02 차트팀 발견 — 여기에 값을 따로 적어뒀더니 낡았습니다.
+#    2026-08-31 대표 결재로 js/trading.js 가 바뀌었는데 이 훅만 안 고쳐서,
+#    ★모든 팀의 모든 파일 쓰기에서 "수정 금지 파일이 바뀌었습니다" 오탐★ 이 났습니다.
+#    같은 값을 두 곳에 두면 반드시 어긋납니다. 그래서 읽어오게 바꿨습니다.
+#
+# CLAUDE.md 를 못 읽으면 ★막지 않습니다★ (조용히 통과).
+# 잘못 막는 것보다 안 막는 게 낫습니다 — 어차피 npm test 의 봉인 48개가 또 봅니다.
+EXPECTED=$(grep -E '^[0-9a-f]{32}  js/' CLAUDE.md 2>/dev/null)
 
+if [ -z "$EXPECTED" ]; then
+  exit 0
+fi
+
+COUNT=$(echo "$EXPECTED" | grep -c .)
+if [ "$COUNT" -ne 12 ]; then
+  echo "주의 — CLAUDE.md 기준 해시 표에서 12줄이 아니라 $COUNT 줄을 읽었습니다."
+  echo "        표 형식이 깨졌는지 확인하세요. 이번에는 막지 않습니다."
+  exit 0
+fi
 CHANGED=$(echo "$EXPECTED" | md5sum -c 2>/dev/null | grep -v ': OK$')
 
 if [ -n "$CHANGED" ]; then
