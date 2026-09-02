@@ -435,9 +435,30 @@ console.log("\n봉 종류 봉인 — 시리즈를 갈아끼우지 않는다 (202
   ok("안내줄이 청산가·진입가를 콕 집어 말한다",
     !!안내 && 안내.textContent.indexOf("청산가") !== -1 &&
     안내.textContent.indexOf("진입가") !== -1, 안내 && 안내.textContent);
-  ok("안내줄 글씨를 줄이지 않았다 (17px 이상)",
-    /#\s*"\s*\+\s*NOTICE_ID/.test(SRC) || /font-size:17px[^;]*;line-height:1\.35/.test(SRC),
-    "대표가 작은 글씨를 못 읽습니다");
+  /* ⚠️⚠️ 2026-09-02 밤 기록팀이 고쳤습니다 — ★이 검사가 아무것도 안 지키고
+     있었습니다.★ 예전 모양은 이랬습니다:
+
+         /#\s*"\s*\+\s*NOTICE_ID/.test(SRC) || /font-size:17px…/.test(SRC)
+
+     앞쪽 조건은 모듈 안의 `var N = "#" + NOTICE_ID;` 한 줄에 ★언제나★ 걸립니다.
+     || 라서 뒤쪽(글씨 크기)은 아예 안 봅니다.
+     실측 — 사본에서 안내줄 글씨를 17px -> 12px 로 바꿔 돌렸더니
+     이 줄이 그대로 [O] 로 통과했고 파일 전체가 115/0 초록이었습니다.
+
+     그래서 소스 글자 대신 ★실제로 넣은 <style> 내용★ 에서 크기를 읽습니다.
+     같은 방식의 검사가 tests/chart-ha-real-price-seal.test.js [5] 에도 있는데,
+     그쪽은 자리·연결·색까지 같이 봅니다. 여기는 크기 하나만 남겨 둡니다. */
+  const 안내규칙 = (function () {
+    const ss = t.win.document.querySelectorAll("style");
+    for (let i = 0; i < ss.length; i++) {
+      const m = ss[i].textContent.match(new RegExp("#" + t.M.NOTICE_ID + "\\s*\\{([^}]*)\\}"));
+      if (m) return m[1];
+    }
+    return "";
+  })();
+  const 안내크기 = Number((안내규칙.match(/font-size:\s*(\d+)px/) || [])[1] || 0);
+  ok("안내줄 글씨를 줄이지 않았다 (17px 이상 — 실제 <style> 에서 읽음)",
+    안내크기 >= 17, 안내크기 + "px · 대표가 작은 글씨를 못 읽습니다");
 
   t.M.setType("candle");
   ok("캔들로 돌아오면 안내줄이 사라진다",
