@@ -72,6 +72,17 @@
  * 버튼이 화면 밖으로 나가면 닫습니다.
  * 이 부분만 되돌리려면 이 파일을 fde463a 판으로 되돌리면 됩니다
  * (git checkout fde463a -- js/chart-indicator-menu.js). 다른 파일은 안 건드렸습니다.
+ *
+ * ── 2026-09-02 자리 다시잡기 (P2) ─────────────────────────────────────
+ * place() 는 멀쩡했는데 ★한 번밖에 안 불렸습니다★. 열 때는 기본 7줄뿐이고
+ * 틀 지표 줄과 "+ 지표 추가" 가 그 뒤에 붙습니다(MutationObserver).
+ *   실측 1440x900, 인스턴스 7개 — 7줄 543px -> 14줄 943px, top 97 고정
+ *   아래끝 1040 -> 화면 밖 140px. maxHeight 도 안 걸려 안쪽 스크롤조차 없음.
+ * 고친 것 — 창 안쪽 DOM 이 바뀌면 place() 를 다시 부릅니다(watchGrow/placeSoon).
+ * 이 부분만 되돌리려면 watchGrow / placeSoon 두 함수와, open() 의
+ * watchGrow(true) · placeSoon() 두 줄, close() 의 watchGrow(false) 한 줄을
+ * 지우면 됩니다. 다른 파일은 안 건드렸습니다.
+ *   봉인: tests/chart-fx-menu-regrow.test.js
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -494,6 +505,60 @@ App.ChartIndicatorMenu = (function () {
     panel.style.left = Math.round(left) + "px";
   }
 
+  /* ---------------------------------------------------------------------
+   * 2026-09-02 P2 — 목록이 화면 밖으로 잘리던 것
+   *
+   * open() 은 build() -> paint() -> place() 순서인데, 그때 목록에는 ★기본 7줄★
+   * 밖에 없습니다. 나머지가 place() ★뒤★ 에 들어옵니다.
+   *   틀 지표 줄(EMA·WMA·ATR…)  js/chart-indicator-kit.js  injectMenuRows()
+   *   "+ 지표 추가" 버튼         js/chart-indicator-settings.js decorateRows()
+   * 둘 다 MutationObserver 라 place() 다음 마이크로태스크에서 붙습니다.
+   * 창은 position:fixed 라 top 이 옛 높이로 굳은 채 ★아래로만★ 자랍니다.
+   * place() 가 그때 "다 들어간다" 고 봤으면 max-height 도 안 걸어서
+   * 안쪽 스크롤조차 안 생깁니다.
+   *   실측 1440x900 (인스턴스 7개) — place() 시점 7줄 543px / 500ms 뒤 14줄 943px
+   *   top 97 고정 -> 아래끝 1040 -> ★화면 밖 140px★
+   * "+ 지표 추가" 는 .tl-fx-list 의 ★바깥 형제★ 라 몸통(max-height)을 줄여도
+   * 같이 안 줄어듭니다. 다만 place() 의 chrome(= 창 높이 - 목록 높이) 계산이
+   * 그 버튼을 ★이미 포함★ 하므로, 버튼이 붙은 ★뒤에★ place() 를 한 번 더
+   * 부르기만 하면 상시 40~50px 넘치던 것까지 같이 사라집니다.
+   *
+   * 그래서 창 안쪽 DOM 이 바뀌면 place() 를 다시 부릅니다.
+   * ⚠ replaceSoon() 을 쓰지 않습니다. 그쪽은 버튼이 화면 밖이면 창을 ★닫습니다★.
+   *   줄이 늘어난 것뿐인데 창이 닫히면 안 됩니다.
+   * ⚠ place() 는 style(top/left/max-height/display) 만 바꿉니다. childList 감시에
+   *   다시 걸리지 않으므로 되돌이(무한 반복)가 생기지 않습니다.
+   * ------------------------------------------------------------------- */
+  var growWatcher = null;
+  var growRaf = 0;
+
+  function placeSoon() {
+    if (!panel) return;
+    if (growRaf) return;
+    if (!window.requestAnimationFrame) {
+      place();
+      return;
+    }
+    growRaf = window.requestAnimationFrame(function () {
+      growRaf = 0;
+      if (!panel) return;
+      place();
+    });
+  }
+
+  function watchGrow(on) {
+    if (!on) {
+      if (growWatcher) growWatcher.disconnect();
+      growWatcher = null;
+      if (growRaf && window.cancelAnimationFrame) window.cancelAnimationFrame(growRaf);
+      growRaf = 0;
+      return;
+    }
+    if (growWatcher || typeof MutationObserver === "undefined" || !panel) return;
+    growWatcher = new MutationObserver(placeSoon);
+    growWatcher.observe(panel, { childList: true, subtree: true });
+  }
+
   /* 스크롤·크기변경 때 다시 잡습니다. position:fixed 라 페이지가 움직이면
      버튼만 따로 움직이기 때문입니다. 프레임당 한 번만 계산합니다. */
   var rafId = 0;
@@ -557,11 +622,15 @@ App.ChartIndicatorMenu = (function () {
     paint();
     place();
     bindDoc(true);
+    watchGrow(true);
+    /* 감시가 없는 환경(MutationObserver 미지원)에서도 한 번은 다시 잽니다 */
+    placeSoon();
     if (anchorBtn && anchorBtn.setAttribute) anchorBtn.setAttribute("aria-pressed", "true");
     return true;
   }
 
   function close() {
+    watchGrow(false);
     bindDoc(false);
     if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
     panel = null;

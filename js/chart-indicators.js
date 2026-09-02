@@ -499,7 +499,22 @@ App.ChartIndicators = (function () {
       '.tl-ind-btn[aria-pressed="true"]{opacity:1;background:#101727;border-color:#838DA4;color:#E7ECF5;}' +
       /* 켜짐 표시는 색 점으로 합니다. MA 99 와 볼린저는 선 색이 보조색(#838DA4)
          이라 글자 색만으로는 켜짐/꺼짐이 구분되지 않았습니다(실측). */
-      ".tl-ind-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}";
+      ".tl-ind-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
+      /* ── 접기 버튼 (2026-09-02 P2) ────────────────────────────────────
+         트레이딩뷰도 범례를 차트 위에 겹쳐 그립니다(우리와 같음). 다른 점은
+         범례 바로 옆에 접는 꺾쇠가 있다는 것뿐이라, 그것만 만들었습니다.
+         · 글자 크기는 옆 칩과 같은 11px 입니다. 줄이지 않았습니다.
+         · order:1 - 칩은 DOM 뒤쪽에 계속 이어 붙습니다
+           (js/chart-indicator-kit.js 가 .tl-kit-btn 을 appendChild 합니다).
+           DOM 순서를 건드리지 않고 보이는 자리만 맨 뒤로 보냅니다.
+         · 접을 때 칩을 지우지 않습니다. 자리에 그대로 두고 감추기만 합니다. */
+      ".tl-ind-fold{order:1;pointer-events:auto;background:#101727;border:1px solid #1D273B;" +
+      "color:#E7ECF5;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:600;" +
+      "line-height:1.5;cursor:pointer;font-family:inherit;opacity:.9;transition:.12s;" +
+      "display:inline-flex;align-items:center;gap:5px;}" +
+      ".tl-ind-fold:hover{opacity:1;border-color:#838DA4;}" +
+      ".tl-ind-bar.tl-ind-folded > *{display:none;}" +
+      ".tl-ind-bar.tl-ind-folded > .tl-ind-fold{display:inline-flex;}";
     var st = document.createElement("style");
     st.id = "chart-indicators-style";
     st.textContent = css;
@@ -517,6 +532,187 @@ App.ChartIndicators = (function () {
       kids[i].style.borderColor = on ? "#838DA4" : "#1D273B";
       var dot = kids[i].querySelector(".tl-ind-dot");
       if (dot) dot.style.background = on ? kids[i].getAttribute("data-color") : "#1D273B";
+    }
+  }
+
+  /* =====================================================================
+   * 칩 줄 접기 — 2026-09-02 P2
+   *
+   * ── 무엇이 문제였나 (조사팀 실측, 360x800) ────────────────────────────
+   *   .tl-ind-bar 는 차트 ★위에 겹쳐★ 그립니다. 차트를 밀어내지 않습니다.
+   *   그래서 칩이 늘어나도 .chart-container 는 560px 그대로이고,
+   *   늘어난 만큼 캔들이 그냥 덮입니다.
+   *       기본 9칩   칩 줄 76px (3줄)  주 칸 330px  가림 23.0%
+   *       14칩       칩 줄 129px(5줄)  주 칸 182px  가림 70.6%
+   *       21칩       칩 줄 235px(9줄)  주 칸 182px  가림 128.8%
+   *   지표를 ★전부 꺼도★ 칩은 남습니다 — 칩이 "켜진 목록" 이 아니라
+   *   켜고 끄는 ★버튼 자체★ 라서 그게 맞습니다. 그건 안 바꿉니다.
+   *
+   * ── 트레이딩뷰가 하는 대로 (2026-09-02 조사팀 실측) ───────────────────
+   *   트레이딩뷰도 범례를 차트 위에 겹쳐 그립니다(우리와 같음).
+   *   ★다만 범례에 접기 꺾쇠가 있습니다★ — 우리에게 없던 것이 그것뿐이라
+   *   그것만 만들었습니다. 칩을 지우거나 옮기지 않았습니다.
+   *
+   * ── 처음에 접혀 있을지 ────────────────────────────────────────────────
+   *   회원이 한 번이라도 직접 접거나 편 적이 있으면 ★그 선택이 우선★ 입니다.
+   *   아직 한 번도 안 눌렀을 때만 자동으로 정합니다 —
+   *   ★칩 줄이 두 줄을 넘으면(> 56px) 접습니다.★
+   *   근거 — 두 줄은 49px(1440·14칩 실측) 이라 가림 15.8% 로 견딜 만하지만,
+   *   세 줄부터는 76px(360·9칩 실측) 로 주 칸의 23% 를 덮습니다.
+   *   화면 폭을 조건으로 쓰지 않고 ★실제 줄 높이★ 를 재는 이유는,
+   *   칩 개수가 회원마다 다르기 때문입니다(지표를 몇 개 얹었느냐).
+   *   그래서 넓은 화면이라도 칩이 많으면 접히고, 좁아도 적으면 안 접힙니다.
+   * ===================================================================== */
+  var FOLD_KEY = "chart-ind-fold";
+  var FOLD_LINE1 = 30; /* 한 줄 = 23px (실측). 이하면 접을 것이 없습니다 */
+  var FOLD_LINE2 = 56; /* 두 줄까지는 그냥 둡니다 (실측 2줄 49px) */
+  var foldBtn = null;
+  var folded = false;
+  var foldChosen = false; /* 회원이 직접 눌렀나 */
+
+  function loadFold() {
+    try {
+      if (!App.Storage || typeof App.Storage.load !== "function") return;
+      var v = App.Storage.load(FOLD_KEY);
+      if (v && typeof v.folded === "boolean") {
+        folded = v.folded;
+        foldChosen = true;
+      }
+    } catch (e) {
+      /* 저장된 값이 이상하면 자동 판단 그대로 */
+    }
+  }
+
+  function saveFold() {
+    try {
+      if (App.Storage && typeof App.Storage.save === "function") {
+        App.Storage.save(FOLD_KEY, { folded: folded });
+      }
+    } catch (e) {
+      /* 저장 실패해도 화면은 그대로 동작 */
+    }
+  }
+
+  /** 지금 칩이 몇 개인가 — 접었을 때 "지표 14" 로 보여줍니다.
+   *  (접기 버튼 자신은 빼고 셉니다) */
+  function chipCount() {
+    if (!buttonsEl) return 0;
+    var kids = buttonsEl.children || [];
+    var n = 0;
+    for (var i = 0; i < kids.length; i++) {
+      if (String(kids[i].className || "").indexOf("tl-ind-fold") === -1) n++;
+    }
+    return n;
+  }
+
+  /* class 를 글자로 다룹니다 — 이 막대의 class 는 늘 "tl-ind-bar" 하나입니다.
+     (classList 를 쓰면 테스트의 가짜 DOM 에서 터집니다) */
+  function isFoldedClass() {
+    return String(buttonsEl && buttonsEl.className || "").indexOf("tl-ind-folded") !== -1;
+  }
+  function setFoldedClass(on) {
+    if (!buttonsEl) return;
+    buttonsEl.className = on ? "tl-ind-bar tl-ind-folded" : "tl-ind-bar";
+  }
+
+  function paintFold() {
+    if (!buttonsEl || !foldBtn) return;
+    setFoldedClass(folded);
+    var label = folded ? "▾ 지표 " + chipCount() : "▴";
+    if (foldBtn.textContent !== label) foldBtn.textContent = label;
+    var t = folded ? "지표 칩 펴기" : "지표 칩 접기";
+    if (foldBtn.getAttribute("title") !== t) {
+      foldBtn.setAttribute("title", t);
+      foldBtn.setAttribute("aria-label", t);
+    }
+    foldBtn.setAttribute("aria-expanded", folded ? "false" : "true");
+  }
+
+  function toggleFold() {
+    folded = !folded;
+    foldChosen = true;
+    saveFold();
+    refreshFold();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 다시 재고 다시 그리기 — 칩이 늘거나 화면 폭이 바뀔 때마다 부릅니다.
+   *
+   *   1) 접기 버튼을 잠깐 숨기고 ★칩만★ 의 줄 높이를 잽니다(hNat).
+   *      버튼 자체가 폭을 차지해 줄을 하나 더 만들 수 있어서, 그 영향을
+   *      뺀 값으로 판단해야 합니다.
+   *      ⚠ 실제로 이걸 안 했을 때 1440·기본 9칩에서 23px(1줄) 이던 것이
+   *        접기 버튼 때문에 49px(2줄) 로 늘었습니다 — 고치려던 것을 오히려
+   *        키운 셈이라 이 단계를 넣었습니다.
+   *   2) 회원이 아직 한 번도 안 눌렀으면 hNat 로 접힘 여부를 정합니다.
+   *      두 줄(실측 49px)까지는 그냥 둡니다. 세 줄부터 접습니다.
+   *   3) 접기 버튼은 ★접을 것이 있을 때만★ 보여줍니다.
+   *      한 줄짜리면 접을 이유가 없으니 아예 안 그립니다 — 그래야 넓은
+   *      화면에서 예전과 완전히 같은 높이가 나옵니다.
+   *      단, 접혀 있을 때는 되돌릴 방법이 그 버튼뿐이라 항상 보여줍니다.
+   * ------------------------------------------------------------------- */
+  function refreshFold() {
+    if (!buttonsEl || !foldBtn) return;
+
+    var wasFolded = isFoldedClass();
+    setFoldedClass(false);
+    foldBtn.style.display = "none";
+    var hNat = buttonsEl.offsetHeight || 0; /* 같은 프레임 안이라 화면에 안 비칩니다 */
+    setFoldedClass(wasFolded);
+
+    if (hNat) {
+      if (!foldChosen) folded = hNat > FOLD_LINE2;
+      foldBtn.style.display = folded || hNat > FOLD_LINE1 ? "" : "none";
+    } else {
+      /* 아직 그려지기 전 — 다음 변화 때 다시 봅니다 */
+      foldBtn.style.display = "";
+    }
+    paintFold();
+  }
+
+  /* 칩은 나중에도 늘어납니다(js/chart-indicator-kit.js 가 이어 붙입니다).
+     그때마다 개수 표시와 자동 판단을 다시 합니다. 회원이 한 번 누른 뒤에는
+     자동 판단이 꺼지므로 회원의 선택을 덮지 않습니다. */
+  var foldWatcher = null;
+  var foldResizeRaf = 0;
+  function watchChips() {
+    if (foldWatcher || typeof MutationObserver === "undefined" || !buttonsEl) return;
+    foldWatcher = new MutationObserver(function () {
+      refreshFold();
+    });
+    foldWatcher.observe(buttonsEl, { childList: true });
+  }
+
+  function buildFold() {
+    if (!buttonsEl || foldBtn) return;
+    loadFold();
+    foldBtn = document.createElement("button");
+    foldBtn.type = "button";
+    foldBtn.className = "tl-ind-fold";
+    foldBtn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggleFold();
+    });
+    buttonsEl.appendChild(foldBtn);
+    refreshFold();
+    watchChips();
+
+    /* 화면 폭이 바뀌면 줄 수도 바뀝니다(폰 가로세로 돌리기 · 창 크기 조절).
+       회원이 이미 고른 뒤에도 "접기 버튼을 보여줄지" 는 다시 정해야 하므로
+       그냥 부릅니다 — refreshFold() 안에서 회원의 선택은 덮지 않습니다. */
+    if (window.addEventListener) {
+      window.addEventListener("resize", function () {
+        if (foldResizeRaf) return;
+        if (!window.requestAnimationFrame) {
+          refreshFold();
+          return;
+        }
+        foldResizeRaf = window.requestAnimationFrame(function () {
+          foldResizeRaf = 0;
+          refreshFold();
+        });
+      });
     }
   }
 
@@ -552,6 +748,7 @@ App.ChartIndicators = (function () {
 
     wrap.appendChild(buttonsEl);
     paintButtons();
+    buildFold();
     return true;
   }
 
@@ -681,6 +878,16 @@ App.ChartIndicators = (function () {
       return { ma7: sums.ma7, ma25: sums.ma25, ma99: sums.ma99, bb: sums.bb };
     },
     onTickForTest: onTick,
+    /* 칩 줄 접기 — 확인용 */
+    isFoldedForTest: function () {
+      return folded;
+    },
+    toggleFoldForTest: toggleFold,
+    buildFoldForTest: buildFold,
+    refreshFoldForTest: refreshFold,
+    buildButtonsForTest: buildButtons,
+    FOLD_LINE1_FOR_TEST: FOLD_LINE1,
+    FOLD_LINE2_FOR_TEST: FOLD_LINE2,
     COLORS: COLORS,
     MA_PERIODS: MA_PERIODS,
     BB_PERIOD: BB_PERIOD,

@@ -457,10 +457,15 @@ console.log("\n[껐다 켜기와 기억]");
 
   const bar = wrap.children.filter((c) => c.className === "tl-ind-bar")[0];
   ok("차트 위에 버튼이 붙는다", !!bar);
-  const btns = bar ? bar.children : [];
-  ok("버튼은 5개 (MA 7 / MA 25 / MA 99 / 볼린저 / 거래량)", btns.length === 5, String(btns.length));
+  /* 2026-09-02 — 칩 줄에 "접기" 버튼(.tl-ind-fold)이 하나 더 붙었습니다(P2).
+     지표 칩만 세도록 골라냅니다. 접기 버튼은 아래에서 따로 확인합니다. */
+  const btns = bar ? bar.children.filter((c) => c.className === "tl-ind-btn") : [];
+  ok("지표 버튼은 5개 (MA 7 / MA 25 / MA 99 / 볼린저 / 거래량)", btns.length === 5, String(btns.length));
   ok("버튼 이름이 맞다", btns.map((b) => b.textContent).join(",") === "MA 7,MA 25,MA 99,볼린저,거래량",
     btns.map((b) => b.textContent).join(","));
+  const fold = bar ? bar.children.filter((c) => c.className === "tl-ind-fold") : [];
+  ok("접기 버튼이 딱 하나 붙는다 (칩이 캔들을 덮던 것 — 2026-09-02 P2)",
+    fold.length === 1, String(fold.length));
 
   ok("기본값 — 거래량만 켜짐(지금 화면 그대로)", M.isOn("vol") === true);
   ok("기본값 — 나머지는 꺼짐", !M.isOn("ma7") && !M.isOn("bb"));
