@@ -623,3 +623,15 @@ tests/interval-more-order-bar-floor.test.js
 #   [6] 이 두 장치를 하나씩 빼서 진짜 터지는지 봅니다.
 # 되돌리기: 이 줄과 tests/chart-timezone-order-bar-floor.test.js 삭제
 tests/chart-timezone-order-bar-floor.test.js
+
+# 2026-09-03 수리팀 — 8시간봉 · 3일봉 추가 (바이낸스에 있는데 우리에만 없던 간격)
+#   실제로 불러서 확인: /fapi/v1/klines interval=8h 봉 간격 28,800,000ms
+#                       interval=3d 봉 간격 259,200,000ms — 둘 다 정상
+#   간격이 16개 → 18개가 되면서 "더보기" 메뉴가 7줄 → 9줄이 됐습니다.
+#   실측 (360x640, 스크롤 25px 간격 18곳) — 메뉴 키 232px → 288px,
+#        남은 여유 위 23px / 아래 0px. 가려진 항목 0 이지만 여유를 다 썼습니다.
+#        표준 6폭 + 360x640 전부 가려진 항목 0.
+#   그래서 스크롤 안전망(바닥 기준 max-height + overflow-y:auto)을 같이 달았고,
+#   이 테스트가 그 안전망과 "글씨 20.5px 그대로"를 지킵니다.
+# 되돌리기: 이 줄과 tests/interval-8h-3d.test.js 삭제
+tests/interval-8h-3d.test.js

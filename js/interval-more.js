@@ -21,7 +21,8 @@
  * 두고 나머지는 메뉴 안입니다. 우리도 같습니다.
  *
  *   밖에 그대로   1분 · 5분 · 15분 · 1시간 · 4시간 · 1일        (수정 전과 동일)
- *   더보기 안     3분 · 30분 · 2시간 · 6시간 · 12시간 · 1주 · 1개월
+ *   더보기 안     3분 · 30분 · 2시간 · 6시간 · 8시간 · 12시간 · 3일 · 1주 · 1개월
+ *                 (8시간 · 3일은 2026-09-03 에 추가 — 바이낸스에 있는 간격입니다)
  *
  * 즉 ★수정 전 화면의 버튼 줄 높이가 늘지 않습니다.★ 늘어난 것은 "더보기"
  * 버튼 하나뿐이고, 그것도 기존 줄 안에 들어갑니다.
@@ -52,7 +53,7 @@ App.IntervalMore = (function () {
 
   /* 더보기 안으로 넣을 간격. 여기 없는 것은 지금처럼 버튼으로 남습니다.
      ⚠ "1M" 은 대문자입니다(1개월). 소문자 "1m" 은 1분이라 밖에 남습니다. */
-  var MORE = ["3m", "30m", "2h", "6h", "12h", "1w", "1M"];
+  var MORE = ["3m", "30m", "2h", "6h", "8h", "12h", "3d", "1w", "1M"];
 
   var ROW_ID = "interval-row";
   var STYLE_ID = "tl-interval-more-css";
@@ -133,7 +134,11 @@ App.IntervalMore = (function () {
       "color:" + C_POINT + ";}" +
       "." + MENU_CLASS + "{position:absolute;left:0;top:calc(100% + 4px);z-index:60;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:10px;" +
-      "padding:6px;display:flex;flex-wrap:wrap;gap:6px;width:236px;max-width:calc(100vw - 24px);}" +
+      "padding:6px;display:flex;flex-wrap:wrap;gap:6px;width:236px;max-width:calc(100vw - 24px);" +
+      /* ★안에서 스크롤★ — 아래 clampMenu() 가 바닥 기준으로 max-height 를 걸 때만
+         실제로 동작합니다. 평소에는 내용만큼 커서 스크롤막대가 안 보입니다.
+         글씨를 줄이는 대신 이걸 씁니다 (js/chart-timezone.js 와 같은 방식). */
+      "overflow-y:auto;overscroll-behavior:contain;}" +
       "." + MENU_CLASS + " button{flex:1 1 106px;background:" + C_TILE + ";" +
       "border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";padding:9px 6px;border-radius:6px;" +
       "font-family:var(--mono);font-size:20.5px;font-weight:600;cursor:pointer;white-space:nowrap;}" +
@@ -238,6 +243,21 @@ App.IntervalMore = (function () {
       menu.style.top = "";
       menu.style.bottom = "";
       var floorY = menuFloorY();
+
+      /* ★먼저 키를 쓸 수 있는 만큼으로 맞춥니다★ (2026-09-03 추가).
+         이걸 안 하면 메뉴가 화면보다 크면 위로 뒤집든 바닥에 붙이든 어느 한쪽이
+         반드시 잘리고, 이 메뉴는 스크롤이 없어서 ★회원이 그 줄을 꺼낼 방법이
+         없습니다★ (시간대 창이 실제로 그랬습니다).
+         실측 — 8시간·3일을 넣어 7줄→9줄(232px→288px)이 되자 360x640 에서
+         남는 여유가 위 23px · 아래 0px 까지 줄었습니다. 지금은 안 잘리지만
+         한 줄만 더 늘면 바로 잘립니다. 그래서 미리 안전망을 답니다.
+         ⚠ 글씨는 한 픽셀도 안 줄입니다 — 안에서 스크롤할 뿐입니다. */
+      menu.style.maxHeight = "";
+      var 쓸수있는키 = floorY - EDGE;
+      if (쓸수있는키 > 0 && menu.getBoundingClientRect().height > 쓸수있는키) {
+        menu.style.maxHeight = Math.round(쓸수있는키) + "px";
+      }
+
       var br = btn.getBoundingClientRect();
       var r2 = menu.getBoundingClientRect();
       if (r2.bottom > floorY) {

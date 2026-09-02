@@ -76,8 +76,14 @@ App.Config = (function () {
     { value: "2h", label: "2시간", seconds: 7200, native: true },
     { value: "4h", label: "4시간", seconds: 14400, native: true },
     { value: "6h", label: "6시간", seconds: 21600, native: true },
+    // 8시간봉 · 3일봉 — 바이낸스에 있는데 우리에만 없던 것입니다 (2026-09-03 추가).
+    // ★실제로 불러서 확인했습니다★ — fapi/v1/klines?interval=8h 는 봉 간격이
+    // 28,800,000ms, interval=3d 는 259,200,000ms 로 정확히 왔습니다.
+    // 둘 다 WS kline 스트림에도 있는 간격이라 native:true 입니다.
+    { value: "8h", label: "8시간", seconds: 28800, native: true },
     { value: "12h", label: "12시간", seconds: 43200, native: true },
     { value: "1d", label: "1일", seconds: 86400, native: true },
+    { value: "3d", label: "3일", seconds: 259200, native: true },
     { value: "1w", label: "1주", seconds: 604800, native: true },
     // "1M" 은 ★대문자 M★ 입니다 — 소문자 "1m" 은 1분입니다. 바이낸스 표기 그대로입니다.
     // seconds 는 30일로 잡았습니다(달마다 실제 길이가 다릅니다). 이 값은 native:false
