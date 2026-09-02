@@ -520,17 +520,52 @@ App.ChartTimezone = (function () {
     clampMenu();
   }
 
+  /* 화면 가장자리에서 띄우는 여백 (js/chart-drawings.js 의 CHIP_EDGE 와 같은 값) */
+  var EDGE = 8;
+
+  /* 창이 넘어가면 안 되는 ★아래쪽 바닥★ 입니다.
+     화면 아래끝(vh - EDGE)만 보면 안 됩니다 — 폰에서는 그 위에 하단
+     매수/매도 바(.tl-order-bar)가 ★겹쳐★ 떠 있습니다(z-index 990 >
+     이 창의 70). 화면 안이어도 바 밑에 깔려 안 보이고, 창이 "다 들어갔다"
+     고 여겨 스크롤도 안 생기므로 ★손으로 꺼낼 수도 없습니다★.
+
+     실측 (수리 전, 스크롤 25px 간격 전수) — 창 키가 608px 인데
+       360x640  바닥 559 · 창 8~616 · ★+57px★
+       375x667  바닥 586 · 창 8~616 · ★+30px★
+       390x664  바닥 583 · 창 8~616 · ★+33px★
+     vh 800 에서는 안 넘쳤습니다. ★짧은 화면에서만 나던 고장★ 입니다.
+
+     바는 폰에서만 나옵니다(디자인팀 CSS 의 @media max-width:700px).
+     768 이상에는 아예 없고, 전체화면일 때는 화면에 안 그려지므로 세지
+     않습니다. js/chart-drawings.js 의 chipFloorY() 와 같은 방식입니다. */
+  function menuFloorY() {
+    var lim = (document.documentElement.clientHeight || window.innerHeight || 0) - EDGE;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim; /* 768 이상엔 없습니다 */
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - EDGE < lim) lim = r.top - EDGE;
+    return lim;
+  }
+
   /* 창을 화면 안으로 넣습니다.
      ⚠ 이 줄은 화면 ★아래쪽★ 에 있어서 창을 위로 엽니다. 그런데 이 창은
        항목이 5개라 키가 큽니다(실측 544px). 800px 높이 화면에서는 위로 열면
        ★위쪽이 166px 잘렸습니다★ — 실제로 재서 발견했고 아래처럼 고쳤습니다.
        ① 위가 잘리면 잘린 만큼 아래로 내립니다(버튼과 겹쳐도 괜찮습니다)
-       ② 그래도 안 들어가면 CSS 의 max-height 로 안에서 스크롤합니다 */
+       ② 그래도 안 들어가면 max-height 로 안에서 스크롤합니다
+       ③ ★아래쪽 기준은 vh-8 이 아니라 menuFloorY()★ — 위 주석 참조 */
   function clampMenu() {
     if (!isOpen()) return;
     try {
       var vw = document.documentElement.clientWidth;
-      var vh = document.documentElement.clientHeight;
 
       /* 가로 — 기본은 오른쪽 맞춤. 왼쪽이 넘치면 왼쪽 맞춤으로 바꿉니다 */
       menu.style.right = "0px";
@@ -547,16 +582,29 @@ App.ChartTimezone = (function () {
       }
 
       /* 세로 — px 로 바꿔 놓고 잘린 만큼 내립니다 */
+      var floorY = menuFloorY();
+
+      /* ★먼저 키를 쓸 수 있는 만큼으로 맞춥니다.★ 이걸 안 하면 아무리 밀어도
+         위아래 중 한쪽은 반드시 넘칩니다(창 608px > 쓸 수 있는 551px).
+         ⚠ 글씨는 한 픽셀도 안 줄입니다 — 이 창은 원래 overflow-y:auto 라
+           안에서 밀어 봅니다. CSS 의 max-height 를 화면 대신 ★바닥 기준★
+           으로 다시 잡아 줄 뿐입니다. */
+      menu.style.maxHeight = "";
+      var 쓸수있는키 = floorY - EDGE;
+      if (menu.getBoundingClientRect().height > 쓸수있는키) {
+        menu.style.maxHeight = Math.round(쓸수있는키) + "px";
+      }
+
       var base = (wrap.offsetHeight || 0) + 6;
       menu.style.top = "auto";
       menu.style.bottom = base + "px";
       var r2 = menu.getBoundingClientRect();
-      if (r2.top < 8) {
-        menu.style.bottom = Math.round(base - (8 - r2.top)) + "px";
+      if (r2.top < EDGE) {
+        menu.style.bottom = Math.round(base - (EDGE - r2.top)) + "px";
       }
       var r3 = menu.getBoundingClientRect();
-      if (r3.bottom > vh - 8) {
-        menu.style.bottom = Math.round(parseFloat(menu.style.bottom) + (r3.bottom - (vh - 8))) + "px";
+      if (r3.bottom > floorY) {
+        menu.style.bottom = Math.round(parseFloat(menu.style.bottom) + (r3.bottom - floorY)) + "px";
       }
     } catch (e) {
       /* 무시 */

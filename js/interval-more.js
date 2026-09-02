@@ -68,6 +68,10 @@ App.IntervalMore = (function () {
   var C_MUTED = "#838DA4";
   var C_POINT = "#F0B429";
 
+  /* 화면 가장자리에서 띄우는 여백. 아래쪽은 폰 주문 막대까지 같이 뺍니다
+     (js/chart-drawings.js 의 CHIP_EDGE / chipFloorY 와 같은 값·같은 방식). */
+  var EDGE = 8;
+
   var wrap = null;
   var menu = null;
   var btn = null;
@@ -189,6 +193,33 @@ App.IntervalMore = (function () {
        세로 — 768px 에서 메뉴 아래끝이 화면 아래 ★59px★ 밖이라 마지막 항목
               "1개월" 이 접힌 자리에 있었습니다. 회원이 있는 줄도 모릅니다.
      ⚠ 당기다가 반대쪽으로 나가지 않게 8px 에서 멈춥니다. */
+  /* 메뉴가 넘어가면 안 되는 ★아래쪽 바닥★ 입니다.
+     화면 아래끝(vh-8)만 보면 안 됩니다 — 폰에서는 그 위에 하단 매수/매도 바
+     (.tl-order-bar)가 겹쳐 떠 있어서, 화면 안이어도 막대에 가려 안 보입니다.
+     실측 (수정 전) — 360x800 에서 메뉴 아래끝이 vh-8 은 안 넘었는데
+     막대 기준으로는 ★+10px★ 넘어 7줄 중 1줄이 막대에 걸렸습니다.
+     360x640 처럼 짧은 화면에서는 ★+70px★, 7줄 중 ★4줄만★ 보였습니다.
+
+     그 막대는 폰에서만 나옵니다(디자인팀 CSS 의 @media max-width:700px).
+     768 이상에는 아예 없고, 전체화면일 때는 화면에 안 그려지므로 세지
+     않습니다. js/chart-drawings.js 의 chipFloorY() 와 같은 방식입니다. */
+  function menuFloorY() {
+    var lim = (document.documentElement.clientHeight || window.innerHeight || 0) - EDGE;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim; /* 768 이상엔 없습니다 */
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - EDGE < lim) lim = r.top - EDGE;
+    return lim;
+  }
+
   function clampMenu() {
     if (!isOpen()) return;
     try {
@@ -202,15 +233,29 @@ App.IntervalMore = (function () {
       if (shift) menu.style.left = Math.round(shift) + "px";
 
       /* 세로 — 아래로 넘치고 위에 자리가 있으면 버튼 ★위쪽★ 으로 뒤집어 엽니다
-         (트레이딩뷰도 화면 끝에서 이렇게 뒤집습니다) */
+         (트레이딩뷰도 화면 끝에서 이렇게 뒤집습니다)
+         ⚠ 기준이 vh-8 이 아니라 ★menuFloorY()★ 입니다. 자세한 것은 그 함수 주석. */
       menu.style.top = "";
       menu.style.bottom = "";
-      var vh = document.documentElement.clientHeight;
+      var floorY = menuFloorY();
       var br = btn.getBoundingClientRect();
       var r2 = menu.getBoundingClientRect();
-      if (r2.bottom > vh - 8 && br.top - r2.height - 4 >= 8) {
-        menu.style.top = "auto";
-        menu.style.bottom = "calc(100% + 4px)";
+      if (r2.bottom > floorY) {
+        if (br.top - r2.height - 4 >= EDGE) {
+          /* 위로 뒤집습니다 */
+          menu.style.top = "auto";
+          menu.style.bottom = "calc(100% + 4px)";
+        } else {
+          /* 위아래 둘 다 모자랍니다 — 바닥(floorY)에 붙여 끌어올립니다.
+             ★막는 차례는 위 → 아래 → EDGE★ 이고 ★마지막이 wrap 위끝이
+             아니라 EDGE★ 인 것이 핵심입니다. wrap 기준으로 막으면 버튼이
+             화면 아래쪽에 있을 때 메뉴가 그 자리에 갇혀 다시 주문 막대에
+             걸립니다(그게 원래 증상이었습니다). */
+          var wr = wrap.getBoundingClientRect();
+          var want = floorY - r2.height;
+          if (want < EDGE) want = EDGE;
+          menu.style.top = Math.round(want - wr.top) + "px";
+        }
       }
     } catch (e) {
       /* 무시 — 못 재면 원래 자리 그대로 둡니다 */

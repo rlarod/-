@@ -27,11 +27,25 @@
  *
  * ── ⚠️ 이 파일이 못 박는 사실 (2026-09-03 census) ─────────────────────
  *   보호됨  js/chart-drawings.js · js/chart-candle-type.js ·
- *           js/chart-indicator-menu.js  (js/chart-replay.js 는 바를 덮는 쪽)
- *   ★안 보고 있음★  js/chart-goto-date.js · js/chart-indicator-settings.js ·
- *                    js/chart-timezone.js · js/interval-more.js
+ *           js/chart-indicator-menu.js · ★js/interval-more.js★ ·
+ *           ★js/chart-timezone.js★   (js/chart-replay.js 는 바를 덮는 쪽)
+ *   ★안 보고 있음★  js/chart-goto-date.js · js/chart-indicator-settings.js
  *
- * 뒤 넷은 화면 아래끝(vh − 8)까지만 막습니다. 그런데 ≤700px 에서 화면 아래
+ * ⚠ js/interval-more.js 는 2026-09-03 수리팀이 고쳐 보호군으로 옮겼습니다.
+ *   그전 실측 — 360x800 에서 메뉴가 바닥을 +10px 넘어 7줄 중 1줄이 바에
+ *   걸렸고, 짧은 화면(360x640)에서는 +70px · 4줄만 보였습니다.
+ *   지금은 menuFloorY() 가 바를 봅니다. 2·3절이 회귀를 막습니다.
+ *
+ * ⚠ js/chart-timezone.js 도 같은 날 같은 팀이 고쳤습니다.
+ *   그전 실측 — 창 키 608px 인데 360x640 바닥 559 · 창 8~616 로 ★+57px★.
+ *   ★스크롤도 안 생겨서 밑에 깔린 부분을 손으로 못 꺼냈습니다★
+ *   (CSS max-height 가 calc(100vh - 20px) 라 "다 들어갔다" 고 여겼습니다).
+ *   지금은 menuFloorY() 로 바닥을 잡고 키도 그 안으로 줄입니다.
+ *   ★자리 잡기와 키 줄이기를 같이 보는 것은 그쪽 전용 봉인★
+ *   tests/chart-timezone-order-bar-floor.test.js 가 합니다.
+ *   여기서는 바닥 함수만 봅니다(두 벌로 안 봅니다 — 5절 참조).
+ *
+ * 뒤 셋은 화면 아래끝(vh − 8)까지만 막습니다. 그런데 ≤700px 에서 화면 아래
  * 72px 는 매수·매도 바가 덮고 있고(style.css), 그 바의 z-index 는 990 이라
  * 이 창들(60 · 70 · 960)보다 ★위★ 입니다. 창의 아래쪽이 바 밑에 깔립니다.
  * ★기록팀은 사이트 코드를 못 고칩니다 — 이 사실을 숫자와 함께 적어 두고
@@ -133,7 +147,11 @@ ok("칸·문서 좌표로 띄우는 것이 알려진 4개 그대로다 (" + 칸�
 절("[2] 보호군 — 하단 매수·매도 바를 보는 모듈");
 
 const 보호군 = 화면기준.filter((m) => m.바를봄).map((m) => m.파일);
-const 알려진보호군 = ["chart-candle-type.js", "chart-drawings.js", "chart-indicator-menu.js"];
+const 알려진보호군 = [
+  "chart-candle-type.js", "chart-drawings.js", "chart-indicator-menu.js",
+  /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (둘 다 menuFloorY) */
+  "chart-timezone.js", "interval-more.js"
+];
 ok("화면 기준이면서 바를 보는 것이 " + 알려진보호군.length + "개 그대로다 (" + 보호군.join(" · ") + ")",
   보호군.slice().sort().join(",") === 알려진보호군.join(","),
   "지금: " + 보호군.join(",") + " / 알려진: " + 알려진보호군.join(","));
@@ -213,7 +231,9 @@ ok("★계산한 바 높이가 2026-09-03 브라우저 실측 73px 과 맞다★
 const 대상 = [
   { 파일: "chart-drawings.js", 함수: "chipFloorY", 여백: "CHIP_EDGE" },
   { 파일: "chart-candle-type.js", 함수: "floorY", 여백: "EDGE" },
-  { 파일: "chart-indicator-menu.js", 함수: "floorY", 여백: "EDGE" }
+  { 파일: "chart-indicator-menu.js", 함수: "floorY", 여백: "EDGE" },
+  { 파일: "interval-more.js", 함수: "menuFloorY", 여백: "EDGE" },
+  { 파일: "chart-timezone.js", 함수: "menuFloorY", 여백: "EDGE" }
 ];
 const 폰화면 = { h: 800, 바: 바높이 };
 const 데스크 = { h: 900, 바: null };
@@ -266,12 +286,10 @@ function 바지우기(본문) {
  * 알려진보호군 으로 옮기면 됩니다. ★기준을 낮추는 것이 아닙니다★ —
  * 「아직 안 됐다」 를 사실로 못 박아 두는 것입니다.
  * ===================================================================== */
-절("[4] 아직 하단 바를 안 보는 넷 (PM 보고용 · 고쳐지면 여기가 빨개집니다)");
+절("[4] 아직 하단 바를 안 보는 것 (PM 보고용 · 고쳐지면 여기가 빨개집니다)");
 
 const 미보호 = 화면기준.filter((m) => !m.바를봄).map((m) => m.파일);
-const 알려진미보호 = [
-  "chart-goto-date.js", "chart-indicator-settings.js", "chart-timezone.js", "interval-more.js"
-];
+const 알려진미보호 = ["chart-goto-date.js", "chart-indicator-settings.js"];
 ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 그대로다★ (" + 미보호.join(" · ") + ")",
   미보호.slice().sort().join(",") === 알려진미보호.slice().sort().join(","),
   "지금: " + 미보호.join(",") + " / 알려진: " + 알려진미보호.join(",") +
@@ -294,7 +312,7 @@ ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 �
     return { 파일: f, 여백: 값 ? Number(값[1]) : null };
   });
   const 다8 = 여백들.every((x) => x.여백 === 8);
-  ok("넷 다 화면 아래끝에서 8px 만 남긴다 (" +
+  ok("남은 " + 알려진미보호.length + "개 다 화면 아래끝에서 8px 만 남긴다 (" +
     여백들.map((x) => x.파일.replace(".js", "") + ":" + x.여백).join(" · ") + ")", 다8,
     "여백이 달라졌습니다 — 아래 가려짐 계산을 다시 해야 합니다");
   const 가려짐 = 바높이 - 8;
@@ -315,7 +333,8 @@ ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 �
     const 최대 = zs.length ? Math.max.apply(null, zs) : 0;
     if (최대 < 바Z) 밑에깔림.push(f.replace(".js", "") + ":" + 최대);
   });
-  ok("★넷 다 바(z " + 바Z + ")보다 아래라 실제로 밑에 깔립니다★ (" + 밑에깔림.join(" · ") + ")",
+  ok("★남은 " + 알려진미보호.length + "개 다 바(z " + 바Z + ")보다 아래라 실제로 밑에 깔립니다★ (" +
+    밑에깔림.join(" · ") + ")",
     밑에깔림.length === 알려진미보호.length,
     "지금 밑에 깔리는 것: " + 밑에깔림.join(",") +
     " → 하나가 바보다 위로 올라갔으면 「깔림」 은 풀리지만 「가림」 은 남습니다");
