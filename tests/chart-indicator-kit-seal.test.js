@@ -50,6 +50,31 @@ const KIT_FILE = "js/chart-indicator-kit.js";
 
 const SRC = fs.readFileSync(path.join(REPO, KIT_FILE), "utf8");
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * ⭐ 기본 인스턴스 개수 — ★여기 한 곳에만★ 적습니다 (2026-09-02 기록팀)
+ *
+ * "처음 오는 회원에게 기본 인스턴스가 몇 개인가" 를 이 파일이 ★네 군데★ 에서
+ * 따로 못 박고 있었습니다. 2026-08-31 에 수정 금지 파일 md5 가 48곳에 흩어져
+ * 있다가 tests/_locked-hashes.js 한 곳으로 모인 것과 같은 냄새입니다.
+ *   · 처음 오는 회원에게 기본 인스턴스가 둘 있다
+ *   · 판번호가 다르면 저장값을 안 쓰고 기본으로 시작한다
+ *   · 거부해도 목록이 안 늘어난다
+ *   · 목록 창이 열리면 우리 줄이 붙는다        (줄 수 = 인스턴스 수)
+ * 2026-09-02 실측 — DEFAULT_INSTANCES 를 2 → 3 으로 늘려 보니 이 네 군데가
+ * 한꺼번에 빨개졌고, 그래서 팀들이 기본 인스턴스를 못 늘렸습니다.
+ *
+ * ── ⚠️ 그래도 이 봉인은 ★그대로 둡니다★ ────────────────────────────────
+ *   기본으로 켜진 지표를 늘리면 처음 오는 회원의 차트가 갑자기 어지러워집니다.
+ *   대표가 매일 보시는 화면이라, "늘려도 되는가" 는 PM 이 정할 일이지
+ *   팀이 조용히 바꿀 일이 아닙니다. ★막는 것이 이 봉인의 목적입니다.★
+ *   지금 둘 다 꺼져 있다는 것(on:false)도 아래에서 같이 봅니다.
+ *
+ * ── 늘리기로 정해지면 ───────────────────────────────────────────────────
+ *   ★이 숫자 하나만★ 고치면 됩니다. 네 군데를 찾아다니지 않습니다.
+ *   그리고 왜 늘렸는지를 이 주석에 날짜와 함께 적으세요.
+ * ───────────────────────────────────────────────────────────────────── */
+const 기본인스턴스수 = 2;
+
 let pass = 0;
 let fail = 0;
 function ok(name, cond, detail) {
@@ -549,7 +574,11 @@ console.log("\n[1] 지표선 색 목록 (LINE_COLORS)");
   const hexes = (list || []).map((c) => c.hex);
 
   ok("틀이 지표선 색 목록을 공개한다", Array.isArray(list) && list.length > 0);
-  ok("색이 12개다", hexes.length === 12, "지금 " + hexes.length + "개");
+  /* ⚠️ 2026-09-02 에 12 -> 20 으로 늘렸습니다. 대표 승인 건입니다
+     (CLAUDE.md "예외 — 차트 지표 색은 늘려도 됩니다"). 개수를 여기 박아 두는
+     이유는 "몇 개인지" 가 중요해서가 아니라 ★말없이 줄거나 느는 것★ 을 잡으려는
+     것입니다. 늘릴 때는 아래 거리 검사를 같이 통과해야 합니다. */
+  ok("색이 20개다", hexes.length === 20, "지금 " + hexes.length + "개");
   ok(
     "전부 #RRGGBB 형식이다",
     hexes.every((h) => /^#[0-9A-F]{6}$/.test(h)),
@@ -585,6 +614,125 @@ console.log("\n[1] 지표선 색 목록 (LINE_COLORS)");
     "배경 #0A0F1C 위에서 전부 명암비 4.5 이상이다",
     어두운.length === 0,
     어두운.map((h) => h + "=" + contrast(h, 배경색).toFixed(2)).join(",")
+  );
+
+
+  /* ── ⭐ 색끼리 얼마나 떨어져 있나 — ★눈대중이 아니라 재서★ ───────────────
+     2026-09-02 PM 지적 — "구분된다를 눈대중으로 말하지 마라. 색 간 거리를
+     실제로 재서 가장 가까운 두 색의 값을 숫자로 보고하라."
+     12색 시절에는 이 계산이 아예 없었습니다. 이제 매번 다시 잽니다.
+
+     ⚠️ 자를 두 개 씁니다. ΔE76(Lab 직선거리)만 보면 틀립니다 —
+        #BA6EED / #E637E6 은 ΔE76 30.76 으로 멀어 보이는데 ΔE2000 은 9.71 로
+        20색 중 ★제일 가깝습니다.★ 사람 눈에 가까운 자는 ΔE2000 입니다. */
+  function lab(hex) {
+    const c = rgb(hex).map((v) => {
+      const s = v / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    const X = c[0] * 0.4124564 + c[1] * 0.3575761 + c[2] * 0.1804375;
+    const Y = c[0] * 0.2126729 + c[1] * 0.7151522 + c[2] * 0.072175;
+    const Z = c[0] * 0.0193339 + c[1] * 0.119192 + c[2] * 0.9503041;
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const fx = f(X / 0.95047);
+    const fy = f(Y / 1);
+    const fz = f(Z / 1.08883);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+  function de76(a, b) {
+    const A = lab(a);
+    const B2 = lab(b);
+    return Math.hypot(A[0] - B2[0], A[1] - B2[1], A[2] - B2[2]);
+  }
+  function de2000(h1, h2) {
+    const [L1, a1, b1] = lab(h1);
+    const [L2, a2, b2] = lab(h2);
+    const rad = (x) => (x * Math.PI) / 180;
+    const deg = (x) => (x * 180) / Math.PI;
+    const C1 = Math.hypot(a1, b1);
+    const C2 = Math.hypot(a2, b2);
+    const Cb = (C1 + C2) / 2;
+    const G = 0.5 * (1 - Math.sqrt(Math.pow(Cb, 7) / (Math.pow(Cb, 7) + Math.pow(25, 7))));
+    const a1p = (1 + G) * a1;
+    const a2p = (1 + G) * a2;
+    const C1p = Math.hypot(a1p, b1);
+    const C2p = Math.hypot(a2p, b2);
+    let h1p = deg(Math.atan2(b1, a1p));
+    if (h1p < 0) h1p += 360;
+    let h2p = deg(Math.atan2(b2, a2p));
+    if (h2p < 0) h2p += 360;
+    const dLp = L2 - L1;
+    const dCp = C2p - C1p;
+    let dhp = 0;
+    if (C1p * C2p !== 0) {
+      dhp = h2p - h1p;
+      if (dhp > 180) dhp -= 360;
+      else if (dhp < -180) dhp += 360;
+    }
+    const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(rad(dhp) / 2);
+    const Lbp = (L1 + L2) / 2;
+    const Cbp = (C1p + C2p) / 2;
+    let hbp;
+    if (C1p * C2p === 0) hbp = h1p + h2p;
+    else if (Math.abs(h1p - h2p) <= 180) hbp = (h1p + h2p) / 2;
+    else hbp = (h1p + h2p + (h1p + h2p < 360 ? 360 : -360)) / 2;
+    const T =
+      1 -
+      0.17 * Math.cos(rad(hbp - 30)) +
+      0.24 * Math.cos(rad(2 * hbp)) +
+      0.32 * Math.cos(rad(3 * hbp + 6)) -
+      0.2 * Math.cos(rad(4 * hbp - 63));
+    const dTh = 30 * Math.exp(-Math.pow((hbp - 275) / 25, 2));
+    const Rc = 2 * Math.sqrt(Math.pow(Cbp, 7) / (Math.pow(Cbp, 7) + Math.pow(25, 7)));
+    const Sl = 1 + (0.015 * Math.pow(Lbp - 50, 2)) / Math.sqrt(20 + Math.pow(Lbp - 50, 2));
+    const Sc = 1 + 0.045 * Cbp;
+    const Sh = 1 + 0.015 * Cbp * T;
+    const Rt = -Math.sin(rad(2 * dTh)) * Rc;
+    return Math.sqrt(
+      Math.pow(dLp / Sl, 2) +
+        Math.pow(dCp / Sc, 2) +
+        Math.pow(dHp / Sh, 2) +
+        Rt * (dCp / Sc) * (dHp / Sh)
+    );
+  }
+
+  let 최소76 = { d: Infinity, 쌍: "" };
+  let 최소00 = { d: Infinity, 쌍: "" };
+  for (let i = 0; i < hexes.length; i++) {
+    for (let j = i + 1; j < hexes.length; j++) {
+      const d1 = de76(hexes[i], hexes[j]);
+      const d2 = de2000(hexes[i], hexes[j]);
+      if (d1 < 최소76.d) 최소76 = { d: d1, 쌍: hexes[i] + "/" + hexes[j] };
+      if (d2 < 최소00.d) 최소00 = { d: d2, 쌍: hexes[i] + "/" + hexes[j] };
+    }
+  }
+  console.log(
+    "      가장 가까운 쌍 — ΔE76 " +
+      최소76.d.toFixed(2) +
+      " (" +
+      최소76.쌍 +
+      ") · ΔE2000 " +
+      최소00.d.toFixed(2) +
+      " (" +
+      최소00.쌍 +
+      ")"
+  );
+  ok("모든 색끼리 ΔE76 22 이상 떨어져 있다", 최소76.d >= 22, 최소76.d.toFixed(2) + " " + 최소76.쌍);
+  /* ⚠️ 9.7 은 "지금이 딱 이만큼" 이라는 뜻입니다. 여유가 없습니다.
+     새 색을 또 넣을 때 이 줄이 빨개지면 ★그 색이 문제★ 입니다. */
+  ok("모든 색끼리 ΔE2000 9.7 이상 떨어져 있다", 최소00.d >= 9.7, 최소00.d.toFixed(2) + " " + 최소00.쌍);
+
+  const 상승가까움 = hexes.filter((h) => de76(h, 상승색) < 46);
+  const 하락가까움 = hexes.filter((h) => de76(h, 하락색) < 46);
+  ok(
+    "상승색과 ΔE76 46 이상 떨어져 있다",
+    상승가까움.length === 0,
+    상승가까움.map((h) => h + "=" + de76(h, 상승색).toFixed(1)).join(",")
+  );
+  ok(
+    "하락색과 ΔE76 46 이상 떨어져 있다",
+    하락가까움.length === 0,
+    하락가까움.map((h) => h + "=" + de76(h, 하락색).toFixed(1)).join(",")
   );
 
   /* ── 같은 값 두 벌 금지 ──────────────────────────────────────────────
@@ -708,7 +856,11 @@ console.log("\n[3] 인스턴스 (정의 1개 + 인스턴스 N개)");
   const warns = B.warns;
 
   const 목록 = K.listInstances();
-  ok("처음 오는 회원에게 기본 인스턴스가 둘 있다", 목록.length === 2, "지금 " + 목록.length + "개");
+  ok(
+    "처음 오는 회원에게 기본 인스턴스가 " + 기본인스턴스수 + "개 있다",
+    목록.length === 기본인스턴스수,
+    "지금 " + 목록.length + "개 (늘리려면 파일 위 기본인스턴스수 한 곳만 고치세요)"
+  );
   ok(
     "둘 다 같은 정의(ema)에서 나왔다",
     목록.every((i) => i.def === "ema")
@@ -849,7 +1001,7 @@ console.log("\n[5] 저장 키");
   });
   ok(
     "판번호가 다르면 저장값을 안 쓰고 기본으로 시작한다",
-    B3.K.listInstances().length === 2 && !B3.K.isOn("x")
+    B3.K.listInstances().length === 기본인스턴스수 && !B3.K.isOn("x")
   );
 }
 
@@ -927,8 +1079,8 @@ console.log("\n[6] 기존 7개 보호 (감싸기가 원래 것을 가리지 않�
     );
   });
   ok(
-    "거부해도 목록이 안 늘어난다 (기본 2개 그대로)",
-    B2.K.listInstances().length === 2,
+    "거부해도 목록이 안 늘어난다 (기본 " + 기본인스턴스수 + "개 그대로)",
+    B2.K.listInstances().length === 기본인스턴스수,
     String(B2.K.listInstances().length)
   );
   ok(
@@ -1102,7 +1254,9 @@ console.log("\n[8] fx 목록 — 무한 고리 방지 (값이 같으면 안 쓴�
   const K = B.K;
 
   const 줄 = B.목록창.querySelectorAll(".tl-fx-row");
-  ok("목록 창이 열리면 우리 줄이 붙는다", 줄.length === 2, "지금 " + 줄.length + "줄");
+  /* 줄 수 = 인스턴스 수. 기본 인스턴스가 늘면 여기도 같이 늡니다 */
+  ok("목록 창이 열리면 우리 줄이 " + 기본인스턴스수 + "줄 붙는다", 줄.length === 기본인스턴스수,
+    "지금 " + 줄.length + "줄");
   ok("감시가 실제로 돌고 있다", B.허브.상태.알림수 > 0, String(B.허브.상태.알림수));
   ok("줄을 붙이는 동안 고리가 안 열렸다", !B.허브.상태.넘침,
     "알림 " + B.허브.상태.알림수 + "회 — 감시→그리기→감시 가 끝없이 돌았습니다");
@@ -1225,6 +1379,247 @@ console.log("\n[9] 예약어 목록 · 저장소로 들어오는 경로");
   const 지어준 = B2.K.addInstance("ema", {});
   ok("id 를 아예 안 주면 우리가 지어 준다", /^ema-\d+$/.test(String(지어준)), String(지어준));
   ok("지어 준 이름이 예약어와 안 겹친다", 이름들.indexOf(String(지어준)) < 0, String(지어준));
+}
+
+/* =======================================================================
+ * 10. 거래량을 쓰는 지표 · 점으로 그리는 지표 (2026-09-02 · 9단계)
+ *
+ * ⚠️ 값을 ★숫자로 박지 않습니다.★ 여기서 트레이딩뷰 식을 다시 한 번 적어
+ *    전체를 계산하고, 틀이 화면에 넣은 값과 대조합니다. 틀의 코드는 안 봅니다.
+ *      OBV   ta.cum(math.sign(ta.change(close)) * volume)
+ *      SAR   Pine 참고서 pine_sar(start, inc, max)
+ *      VWAP  누적(hlc3 x 거래량) / 누적(거래량), ★하루(UTC)마다 다시 셈★
+ *
+ * ⚠️ 거래량은 ★가짜 거래량 시리즈에 직접 넣습니다.★ 틀은 거래량을 캔들이 아니라
+ *    별도 시리즈에서 시각으로 맞춰 읽습니다(chart.js 가 그렇게 만들었습니다).
+ *    그 길이 끊기면 거래량이 전부 0 이 되고, OBV 는 0 만 그리고 VWAP 은 값이
+ *    안 나옵니다. ★오류 0건짜리 조용한 고장★ 이라 아래 마지막 두 검사로 막습니다.
+ * ===================================================================== */
+console.log("\n[10] 거래량 지표(OBV · VWAP) 와 점 지표(SAR)");
+{
+  const candles = makeCandles(200);
+  /* 봉마다 다른 거래량 - 다 같으면 OBV 가 틀려도 안 걸립니다 */
+  const vols = candles.map((c, i) => 3 + ((i * 7) % 11) + (i % 3) * 0.5);
+
+  const B = boot(candles);
+  const K = B.K;
+  B.volumeSeries._data = candles.map((c, i) => ({ time: c.time, value: vols[i] }));
+
+  /* -- OBV ------------------------------------------------------------ */
+  const obvRef = [];
+  {
+    let acc = 0;
+    for (let i = 1; i < candles.length; i++) {
+      if (candles[i].close > candles[i - 1].close) acc += vols[i];
+      else if (candles[i].close < candles[i - 1].close) acc -= vols[i];
+      obvRef.push({ time: candles[i].time, v: acc });
+    }
+  }
+  const obvId = K.addInstance("obv", {});
+  ok("OBV 정의가 있다", !!obvId);
+  K.setOn(obvId, true);
+  const obvS = B.addedSeries[B.addedSeries.length - 1];
+  ok("OBV 점 개수가 전체 재계산과 같다", obvS.data().length === obvRef.length,
+    obvS.data().length + " vs " + obvRef.length);
+  ok("OBV 는 첫 봉을 안 그린다(전 봉과의 차이가 없음)",
+    obvS.data()[0].time === candles[1].time);
+  const obv오차 = obvS.data().reduce((m, p, i) => Math.max(m, Math.abs(p.value - obvRef[i].v)), 0);
+  ok("OBV 값이 전체 재계산과 같다 (오차 0)", obv오차 === 0, "최대오차 " + obv오차);
+  ok("OBV 는 아래 칸에 그린다", K.listInstances().filter((i) => i.id === obvId)[0].pane === "sub");
+
+  /* -- VWAP ----------------------------------------------------------- */
+  const vwRef = [];
+  {
+    let pv = 0;
+    let vv = 0;
+    let day = null;
+    for (let i = 0; i < candles.length; i++) {
+      const d = Math.floor(candles[i].time / 86400);
+      if (d !== day) {
+        day = d;
+        pv = 0;
+        vv = 0;
+      }
+      const tp = (candles[i].high + candles[i].low + candles[i].close) / 3;
+      pv += tp * vols[i];
+      vv += vols[i];
+      vwRef.push({ time: candles[i].time, v: pv / vv });
+    }
+  }
+  const 날수 = new Set(candles.map((c) => Math.floor(c.time / 86400))).size;
+  ok("이 시험 데이터가 하루 경계를 실제로 넘는다", 날수 >= 2, "날 " + 날수 + "개");
+
+  const vwId = K.addInstance("vwap", {});
+  K.setOn(vwId, true);
+  const vwS = B.addedSeries[B.addedSeries.length - 1];
+  ok("VWAP 점 개수가 전체 재계산과 같다", vwS.data().length === vwRef.length,
+    vwS.data().length + " vs " + vwRef.length);
+  const vw오차 = vwS.data().reduce((m, p, i) => Math.max(m, Math.abs(p.value - vwRef[i].v)), 0);
+  ok("VWAP 값이 전체 재계산과 같다 (오차 1e-9 이하)", vw오차 < 1e-9, "최대오차 " + vw오차);
+  ok("VWAP 은 주 차트에 그린다", K.listInstances().filter((i) => i.id === vwId)[0].pane === "main");
+
+  /* ⭐ 하루가 바뀌는 자리에서 ★진짜로 다시 세는가★ - 안 그러면 어제 거래가
+     오늘 평균에 딸려 옵니다. 경계 봉의 VWAP 은 그 봉의 hlc3 과 같아야 합니다. */
+  let 경계 = -1;
+  for (let i = 1; i < candles.length; i++) {
+    if (Math.floor(candles[i].time / 86400) !== Math.floor(candles[i - 1].time / 86400)) {
+      경계 = i;
+      break;
+    }
+  }
+  const 경계값 = vwS.data()[경계].value;
+  const 경계hlc3 = (candles[경계].high + candles[경계].low + candles[경계].close) / 3;
+  ok("하루가 바뀌면 VWAP 이 그 봉의 (고+저+종)/3 에서 다시 시작한다",
+    Math.abs(경계값 - 경계hlc3) < 1e-9, 경계값 + " vs " + 경계hlc3);
+
+  /* -- SAR ------------------------------------------------------------ */
+  const sarRef = [];
+  {
+    const start = 0.02;
+    const inc = 0.02;
+    const mx = 0.2;
+    let res = null;
+    let mm = null;
+    let af = start;
+    let below = true;
+    for (let i = 0; i < candles.length; i++) {
+      let first = false;
+      const c = candles[i];
+      if (i === 1) {
+        if (c.close > candles[0].close) {
+          below = true;
+          mm = c.high;
+          res = candles[0].low;
+        } else {
+          below = false;
+          mm = c.low;
+          res = candles[0].high;
+        }
+        first = true;
+        af = start;
+      }
+      if (i >= 1) {
+        res = res + af * (mm - res);
+        if (below) {
+          if (res > c.low) {
+            first = true;
+            below = false;
+            res = Math.max(c.high, mm);
+            mm = c.low;
+            af = start;
+          }
+        } else if (res < c.high) {
+          first = true;
+          below = true;
+          res = Math.min(c.low, mm);
+          mm = c.high;
+          af = start;
+        }
+        if (!first) {
+          if (below) {
+            if (c.high > mm) {
+              mm = c.high;
+              af = Math.min(af + inc, mx);
+            }
+          } else if (c.low < mm) {
+            mm = c.low;
+            af = Math.min(af + inc, mx);
+          }
+        }
+        if (below) {
+          res = Math.min(res, candles[i - 1].low);
+          if (i > 1) res = Math.min(res, candles[i - 2].low);
+        } else {
+          res = Math.max(res, candles[i - 1].high);
+          if (i > 1) res = Math.max(res, candles[i - 2].high);
+        }
+        sarRef.push({ time: c.time, v: res });
+      }
+    }
+  }
+  const sarId = K.addInstance("sar", {});
+  K.setOn(sarId, true);
+  const sarS = B.addedSeries[B.addedSeries.length - 1];
+  ok("SAR 점 개수가 전체 재계산과 같다", sarS.data().length === sarRef.length,
+    sarS.data().length + " vs " + sarRef.length);
+  const sar오차 = sarS.data().reduce((m, p, i) => Math.max(m, Math.abs(p.value - sarRef[i].v)), 0);
+  ok("SAR 값이 전체 재계산과 같다 (오차 0)", sar오차 === 0, "최대오차 " + sar오차);
+  const 뒤집힘 = sarRef.filter((p, i) => i > 0 && (p.v > candles[i + 1].close) !== (sarRef[i - 1].v > candles[i].close)).length;
+  ok("시험 데이터에서 SAR 이 실제로 여러 번 뒤집힌다", 뒤집힘 >= 3, "뒤집힘 " + 뒤집힘 + "회");
+
+  /* ⭐⭐ 점으로 그려야 합니다 - 선으로 이으면 뒤집히는 자리마다 캔들을 가로지르는
+     사선이 생겨 아예 다른 그림이 됩니다(트레이딩뷰는 X 표로 찍습니다). */
+  ok("SAR 은 선을 숨긴다", sarS.options().lineVisible === false, String(sarS.options().lineVisible));
+  ok("SAR 은 점을 켠다", sarS.options().pointMarkersVisible === true);
+  ok("SAR 점 반지름이 정해져 있다", typeof sarS.options().pointMarkersRadius === "number",
+    String(sarS.options().pointMarkersRadius));
+  ok("SAR 은 주 차트에 그린다", K.listInstances().filter((i) => i.id === sarId)[0].pane === "main");
+
+  /* ⭐ 진행 중인 봉 - step 이 전체 재계산과 같은 답을 내는가 (세 지표 다) */
+  const last = candles[candles.length - 1];
+  const 새종가 = last.close + 260;
+  const 새거래량 = vols[vols.length - 1] + 4;
+  K.onTickForTest({
+    symbol: "BTCUSDT",
+    candle: { time: last.time, open: last.open, high: last.high + 300, low: last.low, close: 새종가, volume: 새거래량 },
+  });
+  const 바뀐봉 = candles.slice(0, -1).concat([
+    { time: last.time, open: last.open, high: last.high + 300, low: last.low, close: 새종가 },
+  ]);
+  const 바뀐량 = vols.slice(0, -1).concat([새거래량]);
+
+  let acc2 = 0;
+  for (let i = 1; i < 바뀐봉.length; i++) {
+    if (바뀐봉[i].close > 바뀐봉[i - 1].close) acc2 += 바뀐량[i];
+    else if (바뀐봉[i].close < 바뀐봉[i - 1].close) acc2 -= 바뀐량[i];
+  }
+  const obv끝 = obvS.data()[obvS.data().length - 1].value;
+  ok("OBV - 진행 중인 봉이 갱신되면 전체 재계산과 같다", Math.abs(obv끝 - acc2) < 1e-9,
+    obv끝 + " vs " + acc2);
+
+  let pv2 = 0;
+  let vv2 = 0;
+  let day2 = null;
+  for (let i = 0; i < 바뀐봉.length; i++) {
+    const d = Math.floor(바뀐봉[i].time / 86400);
+    if (d !== day2) {
+      day2 = d;
+      pv2 = 0;
+      vv2 = 0;
+    }
+    pv2 += ((바뀐봉[i].high + 바뀐봉[i].low + 바뀐봉[i].close) / 3) * 바뀐량[i];
+    vv2 += 바뀐량[i];
+  }
+  const vw끝 = vwS.data()[vwS.data().length - 1].value;
+  ok("VWAP - 진행 중인 봉이 갱신되면 전체 재계산과 같다", Math.abs(vw끝 - pv2 / vv2) < 1e-9,
+    vw끝 + " vs " + pv2 / vv2);
+
+  /* 같은 봉을 여러 번 갱신해도 답이 안 흔들려야 합니다(확정 상태 오염 검사) */
+  for (let r = 0; r < 5; r++) {
+    K.onTickForTest({
+      symbol: "BTCUSDT",
+      candle: { time: last.time, open: last.open, high: last.high + 300, low: last.low, close: 새종가, volume: 새거래량 },
+    });
+  }
+  ok("같은 봉을 여섯 번 갱신해도 OBV 가 그대로다",
+    Math.abs(obvS.data()[obvS.data().length - 1].value - acc2) < 1e-9);
+  ok("같은 봉을 여섯 번 갱신해도 VWAP 이 그대로다",
+    Math.abs(vwS.data()[vwS.data().length - 1].value - pv2 / vv2) < 1e-9);
+  ok("같은 봉을 여섯 번 갱신해도 SAR 점 개수가 안 늘어난다",
+    sarS.data().length === sarRef.length, String(sarS.data().length));
+
+  /* ⭐⭐ 조용한 고장 막기 - 거래량 길이 끊기면 ★그리지 않고 알린다★ */
+  const B3 = boot(makeCandles(200));   /* 가짜 거래량 시리즈가 비어 있는 상태 */
+  const 전 = B3.warns.length;
+  const obvId3 = B3.K.addInstance("obv", {});
+  B3.K.setOn(obvId3, true);
+  const 새선 = B3.addedSeries.length;
+  ok("거래량이 전부 0 이면 OBV 를 0 짜리 선으로 그리지 않는다",
+    새선 === 0 || B3.addedSeries[새선 - 1].data().length === 0,
+    "점 " + (새선 ? B3.addedSeries[새선 - 1].data().length : 0) + "개");
+  ok("거래량이 전부 0 이면 콘솔에 남긴다",
+    B3.warns.length > 전 && /거래량/.test(B3.warns[B3.warns.length - 1]),
+    B3.warns[B3.warns.length - 1] || "경고 없음");
 }
 
 console.log("\n통과 " + pass + " / 실패 " + fail);

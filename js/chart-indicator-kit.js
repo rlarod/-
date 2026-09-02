@@ -101,6 +101,21 @@
  * ⚠️ CCI 의 step 만 O(1) 이 아니라 O(p) 입니다. 계산식 때문이고, 왜 그래도
  *    괜찮은지는 아래 CCI 주석에 실측값과 함께 적어 두었습니다.
  *
+ * -- 2026-09-02 (9단계) 에 늘어난 것 - ★색 8개★ + 지표 3개 -----------
+ *   색      LINE_COLORS 가 12 -> ★20★ 색. 대표 승인(2026-09-02 "ㅇㅋ") 건입니다.
+ *           확정 팔레트 9색은 그대로고 지표선 목록만 늘렸습니다. 고른 방법과
+ *           실측 거리(ΔE76 · ΔE2000 · 명암비)는 LINE_COLORS 바로 위에 있습니다.
+ *   점(dots) 새 그리기 방식. SAR 이 선이 아니라 점이라 길을 냈습니다.
+ *           LineSeries + lineVisible:false + pointMarkersVisible:true.
+ *   소수    설정값에 0.02 같은 소수를 넣을 수 있게 했습니다(inputs type:"float").
+ *           그전에는 parseInt 가 0.02 를 0 으로 읽었습니다.
+ *   OBV     누적거래량 · 아래 칸 · 기준선 없음 · 카키   (트레이딩뷰 ta.obv)
+ *   SAR     0.02 · 0.02 · 0.2 · ★주 차트에 점★ · 연남색 (트레이딩뷰 ta.sar)
+ *   VWAP    hlc3 · 하루(UTC) 기준으로 다시 셈 · 주 차트 · 진하늘 (트레이딩뷰 ta.vwap)
+ *   ⚠️ OBV · VWAP 은 ★거래량이 진짜 오는지 먼저 재고★ 넣었습니다 -
+ *      봉 1000개 중 0 인 봉 0개. 실측값은 volumeAllZero() 위 주석에 있습니다.
+ * ★기본 인스턴스는 이번에도 안 늘렸습니다★ - "지표 추가" 목록에만 나옵니다.
+ *
  * -- 되돌리기 ---------------------------------------------------------
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
@@ -147,7 +162,52 @@ App.ChartIndicatorKit = (function () {
     { key: "navy", hex: "#4974E9", name: "남색" },
     { key: "purple", hex: "#BA6EED", name: "보라" },
     { key: "magenta", hex: "#E637E6", name: "자홍" },
-    { key: "pink", hex: "#F292DE", name: "분홍" }
+    { key: "pink", hex: "#F292DE", name: "분홍" },
+
+    /* ↓ 2026-09-02 (9단계) 에 늘린 8색 - 위 12색이 꽉 찼습니다(기존 MA 3 + 정의 9).
+       ⭐ 대표 승인은 2026-09-02 "차트 지표에 한해 색을 새로 만들어도 될까요" -> "ㅇㅋ".
+          확정 팔레트 9색은 ★그대로★ 입니다. 늘어난 것은 이 지표선 목록뿐입니다.
+
+       -- 어떻게 골랐나 (눈대중 아님 · 전수 계산) ---------------------------
+       17,000여 개 후보(HSL 격자)를 만들어 아래를 모두 통과한 것만 남기고,
+       "이미 있는 색과 가장 가까운 거리" 가 ★제일 먼 것부터★ 하나씩 여덟 번
+       골랐습니다(maximin). 한 개 고를 때마다 그것까지 포함해 다시 쟀습니다.
+
+         조건 1  배경 #0A0F1C 과 명암비 5.0 이상   (새 8색 실측 최소 5.05)
+                 ⚠️ 기존 12색의 바닥은 4.52(#4974E9)였습니다. 새 색은 더 올렸습니다
+         조건 2  모든 색끼리 CIE Lab 거리(ΔE76) 22 이상   (20색 실측 최소 22.01)
+         조건 3  상승 #26C281 · 하락 #F0506E 와 ΔE76 46.4 이상
+                 (46.4 는 기존 12색이 이미 지키던 바닥값 - #E1ED97 의 상승 거리)
+         조건 4  ★색상환에서 초록 · 빨강 쪽으로 더 물러났습니다★
+                 기존 규칙은 초록 100~185도 · 빨강 330~18도 제외였는데,
+                 새 색은 ★24~62도 와 195~320도★ 안에서만 골랐습니다.
+                 이유 - 계산만 믿고 뽑으면 hue 98도(형광 연두) · 18도(주홍) 가
+                 통과합니다. 숫자로는 멀지만 ★회원 눈에는 초록 · 빨강★ 입니다
+
+       -- 지금 제일 가까운 쌍이 어디인가 (ΔE2000 · 사람 눈에 가까운 자) ------
+       ⚠️ ΔE76 만 보면 안 됩니다. 아래 두 값이 그 이유입니다.
+            #BA6EED 보라 / #E637E6 자홍   ΔE76 30.76  ΔE2000 ★9.71★
+            #F0B429 금색 / #FF8F3C 주황   ΔE76 29.55  ΔE2000  18.27
+       ΔE76 은 보라/자홍이 더 멀다고 하는데 눈에는 그쪽이 두 배 가깝습니다.
+       ★다음에 터질 자리는 보라(#BA6EED)와 자홍(#E637E6) 입니다.★ 지금은 CCI(보라)와
+       KDJ 의 J(자홍)가 쓰는데 둘 다 아래 칸이라 한 칸에 같이 놓이진 않습니다.
+       새로 넣은 8색은 ★그보다 멀게★ 잡았습니다 - 새 색이 낀 쌍의 최소 ΔE2000 은
+       11.69(#BB81AC / #F292DE) 입니다.
+
+       -- 20색 전수 실측 (2026-09-02 · 아래 tests 절 1 이 매번 다시 잽니다) --
+            최소 ΔE76    22.01  (#4974E9 남색 / #9197F3 연남색)
+            최소 ΔE2000   9.71  (#BA6EED / #E637E6 - ★기존 쌍 그대로★. 새 색이 아닙니다)
+            최소 명암비    4.52  (#4974E9 - 기존 색. 새 8색의 최소는 5.05)
+       ★순서를 뒤에 붙였습니다★ - suggestColor() 가 앞에서부터 고르기 때문에,
+       앞에 끼워 넣으면 이미 쓰시던 분들의 자동 색이 바뀝니다. */
+    { key: "yellow", hex: "#F2DF0D", name: "노랑" },
+    { key: "khaki", hex: "#9FA329", name: "카키" },
+    { key: "copper", hex: "#B87414", name: "구리" },
+    { key: "sand", hex: "#F5D7B8", name: "모래" },
+    { key: "deepsky", hex: "#258EB1", name: "진하늘" },
+    { key: "periwinkle", hex: "#9197F3", name: "연남색" },
+    { key: "lavender", hex: "#C1BAF3", name: "라벤더" },
+    { key: "mauve", hex: "#BB81AC", name: "연자주" }
   ];
 
   /* 기준선(guide) 색 - 여기 한 곳에만. 값이 아니라 배경이라 팔레트 테두리색입니다.
@@ -164,7 +224,14 @@ App.ChartIndicatorKit = (function () {
   }
 
   var ALLOWED_STYLES = ["solid", "dashed", "dotted"];
-  var ALLOWED_KINDS = ["line", "hist"];
+  /* ⚠️ dots 는 2026-09-02 (9단계) 에 늘렸습니다 - SAR 때문입니다.
+     트레이딩뷰 ta.sar 예시가 plot.style_cross 로 ★점★ 을 찍습니다(선이 아닙니다).
+     lightweight-charts 5.2.0 에는 점 시리즈가 따로 없어서, LineSeries 의
+     lineVisible:false + pointMarkersVisible:true 로 냅니다(아래 addSeriesFor).
+     라이브러리 원본에서 확인한 것 - dist 안에
+        n.pointMarkersVisible ? n.pointMarkersRadius || n.lineWidth/2+2 : void 0
+     즉 반지름을 안 주면 굵기에서 만들어 씁니다. 우리는 직접 줍니다. */
+  var ALLOWED_KINDS = ["line", "hist", "dots"];
   var ALLOWED_PANES = ["main", "sub"];
 
   var ALLOWED_WIDTHS = [1, 2, 3, 4];   /* 트레이딩뷰 Thickness 도 네 칸입니다 */
@@ -344,11 +411,20 @@ App.ChartIndicatorKit = (function () {
     (def.inputs || []).forEach(function (sp) {
       if (!sp || !sp.key) { bad = "inputs 에 key 가 없습니다"; return; }
       if (!(sp.key in params0)) { bad = "inputs 의 key 가 params 에 없습니다: " + sp.key; return; }
+      /* ⚠️ 2026-09-02 (9단계) 에 소수(float)를 늘렸습니다 - SAR 의 0.02 때문입니다.
+         그전에는 정수만 받아서 0.02 를 적으면 parseInt 가 0 으로 읽고 최솟값으로
+         끌어올렸습니다(회원은 0.02 를 적었는데 다른 값이 되는 조용한 고장).
+         ⚠️ 설정 창(js/chart-indicator-settings.js)은 숫자칸 step 을 "1" 로 박아
+            두었습니다. 그 파일은 이번 작업에서 손대지 않기로 한 파일이라,
+            ★화살표 버튼은 1씩 뜁니다.★ 손으로 0.02 를 적는 것은 됩니다(범위를
+            벗어나면 아래 cleanParams 가 잘라 냅니다). 화살표까지 맞추려면
+            저쪽 step 한 줄을 고쳐야 합니다 - PM 판단 사항으로 남깁니다. */
+      var sptype = sp.type === "float" ? "float" : "int";
       inputs.push({
         key: sp.key,
         label: sp.label || sp.key,
-        type: "int",
-        min: typeof sp.min === "number" ? sp.min : 1,
+        type: sptype,
+        min: typeof sp.min === "number" ? sp.min : (sptype === "float" ? 0 : 1),
         max: typeof sp.max === "number" ? sp.max : 5000
       });
     });
@@ -386,13 +462,15 @@ App.ChartIndicatorKit = (function () {
     if (!d) return [];
     return d.inputs.map(function (sp) {
       var r = { key: sp.key, label: sp.label, type: sp.type };
-      if (sp.type === "int") {
-        r.min = sp.min;
-        r.max = sp.max;
-      } else {
+      /* ⚠️ "int 면 범위, 아니면 목록" 이었는데 float 가 생기면서 뒤집었습니다.
+         그대로 뒀으면 소수칸이 값 종류 고르는 목록으로 그려졌을 것입니다. */
+      if (sp.type === "select") {
         r.options = SOURCES.map(function (o) {
           return { key: o.key, name: o.name };
         });
+      } else {
+        r.min = sp.min;
+        r.max = sp.max;
       }
       return r;
     });
@@ -410,7 +488,7 @@ App.ChartIndicatorKit = (function () {
         if (hasSource(v)) out[sp.key] = v;
         return;
       }
-      var n = parseInt(v, 10);
+      var n = sp.type === "float" ? parseFloat(v) : parseInt(v, 10);
       if (!isFinite(n)) return;
       if (n < sp.min) n = sp.min;
       if (n > sp.max) n = sp.max;
@@ -524,6 +602,10 @@ App.ChartIndicatorKit = (function () {
       on: !!opts.on,
       live: null
     };
+    /* 정의의 기본색끼리 겹치는 일은 없지만, opts.colors 로 들어온 색이
+       다른 선과 같아질 수 있습니다(회원 경로 · 저장소에서 되살릴 때). */
+    fixDupColors(insts[id], opts.colors ? Object.keys(opts.colors) : []);
+
     instOrder.push(id);
     return id;
   }
@@ -795,6 +877,12 @@ App.ChartIndicatorKit = (function () {
     return lc.LineStyle.Solid;
   }
 
+  /** 점 반지름 - 굵기 1 이면 1.5px(지름 3px). 라이브러리 기본(굵기/2+2 = 2.5)은
+   *  캔들 위에서 너무 큽니다. 트레이딩뷰 SAR 도 캔들보다 훨씬 작은 표식입니다. */
+  function dotRadius(w) {
+    return w / 2 + 1;
+  }
+
   function makePane() {
     var p = chart.addPane();
     try {
@@ -824,6 +912,16 @@ App.ChartIndicatorKit = (function () {
     if (kind === "line") {
       opts.lineWidth = it.width || DEFAULT_WIDTH;
       opts.lineStyle = styleOf(it.style || out.style);
+    }
+    /* 점(dots) - SAR 처럼 "선이 아니라 점" 인 지표. 선은 끄고 점만 켭니다.
+       ⚠️ 굵기 칸이 점 크기가 됩니다(선이 없으니 굵기가 달리 쓸 데가 없습니다).
+          선모양(solid/dashed)은 점에는 뜻이 없습니다 - 설정 창에서 고를 수는
+          있지만 화면은 안 바뀝니다. */
+    if (kind === "dots") {
+      opts.lineVisible = false;
+      opts.pointMarkersVisible = true;
+      opts.lineWidth = it.width || DEFAULT_WIDTH;
+      opts.pointMarkersRadius = dotRadius(it.width || DEFAULT_WIDTH);
     }
     var seriesDef = kind === "hist" ? lc.HistogramSeries : lc.LineSeries;
 
@@ -1205,6 +1303,8 @@ App.ChartIndicatorKit = (function () {
         var want = patch.colors[o.key];
         if (want && hexes.indexOf(want) >= 0) it.colors[o.key] = want;
       });
+      /* 방금 고른 색이 같은 줄의 다른 선과 겹치면 그 다른 선이 비켜 줍니다 */
+      fixDupColors(it, Object.keys(patch.colors));
     }
     if (patch.style && ALLOWED_STYLES.indexOf(patch.style) >= 0) it.style = patch.style;
     if (patch.width && ALLOWED_WIDTHS.indexOf(patch.width | 0) >= 0) it.width = patch.width | 0;
@@ -1252,16 +1352,94 @@ App.ChartIndicatorKit = (function () {
       순서를 못 바꿉니다. 그래서 목록이 아니라 고르는 쪽에서 미룹니다) */
   var LEGACY_HEXES = ["#F0B429", "#E7ECF5", "#838DA4"];
 
-  /** 아직 아무도 안 쓴 색을 하나 고릅니다(같은 색 두 줄을 막습니다). */
-  function suggestColor() {
-    /* 대표색만이 아니라 ★모든 선의 색★ 을 셉니다 - KDJ 처럼 선이 셋인 지표가
-       생기면서, 새로 얹은 줄의 첫 선이 다른 줄의 둘째·셋째 선과 같은 색이
-       될 수 있게 됐습니다. */
+  /** 지금 화면의 모든 선이 쓰고 있는 색 (선이 셋인 지표까지 전부 셉니다) */
+  function usedColorMap() {
     var used = {};
     instOrder.forEach(function (iid) {
       var it = insts[iid];
       for (var ck in it.colors) used[it.colors[ck]] = true;
     });
+    return used;
+  }
+
+  /* ---------------------------------------------------------------------
+   * ⭐ 2026-09-02 (9단계) 에 잡은 것 - ★한 줄 안에서 두 선이 같은 색★
+   *
+   * 회원이 "지표 추가" 로 KDJ 를 얹으면 설정 창이 이 순서로 부릅니다.
+   *     suggestColor()  ->  createInstance()  ->  updateInstance(첫 선 색)
+   * suggestColor 는 ★아직 만들어지지 않은 그 인스턴스의 나머지 선★ 을 모릅니다.
+   * 그래서 K 선에 골라 준 색이 하필 그 지표의 D 선 기본색과 같으면,
+   * ★한 칸 안에서 K 와 D 가 같은 색★ 이 됩니다. 오류 0건 · 화면 멀쩡 ·
+   * 회원은 선 하나만 보고 판단합니다. 2026-08-31 금색 사고와 같은 종류입니다.
+   *
+   * 실측(2026-09-02) - 기본 상태에서 회원 경로로 EMA · WMA · KDJ 를 차례로
+   * 얹으면 KDJ 의 K 와 D 가 둘 다 #E1ED97 이 됐습니다.
+   *
+   * ⚠️ 회원이 방금 고른 선(keep)은 ★그대로 둡니다.★ 비켜 주는 쪽은 나머지 선입니다.
+   * ⚠️ 색을 다 써버린 경우에도 ★적어도 제 줄 안에서는★ 겹치지 않게 합니다.
+   *    (다른 줄과 겹치는 것은 눈으로 구분이 되지만, 한 칸 안 두 선이 같은 색이면
+   *     아예 한 선으로 보입니다)
+   * ------------------------------------------------------------------- */
+  function pickFreeColor(banned) {
+    var used = usedColorMap();
+    var i, h;
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      h = LINE_COLORS[i].hex;
+      if (!banned[h] && !used[h] && LEGACY_HEXES.indexOf(h) < 0) return h;
+    }
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      h = LINE_COLORS[i].hex;
+      if (!banned[h] && !used[h]) return h;
+    }
+    for (i = 0; i < LINE_COLORS.length; i++) {
+      h = LINE_COLORS[i].hex;
+      if (!banned[h]) return h;
+    }
+    return null;
+  }
+
+  /** 한 인스턴스 안에서 색이 겹치면 비켜 줍니다. keep 에 적힌 선은 안 건드립니다. */
+  function fixDupColors(it, keep) {
+    var d = defs[it.def];
+    if (!d || d.outputs.length < 2) return false;
+
+    var keepMap = {};
+    (keep || []).forEach(function (k) {
+      keepMap[k] = true;
+    });
+
+    /* 회원이 방금 고른 선부터 자리를 잡습니다 */
+    var keys = d.outputs.map(function (o) {
+      return o.key;
+    });
+    keys.sort(function (a, b) {
+      return (keepMap[b] ? 1 : 0) - (keepMap[a] ? 1 : 0);
+    });
+
+    var seen = {};
+    var changed = false;
+    keys.forEach(function (k) {
+      var c = it.colors[k];
+      if (!seen[c]) {
+        seen[c] = true;
+        return;
+      }
+      if (keepMap[k]) return; /* 회원이 고른 선은 안 옮깁니다 */
+      var next = pickFreeColor(seen);
+      if (!next || next === c) return;
+      it.colors[k] = next;
+      seen[next] = true;
+      changed = true;
+    });
+    return changed;
+  }
+
+  /** 아직 아무도 안 쓴 색을 하나 고릅니다(같은 색 두 줄을 막습니다). */
+  function suggestColor() {
+    /* 대표색만이 아니라 ★모든 선의 색★ 을 셉니다 - KDJ 처럼 선이 셋인 지표가
+       생기면서, 새로 얹은 줄의 첫 선이 다른 줄의 둘째·셋째 선과 같은 색이
+       될 수 있게 됐습니다. */
+    var used = usedColorMap();
     var i;
     for (i = 0; i < LINE_COLORS.length; i++) {
       if (!used[LINE_COLORS[i].hex] && LEGACY_HEXES.indexOf(LINE_COLORS[i].hex) < 0) {
@@ -2287,13 +2465,12 @@ App.ChartIndicatorKit = (function () {
    * ⭐ 기준선 +100 · 0 · -100 - 식의 0.015 라는 상수가 "값이 보통 ±100 안에
    *    들어오게" 맞춘 것이라, ±100 이 이 지표의 눈금 그 자체입니다.
    *
-   * ⚠️ 색 - 여기 적힌 #BA6EED 는 ★기본 인스턴스 EMA(21) 와 같은 색★ 입니다.
-   *    LINE_COLORS 12색이 이제 꽉 찼습니다(기존 MA 3 + 정의 9). 겹치는 것을
-   *    피할 수 없어서, ★한 칸 안에서 겹치지 않는 쌍★ 을 골랐습니다 -
-   *    EMA(21) 은 주 차트고 CCI 는 아래 칸이라 같은 눈금 위에 안 놓입니다.
-   *    (아래 칸끼리 겹치면 위아래로 나란히 놓여 비교하게 되니 더 나쁩니다)
-   *    회원이 "지표 추가" 에서 고르면 어차피 틀의 suggestColor() 가 아직 아무도
-   *    안 쓴 색을 먼저 줍니다 - 이 색은 그때 못 고른 경우의 되돌아갈 자리입니다.
+   * ⚠️ 색 - 2026-09-02 (8단계) 에는 #BA6EED 였습니다. 그때 LINE_COLORS 12색이
+   *    꽉 차서 ★기본 인스턴스 EMA(21) 와 같은 색★ 을 쓸 수밖에 없었습니다
+   *    (주 차트와 아래 칸이라 같은 눈금 위엔 안 놓인다는 이유로 눈감았습니다).
+   *    ⭐ 9단계에서 색이 20색이 되어 그럴 이유가 없어졌습니다. 아무도 안 쓰는
+   *       #C1BAF3(라벤더)로 옮겼습니다. 이미 얹어 두신 CCI 는 색을 각자 들고
+   *       있어서 그대로입니다(바뀌는 것은 앞으로 새로 얹는 것뿐입니다).
    *
    * -- ⚠️ step 이 O(1) 이 ★아닙니다★. O(p) 입니다 -----------------------
    *    이 틀의 다른 지표는 전부 O(1) 인데 CCI 만 다릅니다. 계산식 때문입니다.
@@ -2364,7 +2541,7 @@ App.ChartIndicatorKit = (function () {
     nameOf: function (prm) {
       return "CCI(" + prm.p + ")";
     },
-    outputs: [{ key: "cci", kind: "line", color: "#BA6EED", style: "solid" }],
+    outputs: [{ key: "cci", kind: "line", color: "#C1BAF3", style: "solid" }],
     guides: [{ price: 100 }, { price: 0, style: "dotted" }, { price: -100 }],
 
     seed: function (bs, prm, cap) {
@@ -2388,6 +2565,314 @@ App.ChartIndicatorKit = (function () {
       var x = typeof bar.src === "number" ? bar.src : bar.close;
       var r = cciOne(st, x, p);
       return { values: r.value === null ? {} : { cci: r.value }, state: r.state };
+    }
+  });
+
+  /* -- 거래량을 쓰는 지표를 얹기 전에 ★반드시★ ------------------------
+   * 앞 팀이 남긴 경고 - "BarStore 의 거래량이 0 으로 들어올 수 있다".
+   * 0 이면 OBV 는 계속 0 을 그리고 VWAP 은 값이 아예 안 나옵니다.
+   * ★오류도 경고도 안 납니다 - 이 프로젝트가 조용한 고장이라 부르는 그것입니다.★
+   *
+   * ⭐ 2026-09-02 브라우저 실측 (localhost · 1920 · BTCUSDT)
+   *      봉 1000개 중 거래량 0 인 봉  ★0개★
+   *      최소 4.198 · 최대 2,840.886 · 합 95,528.683
+   *      실시간도 옵니다 - 같은 봉의 거래량이 6초 사이 59.677 -> 63.088
+   *    즉 ★지금은 거래량이 진짜로 들어옵니다.★ 그래서 OBV · VWAP 을 얹었습니다.
+   *
+   * ⚠️ 그래도 앞으로 0 이 될 수 있습니다(chart.js 의 거래량 시리즈를 못 찾거나,
+   *    시각이 안 맞아 map 이 비면 syncBars() 가 0 으로 둡니다). 그때 잠자코
+   *    0 짜리 선을 그리면 회원이 그걸 사실로 믿습니다. 그래서 ★한 번은 알립니다.★
+   * ------------------------------------------------------------------- */
+  var volWarned = false;
+
+  /** 봉 거래량이 전부 0 이면 true (그리지 않고 콘솔에 한 번 알립니다). */
+  function volumeAllZero(bs, who) {
+    var v = bs.volume || [];
+    var sum = 0;
+    for (var i = 0; i < v.length; i++) sum += v[i] || 0;
+    if (sum > 0) return false;
+    if (!volWarned) {
+      volWarned = true;
+      console.warn(
+        "[chart-indicator-kit] 봉 " + v.length + "개의 거래량이 전부 0 이라 " + who +
+        " 를 그리지 않습니다. 거래량 시리즈를 못 읽었을 수 있습니다(BarStore.syncBars)."
+      );
+    }
+    return true;
+  }
+
+  /* -- OBV 누적거래량 (On Balance Volume) --------------------------------
+   * "오른 봉의 거래량은 더하고 내린 봉의 거래량은 뺀다" 를 계속 쌓은 것입니다.
+   * 값 자체(1억이든 -3억이든)에는 뜻이 없고 ★방향★ 만 봅니다. 값이 커서 주 차트에
+   * 못 얹습니다(캔들 눈금이 뭉갭니다). 그래서 아래 별도 칸입니다.
+   *
+   * ⭐ 계산식 - 트레이딩뷰 Pine 참고서 ta.obv 를 그대로 옮겼습니다
+   *    (2026-09-02 · 브라우저로 직접 열어 읽은 원문)
+   *        f_obv() => ta.cum(math.sign(ta.change(close)) * volume)
+   *    즉 종가가 오르면 +거래량, 내리면 -거래량, ★같으면 0★ 입니다.
+   *    ⚠️ 첫 봉은 "전 봉과의 차이" 가 없어 값이 없습니다(트레이딩뷰도 둘째 봉부터
+   *       그립니다). 그래서 우리도 둘째 봉부터 냅니다 - 0 을 찍어 두면 회원이
+   *       "여기서 시작했다" 로 읽는데 사실이 아닙니다.
+   *
+   * ⚠️ 기준선 없음 - 값의 절대 크기에 뜻이 없어 0선도 뜻이 없습니다
+   *    (트레이딩뷰 OBV 도 기준선을 안 그립니다).
+   *
+   * -- step 이 O(1) 인 이유 -------------------------------------------
+   *    이전 누적값 하나와 이전 종가 하나면 끝입니다. 상태가 { o, pc } 둘뿐이고
+   *    배열이 없어 "그 자리에서 고쳐 쓰기" 걱정도 없습니다.
+   * ------------------------------------------------------------------- */
+  function obvOne(st, close, vol) {
+    var v = typeof vol === "number" && isFinite(vol) ? vol : 0;
+    var o = st.o;
+    if (st.pc !== null) {
+      if (close > st.pc) o += v;
+      else if (close < st.pc) o -= v;
+    }
+    return { value: st.pc === null ? null : o, state: { o: o, pc: close } };
+  }
+
+  define({
+    id: "obv",
+    name: "OBV",
+    note: "누적거래량",
+    pane: "sub",
+    params: {},
+    inputs: [],
+    outputs: [{ key: "obv", kind: "line", color: "#9FA329", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var n = bs.close.length;
+      var out = [];
+      if (volumeAllZero(bs, "OBV")) return { obv: out };
+      var st = { o: 0, pc: null };
+      for (var i = 0; i < n; i++) {
+        var r = obvOne(st, bs.close[i], bs.volume[i]);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = { o: st.o, pc: st.pc };
+      }
+      return { obv: out };
+    },
+
+    step: function (st, bar) {
+      var r = obvOne(st, bar.close, bar.volume);
+      return { values: r.value === null ? {} : { obv: r.value }, state: r.state };
+    }
+  });
+
+  /* -- SAR 파라볼릭 (Parabolic SAR) --------------------------------------
+   * 캔들 아래에 점이 찍히면 오름세, 위에 찍히면 내림세로 읽습니다. 점이 반대쪽으로
+   * 넘어가는 봉이 "뒤집힌 곳" 입니다. J. Welles Wilder 가 만든 것입니다.
+   *
+   * ⭐ 기본값 0.02 · 0.02 · 0.2 - 트레이딩뷰 기준입니다.
+   *    (2026-09-02 · Pine 참고서 ta.sar 항목을 브라우저로 열어 읽은 원문)
+   *        plot(ta.sar(0.02, 0.02, 0.2), style=plot.style_cross, linewidth=3)
+   *
+   * ⭐ 계산식도 같은 문서의 pine_sar() 를 ★한 줄씩 그대로★ 옮겼습니다.
+   *    직접 짜면 트레이딩뷰와 값이 어긋납니다 - 특히 아래 둘이 자주 빠집니다.
+   *      1) 뒤집히는 봉에서는 가속(af)을 올리지 않습니다(isFirstTrendBar)
+   *      2) 나온 값을 ★직전 두 봉의 저가(또는 고가)★ 안으로 잘라 넣습니다
+   *
+   * ⚠️ 점입니다. 선이 아닙니다 - 트레이딩뷰가 style_cross(X 표) 로 찍습니다.
+   *    lightweight-charts 5.2.0 에는 X 표가 없어 ★동그란 점★ 으로 냈습니다
+   *    (kind:"dots" - 위 addSeriesFor). 선으로 이으면 뒤집히는 자리마다 캔들을
+   *    가로지르는 큰 사선이 생겨서 아예 다른 그림이 됩니다.
+   *
+   * ⚠️ 첫 봉은 값이 없습니다(트레이딩뷰도 bar_index 1 부터 시작합니다).
+   *
+   * -- step 이 O(1) 인 이유 -------------------------------------------
+   *    상태가 전부 숫자 하나짜리입니다 - 지금 SAR · 극값(mm) · 가속(af) ·
+   *    아래냐(below) · 직전 두 봉의 고가 저가 · 직전 종가. 창을 훑지 않습니다.
+   *    ⚠️ 배열이 하나도 없어서 ★진행 중인 봉으로 몇 번을 다시 불러도★ 답이
+   *       같습니다(state 를 새 객체로 만들어 돌려주고 st 는 안 건드립니다).
+   * ------------------------------------------------------------------- */
+
+  /** 소수 설정값 - 없거나 이상하면 기본값으로. (SAR 의 0.02 처럼 정수가 아닌 값) */
+  function fnum(v, dflt) {
+    var n = typeof v === "number" ? v : parseFloat(v);
+    return isFinite(n) && n > 0 ? n : dflt;
+  }
+
+  /** 봉 하나. 트레이딩뷰 pine_sar() 와 줄 순서까지 같습니다. */
+  function sarOne(st, high, low, close, start, inc, mx) {
+    var r = st.r, mm = st.mm, af = st.af, below = st.below;
+    var first = false;
+    var n = st.n;
+    var value = null;
+
+    if (n === 1) {
+      /* 둘째 봉에서 방향을 정합니다 (pine - if bar_index == 1) */
+      if (close > st.c1) {
+        below = true;
+        mm = high;
+        r = st.l1;
+      } else {
+        below = false;
+        mm = low;
+        r = st.h1;
+      }
+      first = true;
+      af = start;
+    }
+
+    if (n >= 1) {
+      r = r + af * (mm - r);
+
+      if (below) {
+        if (r > low) {
+          first = true;
+          below = false;
+          r = Math.max(high, mm);
+          mm = low;
+          af = start;
+        }
+      } else if (r < high) {
+        first = true;
+        below = true;
+        r = Math.min(low, mm);
+        mm = high;
+        af = start;
+      }
+
+      if (!first) {
+        if (below) {
+          if (high > mm) {
+            mm = high;
+            af = Math.min(af + inc, mx);
+          }
+        } else if (low < mm) {
+          mm = low;
+          af = Math.min(af + inc, mx);
+        }
+      }
+
+      /* ★직전 두 봉을 뚫지 못하게★ - 이걸 빼면 값이 트레이딩뷰와 어긋납니다 */
+      if (below) {
+        r = Math.min(r, st.l1);
+        if (n > 1) r = Math.min(r, st.l2);
+      } else {
+        r = Math.max(r, st.h1);
+        if (n > 1) r = Math.max(r, st.h2);
+      }
+      value = r;
+    }
+
+    return {
+      value: value,
+      state: {
+        r: r, mm: mm, af: af, below: below, n: n + 1,
+        h1: high, h2: st.h1, l1: low, l2: st.l1, c1: close
+      }
+    };
+  }
+
+  define({
+    id: "sar",
+    name: "SAR",
+    note: "파라볼릭 (추세 전환점)",
+    pane: "main",
+    params: { start: 0.02, inc: 0.02, max: 0.2 },
+    inputs: [
+      { key: "start", label: "시작", type: "float", min: 0.001, max: 1 },
+      { key: "inc", label: "증가", type: "float", min: 0.001, max: 1 },
+      { key: "max", label: "최대", type: "float", min: 0.001, max: 1 }
+    ],
+    nameOf: function (prm) {
+      return "SAR(" + prm.start + " · " + prm.inc + " · " + prm.max + ")";
+    },
+    outputs: [{ key: "sar", kind: "dots", color: "#9197F3" }],
+
+    seed: function (bs, prm, cap) {
+      var a = fnum(prm.start, 0.02), b = fnum(prm.inc, 0.02), c = fnum(prm.max, 0.2);
+      var n = bs.close.length;
+      var out = [];
+      var st = { r: null, mm: null, af: a, below: true, n: 0, h1: null, h2: null, l1: null, l2: null, c1: null };
+      for (var i = 0; i < n; i++) {
+        var q = sarOne(st, bs.high[i], bs.low[i], bs.close[i], a, b, c);
+        st = q.state;
+        if (q.value !== null) out.push({ time: bs.time[i], value: q.value });
+        if (i === n - 2) cap.state = copy(st);
+      }
+      return { sar: out };
+    },
+
+    step: function (st, bar, prm) {
+      var q = sarOne(
+        st, bar.high, bar.low, bar.close,
+        fnum(prm.start, 0.02), fnum(prm.inc, 0.02), fnum(prm.max, 0.2)
+      );
+      return { values: q.value === null ? {} : { sar: q.value }, state: q.state };
+    }
+  });
+
+  /* -- VWAP 거래량가중평균가 ---------------------------------------------
+   * "오늘 이 종목을 산 사람들의 평균 매입가" 에 가장 가까운 선입니다. 거래가 많이
+   * 붙은 가격일수록 무겁게 칩니다. 캔들과 같은 눈금이라 주 차트에 얹습니다.
+   *
+   * ⭐ 계산식 - 트레이딩뷰 도움말 VWAP 문서 그대로입니다(2026-09-02 확인)
+   *        VWAP = 누적(대표가격 x 거래량) / 누적(거래량),  대표가격 = (고+저+종)/3
+   *    Pine 참고서도 같습니다 - "ta.vwap - Volume Weighted Average Price.
+   *    It uses hlc3 as its source series."
+   *    ⭐ 값 종류는 hlc3 을 기본으로 두고 회원이 바꿀 수 있게 열어 두었습니다
+   *       (도움말 - "By default, the source is hlc3, but hl2 is another common option")
+   *
+   * ⭐ ★하루가 바뀌면 처음부터 다시 셉니다★ - 트레이딩뷰 Anchor Period 의 기본이
+   *    Session 입니다. 어제 거래를 오늘 평균에 끌고 오면 그건 VWAP 이 아닙니다.
+   *    끊는 자리는 ★UTC 자정★ 입니다 - 우리 봉 시각이 바이낸스에서 오는 UTC 초라
+   *    같은 자리에서 끊어야 바이낸스 화면과 맞습니다.
+   *    ⚠️ 봉 간격이 1일 이상이면 봉 하나가 곧 하루라 VWAP 이 그 봉의 대표가격과
+   *       같아집니다. 트레이딩뷰도 그렇습니다(그래서 일봉에서는 안 씁니다).
+   *
+   * ⚠️ 거래량이 0 인 봉은 평균에 아무 영향도 주지 않습니다(가중치 0). 세션 전체가
+   *    0 이면 나눌 수가 없어 ★값을 안 냅니다★ - 0 이나 종가를 대신 찍어 두면
+   *    회원이 그걸 VWAP 으로 믿습니다.
+   *
+   * -- step 이 O(1) 인 이유 -------------------------------------------
+   *    상태가 { 날짜, 누적PV, 누적V } 셋뿐입니다. 날짜가 바뀌면 둘을 0 으로.
+   * ------------------------------------------------------------------- */
+  var DAY_SEC = 86400;
+
+  function vwapOne(st, time, x, vol) {
+    var day = Math.floor(time / DAY_SEC);
+    var same = st.day === day;
+    var pv = same ? st.pv : 0;
+    var vv = same ? st.v : 0;
+    var w = typeof vol === "number" && isFinite(vol) && vol > 0 ? vol : 0;
+    pv += x * w;
+    vv += w;
+    return { value: vv > 0 ? pv / vv : null, state: { day: day, pv: pv, v: vv } };
+  }
+
+  define({
+    id: "vwap",
+    name: "VWAP",
+    note: "거래량가중평균가 (하루 기준)",
+    pane: "main",
+    params: {},
+    inputs: [],
+    useSource: true,
+    srcDefault: "hlc3",
+    outputs: [{ key: "vwap", kind: "line", color: "#258EB1", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      if (volumeAllZero(bs, "VWAP")) return { vwap: out };
+      var st = { day: null, pv: 0, v: 0 };
+      for (var i = 0; i < n; i++) {
+        var r = vwapOne(st, bs.time[i], src[i], bs.volume[i]);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = { day: st.day, pv: st.pv, v: st.v };
+      }
+      return { vwap: out };
+    },
+
+    step: function (st, bar) {
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var r = vwapOne(st, bar.time, x, bar.volume);
+      return { values: r.value === null ? {} : { vwap: r.value }, state: r.state };
     }
   });
 

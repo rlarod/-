@@ -139,10 +139,12 @@ const M = runModule();
      기준을 낮춘 것이 아니라 "지금 무엇이 열려 있는지" 로 맞춘 것입니다.
      열린 도구가 또 늘면 이 문자열에 그 이름을 넣고 날짜·이유를 여기 적으세요.
      (2026-08-27 4차에서 zoom 이 들어온 것과 같은 방식입니다)
-     확인한 자리 — js/chart-drawings.js 의 LEFT_TOOLS 에서 ready:false 로 남은 것은
-     wave · face 둘뿐이고, READY_TOOLS 에 channel 이 들어와 있습니다. */
-  ok("실제로 되는 세로 도구는 커서·추세선·수평선·텍스트·피보나치·자·돋보기·브러시·여러선 아홉",
-    readyLeft === "brush,channel,cursor,fib,hline,ruler,text,trend,zoom", readyLeft);
+     2026-09-02 10·11차 — 파동(wave)·표정(face)을 열어 아홉 -> 열하나가 됐습니다.
+     이제 세로 막대에 준비중은 하나도 없습니다.
+     확인한 자리 — js/chart-drawings.js 의 LEFT_TOOLS 를 직접 열어 ready:false 가
+     하나도 없음을 보고 맞췄습니다. READY_TOOLS 에도 wave · face 가 들어왔습니다. */
+  ok("세로 도구 열한 개가 전부 실제로 된다 (2026-09-02 파동·표정을 열어 준비중 0)",
+    readyLeft === "brush,channel,cursor,face,fib,hline,ruler,text,trend,wave,zoom", readyLeft);
 
   /* 준비중이라고 그린 것은 실제로도 고를 수 없어야 합니다 */
   const lying = left.filter((t) => !t.ready && ready[t.k]);
@@ -154,14 +156,21 @@ const M = runModule();
   ok("된다고 그린 도구는 실제로 골라진다", missing.length === 0,
     missing.map((t) => t.k).join(","));
 
-  /* 고를 수 없는 도구를 억지로 넣어도 바뀌지 않아야 합니다.
-     2026-08-28 — 여기서 쓰던 brush 가 실제로 열려서, 아직 안 연 도구(wave)로
-     옮겼습니다. 검사 자체는 그대로입니다("준비중은 setTool 로도 안 켜진다").
-     2026-08-28 6차 — channel 도 열렸습니다. 이제 준비중은 wave · face 둘뿐이라,
-     wave 마저 열리면 face 로 옮기세요. 둘 다 열리면 이 검사를 지우지 말고
-     "준비중 도구가 하나도 없다" 를 대신 못 박으세요. */
-  M.setTool("wave");
-  ok("준비중 도구(wave)는 setTool 로도 안 켜진다", M.getTool() === "cursor", M.getTool());
+  /* 2026-09-02 — wave · face 가 열려 세로 막대의 준비중이 0 이 됐습니다.
+     앞선 검사가 "둘 다 열리면 이 검사를 지우지 말고 '준비중 도구가 하나도
+     없다' 를 대신 못 박으세요" 라고 적어 두었기에 그대로 따랐습니다.
+     대신 두 가지를 봅니다 —
+       ① 도구 표에 준비중(ready:false)이 하나도 없다
+       ② 표에 없는 이름을 억지로 넣어도 안 켜진다 (READY_TOOLS 관문이 살아 있다) */
+  {
+    const soonLeft = left.filter((t) => !t.ready).map((t) => t.k);
+    const soonTop = top.filter((t) => !t.ready).map((t) => t.k);
+    ok("세로 막대에 준비중 도구가 하나도 없다", soonLeft.length === 0, soonLeft.join(","));
+    ok("가로 막대에 준비중 도구가 하나도 없다", soonTop.length === 0, soonTop.join(","));
+  }
+  M.setTool("cursor");
+  M.setTool("이런도구는없다");
+  ok("도구 표에 없는 이름은 setTool 로도 안 켜진다", M.getTool() === "cursor", M.getTool());
   M.setTool("trend");
   ok("추세선은 켜진다", M.getTool() === "trend");
   /* 반대쪽도 봅니다 — 열었다고 적은 도구는 실제로 켜져야 합니다 (2026-08-28 brush) */
@@ -169,6 +178,12 @@ const M = runModule();
   ok("브러시는 실제로 켜진다 (2026-08-28 5차에서 열림)", M.getTool() === "brush", M.getTool());
   M.setTool("channel");
   ok("여러선은 실제로 켜진다 (2026-08-28 6차에서 열림)", M.getTool() === "channel", M.getTool());
+  M.setTool("wave");
+  ok("파동은 실제로 켜진다 (2026-09-02 10차에서 열림)", M.getTool() === "wave", M.getTool());
+  M.setTool("face");
+  ok("표정은 실제로 켜진다 (2026-09-02 11차에서 열림)", M.getTool() === "face", M.getTool());
+  M.setTool("alert");
+  ok("알람은 실제로 켜진다 (2026-09-02 12차에서 열림)", M.getTool() === "alert", M.getTool());
   M.setTool("cursor");
 
   ok("준비중 버튼은 disabled 로 그린다", /setAttribute\("disabled"/.test(SRC));
@@ -316,6 +331,125 @@ const M = runModule();
   ok("스크롤·크기변경 때 칩을 다시 잡는다",
     SRC.indexOf(String.fromCharCode(34) + "scroll" + String.fromCharCode(34) + ", placeSoon") !== -1 &&
     SRC.indexOf("placeSoon()") !== -1);
+}
+
+/* ---------- 7-2) 파동 (2026-09-02 10차) ---------- */
+{
+  ok("파동은 여러 번 톡 하는 도구다",
+    Object.keys(M.TOOLS.multiTap || {}).sort().join(",") === "wave",
+    Object.keys(M.TOOLS.multiTap || {}).join(","));
+  ok("두 점·세 점 도구에는 안 들어간다 (섞이면 두 번째 점에서 끝나 버립니다)",
+    !M.TOOLS.twoTap.wave && !M.TOOLS.threeTap.wave && !M.TOOLS.twoPoint.wave);
+
+  /* 트레이딩뷰 공개 문서(Drawings-List, 2026-09-02 확인)의 엘리엇 도구 다섯 중
+     둘을 만들었습니다 — impulse(12345) 와 correction(ABC).
+     앱 실측이 아닙니다(도구 막대를 쓰려면 로그인해야 합니다). */
+  ok("이름표 묶음이 둘이다 (12345 / ABC)",
+    Object.keys(M.WAVE_SETS).sort().join(",") === "abc,impulse",
+    Object.keys(M.WAVE_SETS).join(","));
+  ok("충격파동 이름표는 1·2·3·4·5", M.WAVE_SETS.impulse.join(",") === "1,2,3,4,5",
+    M.WAVE_SETS.impulse.join(","));
+  ok("조정파동 이름표는 A·B·C", M.WAVE_SETS.abc.join(",") === "A,B,C", M.WAVE_SETS.abc.join(","));
+  ok("기본은 충격파동(12345)", M.getWaveSet() === "impulse", M.getWaveSet());
+  /* 첫 점은 파동의 시작이라 이름표가 없습니다 — 그래서 점 수 = 이름표 + 1 */
+  ok("충격파동은 점 여섯 개까지", M.waveMax() === 6, String(M.waveMax()));
+  M.toggleWaveSet();
+  ok("조정파동으로 바꿀 수 있다", M.getWaveSet() === "abc", M.getWaveSet());
+  ok("조정파동은 점 네 개까지", M.waveMax() === 4, String(M.waveMax()));
+  M.toggleWaveSet();
+  ok("다시 누르면 되돌아온다", M.getWaveSet() === "impulse", M.getWaveSet());
+  ok("찍은 점이 없으면 되돌릴 것도 없다 (오류를 내지 않는다)", M.undoWavePoint() === false);
+  ok("점 없이 끝내도 오류가 없다", M.finishWave() === false);
+  M.setTool("cursor");
+}
+
+/* ---------- 7-3) 표정 (2026-09-02 11차) ---------- */
+{
+  ok("여섯 가지다", M.FACE_KINDS.length === 6, String(M.FACE_KINDS.length));
+  const keys = M.FACE_KINDS.map((f) => f.k).sort().join(",");
+  ok("종류가 정해져 있다", keys === "cry,flat,frown,smile,surprise,wink", keys);
+  ok("저마다 한글 이름이 붙어 있다 (마우스를 올리면 읽힙니다)",
+    M.FACE_KINDS.every((f) => typeof f.label === "string" && f.label.length > 0));
+  /* 트레이딩뷰는 Twemoji 그림 파일을 쓰지만 우리는 캔버스에 선으로 긋습니다 —
+     남의 그림 묶음을 받지 않기로 했고, 이모지 글자는 이 파일에 못 넣습니다. */
+  ok("그림 파일을 받아 오지 않는다 (선으로 긋습니다)",
+    CODE.indexOf("twemoji") === -1 && CODE.indexOf("Twemoji") === -1 &&
+    !/new Image\(/.test(CODE));
+  ok("고르는 창 단추는 40px 이상이다 (폰에서 손가락으로 누릅니다)",
+    M.FACE_BTN >= 40, String(M.FACE_BTN));
+  /* 여섯 개가 360 폭 차트 칸(약 330px) 안에 들어가야 합니다 */
+  ok("고르는 창이 360 차트 칸(330px) 안에 들어간다",
+    M.FACE_BTN * 6 + 20 <= 330, String(M.FACE_BTN * 6 + 20));
+}
+
+/* ---------- 7-4) 알람 (2026-09-02 12차) ----------
+ * PM 지시로 열었습니다. 경계가 지시에 함께 왔고, 그 경계를 여기서 못 박습니다.
+ *   되는 것   : 가격 선 + 화면 알림줄 · 소리 · 브라우저 알림 (전부 무료)
+ *   안 되는 것 : 알람이 주문을 내는 것 / 자동매매 / 돈 드는 발송 서비스
+ * 이 검사를 지우지 마세요 — 지우면 다음 사람이 알람에 주문을 붙일 수 있습니다. */
+{
+  ok("알람 저장칸은 그림과 다른 칸이다 (탭 두 개일 때 알람만 다시 읽으려고)",
+    M.ALERT_KEY === "chart-alerts" && M.ALERT_KEY !== M.STORAGE_KEY, M.ALERT_KEY);
+  ok("처음엔 알람이 없다", M.getAlertCount() === 0, String(M.getAlertCount()));
+  ok("소리는 켜져 있는 것이 처음값", M.isAlertSoundOn() === true);
+  M.toggleAlertSound();
+  ok("소리를 끌 수 있다", M.isAlertSoundOn() === false);
+  M.toggleAlertSound();
+  ok("다시 켤 수 있다", M.isAlertSoundOn() === true);
+
+  const a = M.addAlert(70000);
+  ok("알람을 걸 수 있다", M.getAlertCount() === 1 && a.price === 70000, String(M.getAlertCount()));
+  ok("조건은 교차 하나다", a.cond === "cross", a.cond);
+  ok("걸자마자 울린 상태가 아니다", a.done === false);
+  ok("그림 저장칸에는 안 들어간다 (그림이 아닙니다)",
+    M.getDrawings().hlines.length === 0 && M.getDrawings().shapes.length === 0);
+
+  /* 교차 — 지난 값과 지금 값 사이에 끼면 울립니다. 처음 한 번은 기준이 없어 안 울립니다 */
+  M.onTickerForTest({ symbol: "BTCUSDT", lastPrice: 69000 });
+  ok("시세가 한 번만 오면 안 울린다 (견줄 지난 값이 없어서)", M.getAlerts()[0].done === false);
+  M.onTickerForTest({ symbol: "BTCUSDT", lastPrice: 69500 });
+  ok("안 지나갔으면 안 울린다", M.getAlerts()[0].done === false);
+  M.onTickerForTest({ symbol: "BTCUSDT", lastPrice: 70500 });
+  ok("지나가면 울린다", M.getAlerts()[0].done === true);
+  M.onTickerForTest({ symbol: "BTCUSDT", lastPrice: 69000 });
+  M.onTickerForTest({ symbol: "BTCUSDT", lastPrice: 71000 });
+  ok("한 번 울린 알람은 다시 안 울린다", M.getAlerts().filter((x) => x.done).length === 1);
+
+  M.addAlert(72000);
+  M.onTickerForTest({ symbol: "ETHUSDT", lastPrice: 999999 });
+  ok("다른 종목 시세로는 안 울린다", M.getAlerts().filter((x) => !x.done).length === 1);
+  ok("울린 것만 치울 수 있다", M.clearFiredAlerts() === 1 && M.getAlertCount() === 1,
+    String(M.getAlertCount()));
+
+  /* 그림을 다 지워도 알람은 남아야 합니다 — 걸어 둔 알람이 조용히 사라지면
+     회원은 "안 울렸다" 가 아니라 "가격이 안 닿았다" 로 읽습니다(조용한 고장) */
+  M.clearAll();
+  ok("그림 전체 지우기가 알람을 지우지 않는다", M.getAlertCount() === 1, String(M.getAlertCount()));
+
+  /* --- 경계 --- */
+  ok("알람이 주문을 내지 않는다 (App.Trading 을 아예 부르지 않는다)",
+    CODE.indexOf("App.Trading") === -1);
+  const 주문말 = ["openPosition", "placeOrder", "submitOrder", "closePosition", "setLeverage", "market\u0042uy"];
+  const 걸린것 = 주문말.filter((w) => CODE.indexOf(w) !== -1);
+  ok("주문을 내는 이름을 아무것도 부르지 않는다", 걸린것.length === 0, 걸린것.join(","));
+  ok("바깥으로 무언가 보내지 않는다 (돈 드는 발송 서비스 금지)",
+    CODE.indexOf("XMLHttpRequest") === -1 && CODE.indexOf("sendBeacon") === -1 &&
+    (CODE.match(/fetch\(/g) || []).length === 1, /* 하나뿐인 fetch 는 아이콘 스프라이트입니다 */
+    String((CODE.match(/fetch\(/g) || []).length));
+  ok("그 하나뿐인 fetch 는 우리 아이콘 파일이다", /fetch\(SPRITE_URL\)/.test(CODE));
+  ok("서버에 저장하지 않는다 (이 브라우저에만 남습니다)",
+    CODE.indexOf("supabase") === -1 && CODE.indexOf("Supabase") === -1);
+
+  /* 창을 닫으면 못 알린다는 말이 화면에 있어야 합니다 (조용한 고장을 막는 장치) */
+  ok("창을 닫으면 못 알린다고 화면에 적는다", SRC.indexOf("창을 닫으면 못 알립니다") !== -1);
+  ok("브라우저 알림을 거절해도 화면 알림줄은 돈다 (권한 확인 뒤에만 알림을 만든다)",
+    /Notification\.permission !== "granted"/.test(CODE));
+  ok("소리는 파일을 받지 않고 브라우저가 만든다 (용량 0 · 돈 0)",
+    /createOscillator\(\)/.test(CODE) && !/[.](mp3|wav|ogg|m4a)["\x27)]/.test(CODE));
+  ok("다른 탭이 바꾸면 알람만 다시 읽는다 (두 번 울리지 않게)",
+    /addEventListener\("storage", onAlertStorage\)/.test(CODE));
+  ok("시세는 초당 한 번 오는 ticker:update 로만 받는다",
+    CODE.indexOf("ticker:update") !== -1);
 }
 
 /* ---------- 8) 화면이 없으면 아무것도 안 만든다 ---------- */

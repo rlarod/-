@@ -75,11 +75,40 @@
  *   "추세선 굵기가 바이낸스와 어긋나 있다" 검사(위 236줄 주석을 봅니다).
  *   이제 어긋나 있지 않으므로 그 검사는 사실과 맞지 않습니다.
  *
- * 아직 자리만 잡아 둔 것 (4개)
- *   세로 막대 — 파동 / 표정
- *   가로 막대 — 알람 / 육각형
- *   이 버튼들은 disabled 이고 오른쪽 위에 회색 점이 붙습니다(디자인팀 규칙).
- *   눌러도 아무 일도 일어나지 않습니다. 되는 척하지 않습니다.
+ * 9차(2026-08-28)에서 연 것 — 육각형 = 차트 스타일 (가로 막대)
+ *   창은 js/chart-style.js 가 만듭니다.
+ *
+ * 10차(2026-09-02)에서 연 것 — 파동 (세로 막대)
+ *   트레이딩뷰의 엘리엇 파동입니다. 점을 하나씩 톡 해서 잇고, 꼭짓점마다
+ *   1·2·3·4·5 (또는 A·B·C) 가 붙습니다. 칩에서 이름표 묶음을 바꿉니다.
+ *   되돌리려면 — LEFT_TOOLS 의 wave ready 를 false 로, label 을 "파동" 으로
+ *   되돌리고 READY_TOOLS·MULTI_TAP 에서 wave 를 빼면 끝입니다
+ *   (나머지 코드는 tool 이 "wave" 일 때만 돕니다).
+ *   같이 되돌릴 것 — tests/chart-toolbar-seal.test.js 의 세로 준비중 개수와
+ *   tests/chart-drawings.test.js 의 readyLeft 문자열.
+ *
+ * 11차(2026-09-02)에서 연 것 — 표정 (세로 막대)
+ *   트레이딩뷰의 Emojis / Stickers 자리입니다. 우리는 그림 파일을 받지 않고
+ *   캔버스에 선으로 여섯 가지를 긋습니다(웃음·시무룩·무표정·놀람·윙크·눈물).
+ *   차트를 톡 하면 고르는 창이 뜨고, 고르면 그 자리에 찍힙니다.
+ *   되돌리려면 — LEFT_TOOLS 의 face ready 를 false 로, label 을 "표정" 으로
+ *   되돌리고 READY_TOOLS 에서 face 를 빼면 끝입니다.
+ *
+ * 12차(2026-09-02)에서 연 것 — 알람 (가로 막대)
+ *   차트 위 가격에 선을 긋고, 시세가 그 선을 지나면 알려줍니다.
+ *   알리는 방법 셋 — 화면 안 알림줄 / 소리 / 브라우저 알림.
+ *   주의 — 알람은 "알려주기" 까지입니다. 주문을 내지 않고, 자동매매로
+ *   이어지지 않으며, 돈 드는 서비스(문자·메일)를 부르지 않습니다.
+ *   주의 — 창을 닫으면 알려드리지 못합니다. 푸시 설비가 없기 때문입니다
+ *   (서버에 저장해도 안 됩니다. 저장 위치 문제가 아니라 설비 문제입니다).
+ *   그래서 알람 칩에 그 말을 상시로 띄웁니다. 조용한 고장을 막는 장치입니다.
+ *   알람만 저장칸이 따로입니다(chart-alerts) — 탭이 두 개일 때 알람만 다시
+ *   읽으면 되게 하려는 것입니다. 그림 저장칸을 통째로 덮어쓰지 않습니다.
+ *   되돌리려면 — TOP_TOOLS 의 alert ready 를 false 로, label 을 "알람" 으로
+ *   되돌리고 READY_TOOLS 에서 alert 를, onButton() 에서 alert 토막을 지웁니다.
+ *   회원 브라우저의 btc_sim_v2_chart-alerts 는 남지만 아무 동작도 안 합니다.
+ *
+ * 이제 준비중(disabled)인 버튼은 하나도 없습니다.
  *
  * ── js/chart.js 는 한 글자도 고치지 않았습니다 ────────────────────────
  * js/chart-font.js 가 LightweightCharts.createChart 를 감싸 두고 있어서
@@ -257,6 +286,102 @@ App.ChartDrawings = (function () {
   var CHANNEL_DASH = [4, 6];
   var FILL_CHANNEL = FILL_DRAW;
 
+  /* ---------------- 파동 (10차 2026-09-02) ----------------
+   * 트레이딩뷰의 "Elliott Wave" 도구입니다. 차트 시스템은 트레이딩뷰를
+   * 따라간다는 2026-09-02 대표 지시에 따라 트레이딩뷰 쪽에 맞췄습니다.
+   *
+   * 주의 — 앱 실측이 아닙니다 — 트레이딩뷰 차트는 도구 막대를 쓰려면 로그인해야
+   *   하고, 팀은 로그인하지 않습니다. 대신 트레이딩뷰가 공개해 둔 도구 목록
+   *   문서(charting-library-docs / Drawings-List, 2026-09-02 확인)를 읽고
+   *   맞췄습니다. 문서에 적힌 엘리엇 도구는 다섯 가지입니다.
+   *     Elliot impulse wave (12345)      <- 우리가 만든 것 (기본)
+   *     Elliot correction wave (ABC)     <- 우리가 만든 것 (칩에서 바꿉니다)
+   *     Elliot triangle wave (ABCDE)     <- 안 만들었습니다
+   *     Elliot double combo wave (WXY)   <- 안 만들었습니다
+   *     Elliot triple combo wave (WXYXZ) <- 안 만들었습니다
+   *   왜 둘만 — 회원이 실제로 가장 많이 쓰는 두 가지이고, 나머지 셋은 라벨
+   *   글자만 다른 같은 도구입니다. 아래 WAVE_SETS 에 줄을 하나 더 넣으면
+   *   그대로 늘어납니다(그리는 코드는 손댈 필요가 없습니다).
+   *
+   * 만드는 법 — 점을 하나씩 톡 합니다. 첫 점은 파동의 시작이라 이름표가
+   * 없고, 그 다음부터 1·2·3·4·5 (또는 A·B·C) 가 붙습니다. 다 채우면 저절로
+   * 끝나고, 그 전에 "끝내기" 를 누르면 거기까지로 남습니다.
+   * ------------------------------------------------------- */
+  var WAVE_SETS = {
+    impulse: ["1", "2", "3", "4", "5"],
+    abc: ["A", "B", "C"]
+  };
+  var WAVE_SET_LABEL = { impulse: "12345", abc: "ABC" };
+  /* 이름표를 꼭짓점에서 이만큼 띄웁니다 (글자 12px + 여백) */
+  var WAVE_LABEL_GAP = 9;
+
+  /* ---------------- 표정 (11차 2026-09-02) ----------------
+   * 트레이딩뷰에 대응하는 것 — 도구 목록 문서의 "Emojis" / "Stickers" /
+   * "Icons" 세 가지가 이 자리입니다(2026-09-02 문서 확인, 앱 실측 아님).
+   * 트레이딩뷰는 Twemoji 그림 파일을 씁니다.
+   *
+   * 주의 — 우리는 그림 파일을 쓰지 않고 선으로 그립니다. 이유 둘 —
+   *   ① 아이콘을 새로 만들지 않기로 했습니다(디자인팀 스프라이트만 씁니다).
+   *      Twemoji 는 수천 장짜리 남의 그림 묶음이라 받아 오면 그 규칙을 깹니다.
+   *   ② 이모지 글자는 이 파일에 넣을 수 없습니다(테스트가 막습니다).
+   * 그래서 캔버스에 직접 긋는 선 그림 여섯 개로 좁혔습니다. 같은 함수를
+   * 고르는 창의 작은 그림에도 그대로 씁니다(두 벌이 되지 않게).
+   * ------------------------------------------------------- */
+  var FACE_KINDS = [
+    { k: "smile", label: "웃음" },
+    { k: "frown", label: "시무룩" },
+    { k: "flat", label: "무표정" },
+    { k: "surprise", label: "놀람" },
+    { k: "wink", label: "윙크" },
+    { k: "cry", label: "눈물" }
+  ];
+  var FACE_R = 12; /* 차트에 그리는 크기(반지름). 지름 24px */
+  var FACE_PICK_R = 12; /* 고르는 창의 작은 그림 */
+  var FACE_BTN = 40; /* 고르는 창 단추 크기 — 손가락으로 눌러야 해서 40px */
+
+  /* ---------------- 알람 (12차 2026-09-02) ----------------
+   * 트레이딩뷰 Alert 에 해당합니다. 주의 — 앱 실측이 아닙니다 — 트레이딩뷰도
+   * 바이낸스도 알람 창은 로그인해야 보이고, 팀은 로그인하지 않습니다.
+   * (2026-08-28 차트팀이 바이낸스를 열어 확인한 결과가 승인대기 10번에
+   *  있습니다 — 로그인 없이는 알람 진입점이 화면에 0개였습니다)
+   *
+   * 여기서 하는 일은 "알려주기" 까지입니다.
+   *   · 주문을 내지 않습니다. 자동매매로 이어지지 않습니다
+   *   · 돈 드는 서비스(문자·메일 발송)를 부르지 않습니다
+   *   · 서버에 저장하지 않습니다. 이 브라우저에만 남습니다
+   *
+   * 조건 — "교차" 하나입니다. 지난 시세와 지금 시세가 그 값을 사이에 두고
+   *   넘어가면 울립니다. 위로 넘든 아래로 넘든 같습니다.
+   * 한 번 울리면 끕니다. 울린 알람은 선이 옅은 점선으로 바뀌고 이름표가
+   *   "알람 울림" 이 됩니다.
+   * 주의 — 이 둘이 트레이딩뷰 기본값과 같은지는 확인하지 못했습니다.
+   *   트레이딩뷰 알람 창은 로그인해야 열리고 팀은 로그인하지 않습니다.
+   *   공개 문서(support / charting-library-docs)에서도 조건·빈도 목록을
+   *   찾지 못했습니다(2026-09-02 확인). 그래서 바이낸스·트레이딩뷰가 이렇다고
+   *   적지 않고, 우리가 고른 규칙으로 적어 둡니다.
+   *   대표님 캡처가 오면 그때 맞춥니다(승인대기 10번).
+   *
+   * 시세는 어디서 받나 — App.Bus 의 "ticker:update"(초당 한 번) 입니다.
+   *   봉 갱신 신호는 듣지 않습니다. 이 파일은 시세 틱마다 다시 그리지 않는
+   *   것이 규칙이고, 알람은 숫자 비교 한 번이면 되기 때문입니다.
+   *   알람이 하나도 없으면 그 비교조차 하지 않고 첫 줄에서 돌아갑니다.
+   *
+   * 색 — 새 색을 만들지 않았습니다. 확정 팔레트의 포인트색(#F0B429)을 쓰고,
+   *   금색 선이 이미 여럿이라(시세선·MA7·그린 선) 선 모양으로 가릅니다.
+   *     그린 수평선  짧은 점선(Dashed)   이름표 없음
+   *     알람         긴 점선(LargeDashed) 이름표 "알람"
+   *     울린 알람    성긴 점선(SparseDotted) 이름표 "알람 울림"
+   *   주의 — 이건 임시방편입니다. 알람 전용 색이 있으면 더 또렷합니다 —
+   *     팀이 색을 임의로 늘리지 않기로 해서 PM 에게 보고만 했습니다.
+   * ------------------------------------------------------- */
+  var ALERT_KEY = "chart-alerts";
+  var ALERT_VERSION = 1;
+  /* 소리 — 파일을 받지 않고 브라우저가 만드는 소리를 씁니다(용량 0, 돈 0) */
+  var BEEP_HZ = 880;
+  var BEEP_LEN = 0.18;
+  var BEEP_GAP = 0.22;
+  var BEEP_VOL = 0.18;
+
   var STORAGE_KEY = "chart-drawings";
   var STORE_VERSION = 1;
   var SPRITE_URL = "assets/icons/chart-tools.svg";
@@ -273,7 +398,9 @@ App.ChartDrawings = (function () {
     { k: "trend", icon: "tlc-i-trendline", label: "추세선", ready: true },
     { k: "hline", icon: "tlc-i-hline", label: "수평선", ready: true },
     { k: "fib", icon: "tlc-i-fib", label: "피보나치 되돌림", ready: true },
-    { k: "wave", icon: "tlc-i-wave", label: "파동", ready: false },
+    /* 10차(2026-09-02) — 파동을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
+       label 을 "파동" 으로 되돌립니다. (같이 되돌릴 것 — READY_TOOLS·MULTI_TAP 의 wave) */
+    { k: "wave", icon: "tlc-i-wave", label: "파동 (엘리엇 · 점을 이어 찍기)", ready: true },
     /* 6차(2026-08-28) — 여러선(평행 채널)을 열었습니다. 되돌리려면 이 줄의
        ready 를 false 로, label 을 "여러선" 으로 되돌립니다.
        (같이 되돌릴 것 — READY_TOOLS 의 channel, THREE_TAP) */
@@ -283,7 +410,9 @@ App.ChartDrawings = (function () {
     { k: "brush", icon: "tlc-i-brush", label: "브러시 (끌어서 자유롭게)", ready: true },
     { k: "sep2", sep: true },
     { k: "text", icon: "tlc-i-text", label: "텍스트", ready: true },
-    { k: "face", icon: "tlc-i-face", label: "표정", ready: false },
+    /* 11차(2026-09-02) — 표정을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
+       label 을 "표정" 으로 되돌립니다. (같이 되돌릴 것 — READY_TOOLS 의 face) */
+    { k: "face", icon: "tlc-i-face", label: "표정 (여섯 가지)", ready: true },
     { k: "sep3", sep: true },
     { k: "ruler", icon: "tlc-i-ruler", label: "자 (두 점 사이 측정)", ready: true },
     /* 4차(2026-08-27) — 돋보기를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
@@ -301,7 +430,11 @@ App.ChartDrawings = (function () {
     /* 3차(2026-08-27) — fx 를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
        목록 자체는 js/chart-indicator-menu.js 가 만듭니다. */
     { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: true },
-    { k: "alert", icon: "tlc-i-alarm", label: "알람", ready: false },
+    /* 12차(2026-09-02) — 알람을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
+       label 을 "알람" 으로 되돌리고, READY_TOOLS 의 alert 와 onButton() 의
+       alert 토막을 지웁니다. 알람 자료는 별도 저장칸(chart-alerts)이라
+       그대로 남지만 아무 동작도 하지 않습니다. */
+    { k: "alert", icon: "tlc-i-alarm", label: "알람 (가격을 지나면 알려줍니다)", ready: true },
     /* 9차(2026-08-28) — 육각형을 열었습니다. 바이낸스 Original 차트에서 이
        아이콘의 이름표가 "Chart Style"(차트 스타일) 이었습니다(실측).
        창은 js/chart-style.js 가 만듭니다. 되돌리려면 이 줄의 ready 를 false,
@@ -313,7 +446,10 @@ App.ChartDrawings = (function () {
   ];
 
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
-  var READY_TOOLS = { cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1, channel: 1 };
+  var READY_TOOLS = {
+    cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1, channel: 1,
+    wave: 1, face: 1, alert: 1
+  };
 
   /* 두 점을 찍어 "그림으로 남는" 도구 — 저장되고 나중에 다시 그려집니다 */
   var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
@@ -326,6 +462,10 @@ App.ChartDrawings = (function () {
   /* 세 번 톡 해서 만드는 도구 — 두 점으로 기준선을 긋고, 세 번째 점이 폭을
      정합니다. 바이낸스(트레이딩뷰 모드) 평행 채널과 같은 순서입니다. */
   var THREE_TAP = { channel: 1 };
+
+  /* 점을 여러 번 톡 해서 이어 찍는 도구 — 끝내기를 누르거나 정해진 점 수를
+     다 채우면 그림이 됩니다. 엘리엇 파동은 점이 여럿인 도구입니다. */
+  var MULTI_TAP = { wave: 1 };
 
   /* 피보나치 되돌림 눈금 — 바이낸스 선물(트레이딩뷰 모드) 기본값 그대로입니다.
      2026-08-26 실측(binance.com/en/futures/BTCUSDT, 1440px, Trading View 모드):
@@ -353,12 +493,18 @@ App.ChartDrawings = (function () {
   var pending = null; /* 추세선 첫 점 {t,p} */
   var chanBase = null; /* 여러선 — 다 그은 기준선 {t1,p1,t2,p2}. 세 번째 점(폭)을 기다립니다 */
   var stroke = null; /* 브러시로 지금 긋고 있는 획 { pts:[{t,p}], lastX, lastY } */
+  var wavePts = null; /* 파동 — 지금까지 찍은 점들 [{t,p}]. 끝내면 그림이 됩니다 */
+  var waveSet = "impulse"; /* 파동 이름표 묶음 — impulse(12345) / abc(ABC) */
   var brushSaved = null; /* 브러시를 켜기 전 차트 옵션 (끌어 옮기기/확대) */
   var brushTouch = null; /* 브러시를 켜기 전 컨테이너의 touch-action */
   var hover = null; /* 미리보기용 현재 위치 {t,p} */
   var selected = null; /* { kind:"hline"|"shape", id } */
 
   var priceLines = {}; /* 수평선 id -> IPriceLine */
+  var alerts = null; /* { v, ui:{sound}, bySymbol:{ SYM:[ {id,price,done,at} ] } } */
+  var alertLines = {}; /* 알람 id -> IPriceLine */
+  var lastTick = null; /* 마지막으로 본 시세 — 교차를 재는 데만 씁니다 */
+  var audioCtx = null; /* 소리를 낼 때 한 번만 만듭니다 */
   var requestUpdate = null; /* 프리미티브가 준 "다시 그려줘" 함수 */
 
   var els = {}; /* 만들어 둔 DOM */
@@ -499,6 +645,80 @@ App.ChartDrawings = (function () {
 
   function countAll() {
     return hlines().length + shapes().length;
+  }
+
+  /* =====================================================================
+   * 알람 저장 — 그림과 다른 칸(chart-alerts)에 따로 둡니다
+   * ---------------------------------------------------------------------
+   * 왜 따로 두나 — 창(탭)을 두 개 열어 두면 알람이 두 번 울릴 수 있습니다.
+   * 그걸 막으려면 다른 탭이 저장을 바꿨을 때 이쪽도 다시 읽어야 하는데,
+   * 그림과 같은 칸에 두면 지금 그리던 것까지 통째로 덮어써 버립니다.
+   * 칸을 나누면 알람만 다시 읽으면 됩니다.
+   *
+   * 알람은 종목 단위입니다(봉 간격과 무관). 1분봉에서 건 알람이 1일봉으로
+   * 바꿨다고 사라지면 회원은 "알람이 없어졌다" 가 아니라 "안 울렸다" 로
+   * 읽습니다 — 조용한 고장입니다.
+   * ===================================================================== */
+  function emptyAlerts() {
+    return { v: ALERT_VERSION, ui: { sound: true }, bySymbol: {} };
+  }
+
+  function loadAlerts() {
+    var a = null;
+    try {
+      if (App.Storage && typeof App.Storage.load === "function") a = App.Storage.load(ALERT_KEY);
+    } catch (e) {
+      a = null;
+    }
+    if (!a || typeof a !== "object" || a.v !== ALERT_VERSION || !a.bySymbol) return emptyAlerts();
+    if (!a.ui) a.ui = { sound: true };
+    return a;
+  }
+
+  function saveAlerts() {
+    try {
+      if (App.Storage && typeof App.Storage.save === "function") App.Storage.save(ALERT_KEY, alerts);
+    } catch (e) {
+      /* 저장이 안 돼도 이 창에서는 그대로 씁니다 */
+    }
+  }
+
+  function alertList() {
+    if (!alerts) alerts = emptyAlerts();
+    var k = sym();
+    if (!alerts.bySymbol[k]) alerts.bySymbol[k] = [];
+    return alerts.bySymbol[k];
+  }
+
+  function alertCount() {
+    return alertList().length;
+  }
+
+  function alertDoneCount() {
+    var l = alertList();
+    var n = 0;
+    for (var i = 0; i < l.length; i++) if (l[i].done) n++;
+    return n;
+  }
+
+  function findAlert(id) {
+    var l = alertList();
+    for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+    return null;
+  }
+
+  function alertSoundOn() {
+    if (!alerts || !alerts.ui) return true;
+    return alerts.ui.sound !== false;
+  }
+
+  function toggleAlertSound() {
+    if (!alerts) alerts = emptyAlerts();
+    if (!alerts.ui) alerts.ui = {};
+    alerts.ui.sound = !alertSoundOn();
+    saveAlerts();
+    paintChip();
+    return alerts.ui.sound;
   }
 
   /* =====================================================================
@@ -945,6 +1165,142 @@ App.ChartDrawings = (function () {
     }
   }
 
+  /* ---------------- 파동 (10차 2026-09-02) ----------------
+   * 찍은 점을 차례로 이은 꺾은선 + 꼭짓점 이름표.
+   * 이름표 자리 — 올라간 꼭짓점은 위, 내려간 꼭짓점은 아래에 적습니다
+   * (트레이딩뷰가 어떻게 하는지는 로그인을 못 해 확인하지 못했습니다. 다만
+   *  안 그러면 선 위에 글자가 얹혀 못 읽습니다 — 360 에서 실제로 그랬습니다).
+   * 점은 시각·가격으로 저장하므로 차트를 옮기거나 확대해도 봉에 붙어
+   * 따라옵니다(브러시·추세선과 같습니다).
+   * ------------------------------------------------------- */
+  function drawWave(ctx, s, on, preview) {
+    var pts = s.pts;
+    if (!pts || pts.length < 2) return;
+    var names = WAVE_SETS[s.set] || WAVE_SETS.impulse;
+    var color = on ? COLOR_SELECTED : COLOR_DRAW;
+    var xs = [];
+    var ys = [];
+    var i;
+    for (i = 0; i < pts.length; i++) {
+      xs.push(timeToX(pts[i].t));
+      ys.push(priceToY(pts[i].p));
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = on ? LINE_WIDTH + 1 : LINE_WIDTH;
+    ctx.setLineDash(preview ? [4, 4] : []);
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    var started = false;
+    for (i = 0; i < pts.length; i++) {
+      if (xs[i] === null || ys[i] === null) {
+        started = false;
+        continue;
+      }
+      if (!started) {
+        ctx.moveTo(xs[i], ys[i]);
+        started = true;
+      } else {
+        ctx.lineTo(xs[i], ys[i]);
+      }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineJoin = "miter";
+
+    /* 이름표 — 첫 점은 파동의 시작이라 이름이 없습니다 */
+    ctx.font = textFont();
+    ctx.textAlign = "center";
+    ctx.fillStyle = color;
+    for (i = 1; i < pts.length; i++) {
+      var nm = names[i - 1];
+      if (!nm) break;
+      if (xs[i] === null || ys[i] === null || ys[i - 1] === null) continue;
+      var up = ys[i] <= ys[i - 1]; /* 올라간 꼭짓점이면 위에 적습니다 */
+      ctx.textBaseline = up ? "bottom" : "top";
+      ctx.fillText(nm, xs[i], ys[i] + (up ? -WAVE_LABEL_GAP : WAVE_LABEL_GAP));
+    }
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+
+    if (on) {
+      for (i = 0; i < pts.length; i++) {
+        if (xs[i] !== null && ys[i] !== null) handle(ctx, xs[i], ys[i]);
+      }
+    }
+  }
+
+  /* ---------------- 표정 (11차 2026-09-02) ----------------
+   * 캔버스에 선으로 직접 긋습니다. 차트 위에도, 고르는 창의 작은 그림에도
+   * 이 함수 하나만 씁니다 — 두 벌이 되면 고른 그림과 찍힌 그림이 달라집니다.
+   * 색은 넘겨받습니다(고른 것은 본문색, 아니면 포인트색).
+   * ------------------------------------------------------- */
+  function drawFaceOn(ctx, cx, cy, r, kind, color, lw) {
+    var eyeY = cy - r * 0.25;
+    var eyeX = r * 0.36;
+    var eyeR = Math.max(1, r * 0.1);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = "round";
+    ctx.setLineDash([]);
+
+    /* 얼굴 테두리 */
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* 왼쪽 눈은 언제나 점 */
+    ctx.beginPath();
+    ctx.arc(cx - eyeX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* 오른쪽 눈 — 윙크만 가로줄 */
+    if (kind === "wink") {
+      ctx.beginPath();
+      ctx.moveTo(cx + eyeX - r * 0.16, eyeY);
+      ctx.lineTo(cx + eyeX + r * 0.16, eyeY);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx + eyeX, eyeY, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* 입 */
+    ctx.beginPath();
+    if (kind === "smile" || kind === "wink") {
+      ctx.arc(cx, cy + r * 0.08, r * 0.52, Math.PI * 0.18, Math.PI * 0.82);
+    } else if (kind === "frown" || kind === "cry") {
+      ctx.arc(cx, cy + r * 0.78, r * 0.52, Math.PI * 1.18, Math.PI * 1.82);
+    } else if (kind === "surprise") {
+      ctx.arc(cx, cy + r * 0.36, r * 0.22, 0, Math.PI * 2);
+    } else {
+      /* 무표정 — 가로줄 하나 */
+      ctx.moveTo(cx - r * 0.38, cy + r * 0.36);
+      ctx.lineTo(cx + r * 0.38, cy + r * 0.36);
+    }
+    ctx.stroke();
+
+    /* 눈물 — 왼쪽 눈 아래로 한 줄 */
+    if (kind === "cry") {
+      ctx.beginPath();
+      ctx.moveTo(cx - eyeX, eyeY + r * 0.18);
+      ctx.lineTo(cx - eyeX, eyeY + r * 0.62);
+      ctx.stroke();
+    }
+
+    ctx.lineCap = "butt";
+    ctx.lineWidth = LINE_WIDTH;
+  }
+
+  function drawFaceShape(ctx, s, on) {
+    var x = timeToX(s.t);
+    var y = priceToY(s.p);
+    if (x === null || y === null) return;
+    drawFaceOn(ctx, x, y, FACE_R, s.f, on ? COLOR_SELECTED : COLOR_DRAW, on ? LINE_WIDTH : LINE_WIDTH - 0.5);
+    if (on) handle(ctx, x, y);
+  }
   function drawOne(ctx, s, on, preview) {
     var color = on ? COLOR_SELECTED : COLOR_DRAW;
 
@@ -992,6 +1348,14 @@ App.ChartDrawings = (function () {
       drawBrush(ctx, s, on, preview);
       return;
     }
+    if (s.type === "wave") {
+      drawWave(ctx, s, on, preview);
+      return;
+    }
+    if (s.type === "face") {
+      drawFaceShape(ctx, s, on);
+      return;
+    }
     if (s.type === "channel") {
       drawChannel(ctx, s, on, preview);
       return;
@@ -1018,6 +1382,19 @@ App.ChartDrawings = (function () {
     /* 브러시로 지금 긋고 있는 획 — 손을 떼기 전에도 보여야 합니다 */
     if (stroke && stroke.pts.length > 1) {
       drawOne(ctx, { type: "brush", pts: stroke.pts }, false, true);
+    }
+
+    /* 파동 — 지금까지 찍은 점 + 마우스가 있는 자리까지 미리 보여줍니다 */
+    if (wavePts && wavePts.length && tool === "wave") {
+      var wp = wavePts.slice();
+      if (hover) wp.push({ t: hover.t, p: hover.p });
+      drawOne(ctx, { type: "wave", set: waveSet, pts: wp }, false, true);
+      for (var wi = 0; wi < wavePts.length; wi++) {
+        var wx = timeToX(wavePts[wi].t);
+        var wy = priceToY(wavePts[wi].p);
+        if (wx !== null && wy !== null) handle(ctx, wx, wy);
+      }
+      return;
     }
 
     /* 여러선 — 기준선을 긋는 중 / 폭을 고르는 중 둘 다 미리 보여줍니다 */
@@ -1167,6 +1544,247 @@ App.ChartDrawings = (function () {
   }
 
   /* =====================================================================
+   * 알람 선 — 수평선과 같은 createPriceLine 을 씁니다
+   * ---------------------------------------------------------------------
+   * 가격축 이름표가 따라오고, 표시 통화(원/달러)는 js/chart.js 가 이미 걸어 둔
+   * formatter 가 알아서 바꿔줍니다. 우리가 환율을 다시 계산하지 않습니다.
+   * 선 모양으로 다른 금색 선들과 구분합니다(위 ALERT_KEY 주석의 표 참고).
+   * ===================================================================== */
+  function alertStyle(a) {
+    var lc = LC();
+    var LS = lc && lc.LineStyle ? lc.LineStyle : null;
+    if (a && a.done) return LS && LS.SparseDotted !== undefined ? LS.SparseDotted : 4;
+    return LS && LS.LargeDashed !== undefined ? LS.LargeDashed : 3;
+  }
+
+  function createAlertLineFor(a) {
+    var on = !!(selected && selected.kind === "alert" && selected.id === a.id);
+    try {
+      alertLines[a.id] = series.createPriceLine({
+        price: a.price,
+        color: on ? COLOR_SELECTED : COLOR_DRAW,
+        lineWidth: LINE_WIDTH,
+        lineStyle: alertStyle(a),
+        axisLabelVisible: true,
+        title: a.done ? "알람 울림" : "알람"
+      });
+    } catch (e) {
+      console.warn("[chart-drawings.js] 알람 선을 긋지 못했습니다:", e);
+    }
+  }
+
+  function paintAlertLine(a) {
+    if (!a) return;
+    var pl = alertLines[a.id];
+    if (!pl) return;
+    var on = !!(selected && selected.kind === "alert" && selected.id === a.id);
+    try {
+      pl.applyOptions({
+        color: on ? COLOR_SELECTED : COLOR_DRAW,
+        lineWidth: on ? LINE_WIDTH + 1 : LINE_WIDTH,
+        lineStyle: alertStyle(a),
+        title: a.done ? "알람 울림" : "알람"
+      });
+    } catch (e) {
+      /* 무시 */
+    }
+  }
+
+  function removeAlertLine(id) {
+    if (!alertLines[id]) return;
+    try {
+      series.removePriceLine(alertLines[id]);
+    } catch (e) {
+      /* 이미 지워졌으면 무시 */
+    }
+    delete alertLines[id];
+  }
+
+  function clearAlertLines() {
+    for (var id in alertLines) removeAlertLine(id);
+  }
+
+  function syncAlertLines() {
+    if (!series) return;
+    var want = {};
+    var list = alertList();
+    var i;
+    var id;
+    for (i = 0; i < list.length; i++) {
+      want[list[i].id] = 1;
+      if (!alertLines[list[i].id]) createAlertLineFor(list[i]);
+      else paintAlertLine(list[i]);
+    }
+    for (id in alertLines) {
+      if (!want[id]) removeAlertLine(id);
+    }
+  }
+
+  /* =====================================================================
+   * 알람이 울릴 때
+   * ---------------------------------------------------------------------
+   * 여기서 하는 일은 알려주기 세 가지뿐입니다 —
+   *   화면 안 알림줄 / 소리 / 브라우저 알림.
+   * 주문을 내지 않습니다. App.Trading 을 부르지도 않습니다.
+   * ===================================================================== */
+
+  /** 소리 — 파일을 받지 않고 브라우저가 그 자리에서 만듭니다 (돈 0, 용량 0) */
+  function beepOnce(at) {
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = "sine";
+    o.frequency.value = BEEP_HZ;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(BEEP_VOL, at + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + BEEP_LEN);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(at);
+    o.stop(at + BEEP_LEN + 0.02);
+  }
+
+  function beep() {
+    if (!alertSoundOn()) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
+      var t0 = audioCtx.currentTime;
+      beepOnce(t0);
+      beepOnce(t0 + BEEP_GAP);
+    } catch (e) {
+      /* 소리가 안 나도 알림줄은 그대로 뜹니다 */
+    }
+  }
+
+  /** 브라우저 알림 — 거절해도 화면 안 알림줄로는 그대로 동작합니다 */
+  function askNotify() {
+    try {
+      if (typeof Notification === "undefined") return;
+      if (Notification.permission !== "default") return;
+      var r = Notification.requestPermission();
+      if (r && typeof r.catch === "function") r.catch(function () {});
+    } catch (e) {
+      /* 안 물어봐져도 그만입니다 */
+    }
+  }
+
+  function notify(msg) {
+    try {
+      if (typeof Notification === "undefined") return;
+      if (Notification.permission !== "granted") return;
+      var nt = new Notification("TL 차트 알람", { body: msg, tag: "tl-chart-alert" });
+      setTimeout(function () {
+        try {
+          nt.close();
+        } catch (e) {
+          /* 무시 */
+        }
+      }, 8000);
+    } catch (e) {
+      /* 무시 */
+    }
+  }
+
+  function ringAlert(a) {
+    var msg = sym() + "  " + fmtPrice(a.price) + " 를 지났습니다";
+    toast("알람 — " + msg);
+    beep();
+    notify(msg);
+  }
+
+  /** 다른 탭이 벌써 울렸는지 저장칸을 다시 읽어 봅니다 (두 번 울리지 않게) */
+  function ringedElsewhere(id) {
+    var disk = loadAlerts();
+    var k = sym();
+    var l = (disk && disk.bySymbol && disk.bySymbol[k]) || [];
+    for (var i = 0; i < l.length; i++) {
+      if (l[i].id === id) return !!l[i].done;
+    }
+    return false;
+  }
+
+  /* 시세가 올 때마다 부릅니다. 알람이 없으면 첫 줄에서 돌아갑니다.
+     초당 한 번 오는 신호이고, 여기서 하는 일은 숫자 비교뿐입니다
+     (그리지 않습니다 — 울린 알람이 있을 때만 선 하나를 다시 칠합니다). */
+  function onTicker(d) {
+    if (!alerts) return;
+    var list = alertList();
+    if (!list.length) return;
+    if (!d || typeof d.lastPrice !== "number" || !isFinite(d.lastPrice)) return;
+    if (d.symbol && d.symbol !== sym()) return;
+    var p = d.lastPrice;
+    var prev = lastTick;
+    lastTick = p;
+    if (prev === null || prev === p) return;
+    var lo = Math.min(prev, p);
+    var hi = Math.max(prev, p);
+    var fired = null;
+    var changed = false;
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (a.done) continue;
+      /* 교차 — 지난 값과 지금 값 사이에 그 가격이 들어오면 지난 것입니다.
+         위로 넘든 아래로 넘든 같게 봅니다. */
+      if (a.price < lo || a.price > hi) continue;
+      var already = ringedElsewhere(a.id);
+      a.done = true;
+      a.firedAt = Date.now();
+      changed = true;
+      if (!already && !fired) fired = a;
+    }
+    if (!changed) return;
+    saveAlerts();
+    syncAlertLines();
+    paintChip();
+    if (fired) ringAlert(fired);
+  }
+
+  /* 다른 탭이 알람을 바꾸면 이쪽도 다시 읽습니다.
+     그림 저장칸과 나눠 둔 덕분에 지금 그리던 것은 건드리지 않습니다. */
+  function onAlertStorage(ev) {
+    if (!ev || !ev.key || String(ev.key).indexOf(ALERT_KEY) === -1) return;
+    alerts = loadAlerts();
+    syncAlertLines();
+    paintChip();
+  }
+
+  function addAlert(price) {
+    if (!alerts) alerts = emptyAlerts();
+    var a = { id: newId(), price: price, cond: "cross", done: false, at: Date.now() };
+    alertList().push(a);
+    saveAlerts();
+    syncAlertLines();
+    askNotify();
+    paintChip();
+    toast("알람을 걸었습니다 — 이 창을 닫으면 알려드리지 못합니다");
+    return a;
+  }
+
+  /** 이미 울린 알람만 치웁니다 (알람 도구를 켜 둔 동안 칩의 가운데 단추) */
+  function clearFiredAlerts() {
+    var list = alertList();
+    var n = 0;
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (!list[i].done) continue;
+      if (selected && selected.kind === "alert" && selected.id === list[i].id) selected = null;
+      removeAlertLine(list[i].id);
+      list.splice(i, 1);
+      n++;
+    }
+    if (!n) {
+      toast("울린 알람이 없습니다");
+      return 0;
+    }
+    saveAlerts();
+    syncAlertLines();
+    paintChip();
+    toast("울린 알람 " + n + "개를 치웠습니다");
+    return n;
+  }
+
+  /* =====================================================================
    * 고르기 (커서 도구) — 누른 자리에서 가장 가까운 그림
    * ===================================================================== */
   function distToSegment(px, py, x1, y1, x2, y2) {
@@ -1230,7 +1848,7 @@ App.ChartDrawings = (function () {
           bestD = cd;
           best = { kind: "shape", id: s.id };
         }
-      } else if (s.type === "brush") {
+      } else if (s.type === "brush" || s.type === "wave") {
         var bp = s.pts;
         if (!bp || bp.length < 2) continue;
         var px = null;
@@ -1247,6 +1865,17 @@ App.ChartDrawings = (function () {
           }
           px = qx;
           py = qy;
+        }
+      } else if (s.type === "face") {
+        /* 얼굴은 동그라미 안쪽 어디를 눌러도 고른 것으로 봅니다 */
+        var fx = timeToX(s.t);
+        var fy = priceToY(s.p);
+        if (fx === null || fy === null) continue;
+        var fd = Math.sqrt((x - fx) * (x - fx) + (y - fy) * (y - fy)) - FACE_R;
+        if (fd < 0) fd = 0;
+        if (fd < bestD) {
+          bestD = fd;
+          best = { kind: "shape", id: s.id };
         }
       } else if (s.type === "fib" || s.type === "ruler") {
         /* 피보나치는 눈금 줄 중 가장 가까운 것, 자는 상자 네 변 중 가장 가까운 것 */
@@ -1291,6 +1920,18 @@ App.ChartDrawings = (function () {
         best = { kind: "hline", id: hs[i].id };
       }
     }
+
+    /* 알람 선도 고를 수 있어야 지울 수 있습니다 (커서로 누르고 "고른 것 지우기") */
+    var al = alertList();
+    for (i = 0; i < al.length; i++) {
+      var ay2 = priceToY(al[i].price);
+      if (ay2 === null) continue;
+      var ad = Math.abs(ay2 - y);
+      if (ad < bestD) {
+        bestD = ad;
+        best = { kind: "alert", id: al[i].id };
+      }
+    }
     return best;
   }
 
@@ -1312,9 +1953,78 @@ App.ChartDrawings = (function () {
       h = findHLine(selected.id);
       if (h) paintPriceLine(h);
     }
+    if (before && before.kind === "alert") paintAlertLine(findAlert(before.id));
+    if (selected && selected.kind === "alert") paintAlertLine(findAlert(selected.id));
     paintButtons();
     paintChip();
     repaint();
+  }
+
+  /* =====================================================================
+   * 파동 — 점을 이어 찍는 도구의 상태
+   * ---------------------------------------------------------------------
+   * 첫 점을 찍으면 pending 에도 같은 점을 넣습니다. 이 파일에서 pending 은
+   * "지금 뭔가 그리는 중" 이라는 표시라, 미리보기와 마우스 움직임 처리가
+   * 전부 그 하나를 봅니다. 파동만 따로 보게 만들면 손볼 곳이 늘어납니다.
+   * ===================================================================== */
+  function waveMax() {
+    var names = WAVE_SETS[waveSet] || WAVE_SETS.impulse;
+    return names.length + 1; /* 첫 점(시작) + 이름표 개수 */
+  }
+
+  function waveCount() {
+    return wavePts ? wavePts.length : 0;
+  }
+
+  function finishWave() {
+    var pts = wavePts;
+    wavePts = null;
+    pending = null;
+    hover = null;
+    if (!pts || pts.length < 2) {
+      setTool("cursor");
+      toast("파동을 껐습니다 — 점 두 개부터 그림이 됩니다");
+      return false;
+    }
+    shapes().push({ id: newId(), type: "wave", set: waveSet, pts: pts });
+    saveStore();
+    paintChip();
+    setTool("cursor");
+    repaint();
+    return true;
+  }
+
+  function undoWavePoint() {
+    if (!wavePts || !wavePts.length) {
+      toast("되돌릴 점이 없습니다");
+      return false;
+    }
+    wavePts.pop();
+    if (!wavePts.length) {
+      wavePts = null;
+      pending = null;
+      hover = null;
+    } else {
+      pending = { t: wavePts[wavePts.length - 1].t, p: wavePts[wavePts.length - 1].p };
+    }
+    paintChip();
+    repaint();
+    return true;
+  }
+
+  /* 이름표 묶음 바꾸기 — 트레이딩뷰의 impulse(12345) <-> correction(ABC) */
+  function toggleWaveSet() {
+    waveSet = waveSet === "impulse" ? "abc" : "impulse";
+    if (!store) store = emptyStore();
+    if (!store.ui) store.ui = {};
+    store.ui.waveSet = waveSet;
+    saveStore();
+    /* 이미 찍어 둔 점이 새 묶음보다 많으면 넘치는 점은 이름표가 없어집니다.
+       선은 그대로 이어집니다(점을 버리지 않습니다). */
+    paintChip();
+    repaint();
+    toast("파동 이름표 — " + WAVE_SET_LABEL[waveSet]);
+    return waveSet;
   }
 
   /* =====================================================================
@@ -1345,7 +2055,35 @@ App.ChartDrawings = (function () {
       return;
     }
 
+    /* 알람 — 누른 자리의 가격에 겁니다. 시간은 쓰지 않습니다(가격만 봅니다).
+       그림이 아니라 별도 저장칸(chart-alerts)에 들어갑니다. */
+    if (tool === "alert") {
+      addAlert(price);
+      setTool("cursor");
+      return;
+    }
+
     if (time === null) return;
+
+    /* 파동 — 점을 하나씩 이어 찍습니다. 다 채우면 저절로 끝납니다. */
+    if (MULTI_TAP[tool]) {
+      if (!wavePts) wavePts = [];
+      if (wavePts.length) {
+        var lastw = wavePts[wavePts.length - 1];
+        /* 같은 자리를 두 번 찍은 것은 세지 않습니다 (점이 겹쳐 선이 안 됩니다) */
+        if (lastw.t === time && lastw.p === price) return;
+      }
+      wavePts.push({ t: time, p: price });
+      pending = { t: time, p: price };
+      hover = { t: time, p: price };
+      if (wavePts.length >= waveMax()) {
+        finishWave();
+      } else {
+        paintChip();
+        repaint();
+      }
+      return;
+    }
 
     /* 여러선 = 평행 채널 — 세 번 톡.
        ① 기준선 시작 ② 기준선 끝 ③ 마주 보는 선의 자리(폭)
@@ -1407,6 +2145,12 @@ App.ChartDrawings = (function () {
         setTool("cursor");
         repaint();
       }
+      return;
+    }
+
+    /* 표정 — 누른 자리에 고르는 창을 띄웁니다 (글자 넣기와 같은 방식) */
+    if (tool === "face") {
+      openFacePicker(x, y, time, price);
       return;
     }
 
@@ -1579,6 +2323,23 @@ App.ChartDrawings = (function () {
       return false;
     }
     var i;
+    if (selected.kind === "alert") {
+      var al = alertList();
+      for (i = 0; i < al.length; i++) {
+        if (al[i].id === selected.id) {
+          al.splice(i, 1);
+          break;
+        }
+      }
+      removeAlertLine(selected.id);
+      selected = null;
+      saveAlerts();
+      syncAlertLines();
+      paintButtons();
+      paintChip();
+      repaint();
+      return true;
+    }
     if (selected.kind === "hline") {
       var hs = hlines();
       for (i = 0; i < hs.length; i++) {
@@ -1606,6 +2367,8 @@ App.ChartDrawings = (function () {
     return true;
   }
 
+  /* 그림만 지웁니다. 알람은 그림이 아니라서 남깁니다 —
+     회원이 "그린 것" 을 치우려다 걸어 둔 알람까지 잃으면 조용한 고장입니다. */
   function clearAll() {
     hlines().length = 0;
     shapes().length = 0;
@@ -1613,6 +2376,8 @@ App.ChartDrawings = (function () {
     pending = null;
     chanBase = null;
     hover = null;
+    wavePts = null;
+    closeFacePicker();
     cancelStroke();
     saveStore();
     clearPriceLines();
@@ -1852,7 +2617,9 @@ App.ChartDrawings = (function () {
     pending = null;
     chanBase = null;
     hover = null;
+    wavePts = null;
     cancelStroke();
+    closeFacePicker();
     /* 브러시일 때만 차트 끌기·페이지 스크롤을 멈춥니다(끄면 되돌립니다) */
     applyBrushMode(name === "brush");
     if (name !== "cursor") setSelected(null);
@@ -1862,6 +2629,9 @@ App.ChartDrawings = (function () {
     repaint();
     /* 세 번 톡은 다른 도구와 순서가 달라서 한 줄 알려줍니다 */
     if (name === "channel") toast("세 번 톡 — 기준선 두 점, 그 다음 폭");
+    /* 파동·알람도 순서가 다른 도구라 한 줄 알려줍니다 */
+    if (name === "wave") toast("점을 하나씩 톡 — " + WAVE_SET_LABEL[waveSet] + " · " + waveMax() + "점");
+    if (name === "alert") toast("알릴 가격을 톡 하세요 — 창을 닫으면 알려드리지 못합니다");
   }
 
   /* =====================================================================
@@ -1976,6 +2746,13 @@ App.ChartDrawings = (function () {
     }
     if (def.k === "camera") {
       saveImage();
+      return;
+    }
+    /* 알람 — 가로 막대에 있지만 실제로는 "그리는 도구" 입니다.
+       누르면 알람 놓기가 켜지고, 차트를 톡 하면 그 가격에 걸립니다.
+       한 번 더 누르면 꺼집니다(회원이 갇히지 않게). */
+    if (def.k === "alert") {
+      setTool(tool === "alert" ? "cursor" : "alert");
       return;
     }
     /* fx 지표 — 목록은 별도 파일이 만듭니다(js/chart-indicator-menu.js).
@@ -2199,6 +2976,9 @@ App.ChartDrawings = (function () {
     if (ex) ex.setAttribute("aria-pressed", railOpen() ? "true" : "false");
     var fs = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=fullscreen]") : null;
     if (fs) fs.setAttribute("aria-pressed", fullOn ? "true" : "false");
+    /* 알람은 가로 막대에 있지만 켜짐/꺼짐이 있는 도구라 같이 칠합니다 */
+    var al = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=alert]") : null;
+    if (al) al.setAttribute("aria-pressed", tool === "alert" ? "true" : "false");
   }
 
   /* ---------------- 아이콘 스프라이트 ----------------
@@ -2272,6 +3052,13 @@ App.ChartDrawings = (function () {
       ".tl-draw-toast{position:fixed;left:0;top:0;z-index:9;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";border-radius:6px;" +
       "padding:3px 10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;}" +
+      /* 표정 고르는 창 — 단추 40px (폰에서 손가락으로 누릅니다) */
+      ".tl-face-pick{position:absolute;z-index:9;display:flex;gap:2px;padding:4px;border-radius:8px;" +
+      "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";}" +
+      ".tl-face-pick button{width:" + FACE_BTN + "px;height:" + FACE_BTN + "px;padding:0;display:flex;" +
+      "align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;" +
+      "background:" + C_BG + ";cursor:pointer;}" +
+      ".tl-face-pick button:hover{border-color:" + COLOR_DRAW + ";}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
       "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}" +
       /* 전체화면 — css/chart-toolbar.css 와 style.css 는 한 글자도 안 고쳤습니다.
@@ -2439,6 +3226,14 @@ App.ChartDrawings = (function () {
         undoLastStroke();
         return;
       }
+      if (tool === "wave") {
+        undoWavePoint();
+        return;
+      }
+      if (tool === "alert") {
+        toggleAlertSound();
+        return;
+      }
       removeSelected();
     });
     b2.addEventListener("click", function () {
@@ -2452,29 +3247,98 @@ App.ChartDrawings = (function () {
         toast("브러시를 껐습니다");
         return;
       }
+      if (tool === "wave") {
+        finishWave();
+        return;
+      }
+      if (tool === "alert") {
+        clearFiredAlerts();
+        return;
+      }
       askingClear = true;
       paintChip();
+    });
+    /* 세 번째 단추 — 파동과 알람에서만 나옵니다. 평소엔 숨어 있습니다.
+       (파동 : 이름표 12345 <-> ABC  /  알람 : 끝내기) */
+    var b3 = document.createElement("button");
+    b3.type = "button";
+    b3.style.display = "none";
+    b3.addEventListener("click", function () {
+      if (tool === "wave") toggleWaveSet();
     });
     chip.appendChild(label);
     chip.appendChild(b1);
     chip.appendChild(b2);
+    chip.appendChild(b3);
     wrap.appendChild(chip);
     els.chip = chip;
     els.chipLabel = label;
     els.chipBtn1 = b1;
     els.chipBtn2 = b2;
+    els.chipBtn3 = b3;
+  }
+
+  function showBtn3(text, on) {
+    if (!els.chipBtn3) return;
+    els.chipBtn3.style.display = "";
+    els.chipBtn3.textContent = text;
+    els.chipBtn3.className = on ? "on" : "";
+  }
+
+  function hideBtn3() {
+    if (els.chipBtn3) els.chipBtn3.style.display = "none";
   }
 
   function paintChip() {
     if (!els.chip) return;
     var n = countAll();
-    if (!n && tool !== "brush") {
+    var an = alertCount();
+    /* 도구를 켜 둔 동안에는 그린 것이 없어도 칩이 있어야 합니다
+       (되돌리기·끝내기가 거기 있습니다) */
+    var live = tool === "brush" || tool === "wave" || tool === "alert";
+    if (!n && !an && !live) {
       askingClear = false;
+      hideBtn3();
       els.chip.style.display = "none";
       return;
     }
     els.chip.style.display = "flex";
     placeSoon();
+
+    /* 파동을 찍는 중 — 점 되돌리기 · 끝내기 · 이름표 바꾸기 */
+    if (tool === "wave" && !askingClear) {
+      els.chipLabel.textContent = "파동 " + WAVE_SET_LABEL[waveSet] + " · 점 " + waveCount() + "/" + waveMax();
+      els.chipBtn1.textContent = "점 되돌리기";
+      els.chipBtn1.className = "";
+      if (waveCount()) els.chipBtn1.removeAttribute("data-dim");
+      else els.chipBtn1.setAttribute("data-dim", "1");
+      els.chipBtn2.textContent = "끝내기";
+      els.chipBtn2.className = "on";
+      els.chipBtn2.removeAttribute("data-dim");
+      showBtn3(WAVE_SET_LABEL[waveSet === "impulse" ? "abc" : "impulse"] + " 로", false);
+      return;
+    }
+
+    /* 알람을 놓는 중 — 창을 닫으면 못 알린다는 말을 늘 붙여 둡니다.
+       회원이 걸어놓고 창을 닫으면 "안 울렸다" 가 아니라 "가격이 안 닿았다" 로
+       읽습니다. 그게 조용한 고장이라 여기 한 줄을 상시로 둡니다. */
+    if (tool === "alert" && !askingClear) {
+      els.chipLabel.textContent = "알람 " + an + " · 창을 닫으면 못 알립니다";
+      els.chipBtn1.textContent = alertSoundOn() ? "소리 켬" : "소리 끔";
+      els.chipBtn1.className = alertSoundOn() ? "on" : "";
+      els.chipBtn1.removeAttribute("data-dim");
+      els.chipBtn2.textContent = "울린 것 지우기";
+      els.chipBtn2.className = "";
+      if (alertDoneCount()) els.chipBtn2.removeAttribute("data-dim");
+      else els.chipBtn2.setAttribute("data-dim", "1");
+      /* 세 번째 단추를 두지 않습니다 — 360 실측에서 칩이 362px 이 되어
+         화면 오른쪽으로 25px 넘쳤습니다(창 폭 360). 끄는 길은 세 가지가
+         이미 있습니다 — 도구 막대의 알람 단추를 한 번 더 누르기 / Esc /
+         다른 도구 고르기. 알람을 하나 걸면 저절로 커서로 돌아오기도 합니다. */
+      hideBtn3();
+      return;
+    }
+    hideBtn3();
     /* 브러시를 켜 둔 동안 — 되돌리기 · 끝내기.
        "끝내기" 가 있어야 폰에서 차트를 다시 끌 수 있습니다(브러시 중에는
        차트 끌기를 꺼 두기 때문입니다). */
@@ -2497,7 +3361,7 @@ App.ChartDrawings = (function () {
       els.chipBtn2.className = "";
       return;
     }
-    els.chipLabel.textContent = "그린 것 " + n;
+    els.chipLabel.textContent = "그린 것 " + n + (an ? " · 알람 " + an : "");
     els.chipBtn1.textContent = "고른 것 지우기";
     els.chipBtn1.className = "";
     if (selected) els.chipBtn1.removeAttribute("data-dim");
@@ -2522,6 +3386,80 @@ App.ChartDrawings = (function () {
     toastTimer = setTimeout(function () {
       if (els.toast) els.toast.style.display = "none";
     }, 1600);
+  }
+
+  /* ---------------- 표정 고르는 창 (11차 2026-09-02) ----------------
+   * 누른 자리에 작은 창을 띄우고 여섯 가지 중 하나를 고르게 합니다.
+   * 그림은 캔버스에 그 자리에서 긋습니다 — 차트에 찍히는 것과 똑같은 함수라
+   * 고른 얼굴과 찍힌 얼굴이 다를 수 없습니다.
+   * 단추는 40px 입니다. 폰에서 손가락으로 눌러야 해서 작게 잡지 않았습니다
+   * (여섯 개 + 여백 = 262px. 360 폭에서도 차트 칸 안에 들어갑니다).
+   * ------------------------------------------------------------------- */
+  function closeFacePicker() {
+    if (els.facePick && els.facePick.parentNode) els.facePick.parentNode.removeChild(els.facePick);
+    els.facePick = null;
+  }
+
+  function facePickCanvas(kind) {
+    var d = FACE_PICK_R * 2 + 6;
+    var cv = document.createElement("canvas");
+    cv.width = d;
+    cv.height = d;
+    cv.style.width = d + "px";
+    cv.style.height = d + "px";
+    var g = null;
+    try {
+      g = cv.getContext ? cv.getContext("2d") : null;
+    } catch (e) {
+      g = null; /* 캔버스를 못 쓰는 곳이면 빈 단추가 됩니다 (이름표는 남습니다) */
+    }
+    if (g) drawFaceOn(g, d / 2, d / 2, FACE_PICK_R, kind, COLOR_DRAW, 1.5);
+    return cv;
+  }
+
+  function openFacePicker(x, y, time, price) {
+    closeFacePicker();
+    closeTextInput();
+    injectStyle();
+    var o = paneOrigin();
+    var box = document.createElement("div");
+    box.className = "tl-face-pick";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "표정 고르기");
+    FACE_KINDS.forEach(function (f) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("title", f.label);
+      b.setAttribute("aria-label", f.label);
+      b.setAttribute("data-face", f.k);
+      b.appendChild(facePickCanvas(f.k));
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        shapes().push({ id: newId(), type: "face", t: time, p: price, f: f.k });
+        saveStore();
+        closeFacePicker();
+        paintChip();
+        setTool("cursor");
+        repaint();
+        toast("표정을 찍었습니다 — " + f.label);
+      });
+      box.appendChild(b);
+    });
+    wrap.appendChild(box);
+    els.facePick = box;
+
+    /* 자리 — 누른 곳 오른쪽 아래. 차트 칸 밖으로 나가면 안쪽으로 당깁니다 */
+    var wr = wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : { width: 0, height: 0 };
+    var bw = box.offsetWidth || FACE_BTN * FACE_KINDS.length + 20;
+    var bh = box.offsetHeight || FACE_BTN + 10;
+    var left = o.x + x + 8;
+    var top = o.y + y + 8;
+    if (wr.width && left + bw > wr.width - 4) left = wr.width - bw - 4;
+    if (left < 4) left = 4;
+    if (wr.height && top + bh > wr.height - 4) top = o.y + y - bh - 8;
+    if (top < 4) top = 4;
+    box.style.left = Math.round(left) + "px";
+    box.style.top = Math.round(top) + "px";
   }
 
   /* ---------------- 글자 넣기 ----------------
@@ -2599,15 +3537,17 @@ App.ChartDrawings = (function () {
         toggleFullscreen();
         return;
       }
-      if (pending || chanBase) {
+      if (pending || chanBase || wavePts) {
         pending = null;
         chanBase = null;
+        wavePts = null;
         hover = null;
         repaint();
       }
       askingClear = false;
       paintChip();
       closeTextInput();
+      closeFacePicker();
       setTool("cursor");
       return;
     }
@@ -2627,16 +3567,23 @@ App.ChartDrawings = (function () {
     pending = null;
     chanBase = null;
     hover = null;
+    wavePts = null;
     cancelStroke();
+    closeFacePicker();
     askingClear = false;
+    /* 알람은 종목 단위라 종목이 바뀌면 선을 다시 깔고, 교차를 재는 기준값은
+       버립니다(다른 종목의 지난 시세와 견주면 엉뚱하게 울립니다) */
+    lastTick = null;
     /* 봉 간격이 바뀌면 논리 번호의 뜻이 달라집니다(1분봉 300번째 != 1일봉 300번째).
        js/chart.js 가 새로 불러온 뒤 fitContent() 를 하므로 기록만 비웁니다. */
     zoomUndo.length = 0;
     paintZoomChip();
     clearPriceLines();
+    clearAlertLines();
     meta.at = 0;
     refreshMeta(true);
     syncPriceLines();
+    syncAlertLines();
     paintButtons();
     paintChip();
     repaint();
@@ -2676,6 +3623,7 @@ App.ChartDrawings = (function () {
 
     refreshMeta(true);
     syncPriceLines();
+    syncAlertLines();
     paintChip();
     repaint();
 
@@ -2686,6 +3634,8 @@ App.ChartDrawings = (function () {
     });
     /* position:fixed 라 페이지가 움직이면 칩만 따로 남습니다 — 같이 옮깁니다 */
     window.addEventListener("scroll", placeSoon, true);
+    /* 다른 탭이 알람을 바꾸면 이쪽도 다시 읽습니다 (두 번 울리는 것을 막습니다) */
+    window.addEventListener("storage", onAlertStorage);
 
     document.addEventListener("fullscreenchange", onFullChange);
     document.addEventListener("webkitfullscreenchange", onFullChange);
@@ -2696,12 +3646,17 @@ App.ChartDrawings = (function () {
       /* 원화로 보는 회원이 있습니다. 통화가 바뀌면 피보나치·자의 글자도
          같이 바뀌어야 합니다(수평선은 가격축 라벨이라 chart.js 가 합니다). */
       App.Bus.on("currency:change", repaint);
+      /* 알람 — 초당 한 번 오는 시세 신호입니다. 봉 갱신 신호는 듣지 않습니다.
+         알람이 하나도 없으면 onTicker 가 첫 줄에서 돌아갑니다(계산 0회). */
+      App.Bus.on("ticker:update", onTicker);
     }
     return true;
   }
 
   function init() {
     store = loadStore();
+    alerts = loadAlerts();
+    if (store && store.ui && store.ui.waveSet === "abc") waveSet = "abc";
     /* 껍데기는 차트가 만들어지기 전에 먼저 세웁니다.
        (차트 칸을 나중에 옮기면 차트가 한 번 다시 그려집니다) */
     restructure();
@@ -2740,6 +3695,32 @@ App.ChartDrawings = (function () {
     zoomReset: zoomReset,
     undoLastStroke: undoLastStroke,
     getBrushCount: brushCount,
+    /* 파동 */
+    finishWave: finishWave,
+    undoWavePoint: undoWavePoint,
+    toggleWaveSet: toggleWaveSet,
+    getWaveSet: function () {
+      return waveSet;
+    },
+    getWavePointCount: waveCount,
+    waveMax: waveMax,
+    WAVE_SETS: WAVE_SETS,
+    WAVE_SET_LABEL: WAVE_SET_LABEL,
+    /* 표정 */
+    FACE_KINDS: FACE_KINDS,
+    FACE_R: FACE_R,
+    FACE_BTN: FACE_BTN,
+    /* 알람 — 걸기·지우기·소리 켜고 끄기까지입니다. 주문은 없습니다 */
+    addAlert: addAlert,
+    clearFiredAlerts: clearFiredAlerts,
+    toggleAlertSound: toggleAlertSound,
+    isAlertSoundOn: alertSoundOn,
+    getAlerts: function () {
+      return alertList().slice();
+    },
+    getAlertCount: alertCount,
+    onTickerForTest: onTicker,
+    ALERT_KEY: ALERT_KEY,
     isBrushMode: function () {
       return !!brushSaved;
     },
@@ -2783,7 +3764,7 @@ App.ChartDrawings = (function () {
     FIB_LEVELS: FIB_LEVELS,
     TOOLS: {
       left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS,
-      twoPoint: TWO_POINT, twoTap: TWO_TAP, threeTap: THREE_TAP
+      twoPoint: TWO_POINT, twoTap: TWO_TAP, threeTap: THREE_TAP, multiTap: MULTI_TAP
     },
     /* 여러선 계산부 — 테스트에서 그대로 씁니다 */
     lineYAt: lineYAt,
