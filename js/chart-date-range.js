@@ -193,7 +193,19 @@ App.ChartDateRange = (function () {
       /* 안내문은 ★자기 줄★ 을 씁니다 — 탭 위에 겹쳐 그리지 않습니다 */
       "#" + NOTE_ID + "{flex:1 1 100%;order:9;font-size:15px;color:" + C_MUTED + ";" +
       "padding:2px 2px 3px;line-height:1.35;}" +
-      "#" + NOTE_ID + ":empty{display:none;}";
+      "#" + NOTE_ID + ":empty{display:none;}" +
+      /* ★넓은 화면에서 한 줄로 만들기 위한 것입니다(글씨는 그대로 17px).★
+         2026-09-02 실측 — 이 줄에 필요한 폭 832px / 차트 열 폭 780px(1440·1920).
+         52px 이 모자라 시계가 둘째 줄로 내려갔고 차트가 83px 짧아졌습니다.
+         여기서 버는 것   탭 좌우 여백 10→8 (9개 × 4px = 36px) · 탭 사이 5→4 (8px)
+         시계에서 버는 것 초 표시 제거 (31px)  → 합계 75px, 23px 여유로 한 줄이 됩니다.
+         ⚠ 폰(360~390)은 ★그대로 둡니다★ — 거기는 어차피 두 줄이고, 손가락으로
+           누르는 자리를 좁히면 안 됩니다.
+         ⚠ 혹시 안 맞으면 그냥 두 줄로 접힙니다. 잘리거나 숨지 않습니다. */
+      "@media (min-width:1200px){" +
+      "#" + WRAP_ID + "{gap:4px;}" +
+      "#" + WRAP_ID + " .tl-dr-tab{padding:5px 8px;}" +
+      "}";
     var s = document.createElement("style");
     s.id = STYLE_ID;
     s.textContent = css;

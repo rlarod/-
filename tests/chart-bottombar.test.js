@@ -105,7 +105,8 @@ function fakeEl() {
   };
 }
 
-function boot() {
+function boot(opts) {
+  opts = opts || {};
   const doc = {
     readyState: "complete",
     addEventListener() {},
@@ -139,11 +140,68 @@ function boot() {
   win.window = win;
   const ctx = vm.createContext(win);
   ctx.console = { log() {}, warn() {}, error() {} };
-  ["js/config.js", "js/chart-date-range.js", "js/chart-goto-date.js", "js/chart-timezone.js"].forEach(
-    function (f) {
-      vm.runInContext(fs.readFileSync(path.join(REPO, f), "utf8"), ctx, { filename: f });
+
+  /* 가짜 저장칸 — 회원 브라우저의 localStorage 자리입니다.
+     opts.store 에 값을 넣으면 "이미 골라 저장해 둔 회원" 이 됩니다. */
+  const store = Object.assign({}, opts.store || {});
+  win.App.Storage = {
+    load(k) {
+      return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;
+    },
+    save(k, v) {
+      store[k] = v;
+    },
+    clear(k) {
+      delete store[k];
+    },
+  };
+
+  /* 가짜 Bus */
+  const subs = {};
+  win.App.Bus = {
+    on(name, fn) {
+      (subs[name] = subs[name] || []).push(fn);
+    },
+    emit(name, payload) {
+      (subs[name] || []).forEach(function (fn) {
+        fn(payload);
+      });
+    },
+  };
+
+  /* 가짜 TL-004 방어 장치.
+     ⚠ 막힌 간격 목록을 여기에 손으로 적지 않고 js/interval-guard.js 에서
+       ★그대로 읽어옵니다.★ 그 파일이 목록을 바꾸면 이 검사도 같이 따라갑니다. */
+  if (opts.guard !== false) {
+    const guardSrc = fs.readFileSync(path.join(REPO, "js/interval-guard.js"), "utf8");
+    const m = guardSrc.match(/var BLOCKED = [{]([^}]*)[}]/);
+    const blocked = {};
+    if (m) {
+      m[1].split(",").forEach(function (piece) {
+        const mm = piece.match(/"([^"]+)"[ ]*:[ ]*true/);
+        if (mm) blocked[mm[1]] = true;
+      });
     }
-  );
+    win.App.IntervalGuard = {
+      isBlocked(v) {
+        return !!blocked[v];
+      },
+      getBlocked() {
+        return Object.keys(blocked);
+      },
+    };
+  }
+
+  [
+    "js/config.js",
+    "js/interval-remember.js",
+    "js/chart-date-range.js",
+    "js/chart-goto-date.js",
+    "js/chart-timezone.js",
+  ].forEach(function (f) {
+    vm.runInContext(fs.readFileSync(path.join(REPO, f), "utf8"), ctx, { filename: f });
+  });
+  ctx.App.__store = store;
   return ctx.App;
 }
 
@@ -258,8 +316,13 @@ console.log("\n[3] ⭐ 날짜로 가기가 고르는 간격");
  * ===================================================================== */
 console.log("\n[4] 차트 표시 시간대");
 {
-  ok("기본값이 UTC 다 (아무도 안 건드리면 지금까지와 같은 화면)", TZ.getZone() === "UTC", TZ.getZone());
-  ok("첫 번째 항목이 UTC 다", TZ.ZONES[0] && TZ.ZONES[0].id === "UTC");
+  /* ★2026-09-02 PM 결정 — 기본값이 UTC → "내 컴퓨터 시간" 으로 바뀌었습니다.★
+     UTC 로 두면 차트(UTC)와 거래내역(내 컴퓨터 시간)이 9시간 어긋난 채로 남아,
+     회원이 체결 시각의 봉을 ★엉뚱한 자리★ 에서 찾게 됩니다(P1).
+     여기서 못 박는 것 — 이 기본값이 ★조용히 되돌아가지 않게★. */
+  ok("기본값이 '내 컴퓨터 시간' 이다 (거래내역과 같은 시각)", TZ.getZone() === "LOCAL", TZ.getZone());
+  ok("첫 번째 항목이 기본값과 같다", TZ.ZONES[0] && TZ.ZONES[0].id === "LOCAL");
+  ok("UTC 도 목록에 그대로 있다", TZ.ZONES.some(function (z) { return z.id === "UTC"; }));
   const ids = TZ.ZONES.map(function (z) {
     return z.id;
   });
@@ -293,6 +356,62 @@ console.log("\n[4] 차트 표시 시간대");
 }
 
 /* =======================================================================
+ * [4-2] ⭐ 이미 골라 저장해 둔 회원의 선택이 기본값보다 우선
+ * ===================================================================== */
+console.log("");
+console.log("[4-2] ⭐ 저장해 둔 시간대가 기본값을 이긴다");
+{
+  const A = boot({ store: { "chart-timezone": { zone: "UTC" } } });
+  ok("UTC 를 골라 뒀으면 새로고침해도 UTC 다", A.ChartTimezone.getZone() === "UTC", A.ChartTimezone.getZone());
+  const B = boot({ store: { "chart-timezone": { zone: "NY" } } });
+  ok("뉴욕을 골라 뒀으면 뉴욕이다", B.ChartTimezone.getZone() === "NY", B.ChartTimezone.getZone());
+  const C = boot({ store: { "chart-timezone": { zone: "없는값" } } });
+  ok("저장값이 이상하면 기본값으로 간다", C.ChartTimezone.getZone() === "LOCAL", C.ChartTimezone.getZone());
+}
+
+/* =======================================================================
+ * [4-3] ⭐ 시간 단위 기억하기 (js/interval-remember.js)
+ * ===================================================================== */
+console.log("");
+console.log("[4-3] ⭐ 시간 단위 기억하기");
+{
+  const A = boot();
+  ok("저장한 적이 없으면 js/config.js 기본값(1분) 그대로", A.Config.getActiveInterval() === "1m", A.Config.getActiveInterval());
+  ok("아무것도 안 되살렸다고 답한다", A.IntervalRemember.getRestored() === null);
+
+  const B = boot({ store: { "chart-interval": { interval: "15m" } } });
+  ok("저장해 둔 15분으로 열린다", B.Config.getActiveInterval() === "15m", B.Config.getActiveInterval());
+
+  const C = boot({ store: { "chart-interval": { interval: "2h" } } });
+  ok("더보기 안에 있는 2시간도 되살아난다", C.Config.getActiveInterval() === "2h", C.Config.getActiveInterval());
+
+  /* ★TL-004★ — 1초·5초·15초는 시세 신호가 0회라 강제청산·손절·익절이 조용히
+     멈춥니다. 저장칸에 남아 있어도 ★되살리면 안 됩니다.★ */
+  const blockedList = boot().IntervalGuard.getBlocked();
+  ok("막힌 간격 목록을 js/interval-guard.js 에서 읽어왔다", blockedList.length > 0, blockedList.join(","));
+  blockedList.forEach(function (v) {
+    const D = boot({ store: { "chart-interval": { interval: v } } });
+    ok(v + " 는 되살리지 않는다 (TL-004 — 강제청산·손절이 멈추는 간격)",
+      D.Config.getActiveInterval() === "1m", D.Config.getActiveInterval());
+    ok(v + " 를 만나면 저장칸도 1분으로 고쳐 둔다 (다음에 또 시도하지 않게)",
+      D.__store["chart-interval"] && D.__store["chart-interval"].interval === "1m",
+      JSON.stringify(D.__store["chart-interval"]));
+  });
+
+  const E = boot({ store: { "chart-interval": { interval: "없는간격" } } });
+  ok("목록에 없는 값이면 그냥 기본값으로 둔다", E.Config.getActiveInterval() === "1m", E.Config.getActiveInterval());
+
+  /* 버튼 · 더보기 · 표시 기간 탭 · 날짜로 가기 — 전부 이 한 길을 지납니다 */
+  const F = boot();
+  F.Config.setActiveInterval("4h");
+  ok("간격이 바뀌면 저장된다", F.__store["chart-interval"] && F.__store["chart-interval"].interval === "4h",
+    JSON.stringify(F.__store["chart-interval"]));
+  F.Config.setActiveInterval("1d");
+  ok("다시 바뀌면 새 값으로 덮인다", F.__store["chart-interval"].interval === "1d",
+    JSON.stringify(F.__store["chart-interval"]));
+}
+
+/* =======================================================================
  * [5] 세 파일이 같은 줄을 쓴다
  * ===================================================================== */
 console.log("\n[5] 세 파일이 차트 아래 ★같은 줄★ 을 쓴다");
@@ -314,6 +433,15 @@ console.log("\n[6] index.html 이 세 파일을 부른다");
   ["js/chart-date-range.js", "js/chart-goto-date.js", "js/chart-timezone.js"].forEach(function (f) {
     ok(f + " 를 부른다", html.indexOf('src="' + f + '"') !== -1);
   });
+
+  /* ★순서가 중요합니다★ — 시간 단위 기억은 js/config.js 뒤, js/chart.js 앞이어야
+     합니다. 뒤로 밀리면 1분봉을 받았다가 저장된 간격으로 ★다시 받습니다★. */
+  const i기억 = html.indexOf('src="js/interval-remember.js"');
+  const i설정 = html.indexOf('src="js/config.js"');
+  const i차트 = html.indexOf('src="js/chart.js"');
+  ok("js/interval-remember.js 를 부른다", i기억 !== -1);
+  ok("js/config.js 보다 뒤에 있다", i설정 !== -1 && i기억 > i설정);
+  ok("js/chart.js 보다 ★앞★ 에 있다 (한 번만 불러오게)", i차트 !== -1 && i기억 < i차트);
 }
 
 console.log("\n통과 " + pass + " / 실패 " + fail);

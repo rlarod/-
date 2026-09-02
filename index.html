@@ -1243,6 +1243,12 @@
      멈춥니다. 버튼은 style.css 가 가리고, 이 파일이 다른 경로로 그 간격이
      선택되는 것을 막습니다. 근본 수정이 끝나면 이 한 줄을 지우세요. -->
 <script src="js/interval-guard.js"></script>
+<!-- 시간 단위(1분·5분…) 기억하기 — 새로고침해도 마지막에 고른 간격으로 엽니다.
+     ★반드시 js/config.js · js/interval-guard.js 뒤, js/chart.js 앞이어야 합니다.★
+     여기서 활성 간격을 미리 바꿔 둬야 js/chart.js 가 처음부터 그 간격으로
+     한 번만 불러옵니다(1분봉을 받았다가 다시 받는 낭비가 없습니다).
+     이 한 줄을 지우면 예전처럼 열 때마다 1분으로 돌아갑니다. -->
+<script src="js/interval-remember.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/websocket.js"></script>

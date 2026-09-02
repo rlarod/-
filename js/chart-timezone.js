@@ -38,15 +38,34 @@
  *        남아 봉과 어긋납니다. 그리기 자료는 시각으로 저장되기 때문입니다.
  *        글자만 바꾸면 그런 일이 없습니다.
  *
- *   ★기본값은 UTC 입니다 — 오늘까지와 똑같습니다★
- *     · 트레이딩뷰도 이 종목에서 기본이 UTC 입니다(위 실측)
- *     · 기본값에서는 ★서식 함수를 아예 걸지 않습니다★. 그래서 아무도 안
- *       건드리면 화면 글자가 오늘과 한 글자도 다르지 않습니다
- *     · 대신 시계 옆에 ★UTC★ 라고 항상 적습니다. 안 적힌 게 문제였습니다
+ *   ★기본값 — 2026-09-02 PM 결정으로 UTC → "내 컴퓨터 시간" 으로 바꿨습니다★
+ *
+ *     처음 올릴 때는 기본이 UTC 였습니다(트레이딩뷰가 이 종목에서 UTC 라서).
+ *     PM 이 그날 밤 이렇게 정했습니다 —
+ *
+ *       "UTC 로 두면 9시간 함정이 그대로 남는다.
+ *        회원이 거래내역에서 체결 19:27 을 보고 차트에서 그 봉을 찾으면
+ *        ★엉뚱한 자리★ 를 본다. 차트에는 10:27 로 적혀 있으니까."
+ *
+ *     우리 등급 기준으로 ★P1★ 입니다 — "회원이 잘못된 정보로 판단하게 만드는 것".
+ *
+ *     ⚠ 규칙 근거 — CLAUDE.md "★경계가 겹치는 것은 거래 쪽이 우선★".
+ *       체결 시각 · 주문 시각은 ★거래★ 입니다. 차트가 거기에 맞춥니다.
+ *       트레이딩뷰가 UTC 기본인 건 맞지만 ★트레이딩뷰 옆에는 우리 거래내역
+ *       패널이 없습니다.★ 이 충돌은 트레이딩뷰 것이 아니라 우리 것입니다.
+ *
+ *     · 시계에는 ★KST★ 처럼 시간대 이름을 계속 적습니다(UTC 때와 같은 자리)
+ *     · UTC 는 목록에 그대로 있습니다 — 고르면 그대로 씁니다
+ *     · ★이미 골라 저장해 둔 회원의 선택이 우선입니다.★ 저장칸이 비어 있을
+ *       때만 새 기본값이 걸립니다(loadSaved 참고)
+ *     · 기본값이 UTC 가 아니게 되면서, 이제는 ★어느 시간대든 서식을 겁니다★.
+ *       "안 걸린 상태" 라는 갈래를 없앴습니다(applyToChart 주석 참고)
  *
  * ── 되돌리는 방법 ────────────────────────────────────────────────────
  *   1) index.html 에서 <script src="js/chart-timezone.js"></script> 한 줄 삭제
  *   2) rm js/chart-timezone.js
+ *   ⚠ 되돌리면 차트는 다시 ★UTC★ 로 그려집니다(라이브러리 기본). 그러면 거래내역과
+ *     9시간 어긋난 상태로 돌아가니, 되돌릴 때는 그것까지 같이 판단하세요.
  *   3) 회원 브라우저에 남은 선택값은 localStorage 의
  *      btc_sim_v2_chart-timezone 하나뿐이라, 파일이 없으면 아무 일도 안 합니다
  *   실행 중에 잠깐 끄려면 콘솔에서 App.ChartTimezone.disable()
@@ -80,12 +99,15 @@ App.ChartTimezone = (function () {
 
   /* 고를 수 있는 시간대. 첫 번째가 기본값입니다. */
   var ZONES = [
-    { id: "UTC", tz: "UTC", label: "UTC", desc: "세계 표준시 (기본값 · 지금까지와 같음)" },
-    { id: "KST", tz: "Asia/Seoul", label: "한국", desc: "UTC+9 — 거래내역과 같은 시간" },
-    { id: "LOCAL", tz: null, label: "내 컴퓨터 시간", desc: "이 컴퓨터에 설정된 시간대" },
+    { id: "LOCAL", tz: null, label: "내 컴퓨터 시간", desc: "기본값 — 거래내역·체결 시각과 같은 시간" },
+    { id: "KST", tz: "Asia/Seoul", label: "한국", desc: "UTC+9 — 한국에서는 위와 같습니다" },
+    { id: "UTC", tz: "UTC", label: "UTC", desc: "세계 표준시 — 거래내역과 9시간 어긋납니다" },
     { id: "NY", tz: "America/New_York", label: "뉴욕", desc: "미국 동부 (서머타임 자동)" },
     { id: "LON", tz: "Europe/London", label: "런던", desc: "영국 (서머타임 자동)" },
   ];
+
+  /* ★기본값★ — 2026-09-02 PM 지시로 UTC 에서 바뀌었습니다. 이유는 파일 맨 위 참고 */
+  var DEFAULT_ZONE = "LOCAL";
 
   var off = false;
   var wrap = null;
@@ -93,7 +115,7 @@ App.ChartTimezone = (function () {
   var menu = null;
   var observer = null;
   var clockTimer = null;
-  var current = "UTC";
+  var current = DEFAULT_ZONE;
   var appliedTo = null; /* 어느 차트 객체에 걸어 뒀는지 */
   var touched = false; /* 회원이 시간대를 한 번이라도 건드렸는가 */
 
@@ -146,6 +168,33 @@ App.ChartTimezone = (function () {
     return out;
   }
 
+  /* 두 시간대가 몇 분 차이인지 — 창 아래 안내문이 ★지금 상태★ 를 말하게 하려고 씁니다.
+     서머타임 때문에 계절마다 달라질 수 있어 그때그때 다시 잽니다. */
+  function offsetMin(tz, ms) {
+    var p = partsIn(tz, ms);
+    var asUTC = Date.UTC(
+      Number(p.year), Number(p.month) - 1, Number(p.day),
+      Number(p.hour), Number(p.minute), Number(p.second)
+    );
+    return Math.round((asUTC - ms) / 60000);
+  }
+
+  function gapToLocalMin() {
+    var now = Date.now();
+    try {
+      return offsetMin(tzOf(current), now) - offsetMin(localZone(), now);
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function gapText(min) {
+    var a = Math.abs(min);
+    var h = Math.floor(a / 60);
+    var m = a % 60;
+    return (h ? h + "시간" : "") + (m ? (h ? " " : "") + m + "분" : h ? "" : "0분");
+  }
+
   function timeToMs(time) {
     /* 우리 데이터는 숫자(초)입니다. 라이브러리가 {year,month,day} 를 줄 수도 있어
        그 경우도 받아 둡니다 — 안 받으면 눈금이 "undefined" 로 나옵니다. */
@@ -157,8 +206,9 @@ App.ChartTimezone = (function () {
   }
 
   /* =====================================================================
-   * 차트에 걸기 / 떼기
-   * ⚠ 기본값(UTC)일 때는 ★아무 것도 걸지 않습니다★ — 오늘 화면 그대로입니다.
+   * 차트에 걸기
+   * ⚠ 어느 시간대든 겁니다. 라이브러리는 UTC 로만 그리기 때문에, 기본값이
+   *   "내 컴퓨터 시간" 이 된 지금은 걸지 않으면 9시간 어긋난 채로 남습니다.
    * ===================================================================== */
   function getChart() {
     try {
@@ -177,37 +227,49 @@ App.ChartTimezone = (function () {
     if (!T) return false;
     var tz = tzOf(current);
 
-    /* ★아무도 시간대를 안 만졌으면 손대지 않습니다★ — 오늘 화면 그대로입니다 */
-    if (current === "UTC" && !touched) {
-      appliedTo = chart;
-      return true;
-    }
-
-    /* ⚠ 실측으로 확인한 것 — 한 번 건 서식 함수는 ★뗄 수가 없습니다★.
-       chart.applyOptions({timeScale:{tickMarkFormatter:undefined}}) 를 불러도
-       라이브러리가 undefined 를 "안 바꿈" 으로 보고 무시합니다(실측: 되돌린 뒤에도
-       typeof 가 계속 function 이었습니다). 그래서 UTC 로 돌아올 때는 떼는 대신
-       ★UTC 로 그리는 같은 서식 함수★ 를 겁니다. 시각은 라이브러리 기본과 똑같습니다.
-       (달 이름은 locale ko-KR 기준 "9월" 로 라이브러리 기본과 글자까지 같습니다.
-        십자선 글자만 "2026-09-02 10:29" 형태로 남습니다 — 시각은 같습니다) */
+    /* ★2026-09-02 부터는 UTC 일 때도 서식을 겁니다.★
+       기본값이 "내 컴퓨터 시간" 으로 바뀌어, 어차피 거의 모든 회원에게 서식이
+       걸립니다. 그래서 "안 걸린 상태" 를 따로 두지 않습니다 — 갈래가 하나면
+       나중에 고칠 때 한쪽만 고치는 실수가 안 납니다.
+       ⚠ 그리고 어차피 뗄 수가 없습니다(실측) — applyOptions 에 undefined 를 넣어도
+         라이브러리가 "안 바꿈" 으로 보고 무시합니다. 되돌린 뒤에도 typeof 가
+         계속 function 이었습니다. UTC 로 돌아올 때는 ★UTC 로 그리는 같은 서식★ 을
+         겁니다. 눈금 글자는 라이브러리 기본과 같습니다(달 이름도 ko-KR 기준 "9월").
+         십자선만 "2026-09-02 10:29" 형태로 남습니다 — ★시각은 같습니다★. */
     touched = true;
+
+    /* ⚠ 서식 함수 안에서 예외가 나면 시간축이 통째로 안 그려집니다.
+       그래서 무슨 일이 있어도 글자를 돌려주게 감쌉니다(최후에는 UTC 로). */
+    function safe(fn, time) {
+      try {
+        return fn(partsIn(tz, timeToMs(time)));
+      } catch (e) {
+        try {
+          return fn(partsIn("UTC", timeToMs(time)));
+        } catch (e2) {
+          return "";
+        }
+      }
+    }
 
     try {
       chart.applyOptions({
         timeScale: {
           tickMarkFormatter: function (time, type) {
-            var p = partsIn(tz, timeToMs(time));
-            if (type === T.Year) return p.year;
-            if (type === T.Month) return String(Number(p.month)) + "월";
-            if (type === T.DayOfMonth) return String(Number(p.day));
-            if (type === T.TimeWithSeconds) return p.hour + ":" + p.minute + ":" + p.second;
-            return p.hour + ":" + p.minute;
+            return safe(function (p) {
+              if (type === T.Year) return p.year;
+              if (type === T.Month) return String(Number(p.month)) + "월";
+              if (type === T.DayOfMonth) return String(Number(p.day));
+              if (type === T.TimeWithSeconds) return p.hour + ":" + p.minute + ":" + p.second;
+              return p.hour + ":" + p.minute;
+            }, time);
           },
         },
         localization: {
           timeFormatter: function (time) {
-            var p = partsIn(tz, timeToMs(time));
-            return p.year + "-" + p.month + "-" + p.day + " " + p.hour + ":" + p.minute;
+            return safe(function (p) {
+              return p.year + "-" + p.month + "-" + p.day + " " + p.hour + ":" + p.minute;
+            }, time);
           },
         },
       });
@@ -234,16 +296,19 @@ App.ChartTimezone = (function () {
         }
       }
     } catch (e) {
-      /* 무시 — 기본값 UTC 로 갑니다 */
+      /* 무시 — 기본값으로 갑니다 */
     }
   }
 
   function save() {
     try {
       if (!App.Storage) return;
-      if (current === "UTC") {
+      if (current === DEFAULT_ZONE) {
         /* 기본값이면 저장칸을 아예 비웁니다 — 남겨 두면 나중에 기본값을
-           바꿀 때 옛 값이 계속 살아납니다 */
+           바꿀 때 옛 값이 계속 살아납니다.
+           ⚠ 반대로 ★UTC 를 직접 고른 회원★ 은 이제 저장칸에 남습니다.
+             기본값이 UTC 이던 시절에는 UTC 가 "안 고른 것" 과 구분이 안 됐는데,
+             이제는 구분됩니다 — 그 선택을 다음에도 그대로 지켜 줍니다. */
         if (typeof App.Storage.clear === "function") App.Storage.clear(STORAGE_KEY);
         return;
       }
@@ -325,9 +390,18 @@ App.ChartTimezone = (function () {
     var p = partsIn(tzOf(current), Date.now());
     var label = btn.querySelector("span");
     if (label) {
-      label.textContent = "차트 시각 " + p.hour + ":" + p.minute + ":" + p.second + " " + shortName(current);
+      /* ⚠ 초를 뺐습니다 — 글씨를 줄이는 대신 ★글자 수★ 를 줄여 자리를 만든 것입니다.
+         2026-09-02 실측 — 넓은 화면에서 이 줄에 필요한 폭이 832px 인데 자리가 780px
+         이라 시계가 둘째 줄로 내려갔고, 그만큼(83px) 차트가 짧아졌습니다.
+         "차트" 라는 말과 시간대 이름(UTC·KST)은 ★그대로 둡니다★ — 그게 이 시계의 일입니다.
+         1초마다 계속 다시 그리므로 분이 바뀌는 순간 바로 반영됩니다. */
+      label.textContent = "차트 시각 " + p.hour + ":" + p.minute + " " + shortName(current);
     }
-    btn.className = "tl-tz-btn" + (current === "UTC" ? "" : " custom");
+    /* 금색은 "기본값이 아님" 을 뜻합니다.
+       기본값이 UTC 이던 시절에는 UTC 가 기준이었는데, 이제 기본값이
+       "내 컴퓨터 시간" 이라 기준도 같이 옮깁니다.
+       ⚠ 이렇게 두면 금색이 곧 ★차트가 거래내역과 다른 시각★ 이라는 표시가 됩니다. */
+    btn.className = "tl-tz-btn" + (current === DEFAULT_ZONE ? "" : " custom");
     btn.setAttribute(
       "title",
       "차트 표시 시간대 — 지금 " + shortName(current) + " 입니다. 눌러서 바꿉니다.\n" +
@@ -376,6 +450,27 @@ App.ChartTimezone = (function () {
     if (btn) btn.setAttribute("aria-expanded", "false");
   }
 
+  function warnHtml() {
+    var gap = gapToLocalMin();
+    var base =
+      "여기서 바꾸는 것은 <b>차트 눈금과 십자선</b> 뿐입니다. " +
+      "거래내역 · 체결 시각 · 주문 시각은 <b>바뀌지 않습니다</b>.";
+    if (gap === 0) {
+      return (
+        "지금 차트와 <b>거래내역 · 체결 시각이 같은 시간</b>입니다.<br>" + base
+      );
+    }
+    /* 화면에 나가는 글자에는 ⚠ 같은 기호를 쓰지 않습니다 —
+       tests/no-emoji.test.js 가 막습니다(주석은 괜찮고 ★문자열★ 이 걸립니다).
+       그래서 굵은 글씨로만 눈에 띄게 합니다. */
+    return (
+      "지금 차트는 <b>" + shortName(current) + "</b>, 거래내역 · 체결 시각은 " +
+      "<b>내 컴퓨터 시간</b>이라 <b>" + gapText(gap) + " 어긋납니다</b>.<br>" +
+      "차트에서 체결 시각의 봉을 찾으실 때 " + gapText(gap) +
+      (gap > 0 ? " 더해서" : " 빼서") + " 보셔야 합니다.<br>" + base
+    );
+  }
+
   function openMenu() {
     if (!wrap || isOpen()) return;
     injectStyle();
@@ -411,12 +506,13 @@ App.ChartTimezone = (function () {
       menu.appendChild(b);
     });
 
-    /* ★PM 이 제일 걱정한 자리 — 여기에 분명히 적습니다★ */
+    /* ★PM 이 제일 걱정한 자리 — 여기에 분명히 적습니다★
+       ⚠ 문구를 글자로 박아 두면 ★틀린 말★ 이 됩니다. 기본값이 "내 컴퓨터 시간" 이
+         된 뒤로는 대부분 차트와 거래내역이 같은 시각이기 때문입니다.
+         그래서 지금 고른 시간대와 내 컴퓨터 시간의 차이를 ★그때그때 재서★ 씁니다. */
     var warn = document.createElement("div");
     warn.className = "tl-tz-warn";
-    warn.innerHTML =
-      "여기서 바꾸는 것은 <b>차트 눈금과 십자선</b> 뿐입니다.<br>" +
-      "<b>거래내역 · 체결 시각 · 주문 시각은 바뀌지 않습니다</b> — 그대로 내 컴퓨터 시간입니다.";
+    warn.innerHTML = warnHtml();
     menu.appendChild(warn);
 
     wrap.appendChild(menu);
