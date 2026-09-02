@@ -12,6 +12,17 @@
  * 여기서 insert만 하면 chat.js 쪽 코드를 전혀 안 건드리고도(id로만
  * 요소를 찾는 구조 유지) 자동으로 채팅창에 나타납니다 — chat.js에는
  * message_type에 따라 스타일만 다르게 그리는 부분만 추가했습니다.
+ *
+ * ── 2026-09-02 · 금액이 실제보다 크게 나가던 것 ─────────────────────────
+ * t.pnl 에는 진입 수수료가 빠져 있지 않아(청산 수수료만 뺀 값), 그 숫자를
+ * 그대로 "익절액" 이라고 말하면 실제 지갑 증가보다 큽니다. 100배에서는
+ * 증거금의 5% 만큼 부풀고, ROE 가 그 아래면 ★실제로는 돈이 줄었는데★
+ * "익절했습니다" 라고 말합니다. 금액과 익절/손절 판정을 모두
+ * App.RealizedPnlFix.entryFeeOf() 로 보정한 값 기준으로 바꿨습니다.
+ *
+ * 되돌리는 방법:
+ *   git checkout HEAD -- js/trade-events-chat.js
+ *   (또는 실현손익() 을 지우고 buildMessage 의 net 을 t.pnl 로 되돌립니다)
  * ========================================================================= */
 
 window.App = window.App || {};
@@ -169,7 +180,7 @@ App.TradeEventsChat = (function () {
     // 오래된 것부터 순서대로(여러 개가 한꺼번에 청산됐을 때 시간 순서 유지)
     const ordered = 새거래.slice().reverse();
     for (const t of ordered) {
-      const message = buildMessage(nickname, t);
+      const message = buildMessage(nickname, t, snapshot.feeRate);
       if (최근에보냈나(message)) {
         console.warn("[trade-events-chat.js] 같은 알림을 방금 보냈습니다 — 건너뜁니다:", message);
         continue;
@@ -220,19 +231,51 @@ App.TradeEventsChat = (function () {
     return sign + Math.abs(won).toLocaleString("ko-KR") + "원";
   }
 
-  function buildMessage(nickname, t) {
+  /* ── 채팅이 말할 금액 ──────────────────────────────────────────────────
+   * t.pnl 은 "총손익 − 청산수수료" 입니다(js/trading.js:511).
+   * ★진입 수수료가 아직 안 빠져 있습니다.★ 그 값을 그대로 익절액이라고
+   * 말하면 실제로 지갑에 늘어난 돈보다 큽니다.
+   *
+   * 진입 수수료를 여기서 새로 계산하지 않습니다. 같은 값이 두 벌 생기면
+   * 화면마다 숫자가 갈라집니다(이 프로젝트에서 이미 네 번 겪었습니다).
+   * 이미 있는 보정 모듈을 그대로 씁니다 — 강제청산일 때 fee 에 진입
+   * 수수료만 담기는 예외까지 그쪽에 처리돼 있습니다.
+   *     js/realized-pnl-fix.js  App.RealizedPnlFix.entryFeeOf(t, feeRate)
+   *
+   * 보정 모듈이 없으면 ★옛 동작(t.pnl 그대로)★ 으로 둡니다.
+   * 조용히 0 으로 만들면 "0원 익절" 이라는 또 다른 거짓말이 됩니다. */
+  function 실현손익(t, feeRate) {
+    const raw = Number(t && t.pnl);
+    if (!isFinite(raw)) return 0;
+    const fix = App.RealizedPnlFix;
+    if (!fix || typeof fix.entryFeeOf !== "function") return raw;
+    try {
+      const entryFee = Number(fix.entryFeeOf(t, feeRate));
+      if (!isFinite(entryFee)) return raw;
+      return raw - entryFee;
+    } catch (e) {
+      console.warn("[trade-events-chat.js] 진입 수수료 보정 실패 — 원래 값을 씁니다:", e);
+      return raw;
+    }
+  }
+
+  function buildMessage(nickname, t, feeRate) {
     // 방향은 한글로 — 채팅은 한국어 문장이라 LONG/SHORT만 영문이면 어색합니다.
     const sideLabel = t.side === "long" ? "매수" : "매도";
     // 금액도 원화로 — 채팅은 사람이 읽는 문장이라 익숙한 단위가 낫습니다.
     // 환율은 App.Config.USD_KRW 하나만 씁니다(다른 곳에 또 적지 않음).
-    const amountText = formatKrwSigned(t.pnl);
+    // ★t.pnl 이 아니라 진입 수수료까지 뺀 값★ 입니다(위 실현손익() 참고).
+    const net = 실현손익(t, feeRate);
+    const amountText = formatKrwSigned(net);
     // 종목 이름도 종목 규격표에서 — 코인은 "BTC", 주식·지수는 "삼성전자" 처럼 나옵니다.
     // ⚠ 이미 서버에 문자열로 저장된 옛 메시지는 고치지 않습니다. 앞으로 만들어지는 문구만입니다.
     const symLabel = App.Utils && App.Utils.symbolLabel ? App.Utils.symbolLabel(t.symbol) : "BTC";
     if (t.reason === "강제청산") {
       return nickname + "님의 " + symLabel + " " + sideLabel + " 포지션이 강제청산되었습니다 (" + amountText + ")";
     }
-    if (t.pnl >= 0) {
+    // 판정도 ★같은 보정값★ 기준입니다. 금액만 고치고 여기를 t.pnl 로 두면
+    // "−1,200만원 익절했습니다" 가 나옵니다.
+    if (net >= 0) {
       return nickname + "님이 " + symLabel + " " + sideLabel + " 포지션을 " + amountText + " 익절했습니다";
     }
     return nickname + "님이 " + symLabel + " " + sideLabel + " 포지션을 " + amountText + " 손절했습니다";

@@ -199,3 +199,8 @@ tests/bracket-max-leverage-seal.test.js
 # ⭐ 제일 중요한 것은 [2] — ★깎는 양을 사람이 고르지 않는다★ (0.999 곱하기 금지).
 # 되돌리기: index.html 에서 js/max-margin-safe.js 한 줄 삭제
 tests/max-margin-safe-seal.test.js
+# 2026-09-02 — 채팅이 "익절" 이라고 말한 금액에 진입 수수료가 안 빠져 있었습니다.
+# 100배에서 ROE 5% 미만이면 실제로는 지갑이 줄었는데 "익절했습니다" 라고 말합니다(P1).
+# 제일 중요한 것은 [2] — 익절/손절 판정도 보정값 기준.
+# 되돌리기: git checkout HEAD -- js/trade-events-chat.js
+tests/chat-event-entry-fee.test.js
