@@ -244,7 +244,11 @@ console.log("\nfx 지표 목록 — 기간·색은 지표 파일에서만 온다
  * ========================================================================= */
 절("[3] 자리잡기 — 원본 place() 를 가짜 화면 위에서 돌린다");
 
-const GEOM = ["vpW", "vpH", "fullscreenOn", "floorY", "place"];
+/* 2026-09-03 수리팀 — place() 가 minListH() 를 부르게 되어 이름을 더했습니다.
+   (이 파일 41줄의 안내대로 "GEOM 목록의 이름만" 고쳤습니다. 계산은 안 베꼈습니다)
+   minListH() 는 목록에 최소로 남길 높이를 ★줄에서 재는★ 함수입니다 —
+   전에는 place() 안에 38 이 박혀 있었고, 줄이 50px 로 자라 폰에서 0줄이 됐습니다. */
+const GEOM = ["vpW", "vpH", "fullscreenOn", "floorY", "minListH", "place"];
 
 function 함수떼기(name) {
   const i = SRC.indexOf("function " + name + "(");
@@ -276,6 +280,10 @@ ok("여백이 8px 다 (바뀌면 아래 기대값도 같이 봐야 합니다)", 
    머리 33 + 발 30 = 63, 안내줄 27, 목록 몸통 324 → 다 펼치면 387px.
    387 은 2026-08-27 에 실제로 잰 목록 높이입니다. */
 const HEAD = 33, FOOT = 30, HINT = 27, LIST자연 = 324;
+/* 2026-09-03 수리팀 — place() 가 minListH() 로 「줄 한 칸」 을 재게 되어
+   가짜 목록도 줄을 하나 갖고 있어야 합니다. 324px / 7줄 = 46px.
+   이 가짜 목록에는 그룹 제목줄이 없으므로 .tl-fx-group 은 null 입니다. */
+const ROW = Math.round(LIST자연 / 7);
 
 function 상황(설정) {
   const listEl = {
@@ -284,6 +292,10 @@ function 상황(설정) {
       const mh = this.style.maxHeight;
       if (!mh) return LIST자연;
       return Math.min(LIST자연, parseInt(mh, 10) || LIST자연);
+    },
+    querySelector: function (s) {
+      if (s === ".tl-fx-row") return { offsetHeight: ROW };
+      return null;
     }
   };
   const hintEl = { style: { display: "none" } };

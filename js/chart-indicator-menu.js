@@ -399,6 +399,24 @@ App.ChartIndicatorMenu = (function () {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
 
+  /* 목록에 「최소한」 남겨야 하는 높이 — ★실제로 재서★ 씁니다.
+     ⚠ 2026-09-03 P1: 여기 숫자가 38 로 박혀 있었습니다. 위 26줄 주석의
+       "줄 한 칸 136x38"(2026-08-27 바이낸스 실측) 을 그대로 옮긴 값인데,
+       그 뒤 설정 톱니가 붙고 글씨가 커지면서 ★줄 높이가 50px 로 자랐습니다★.
+       그래서 "최소 한 줄은 보이게" 라는 주석이 거짓말이 됐습니다 —
+       38px 에는 제목줄(.tl-fx-group 39px)조차 안 들어갑니다.
+       숫자를 50 으로 다시 박으면 ★같은 일이 또 납니다★. 그래서 잽니다.
+     제목줄 + 첫 줄 + 다음 줄이 살짝 걸치는 만큼을 봅니다.
+     다음 줄이 걸쳐 보여야 회원이 "밀면 더 있다" 를 압니다. */
+  function minListH(listEl) {
+    var g = listEl.querySelector(".tl-fx-group");
+    var r = listEl.querySelector(".tl-fx-row");
+    var gh = g && g.offsetHeight ? g.offsetHeight : 0;
+    var rh = r && r.offsetHeight ? r.offsetHeight : 0;
+    if (!rh) rh = 50; /* 못 재면 넉넉히 — 모자란 쪽보다 남는 쪽이 낫습니다 */
+    return Math.ceil(gh + rh * 1.4);
+  }
+
   /* 목록이 내려갈 수 있는 화면상의 마지노선.
      폰의 하단 고정 매수/매도 바 위로는 안 내려갑니다.
      전체화면일 때는 그 바가 화면에 안 그려지므로 세지 않습니다. */
@@ -427,6 +445,12 @@ App.ChartIndicatorMenu = (function () {
     /* 잰 값이 지난번 자르기에 물들지 않게 원래 크기부터 되돌립니다 */
     if (listEl) listEl.style.maxHeight = "";
     if (hintEl) hintEl.style.display = "none";
+
+    /* 자르기 전의 목록 키 — "다 들어갔는지" 를 나중에 이 값으로 봅니다.
+       ⚠ scrollHeight 를 쓰지 않습니다. jsdom 은 화면을 안 그려서 늘 0 이라
+         테스트에서는 "늘 다 들어갔다" 로 읽힙니다. offsetHeight 는 기록팀
+         봉인이 흉내 내 주므로 브라우저와 테스트가 같은 답을 냅니다. */
+    var listNatural = listEl ? listEl.offsetHeight : 0;
 
     var TOP = EDGE;
     var BOT = floorY();
@@ -490,10 +514,51 @@ App.ChartIndicatorMenu = (function () {
     if (cap > 0 && listEl) {
       if (hintEl) hintEl.style.display = "block";
       var chrome = panel.offsetHeight - listEl.offsetHeight; /* 머리 + 안내 + 발 */
+
+      /* ★2026-09-03 P1 — 폰에서 지표가 「한 줄도」 안 보이던 것★
+         360·375·390 의 scrollY 250~325 에서 목록 9줄 중 ★0줄★ 이었습니다.
+         오류도 없고 창도 멀쩡히 떠서 회원은 "지표가 하나도 없네" 로 읽습니다.
+         실측(360·scrollY 300) — 창 449~719(270px) · 목록 50px · 0/9줄.
+           머리 56 + 지표추가 50 + 안내 41 + 발 72 = chrome 220
+           남은 자리 cap 270 → 목록 50px → 제목줄 39 + 첫 줄 11px 만 걸침
+         두 가지가 겹친 고장이었습니다.
+           ① 최소 보장값이 38 로 박혀 있었는데 줄이 50px 로 자랐습니다 → minListH()
+           ② 화면에 쓸 수 있는 높이가 711px(8~719) 인데 ★270px 만 썼습니다★.
+              버튼 한쪽(위/아래) 자리만 보기 때문입니다. 여기 .tl-ind-bar 가
+              below 를 449 까지 밀어내려 아래쪽이 270px 밖에 안 남았고,
+              위쪽(250px)은 그보다도 좁아서 아래쪽이 뽑혔습니다.
+         ②를 이렇게 고칩니다 — 「한쪽 자리로는 한 줄도 못 보여줄 때만」
+         버튼에 붙이는 것을 포기하고 ★화면 전체(TOP~BOT)★ 를 씁니다.
+         트레이딩뷰도 폰에서 지표 목록을 화면 가득 띄웁니다(차트 시스템은
+         트레이딩뷰를 따라갑니다 — CLAUDE.md). 지표 막대·fx 버튼을 덮게 되지만
+         ★0줄보다는 낫습니다★. 자리가 넉넉하면 이 길로 안 옵니다 — 지금까지처럼
+         버튼에 붙어서 열립니다. */
+      var need = minListH(listEl);
+      var roomAll = Math.floor(BOT - TOP - chrome);
+      if (need > roomAll) need = roomAll > 0 ? roomAll : 0; /* 화면보다 크게 요구하지 않습니다 */
+      var wide = false;
+      if (cap - chrome < need && BOT - TOP > cap) {
+        cap = BOT - TOP;
+        top = TOP;
+        wide = true;
+      }
+
       var avail = Math.floor(cap - chrome);
-      if (avail < 38) avail = 38; /* 최소 한 줄은 보이게 */
+      if (avail < need) avail = need; /* 최소 한 줄 + 다음 줄이 걸쳐 보이게 */
       listEl.style.maxHeight = avail + "px";
-      if (top === TOP && br) top = aboveEnd - panel.offsetHeight; /* 위로 열었으면 아래끝을 버튼에 붙임 */
+
+      /* 넓혀서 ★다 들어가 버린★ 때는 안내줄을 도로 끕니다.
+         밀 것이 없는데 "밀면 나머지가 보입니다" 라고 하면 회원이
+         "밀었는데 아무것도 없네" 로 또 헷갈립니다.
+         (넓히기 전에는 늘 잘렸으니 이 경우가 아예 없었습니다) */
+      if (hintEl && listNatural > 0 && avail >= listNatural) {
+        hintEl.style.display = "none";
+      }
+
+      /* 위로 열었으면 아래끝을 버튼에 붙임.
+         ⚠ 화면 전체를 쓰기로 한 때(wide)는 버튼에 붙이지 않습니다 —
+           붙이면 방금 넓힌 것이 도로 버튼 위 좁은 자리로 끌려갑니다. */
+      if (!wide && top === TOP && br) top = aboveEnd - panel.offsetHeight;
     }
 
     /* 마지막 안전장치 — 그래도 넘치면 화면 안으로 밀어 넣습니다 */

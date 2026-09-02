@@ -596,3 +596,4 @@ tests/chart-indicator-macd-move.test.js
 #   박아 넣으면 그 자리에서 빨개집니다. [7] 은 수리 전 상태를 되살려
 #   브라우저 실측(0줄·목록 50px·창 270px)이 그대로 재현되는지 봅니다.
 # 되돌리기: 이 줄과 tests/chart-fx-menu-min-rows.test.js 삭제
+tests/chart-fx-menu-min-rows.test.js
