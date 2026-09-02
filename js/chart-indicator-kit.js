@@ -81,6 +81,26 @@
  * 저장 키는 그대로 btc_sim_v2_chart-indicator-kit 이고 형식도 v1 그대로라
  * 이미 저장된 인스턴스는 그대로 열립니다.
  *
+ * -- 2026-09-02 (7단계) 에 늘어난 것 - ★기준선★ ----------------------
+ * CCI 의 ±100, StochRSI 의 20 · 80 처럼 "값이 아니라 배경" 인 가로선입니다.
+ *   guides   정의가 [{ price, style }] 로 적습니다. 색 · 굵기는 못 고릅니다
+ *            (GUIDE_COLOR 한 곳). js/chart-oscillators.js:640 addGuide() 와
+ *            같은 모양입니다 - #1D273B · 굵기 1 · 점선 · 축 라벨 없음
+ *   ⭐ 같이 고친 것 - 정의에 모르는 칸이 오면 ★조용히 버리지 않고 알립니다.★
+ *      그전에는 guides 를 적어도 define() 이 true 를 돌려주고 화면엔 아무것도
+ *      안 그렸습니다. 오류 0건 · 화면 멀쩡 · 내용만 없음(조용한 고장).
+ *   ⚠️ 끌 때 기준선을 ★시리즈보다 먼저★ 직접 지웁니다. removeSeries 만 해도
+ *      결국 사라지지만 ★다음 번 다시 그릴 때★ 라, 그때까지 화면에 남습니다
+ *      (실측 - 아래 addGuides 주석). 확인용 - getGuideCountForTest()
+ *
+ * -- 2026-09-02 (8단계) 에 늘어난 것 - 지표 3개 -----------------------
+ *   ATR       기간 14 · RMA(와일더) · 기준선 없음 · 갈색  (트레이딩뷰 기준)
+ *   StochRSI  14·14·3·3 · 기준선 20 · 80 · 남색+분홍 (바이낸스 = 트레이딩뷰)
+ *   CCI       기간 20 · hlc3 · 기준선 ±100 과 0 · 보라   (트레이딩뷰 기준)
+ * ★기본 인스턴스는 안 늘렸습니다★ - "지표 추가" 목록에만 나옵니다.
+ * ⚠️ CCI 의 step 만 O(1) 이 아니라 O(p) 입니다. 계산식 때문이고, 왜 그래도
+ *    괜찮은지는 아래 CCI 주석에 실측값과 함께 적어 두었습니다.
+ *
  * -- 되돌리기 ---------------------------------------------------------
  *   1) index.html 의 <script src="js/chart-indicator-kit.js"></script> 한 줄 삭제
  *   2) js/chart-indicator-kit.js 파일 삭제
@@ -130,8 +150,12 @@ App.ChartIndicatorKit = (function () {
     { key: "pink", hex: "#F292DE", name: "분홍" }
   ];
 
-  /* 눈금 · 안내선용. 값이 아니라 배경이라 팔레트 테두리색을 씁니다. */
+  /* 기준선(guide) 색 - 여기 한 곳에만. 값이 아니라 배경이라 팔레트 테두리색입니다.
+     js/chart-oscillators.js 의 RSI 30/70 · MACD 0선이 쓰는 값과 같습니다
+     (저쪽 COLORS.rsiGuide · COLORS.zero 도 #1D273B). 회원이 이미 보던 굵기 ·
+     점선 그대로라 새 지표를 얹어도 화면이 낯설지 않습니다. */
   var GUIDE_COLOR = "#1D273B";
+  var GUIDE_STYLE = "dashed";   /* 저쪽 addGuide() 가 LineStyle.Dashed 를 씁니다 */
 
   function colorHexes() {
     return LINE_COLORS.map(function (c) {
@@ -195,6 +219,24 @@ App.ChartIndicatorKit = (function () {
     return RESERVED_IDS.indexOf(id) >= 0;
   }
 
+  /* ---------------------------------------------------------------------
+   * 정의가 쓸 수 있는 칸 이름 - 여기 없는 이름이 오면 알립니다.
+   *
+   * ⭐ 2026-09-02 에 실제로 당한 것 - 정의에 guides 를 적어 넣었더니
+   *    define() 이 ★true 를 돌려주고★ 화면엔 기준선이 하나도 안 그려졌습니다.
+   *    아래 defs[def.id] = {...} 가 아는 칸만 옮겨 담는데, 모르는 칸은
+   *    말없이 버렸기 때문입니다. 오류 0건 · 경고 0건 · 화면 멀쩡 · 내용만 없음.
+   *    이 프로젝트가 "조용한 고장" 이라 부르는 모양 그대로입니다.
+   *    다음 사람이 bands: 나 guide: 처럼 오타를 내도 똑같은 일이 납니다.
+   *
+   * ⚠️ 거부까지는 하지 않습니다. 칸 이름 하나 틀렸다고 지표가 통째로 안 뜨는
+   *    쪽이 더 나쁩니다. 대신 ★반드시 콘솔에 남깁니다.★
+   * ------------------------------------------------------------------- */
+  var DEF_FIELDS = [
+    "id", "name", "note", "pane", "params", "inputs", "outputs", "guides",
+    "nameOf", "seed", "step", "useSource", "srcDefault", "useOffset"
+  ];
+
   var STORAGE_KEY = "chart-indicator-kit";
   var STORE_VERSION = 1;
 
@@ -223,6 +265,9 @@ App.ChartIndicatorKit = (function () {
    *   pane     "main" | "sub"    기본으로 어디에 그릴지 (인스턴스가 덮어씀)
    *   params   { p: 9 }          설정값 기본치
    *   outputs  [{ key, kind:"line"|"hist", color, style }]
+   *   guides   [{ price, style }]       기준선. CCI 의 ±100, StochRSI 의 20·80
+   *            값이 아니라 배경입니다. 색 · 굵기는 고르지 못합니다 -
+   *            GUIDE_COLOR 한 곳으로 고정입니다(두 벌 금지).
    *   nameOf(params) -> "EMA(9)"        (없으면 name 그대로)
    *   seed(bars, params, capture) -> { <outKey>: [{time,value}] }
    *            켤 때 한 번. 전체를 계산합니다.
@@ -244,6 +289,17 @@ App.ChartIndicatorKit = (function () {
     if (!def.name || typeof def.name !== "string") return no("name 이 없습니다: " + def.id);
     if (ALLOWED_PANES.indexOf(def.pane) < 0) return no("pane 은 main 또는 sub 여야 합니다: " + def.id);
 
+    /* 모르는 칸은 조용히 버리지 않고 알립니다 (위 DEF_FIELDS 주석 참조).
+       ★거부보다 먼저★ 돌립니다 - 거부 사유 경고가 콘솔 맨 끝에 오게. */
+    for (var f in def) {
+      if (DEF_FIELDS.indexOf(f) < 0) {
+        console.warn(
+          "[chart-indicator-kit] 정의에 모르는 칸이 있어 무시합니다 - " + def.id + "." + f +
+          " (쓸 수 있는 칸 - " + DEF_FIELDS.join(" · ") + ")"
+        );
+      }
+    }
+
     /* seed 와 step 은 둘 다 필수입니다.
        step 이 없으면 틱마다 전체를 다시 계산하게 되어 화면이 버벅입니다. */
     if (!isFn(def.seed)) return no("seed 가 없습니다(켤 때 전체 계산): " + def.id);
@@ -263,6 +319,21 @@ App.ChartIndicatorKit = (function () {
         );
       }
       if (o.style && ALLOWED_STYLES.indexOf(o.style) < 0) return no("style 은 solid/dashed/dotted: " + def.id);
+    }
+
+    /* 기준선 - 값이 아니라 배경입니다. 색 · 굵기는 정의가 못 고릅니다
+       (GUIDE_COLOR 한 곳). 고르게 하면 지표마다 다른 회색이 생깁니다. */
+    var guides = [];
+    var gsrc = def.guides || [];
+    for (var gi = 0; gi < gsrc.length; gi++) {
+      var g = gsrc[gi];
+      if (!g || typeof g.price !== "number" || !isFinite(g.price)) {
+        return no("guides[" + gi + "].price 가 숫자가 아닙니다: " + def.id);
+      }
+      if (g.style && ALLOWED_STYLES.indexOf(g.style) < 0) {
+        return no("guides[" + gi + "].style 은 solid/dashed/dotted: " + def.id);
+      }
+      guides.push({ price: g.price, style: g.style || GUIDE_STYLE });
     }
 
     /* 설정 창이 무엇을 보여줄지도 정의가 들고 있습니다. 화면 쪽 파일에
@@ -300,6 +371,7 @@ App.ChartIndicatorKit = (function () {
       params: params0,
       inputs: inputs,
       outputs: def.outputs,
+      guides: guides,
       nameOf: isFn(def.nameOf) ? def.nameOf : null,
       seed: def.seed,
       step: def.step
@@ -356,7 +428,10 @@ App.ChartIndicatorKit = (function () {
         note: d.note,
         pane: d.pane,
         params: copy(d.params),
-        inputs: inputsOf(d.id)
+        inputs: inputsOf(d.id),
+        guides: d.guides.map(function (g) {
+          return { price: g.price, style: g.style };
+        })
       };
     });
   }
@@ -757,6 +832,75 @@ App.ChartIndicatorKit = (function () {
     return chart.addSeries(seriesDef, opts);
   }
 
+  /* ---------------------------------------------------------------------
+   * 기준선 - CCI 의 ±100, StochRSI 의 20 · 80 처럼 "값이 아니라 배경" 인 선.
+   *
+   * js/chart-oscillators.js:640 addGuide() 를 그대로 따랐습니다. RSI 30/70 과
+   * MACD 0선이 몇 달째 이 모양으로 돌고 있어 회원 눈이 이미 여기 맞춰져 있습니다.
+   *     색 #1D273B (GUIDE_COLOR) · 굵기 1 · 점선 · 축 라벨 없음 · 제목 없음
+   *
+   * ⚠️ 왜 지표선(output)으로 안 그리나 - 2026-09-02 실측.
+   *    봉 1006개에 기준선 2줄을 "값이 늘 같은 선" 으로 그리면 점이 ★2,012개★
+   *    더 실립니다. createPriceLine 은 ★0개★ 입니다. 게다가 output 은 색 목록
+   *    검사에 걸려 #1D273B 을 못 써서 밝은 지표색이 되고, lastValueVisible 때문에
+   *    가격축에 100 · -100 라벨까지 붙습니다. 바이낸스도 트레이딩뷰도 안 그럽니다.
+   *
+   * -- 지운 자리를 ★직접★ 챙깁니다 (2026-09-02 브라우저 실측) -----------
+   *    "removeSeries 만 해도 기준선이 같이 사라지나" 를 실제로 재 봤습니다.
+   *    lightweight-charts 5.2.0 · 주 차트에 #1D273B 기준선 하나를 그린 뒤
+   *    removePriceLine 을 ★안 부르고★ removeSeries 만 했습니다.
+   *        그리기 전 0점 -> 그린 뒤 304점 -> removeSeries 직후 ★304점 그대로★
+   *        -> 다시 그려진 뒤 0점
+   *    지워 주기는 합니다. 다만 ★그 자리에서가 아니라 다음 번 다시 그릴 때★
+   *    입니다. 그때까지는 끈 지표의 기준선이 화면에 남습니다. 그래서 여기서
+   *    먼저 지웁니다 - 끄는 순간 바로 사라지게. 이미 지워졌다면 try 가
+   *    삼킵니다(두 번 지워도 안전).
+   *
+   *    ⭐ 켰다 껐다 3회 실측 (브라우저 · 봉 1000개 · 기준선 3줄)
+   *       createPriceLine 9회 · removePriceLine 9회 · 오류 0건
+   *       화면의 #1D273B 점  0 -> 912 -> 0
+   *       틀이 센 기준선 3 -> 0 · 칸 2 -> 1
+   * ------------------------------------------------------------------- */
+  function addGuides(d, target) {
+    var out = [];
+    if (!target || !d.guides || !d.guides.length) return out;
+    for (var i = 0; i < d.guides.length; i++) {
+      try {
+        out.push(
+          target.createPriceLine({
+            price: d.guides[i].price,
+            color: GUIDE_COLOR,
+            lineWidth: 1,
+            lineStyle: styleOf(d.guides[i].style),
+            axisLabelVisible: false,
+            title: ""
+          })
+        );
+      } catch (e) {
+        /* 기준선을 못 그려도 지표 자체는 그대로 동작합니다
+           (js/chart-oscillators.js 도 같은 방식입니다) */
+      }
+    }
+    return out;
+  }
+
+  /** 만든 기준선을 지웁니다. 지운 개수를 돌려줍니다(확인용). */
+  function dropGuides(L) {
+    if (!L || !L.guides || !L.guides.length) return 0;
+    var gone = 0;
+    for (var i = 0; i < L.guides.length; i++) {
+      try {
+        L.guideHost.removePriceLine(L.guides[i]);
+        gone++;
+      } catch (e) {
+        /* 시리즈가 이미 없으면 기준선도 같이 사라진 것입니다 */
+      }
+    }
+    L.guides = [];
+    L.guideHost = null;
+    return gone;
+  }
+
   /** 인스턴스 하나를 그립니다. 다른 인스턴스는 건드리지 않습니다. */
   function turnOn(id) {
     var it = insts[id];
@@ -797,10 +941,16 @@ App.ChartIndicatorKit = (function () {
       }
     }
 
+    /* 기준선은 첫 번째 선에 붙입니다 - 어느 선에 붙든 같은 칸의 같은 눈금이라
+       화면은 같습니다. 첫 선을 못 만들었으면(위 catch) 기준선도 건너뜁니다. */
+    var host = made[d.outputs[0].key] || null;
+
     it.live = {
       series: made,
       pane: pane,
       off: off,
+      guides: addGuides(d, host),
+      guideHost: host,
       commit: cap.state || null,
       commitIdx: cap.state ? n - 2 : -1
     };
@@ -816,6 +966,11 @@ App.ChartIndicatorKit = (function () {
     var it = insts[id];
     if (!it || !it.live) return;
     var L = it.live;
+
+    /* ★시리즈보다 먼저★ - 시리즈를 지운 뒤엔 removePriceLine 을 부를
+       손잡이가 없습니다. */
+    dropGuides(L);
+
     var k;
     for (k in L.series) {
       try {
@@ -1806,6 +1961,436 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* -- ATR 평균실체범위 -------------------------------------------------
+   * 진폭(변동성)입니다. 방향을 안 봅니다 - 얼마나 흔들리는지만 봅니다.
+   *
+   *   TR(t)  = max( 고-저 , |고-이전종| , |저-이전종| )
+   *   ATR(t) = ((p-1)·ATR(t-1) + TR(t)) / p        <- RMA(와일더 평활)
+   *   첫 값은 앞 p개 TR 의 단순평균으로 시작합니다(트레이딩뷰 ta.rma 와 같음).
+   *   첫 봉의 TR 은 이전 종가가 없으므로 고-저 만 씁니다(ta.tr(true) 와 같음).
+   *
+   * ⭐ 기본 기간 14 · 평활 RMA - ★트레이딩뷰 기준★ 입니다.
+   *    (2026-09-02 트레이딩뷰 도움말 "Average True Range (ATR)" -
+   *     "14 days is the default" · "By default on TradingView the ATR is a
+   *     Relative Moving Average (RMA) of the True Range")
+   *    ⚠️ 앱 안 설정 창은 직접 못 열었습니다 - 지표를 얹으려면 회원가입을
+   *       하라는 창이 막았고, 우리는 로그인하지 않습니다. 도움말 문서 값입니다.
+   *    ⚠️ ★바이낸스에는 ATR 이 아예 없습니다★ - 2026-09-02 Original 차트에서
+   *       Main 9개(MA · EMA · WMA · BOLL · VWAP · AVL · TRIX · SAR · SUPER)와
+   *       Sub 10개(VOL · MACD · RSI · MFI · KDJ · OBV · CCI · StochRSI · WR · DMI)
+   *       를 다 세었고 스크롤도 없었습니다(422/422 · 598/598).
+   *       차트 시스템은 트레이딩뷰 관할이라 그래도 넣습니다.
+   *
+   * 기준선 없음 - ATR 은 늘 0 이상이고 종목 · 가격대마다 크기가 달라서
+   * 고정된 눈금선이 뜻을 갖지 못합니다. 트레이딩뷰도 안 그립니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    RMA 는 이전 값 하나만 있으면 됩니다. 창을 훑지 않습니다.
+   *        atr = ((p-1)·이전atr + TR) / p       곱셈 1 · 덧셈 1 · 나눗셈 1
+   *    TR 도 이전 종가 하나면 구해집니다. 그래서 상태가 { a, pc } 둘뿐입니다.
+   *    배열이 없어서 "그 자리에서 고쳐 쓰기" 걱정도 없습니다.
+   * ------------------------------------------------------------------- */
+
+  /** 봉 하나의 TR. pc(이전 종가)가 없으면 첫 봉이라 고-저 만 씁니다. */
+  function trueRange(high, low, pc) {
+    var r = high - low;
+    if (typeof pc !== "number") return r;
+    var a = high - pc;
+    if (a < 0) a = -a;
+    var b = low - pc;
+    if (b < 0) b = -b;
+    if (a > r) r = a;
+    if (b > r) r = b;
+    return r;
+  }
+
+  define({
+    id: "atr",
+    name: "ATR",
+    note: "평균실체범위 (변동성)",
+    pane: "sub",
+    params: { p: 14 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    nameOf: function (prm) {
+      return "ATR(" + prm.p + ")";
+    },
+    outputs: [{ key: "atr", kind: "line", color: "#B99264", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var n = bs.close.length;
+      var out = [];
+      if (n < p) return { atr: out };
+
+      var i;
+      var tr = new Array(n);
+      tr[0] = trueRange(bs.high[0], bs.low[0]);
+      for (i = 1; i < n; i++) tr[i] = trueRange(bs.high[i], bs.low[i], bs.close[i - 1]);
+
+      var sum = 0;
+      for (i = 0; i < p; i++) sum += tr[i];
+      var a = sum / p;
+      out.push({ time: bs.time[p - 1], value: a });
+      if (p - 1 === n - 2) cap.state = { a: a, pc: bs.close[p - 1] };
+
+      for (i = p; i < n; i++) {
+        a = ((p - 1) * a + tr[i]) / p;
+        out.push({ time: bs.time[i], value: a });
+        if (i === n - 2) cap.state = { a: a, pc: bs.close[i] };
+      }
+      return { atr: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var a = ((p - 1) * st.a + trueRange(bar.high, bar.low, st.pc)) / p;
+      /* 돌려주는 상태는 "이 봉이 닫혔다면" 의 상태입니다. 진행 중인 봉에
+         대해서는 틀이 이 상태를 ★버립니다★(6절 onTick). 그래서 몇 번을
+         다시 불러도 st 는 그대로고 답도 같습니다. */
+      return { values: { atr: a }, state: { a: a, pc: bar.close } };
+    }
+  });
+
+  /* -- StochRSI 스토캐스틱 RSI -------------------------------------------
+   * RSI 에 스토캐스틱을 한 번 더 씌운 것입니다. "RSI 가 요즘 값들 중 어디쯤인가"
+   * 를 봅니다. 그래서 RSI 보다 빨리 끝(0 · 100)에 닿습니다.
+   *
+   *   RSI   = 100 - 100/(1+RS),  RS = 평균상승/평균하락 (와일더 RMA)
+   *   Stoch = (RSI - RSI최저) / (RSI최고 - RSI최저) x 100    창 = 스토캐스틱 기간
+   *   %K    = Stoch 의 단순평균 (K 기간)
+   *   %D    = %K    의 단순평균 (D 기간)
+   *
+   *   ⚠️ 평균하락이 0 이면 100, 평균상승이 0 이면 0 으로 둡니다 -
+   *      트레이딩뷰 ta.rsi 가 그렇게 합니다(0/0 을 식 그대로 두면 NaN).
+   *
+   * ⭐ 기본값 14 · 14 · 3 · 3 - ★바이낸스와 트레이딩뷰가 같습니다.★
+   *    바이낸스 실측(2026-09-02 · Original 차트 > Sub Indicator > StochRSI)
+   *        "StochRSI - Stochastic RSI"
+   *        Length RSI 14 · Length Stoch 14 · Smooth K 3 · Smooth D 3
+   *        (설정 창 입력칸 네 개를 그대로 읽었습니다)
+   *    트레이딩뷰 도움말 "Stochastic RSI" - K 3 · D 3 · Source Close ·
+   *        예시가 "14 Period Stoch RSI". 두 곳이 같아 고를 것이 없었습니다.
+   *
+   * ⭐ 기준선 20 · 80 - 트레이딩뷰 기본 밴드입니다(도움말 Upper 80 · Lower 20).
+   *    RSI 의 30/70 과 다릅니다. StochRSI 가 끝에 더 자주 붙기 때문입니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    ① RSI      와일더 RMA. 이전 평균 둘(상승 · 하락)만 있으면 됩니다
+   *    ② RSI 최고 · 최저   KDJ 와 ★똑같은 링버퍼★ 입니다. 최고가 어느 칸인지
+   *       (hiIdx)를 들고 다녀 보통 비교 한 번. 최고이던 봉이 창에서 빠질 때만
+   *       훑는데, 그때도 ★봉 개수 n 이 아니라 기간 p★ 입니다
+   *    ③ %K · %D  굴러가는 합. 더하고 빼면 끝
+   *    평소 O(1) · 극값이 빠지는 드문 경우만 O(p). KDJ 와 같은 성질입니다.
+   *
+   * ⚠️ 버퍼를 그 자리에서 고쳐 쓰는 것이 왜 안전한가 (WMA · KDJ 와 같은 이유)
+   *    step 은 ★진행 중인 봉★ 때문에 같은 상태로 여러 번 불립니다. 그때
+   *    덮어쓰는 칸은 rb[rh] · kb[kh] · db[dh] ★세 칸뿐★ 이고, 굴러가는 합이
+   *    필요로 하는 "곧 빠질 값" 은 버퍼가 아니라 st.kold · st.dold 에 ★따로★
+   *    적어 두었습니다. 그래서 몇 번을 다시 불러도 답이 같습니다.
+   *    (rb 는 합을 안 쓰고 최고 · 최저만 보므로 따로 적을 것이 없습니다)
+   * ------------------------------------------------------------------- */
+
+  function srsiInit(sp, kp, dp) {
+    return {
+      /* RSI - m 은 지금까지 본 "변화량" 개수입니다(첫 봉은 변화량이 없습니다) */
+      pc: null, ag: 0, al: 0, m: 0,
+      /* RSI 의 최고 · 최저 창 */
+      rb: new Array(sp), rh: 0, rc: 0,
+      hiMax: -Infinity, hiIdx: -1, loMin: Infinity, loIdx: -1,
+      /* %K · %D 의 굴러가는 합 (kold · dold = 곧 창에서 빠질 값) */
+      kb: new Array(kp), kh: 0, kc: 0, ks: 0, kold: 0,
+      db: new Array(dp), dh: 0, dc: 0, ds: 0, dold: 0
+    };
+  }
+
+  /** seed 가 잡아 두는 상태는 배열까지 복사합니다 - 뒤이어 도는 봉이 같은
+   *  배열을 고쳐 쓰지 못하게. (켤 때 한 번뿐입니다) */
+  function srsiCopy(st) {
+    return {
+      pc: st.pc, ag: st.ag, al: st.al, m: st.m,
+      rb: st.rb.slice(), rh: st.rh, rc: st.rc,
+      hiMax: st.hiMax, hiIdx: st.hiIdx, loMin: st.loMin, loIdx: st.loIdx,
+      kb: st.kb.slice(), kh: st.kh, kc: st.kc, ks: st.ks, kold: st.kold,
+      db: st.db.slice(), dh: st.dh, dc: st.dc, ds: st.ds, dold: st.dold
+    };
+  }
+
+  /** 봉 하나를 처리합니다. seed 와 step 이 ★같은 함수★ 를 씁니다
+   *  (계산이 두 벌이 되면 켤 때와 틱이 어긋납니다). */
+  function srsiOne(st, close, rp, sp, kp, dp) {
+    var ag = st.ag, al = st.al, m = st.m;
+    var rsi = null;
+
+    if (st.pc !== null) {
+      var ch = close - st.pc;
+      var up = ch > 0 ? ch : 0;
+      var dn = ch < 0 ? -ch : 0;
+      m++;
+      if (m < rp) {
+        ag += up;                       /* 아직 모으는 중 */
+        al += dn;
+      } else if (m === rp) {
+        ag = (ag + up) / rp;            /* 앞 rp개의 단순평균으로 시작 */
+        al = (al + dn) / rp;
+      } else {
+        ag = ((rp - 1) * ag + up) / rp; /* 와일더 RMA */
+        al = ((rp - 1) * al + dn) / rp;
+      }
+      if (m >= rp) rsi = al === 0 ? 100 : (ag === 0 ? 0 : 100 - 100 / (1 + ag / al));
+    }
+
+    var vals = null;
+    var rb = st.rb, rh = st.rh, rc = st.rc;
+    var hiMax = st.hiMax, hiIdx = st.hiIdx, loMin = st.loMin, loIdx = st.loIdx;
+    var kb = st.kb, kh = st.kh, kc = st.kc, ks = st.ks, kold = st.kold;
+    var db = st.db, dh = st.dh, dc = st.dc, ds = st.ds, dold = st.dold;
+    var a, v;
+
+    if (rsi !== null) {
+      rb[rh] = rsi;                     /* 덮어쓰는 칸은 여기 하나뿐 */
+
+      if (rsi >= hiMax) {
+        hiMax = rsi;
+        hiIdx = rh;
+      } else if (hiIdx === rh) {        /* 최고이던 봉이 창에서 빠졌습니다 */
+        hiMax = -Infinity;
+        hiIdx = -1;
+        for (a = 0; a < sp; a++) {
+          v = rb[a];
+          if (v === undefined) continue;
+          if (v > hiMax) { hiMax = v; hiIdx = a; }
+        }
+      }
+
+      if (rsi <= loMin) {
+        loMin = rsi;
+        loIdx = rh;
+      } else if (loIdx === rh) {
+        loMin = Infinity;
+        loIdx = -1;
+        for (a = 0; a < sp; a++) {
+          v = rb[a];
+          if (v === undefined) continue;
+          if (v < loMin) { loMin = v; loIdx = a; }
+        }
+      }
+
+      rh = (rh + 1) % sp;
+      if (rc < sp) rc++;
+
+      if (rc >= sp) {
+        /* 창이 한 값으로 평평하면 나눌 것이 없습니다 - 0 으로 둡니다 */
+        var stoch = hiMax > loMin ? ((rsi - loMin) / (hiMax - loMin)) * 100 : 0;
+
+        ks = ks + stoch - (kc >= kp ? kold : 0);
+        kb[kh] = stoch;
+        kh = (kh + 1) % kp;
+        if (kc < kp) kc++;
+        kold = kb[kh];                  /* 다음에 빠질 값 - ★쓴 뒤에★ 읽습니다 */
+
+        if (kc >= kp) {
+          var kv = ks / kp;
+          ds = ds + kv - (dc >= dp ? dold : 0);
+          db[dh] = kv;
+          dh = (dh + 1) % dp;
+          if (dc < dp) dc++;
+          dold = db[dh];
+          if (dc >= dp) vals = { k: kv, d: ds / dp };
+        }
+      }
+    }
+
+    return {
+      values: vals,
+      state: {
+        pc: close, ag: ag, al: al, m: m,
+        rb: rb, rh: rh, rc: rc,
+        hiMax: hiMax, hiIdx: hiIdx, loMin: loMin, loIdx: loIdx,
+        kb: kb, kh: kh, kc: kc, ks: ks, kold: kold,
+        db: db, dh: dh, dc: dc, ds: ds, dold: dold
+      }
+    };
+  }
+
+  define({
+    id: "srsi",
+    name: "StochRSI",
+    note: "RSI 에 스토캐스틱을 다시 씌운 것",
+    pane: "sub",
+    params: { rp: 14, sp: 14, k: 3, d: 3 },
+    inputs: [
+      { key: "rp", label: "RSI 기간", min: 1, max: 1000 },
+      { key: "sp", label: "스토캐스틱 기간", min: 1, max: 1000 },
+      { key: "k", label: "%K 기간", min: 1, max: 100 },
+      { key: "d", label: "%D 기간", min: 1, max: 100 }
+    ],
+    nameOf: function (prm) {
+      return "StochRSI(" + prm.rp + "," + prm.sp + "," + prm.k + "," + prm.d + ")";
+    },
+    outputs: [
+      { key: "k", kind: "line", color: "#4974E9", style: "solid" },
+      { key: "d", kind: "line", color: "#F292DE", style: "solid" }
+    ],
+    guides: [{ price: 80 }, { price: 20 }],
+
+    seed: function (bs, prm, cap) {
+      var rp = Math.max(1, prm.rp | 0);
+      var sp = Math.max(1, prm.sp | 0);
+      var kp = Math.max(1, prm.k | 0);
+      var dp = Math.max(1, prm.d | 0);
+      var n = bs.close.length;
+      var outK = [], outD = [];
+      var st = srsiInit(sp, kp, dp);
+
+      for (var i = 0; i < n; i++) {
+        var r = srsiOne(st, bs.close[i], rp, sp, kp, dp);
+        st = r.state;
+        if (r.values) {
+          outK.push({ time: bs.time[i], value: r.values.k });
+          outD.push({ time: bs.time[i], value: r.values.d });
+        }
+        if (i === n - 2) cap.state = srsiCopy(st);
+      }
+      return { k: outK, d: outD };
+    },
+
+    step: function (st, bar, prm) {
+      var r = srsiOne(
+        st, bar.close,
+        Math.max(1, prm.rp | 0), Math.max(1, prm.sp | 0),
+        Math.max(1, prm.k | 0), Math.max(1, prm.d | 0)
+      );
+      return { values: r.values || {}, state: r.state };
+    }
+  });
+
+  /* -- CCI 상품채널지수 -------------------------------------------------
+   *   TP  = (고 + 저 + 종) / 3                      <- 값 종류 기본이 이것입니다
+   *   MD  = (1/p) · Σ |TP_i - SMA(TP,p)|             평균편차
+   *   CCI = (TP - SMA(TP,p)) / (0.015 · MD)
+   *
+   * ⭐ 기본 기간 20 · 값 종류 (고+저+종)/3 - ★트레이딩뷰 기준★ 입니다.
+   *    (2026-09-02 트레이딩뷰 도움말 "Commodity Channel Index (CCI)" -
+   *     "The time period to be used in calculating the SMA portion of the
+   *      CCI (20 is the default)")
+   *    ⚠️ ★바이낸스는 9 입니다★ - 2026-09-02 Original 차트 > Sub Indicator >
+   *       CCI 설정 창의 Length 칸을 직접 읽었습니다. 입력칸이 그것 하나뿐이었습니다.
+   *       WMA 때와 같은 갈림인데, 대표 지시가 "차트 시스템은 트레이딩뷰를
+   *       따라간다" 라 20 으로 갑니다. 바이낸스처럼 보고 싶으면 기간만 9 로
+   *       고쳐 한 줄 더 얹으면 됩니다 - "정의 1개 + 인스턴스 N개" 인 이유입니다.
+   *    ⚠️ 값 종류 - 도움말에는 "Close is the default" 라고 적혀 있는데, ★식이
+   *       말해 줍니다.★ 위 TP 가 곧 (고+저+종)/3 이고, 종가로 계산하면 그건
+   *       CCI 가 아닙니다. 그래서 기본을 hlc3 으로 두고, 트레이딩뷰처럼
+   *       회원이 값 종류를 바꿀 수 있게 열어 두었습니다.
+   *       (앱 안 설정 창은 회원가입 창이 막아 못 열었습니다 - 도움말 문서 값입니다)
+   *
+   * ⭐ 기준선 +100 · 0 · -100 - 식의 0.015 라는 상수가 "값이 보통 ±100 안에
+   *    들어오게" 맞춘 것이라, ±100 이 이 지표의 눈금 그 자체입니다.
+   *
+   * ⚠️ 색 - 여기 적힌 #BA6EED 는 ★기본 인스턴스 EMA(21) 와 같은 색★ 입니다.
+   *    LINE_COLORS 12색이 이제 꽉 찼습니다(기존 MA 3 + 정의 9). 겹치는 것을
+   *    피할 수 없어서, ★한 칸 안에서 겹치지 않는 쌍★ 을 골랐습니다 -
+   *    EMA(21) 은 주 차트고 CCI 는 아래 칸이라 같은 눈금 위에 안 놓입니다.
+   *    (아래 칸끼리 겹치면 위아래로 나란히 놓여 비교하게 되니 더 나쁩니다)
+   *    회원이 "지표 추가" 에서 고르면 어차피 틀의 suggestColor() 가 아직 아무도
+   *    안 쓴 색을 먼저 줍니다 - 이 색은 그때 못 고른 경우의 되돌아갈 자리입니다.
+   *
+   * -- ⚠️ step 이 O(1) 이 ★아닙니다★. O(p) 입니다 -----------------------
+   *    이 틀의 다른 지표는 전부 O(1) 인데 CCI 만 다릅니다. 계산식 때문입니다.
+   *        MD = (1/p) · Σ |TP_i - SMA|     <- 절댓값 안에 ★현재★ SMA 가 있음
+   *    SMA 는 굴러가는 합으로 O(1) 인데, ★SMA 가 매 봉 바뀌면 p개 항이 전부
+   *    같이 바뀝니다.★ 그래서 창을 다시 훑는 것 말고 방법이 없습니다.
+   *    (KDJ · StochRSI 는 "극값이 빠질 때만" O(p) 인데 CCI 는 항상입니다)
+   *
+   *    ⭐ 그래서 비싼가 - 재 봤습니다. 안 비쌉니다.
+   *       (틀의 step 을 그대로 20만 회 부른 실측 · 예열 뒤 · 봉 1006개)
+   *          기간   2   step 0.000579 ms   초당 50틱 0.029 ms/초   한 장의 0.0035%
+   *          기간   9   step 0.001936 ms   초당 50틱 0.097 ms/초   한 장의 0.0116%
+   *          기간  20   step 0.003874 ms   초당 50틱 0.194 ms/초   한 장의 0.0232%
+   *          기간 100   step 0.018653 ms   초당 50틱 0.933 ms/초   한 장의 0.1117%
+   *       O(1) 인 다른 지표와 견주면 - EMA 0.000217 · WMA 0.000232 ·
+   *       ATR 0.000226 · KDJ 0.000628 · StochRSI 0.000853 ms
+   *       CCI(20)가 제일 비싸지만 그래도 ★화면 한 장의 0.02%★ 입니다.
+   *    값을 근사치(제곱 기반)로 바꾸면 O(1) 이 되지만 ★트레이딩뷰와 숫자가
+   *    달라집니다.★ 0.02% 를 아끼려고 값을 틀리게 만들지 않습니다.
+   *    (2026-09-02 PM 결정 - "CCI 에는 O(1) 지시가 틀렸다. 그대로 진행하고
+   *     주석에 근거를 적어라")
+   *
+   * ⚠️ 평균(SMA)도 창을 훑어 구합니다 - 굴러가는 합을 안 씁니다.
+   *    처음엔 합을 굴렸는데(O(1)), 봉 1000개를 지나며 반올림 오차가 쌓여
+   *    ★기간 2 에서 값이 최대 4.3e-6 어긋났습니다★(1005개 중 2개).
+   *    평균편차 때문에 어차피 창을 한 바퀴 도는데, 그 김에 합도 같이 구하면
+   *    오차가 사라집니다. O(p) 가 O(p) 그대로라 ★값은 공짜로 정확해집니다.★
+   *    (고친 뒤 실측 - 기간 2 · 9 · 20 · 100 전부 최대 오차 2.0e-10 이하)
+   *
+   * ⚠️ buf 를 그 자리에서 고쳐 쓰는 것은 WMA 와 같은 이유로 안전합니다.
+   *    덮어쓰는 칸은 head ★하나뿐★ 이고, 값은 그 칸까지 포함한 창 전체를
+   *    다시 훑어 냅니다. 그래서 같은 상태로 몇 번을 다시 불러도 답이 같습니다.
+   *    (굴러가는 합을 안 쓰니 "곧 빠질 값" 을 따로 적어 둘 일도 없습니다)
+   * ------------------------------------------------------------------- */
+
+  function cciCopy(st) {
+    return { buf: st.buf.slice(), head: st.head, c: st.c };
+  }
+
+  /** 창에 값 하나를 넣고 CCI 를 냅니다. 창이 덜 찼으면 null. */
+  function cciOne(st, x, p) {
+    st.buf[st.head] = x;                    /* 덮어쓰는 칸은 여기 하나뿐 */
+    var head = (st.head + 1) % p;
+    var c = st.c < p ? st.c + 1 : st.c;
+
+    var v = null;
+    if (c >= p) {
+      var i, sum = 0;
+      for (i = 0; i < p; i++) sum += st.buf[i];                      /* <- O(p) */
+      var sma = sum / p;
+      var md = 0;
+      for (i = 0; i < p; i++) md += Math.abs(st.buf[i] - sma);       /* <- O(p) */
+      md /= p;
+      v = md > 0 ? (x - sma) / (0.015 * md) : 0;
+    }
+    return { value: v, state: { buf: st.buf, head: head, c: c } };
+  }
+
+  define({
+    id: "cci",
+    name: "CCI",
+    note: "상품채널지수",
+    pane: "sub",
+    params: { p: 20 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    srcDefault: "hlc3",
+    nameOf: function (prm) {
+      return "CCI(" + prm.p + ")";
+    },
+    outputs: [{ key: "cci", kind: "line", color: "#BA6EED", style: "solid" }],
+    guides: [{ price: 100 }, { price: 0, style: "dotted" }, { price: -100 }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      var st = { buf: new Array(p), head: 0, c: 0 };
+
+      for (var i = 0; i < n; i++) {
+        var r = cciOne(st, src[i], p);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = cciCopy(st);
+      }
+      return { cci: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var r = cciOne(st, x, p);
+      return { values: r.value === null ? {} : { cci: r.value }, state: r.state };
+    }
+  });
+
   /* 처음 오는 회원에게 주는 기본 인스턴스 - 전부 꺼짐입니다.
      정의는 "ema" 하나인데 인스턴스가 둘입니다. 이것이 이번 증명입니다. */
   var DEFAULT_INSTANCES = [
@@ -1910,6 +2495,16 @@ App.ChartIndicatorKit = (function () {
     },
     getDefsForTest: function () {
       return defs;
+    },
+    /** 지금 화면에 붙어 있는 기준선 개수 - 켰다 껐다 한 뒤 0 인지 세는 용도.
+     *  (끈 지표의 기준선만 남는 조용한 고장을 눈이 아니라 숫자로 잡습니다) */
+    getGuideCountForTest: function () {
+      var n = 0;
+      for (var i = 0; i < instOrder.length; i++) {
+        var L = insts[instOrder[i]].live;
+        if (L && L.guides) n += L.guides.length;
+      }
+      return n;
     },
     onTickForTest: onTick,
     rebuildButtonsForTest: buildButtons
