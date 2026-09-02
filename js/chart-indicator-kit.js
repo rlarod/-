@@ -593,9 +593,27 @@ App.ChartIndicatorKit = (function () {
      *
      *   min · max    있으면 그 범위로 고정합니다(autoscaleInfoProvider)
      *   top · bottom 칸 위 · 아래 여백 비율(0~0.45). 없으면 라이브러리 기본
+     *   keepGuides   ★범위는 데이터에 맡기되 기준선만은 늘 안에 넣습니다★
      *
      * ⚠️ 주 칸(main)에는 못 씁니다 - 캔들과 같은 가격축이라 0~100 으로
      *    고정하면 캔들이 사라집니다. 그래서 아래에서 거부합니다.
+     *
+     * -- ⭐ keepGuides - 0~100 이 ★아닌★ 지표를 위한 세 번째 길 (2026-09-03)
+     *    CCI 는 ±100 을 넘나듭니다. min/max 로 고정하면 큰 값이 잘리고,
+     *    아무것도 안 걸면 한쪽으로 쏠린 장에서 ±100 · 0 이 ★셋 다 화면 밖★
+     *    으로 나갑니다 (기록팀 재현 - 단조 상승 300봉에서 값 126.7 고정).
+     *
+     *    트레이딩뷰가 이 상황을 어떻게 하는지 - Pine 의 hline 은 ★그림이
+     *    아니라 눈금에 참여하는 값★ 입니다. 그래서 CCI 칸은 값이 아무리
+     *    좁아도 ±100 이 늘 보입니다("hline 때문에 눈금이 늘어난다" 는
+     *    트레이딩뷰 쪽 흔한 하소연이 그 증거입니다).
+     *    keepGuides 는 그것과 같은 뜻입니다 -
+     *        범위 = [데이터 최소, 데이터 최대] ∪ [기준선 최소, 기준선 최대]
+     *
+     *    ⚠️ MACD 에는 안 붙였습니다. 값이 0 을 늘 오가서 0선이 저절로
+     *       안에 들어오고, 다른 팀 봉인이 "MACD 는 autoscaleInfoProvider 를
+     *       안 건다" 를 검사합니다. 그래서 ★스스로 켜지지 않는★ 옵션입니다 -
+     *       적은 지표에만 걸립니다.
      * ===================================================================== */
     var scale = null;
     if (def.scale !== undefined && def.scale !== null) {
@@ -621,11 +639,23 @@ App.ChartIndicatorKit = (function () {
         mar[mk] = sc[mk];
       });
       if (mbad) return no(mbad + ": " + def.id);
+      /* keepGuides - 기준선이 없으면 넣을 것이 없고, min/max 로 이미 고정했으면
+         할 일이 겹칩니다. 둘 다 조용히 넘기지 않고 그 자리에서 거부합니다 */
+      var keepG = false;
+      if (sc.keepGuides !== undefined && sc.keepGuides !== null) {
+        if (sc.keepGuides !== true && sc.keepGuides !== false) {
+          return no("scale.keepGuides 는 true/false 여야 합니다: " + def.id);
+        }
+        keepG = sc.keepGuides === true;
+      }
+      if (keepG && hasMin) return no("scale.keepGuides 와 min/max 는 같이 못 씁니다: " + def.id);
+      if (keepG && !guides.length) return no("scale.keepGuides 는 기준선(guides)이 있어야 뜻이 있습니다: " + def.id);
       scale = {
         min: hasMin ? sc.min : null,
         max: hasMin ? sc.max : null,
         top: mar.top === undefined ? null : mar.top,
-        bottom: mar.bottom === undefined ? null : mar.bottom
+        bottom: mar.bottom === undefined ? null : mar.bottom,
+        keepGuides: keepG
       };
     }
 
@@ -1348,6 +1378,32 @@ App.ChartIndicatorKit = (function () {
     };
   }
 
+  /** 13.1 keepGuides - 데이터 범위에 기준선 값을 ★더해서★ 돌려줍니다.
+   *  트레이딩뷰의 hline 이 눈금에 참여하는 것과 같은 뜻입니다(위 13.1 절 참조).
+   *  ⚠️ original() 은 라이브러리가 넘겨 주는 "원래 계산한 범위" 입니다.
+   *     못 받거나(테스트용 가짜 시리즈) 비어 있으면 기준선 범위만 돌려줍니다 -
+   *     그래도 기준선은 보입니다. */
+  function guideScaleProvider(prices) {
+    var lo = Math.min.apply(null, prices);
+    var hi = Math.max.apply(null, prices);
+    return function (original) {
+      var res = null;
+      try {
+        if (isFn(original)) res = original();
+      } catch (e) {
+        res = null;
+      }
+      if (!res || !res.priceRange) return { priceRange: { minValue: lo, maxValue: hi } };
+      var mn = res.priceRange.minValue;
+      var mx = res.priceRange.maxValue;
+      if (typeof mn !== "number" || !isFinite(mn)) mn = lo;
+      if (typeof mx !== "number" || !isFinite(mx)) mx = hi;
+      var out = { priceRange: { minValue: Math.min(mn, lo), maxValue: Math.max(mx, hi) } };
+      if (res.margins) out.margins = res.margins;
+      return out;
+    };
+  }
+
   /** 13.1 칸 위·아래 여백. 시리즈 하나에만 걸면 그 칸 전체에 걸립니다. */
   function applyScaleMargins(host, d) {
     if (!host || !d || !d.scale) return false;
@@ -1378,6 +1434,10 @@ App.ChartIndicatorKit = (function () {
     if (d && d.unit === "price") opts.priceFormat = priceUnitFormat();
     /* 13.1 눈금 고정 (RSI 0~100). 아래 칸에서만 - 위에서 main 은 거부합니다 */
     if (d && d.scale && d.scale.min !== null) opts.autoscaleInfoProvider = fixedScaleProvider(d.scale);
+    /* 13.1 keepGuides (CCI) - 고정은 안 하고 기준선만 늘 눈금 안에 넣습니다 */
+    else if (d && d.scale && d.scale.keepGuides && d.guides && d.guides.length) {
+      opts.autoscaleInfoProvider = guideScaleProvider(d.guides.map(function (g) { return g.price; }));
+    }
     if (kind === "line") {
       opts.lineWidth = it.width || DEFAULT_WIDTH;
       opts.lineStyle = styleOf(it.style || out.style);
@@ -3836,6 +3896,14 @@ App.ChartIndicatorKit = (function () {
       { key: "d", kind: "line", color: "#F292DE", style: "solid" }
     ],
     guides: [{ price: 80 }, { price: 20 }],
+    /* 13.1 눈금 0~100 고정 - RSI 와 같습니다. StochRSI 는 정의상 0~100 밖으로
+       못 나갑니다(RSI 를 그 창의 최고 · 최저로 0~100 에 다시 눕힌 값이라).
+       ⚠️ 안 걸면 값이 한쪽에 붙어 있을 때 눈금이 그 좁은 폭으로 오그라들고
+          20 · 80 이 ★둘 다 화면 밖★ 으로 나갑니다. 2026-09-03 기록팀 재현 -
+          단조 상승 300봉에서 값 0.0 고정 · 기준선 둘 다 밖.
+       ⚠️ 여백 0.12 는 RSI 와 같은 값입니다 - 같은 0~100 칸이 지표마다 다른
+          여백을 쓰면 선이 같은 높이에 안 놓입니다. */
+    scale: { min: 0, max: 100, top: 0.12, bottom: 0.12 },
 
     seed: function (bs, prm, cap) {
       var rp = Math.max(1, prm.rp | 0);
@@ -3969,6 +4037,13 @@ App.ChartIndicatorKit = (function () {
     },
     outputs: [{ key: "cci", kind: "line", color: "#C1BAF3", style: "solid" }],
     guides: [{ price: 100 }, { price: 0, style: "dotted" }, { price: -100 }],
+    /* 13.1 ★고정하지 않습니다★ - CCI 는 0~100 짜리가 아닙니다. ±100 을
+       예사로 넘고, 고정하면 그 봉우리가 통째로 잘립니다. 그렇다고 아무것도
+       안 걸면 한쪽으로 쏠린 장에서 ±100 · 0 이 ★셋 다★ 화면 밖으로
+       나갑니다(2026-09-03 기록팀 재현 - 값 126.7 고정).
+       그래서 세 번째 길 - 범위는 데이터에 맡기고 기준선만 늘 안에 넣습니다.
+       트레이딩뷰의 hline 이 눈금에 참여하는 것과 같은 뜻입니다(위 13.1 절). */
+    scale: { keepGuides: true },
 
     seed: function (bs, prm, cap) {
       var p = Math.max(1, prm.p | 0);
@@ -4484,6 +4559,12 @@ App.ChartIndicatorKit = (function () {
       { key: "d", kind: "line", color: "#FF8F3C", style: "solid" }
     ],
     guides: [{ price: 80 }, { price: 20 }],
+    /* 13.1 눈금 0~100 고정 - RSI · StochRSI 와 같습니다. %K 는 "최근 폭에서
+       종가의 자리" 라 0~100 밖으로 못 나가고(%D 는 그 평균이라 마찬가지),
+       트레이딩뷰 내장 Stochastic 칸도 0~100 입니다.
+       ⚠️ 2026-09-03 기록팀 재현 - 단조 상승 300봉에서 값 98.2 고정 ·
+          기준선 20 · 80 이 둘 다 화면 밖. */
+    scale: { min: 0, max: 100, top: 0.12, bottom: 0.12 },
 
     seed: function (bs, prm, cap) {
       var p = Math.max(1, prm.p | 0);
