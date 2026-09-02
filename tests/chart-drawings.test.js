@@ -129,7 +129,10 @@ const M = runModule();
 {
   const left = M.TOOLS.left.filter((t) => !t.sep && !t.spacer);
   const top = M.TOOLS.top.filter((t) => !t.sep && !t.spacer);
-  ok("세로 막대 도구가 11개다", left.length === 11, "지금 " + left.length + "개");
+  /* 2026-09-03 18차 — 차트팀이 수직선·사각형·화살표 셋을 열어 11 -> 14 가 됐습니다.
+     기준을 낮추거나 올린 것이 아니라 "지금 무엇이 있는지" 로 맞춘 것입니다.
+     LEFT_TOOLS 를 직접 열어 sep 를 뺀 도구가 14개임을 세고 적었습니다. */
+  ok("세로 막대 도구가 14개다", left.length === 14, "지금 " + left.length + "개");
   ok("가로 막대 도구가 7개다", top.length === 7, "지금 " + top.length + "개");
 
   const ready = M.TOOLS.ready;
@@ -143,8 +146,11 @@ const M = runModule();
      이제 세로 막대에 준비중은 하나도 없습니다.
      확인한 자리 — js/chart-drawings.js 의 LEFT_TOOLS 를 직접 열어 ready:false 가
      하나도 없음을 보고 맞췄습니다. READY_TOOLS 에도 wave · face 가 들어왔습니다. */
-  ok("세로 도구 열한 개가 전부 실제로 된다 (2026-09-02 파동·표정을 열어 준비중 0)",
-    readyLeft === "brush,channel,cursor,face,fib,hline,ruler,text,trend,wave,zoom", readyLeft);
+  /* 2026-09-03 18차 — 수직선(vline)·사각형(rect)·화살표(arrow) 를 열어
+     열하나 -> 열넷이 됐습니다. 조사팀 아침 격차표 [A] 건입니다
+     (트레이딩뷰에는 있는데 우리에게만 없던 가장 기본 도형 셋). */
+  ok("세로 도구 열네 개가 전부 실제로 된다 (2026-09-03 수직선·사각형·화살표를 열어 준비중 0)",
+    readyLeft === "arrow,brush,channel,cursor,face,fib,hline,rect,ruler,text,trend,vline,wave,zoom", readyLeft);
 
   /* 준비중이라고 그린 것은 실제로도 고를 수 없어야 합니다 */
   const lying = left.filter((t) => !t.ready && ready[t.k]);
@@ -388,15 +394,18 @@ const M = runModule();
   ok("자 — 5분은 5분", M.fmtSpan(5 * 60) === "5분", M.fmtSpan(5 * 60));
   ok("자 — 거꾸로 잰 것도 같은 길이", M.fmtSpan(-5 * 60) === "5분", M.fmtSpan(-5 * 60));
 
-  ok("두 점으로 만드는 도구는 추세선·피보나치·자 셋이다",
-    Object.keys(M.TOOLS.twoPoint).sort().join(",") === "fib,ruler,trend",
+  /* 2026-09-03 18차 — 사각형·화살표가 들어와 셋 -> 다섯이 됐습니다.
+     둘 다 "두 점을 찍어 그림으로 남는" 도구라 같은 길을 그대로 탑니다. */
+  ok("두 점으로 만드는 도구는 추세선·피보나치·자·사각형·화살표 다섯이다",
+    Object.keys(M.TOOLS.twoPoint).sort().join(",") === "arrow,fib,rect,ruler,trend",
     Object.keys(M.TOOLS.twoPoint).sort().join(","));
 }
 
 /* ---------- 7-1) 돋보기 (2026-08-27) ---------- */
 {
-  ok("두 번 톡 하는 도구는 추세선·피보나치·자·돋보기 넷이다",
-    Object.keys(M.TOOLS.twoTap).sort().join(",") === "fib,ruler,trend,zoom",
+  /* 2026-09-03 18차 — 사각형·화살표가 들어와 넷 -> 여섯이 됐습니다. */
+  ok("두 번 톡 하는 도구는 추세선·피보나치·자·돋보기·사각형·화살표 여섯이다",
+    Object.keys(M.TOOLS.twoTap).sort().join(",") === "arrow,fib,rect,ruler,trend,zoom",
     Object.keys(M.TOOLS.twoTap).sort().join(","));
 
   /* 돋보기는 그림이 아닙니다 — 저장에 남으면 새로고침 때 유령이 생깁니다 */

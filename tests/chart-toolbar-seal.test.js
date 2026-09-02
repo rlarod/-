@@ -278,7 +278,11 @@ ok("폰 .tlc-toolbar 도 overflow:visible 이다 (데스크톱의 overflow-x:aut
    ★ 여기는 반드시 "폰 값(M_BTN)" 으로 잽니다. 데스크톱 값(BTN)으로 재면
      2026-08-26 처럼 폰/데스크톱이 갈린 뒤로는 틀린 답이 나옵니다. */
 {
-  const 세로도구수 = 11;
+  /* 2026-09-03 18차 — 수직선·사각형·화살표가 들어와 11 -> 14.
+     360 에서 한 줄 7칸이라 딱 두 줄(7 + 7)이고, 마지막 줄에 7개가 남습니다.
+     아래 세 검사가 그것을 그대로 다시 계산합니다 — 숫자만 바꾼 것이 아니라
+     "세 줄이 되지 않는다 / 마지막 줄에 둘 이상" 이 여전히 참인지 봅니다. */
+  const 세로도구수 = 14;
   const 가로도구수 = 7;
   const 폰차트칸 = 330; /* 2026-08-25 360 화면 localhost 실측 — .chart-wrap 330px */
   const 한줄칸수 = Math.floor(폰차트칸 / M_BTN);
@@ -350,7 +354,8 @@ const A = boot({ width: 1920 });
 const railBtns = Array.from(A.win.document.querySelectorAll(".tlc-rail .tlc-btn"));
 const barBtns = Array.from(A.win.document.querySelectorAll(".tlc-toolbar .tlc-btn"));
 
-ok("세로 막대 버튼 11개가 실제로 그려진다", railBtns.length === 11, "지금 " + railBtns.length + "개");
+ok("세로 막대 버튼 14개가 실제로 그려진다 (2026-09-03 수직선·사각형·화살표를 열어 11 -> 14)",
+  railBtns.length === 14, "지금 " + railBtns.length + "개");
 ok("가로 막대 버튼 7개가 실제로 그려진다", barBtns.length === 7, "지금 " + barBtns.length + "개");
 ok("차트 칸이 .tlc-body 안으로 들어갔다",
   !!A.win.document.querySelector(".tlc-body > .chart-wrap"));
@@ -422,11 +427,12 @@ ok("가로 막대 준비중이 0개다 (2026-09-02 알람을 열어 1 -> 0)",
    하나라도 잠기면 여기서 걸립니다. 누가 fx 를 도로 잠그면 개수는 1 이 되어
    위 검사에서 걸리고, 이름은 여기서 걸립니다. (2026-09-02) */
 {
-  const wantRail = "brush,channel,cursor,face,fib,hline,ruler,text,trend,wave,zoom";
+  /* 2026-09-03 18차 — arrow · rect · vline 셋이 늘었습니다 */
+  const wantRail = "arrow,brush,channel,cursor,face,fib,hline,rect,ruler,text,trend,vline,wave,zoom";
   const wantBar = "alert,camera,candletype,expand,fullscreen,fx,hex";
   const gotRail = railBtns.map((b) => b.getAttribute("data-tlc")).sort().join(",");
   const gotBar = barBtns.map((b) => b.getAttribute("data-tlc")).sort().join(",");
-  ok("세로 막대 단추 열한 개가 이름 그대로 전부 그려진다", gotRail === wantRail, gotRail);
+  ok("세로 막대 단추 열네 개가 이름 그대로 전부 그려진다", gotRail === wantRail, gotRail);
   ok("가로 막대 단추 일곱 개가 이름 그대로 전부 그려진다", gotBar === wantBar, gotBar);
   const anySoon = railBtns.concat(barBtns).filter((b) => b.hasAttribute("data-soon"))
     .map((b) => b.getAttribute("data-tlc"));
@@ -565,8 +571,8 @@ function click(btn) {
   const body = P.win.document.querySelector(".tlc-body");
   ok("폰(360)에서는 세로 막대가 접힌 채로 시작한다", body.getAttribute("data-rail") === "off",
     body.getAttribute("data-rail"));
-  ok("접혀 있어도 버튼 11개는 그대로 남아 있다 (지운 게 아니라 접은 것)",
-    P.win.document.querySelectorAll(".tlc-rail .tlc-btn").length === 11);
+  ok("접혀 있어도 버튼 14개는 그대로 남아 있다 (지운 게 아니라 접은 것)",
+    P.win.document.querySelectorAll(".tlc-rail .tlc-btn").length === 14);
   P.M.toggleRail();
   ok("폰에서 접기/펴기를 누르면 펴진다", body.getAttribute("data-rail") === "on");
   P.win.close();

@@ -42,7 +42,13 @@ function 가짜컨텍스트() {
     stroke() { 기록.push({ op: "stroke", w: c.lineWidth, color: c.strokeStyle }); },
     fill() { 기록.push({ op: "fill", color: c.fillStyle }); },
     setLineDash(d) { c._대시 = (d || []).slice(); },
-    arc() {}, rect() {}, fillRect() {}, strokeRect() {},
+    arc() {}, rect() {},
+    /* 2026-09-03 18차 — 네모를 그리는 두 붓질도 받아 둡니다.
+       사각형(rect)이 이 둘로만 그려져서, 안 받아 두면 "그렸는지" 를 못 봅니다.
+       op 이름을 stroke/fill 과 다르게 두었습니다 — 기존 봉인들이
+       op === "stroke" · "fill" 로 세고 있어서 그 숫자를 건드리면 안 됩니다. */
+    fillRect(x, y, w, h) { 기록.push({ op: "fillRect", x: x, y: y, w: w, h: h, color: c.fillStyle }); },
+    strokeRect(x, y, w, h) { 기록.push({ op: "strokeRect", x: x, y: y, w: w, h: h, color: c.strokeStyle, lw: c.lineWidth }); },
     save() {}, restore() {}, clip() {},
     fillText(s, x, y) { 기록.push({ op: "text", s: s, x: x, y: y }); },
     strokeText() {},

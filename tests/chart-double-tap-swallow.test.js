@@ -105,8 +105,11 @@ console.log("\n빠른 두 번 톡이 삼켜진다 — 지금 이렇다는 기록
   const threeTap = (SRC.match(/var THREE_TAP = \{([^}]*)\}/) || [])[1] || "";
   const 이름들 = (twoTap + "," + threeTap).split(",")
     .map((s) => s.split(":")[0].trim()).filter(Boolean).sort().join(",");
-  ok("영향을 받는 도구가 추세선·피보나치·자·돋보기·여러선 다섯이다 (PM 지시문에는 돋보기가 빠져 있었습니다)",
-    이름들 === "channel,fib,ruler,trend,zoom", 이름들);
+  /* 2026-09-03 18차 — 사각형(rect)·화살표(arrow) 가 같은 길로 들어와 다섯 -> 일곱.
+     둘 다 chart.subscribeClick 한 길만 씁니다(따로 만든 입구가 없습니다).
+     그래서 라이브러리가 두 번째 톡을 삼키면 이 둘도 같이 영향을 받습니다. */
+  ok("영향을 받는 도구가 추세선·피보나치·자·돋보기·여러선·사각형·화살표 일곱이다",
+    이름들 === "arrow,channel,fib,rect,ruler,trend,zoom", 이름들);
 
   /* 브러시만 다른 길입니다 — 끌어서 긋기라 포인터를 직접 받습니다.
      그래서 브러시는 이 현상의 영향을 받지 않습니다. 이것도 같이 못 박습니다. */

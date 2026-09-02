@@ -123,6 +123,29 @@
  *   자세한 것은 아래 CATCHUP_* 주석에 있습니다. 되돌리는 법도 거기 있습니다.
  *   주의 — 되돌리기(Ctrl+Z)는 12차·13차 그대로 알람을 건드리지 않습니다.
  *
+ * 18차(2026-09-03)에서 연 것 — 수직선 · 사각형 · 화살표 (세로 막대)
+ *   트레이딩뷰에는 있는데 우리에게만 없던 가장 기본 도형 셋입니다(조사팀 [A]).
+ *   수직선  한 번 톡. 「수평선의 짝」 이라 가로가 아니라 세로로 긋습니다.
+ *           다만 저장 자리가 다릅니다 — 수평선은 가격만 써서 종목별이고,
+ *           수직선은 시간에 매달린 그림이라 종목 + 봉 간격별입니다.
+ *           (1분봉에 그은 세로선을 1일봉에 그대로 옮기면 화면 밖으로 나갑니다)
+ *           라이브러리에 세로선용 createPriceLine 같은 것이 없어서,
+ *           다른 그림과 같은 붓(프리미티브)으로 판 높이만큼 긋습니다.
+ *   사각형  두 번 톡. 구간을 네모로 묶습니다. 모서리 4곳 + 변 4곳을 잡아
+ *           늘립니다(손잡이 8개). 안쪽 채움은 그린 색 그대로 10% 입니다
+ *           — 자(ruler) 상자와 같은 진하기입니다.
+ *   화살표  두 번 톡. 두 번째 점 쪽에 머리가 붙습니다(방향을 가리킴).
+ *   세짝 다 되돌리기(Ctrl+Z) · 그린 것 목록 · 잠금 · 숨김 · 색 · 굵기 ·
+ *   계속 그리기에 그대로 들어갑니다 — 따로 붙인 것이 아니라 기존 길을
+ *   그대로 타기 때문입니다(shapes() · geomOf · shapeHandles).
+ *   색을 새로 만들지 않았습니다 — DRAW_COLORS 8색 그대로입니다.
+ *   되돌리려면 — LEFT_TOOLS 의 vline · rect · arrow 세 줄을 지우고,
+ *   READY_TOOLS 에서 셋을, TWO_POINT · TWO_TAP 에서 rect · arrow 를 빼면
+ *   끝입니다. 이미 그려 둔 것은 저장에 남지만 그리지 않습니다(조용히 무시).
+ *   같이 되돌릴 것 — assets/icons/chart-tools.svg 의 tlc-i-vline · tlc-i-rect ·
+ *   tlc-i-arrow 세 줄, tests/chart-toolbar-seal.test.js 의 세로 11 -> 14,
+ *   tests/chart-drawings.test.js 의 readyLeft 문자열, tests/chart-shape-seal.test.js.
+ *
  * 이제 준비중(disabled)인 버튼은 하나도 없습니다.
  *
  * ── js/chart.js 는 한 글자도 고치지 않았습니다 ────────────────────────
@@ -135,8 +158,12 @@
  *   생김새   css/chart-toolbar.css      (.tlc-toolbar / .tlc-body / .tlc-rail
  *                                        .tlc-btn / .tlc-ico / .tlc-sep / .tlc-spacer)
  *   아이콘   assets/icons/chart-tools.svg  (id 는 tlc-i-*)
- * 이 파일은 그 클래스와 아이콘 id 를 그대로 씁니다. 아이콘을 새로 만들지
- * 않았고, 디자인팀 파일도 고치지 않았습니다.
+ * 이 파일은 그 클래스와 아이콘 id 를 그대로 씁니다. 그림(svg 도형)을 이 파일
+ * 안에서 직접 만들지 않습니다 — tests/chart-drawings.test.js 가 그것을 봅니다.
+ * 주의 — 18차(2026-09-03) 에 스프라이트에 아이콘 세 개를 더했습니다:
+ *   tlc-i-vline · tlc-i-rect · tlc-i-arrow. 디자인팀이 정한 규칙(16px · 단색 ·
+ *   currentColor · stroke-width 1.5 · fill none)을 그대로 따랐고, 있던 18개는
+ *   한 글자도 안 건드렸습니다. 되돌리려면 그 세 줄만 지우면 됩니다.
  *
  * 디자인팀이 정한 뼈대에 맞추려면 .chart-wrap 이 .tlc-body 안으로 들어가야
  * 합니다. index.html 의 마크업을 고치는 대신, 이 파일이 화면이 만들어질 때
@@ -264,6 +291,21 @@ App.ChartDrawings = (function () {
   var RULER_WIDTH = 1;
 
   var HIT_PX = 7; /* 이 거리 안에서 누르면 그 그림을 고른 것으로 봅니다 */
+
+  /* ---------------- 화살표 머리 (18차 2026-09-03) ----------------
+     머리 길이 = ARROW_HEAD + 굵기 * ARROW_HEAD_W (px).
+     기본 굵기 2px 에서 6 + 2*3 = 12px 입니다.
+     실측 근거 — 바이낸스 선물(트레이딩뷰 모드) Arrow 를 1440 화면에서 그어
+     캡처로 재니 머리 길이가 12px 이었습니다(2026-09-03, 로그인 안 한 공개
+     화면). 벌어진 각은 좌우 각각 0.42rad(약 24도)로, 캡처의 머리 폭
+     10px / 길이 12px 비율(반각 tan = 5/12 = 0.417rad)에 맞춘 값입니다.
+     주의 — 눈으로 잰 값입니다. 트레이딩뷰 설정 창을 눌러 본 것이 아닙니다. */
+  var ARROW_HEAD = 6;
+  var ARROW_HEAD_W = 3;
+  var ARROW_SPREAD = 0.42;
+  /* 사각형 안쪽 채움 진하기. 자(ruler) 상자와 같은 10% 입니다 —
+     새 값을 만들면 같은 화면에 진하기가 두 가지가 됩니다. */
+  var RECT_FILL_A = 0.1;
 
   /* ---------------- 잡는 반경 (13차 2026-09-02) ----------------
    * 그림을 끌어 옮기거나 끝점을 잡을 때 쓰는 거리입니다.
@@ -576,6 +618,9 @@ App.ChartDrawings = (function () {
   /* 그림 종류 이름 — 회원이 목록에서 보는 말입니다. 적는 곳은 여기 한 곳뿐입니다 */
   var SHAPE_NAMES = {
     hline: "수평선",
+    vline: "수직선",
+    rect: "사각형",
+    arrow: "화살표",
     trend: "추세선",
     fib: "피보나치",
     ruler: "자",
@@ -607,6 +652,9 @@ App.ChartDrawings = (function () {
     { k: "sep1", sep: true },
     { k: "trend", icon: "tlc-i-trendline", label: "추세선", ready: true },
     { k: "hline", icon: "tlc-i-hline", label: "수평선", ready: true },
+    /* 18차(2026-09-03) — 수직선을 열었습니다. 수평선 바로 옆에 둡니다(짝이라서).
+       되돌리려면 이 줄을 지우고 READY_TOOLS 에서 vline 을 빼면 끝입니다. */
+    { k: "vline", icon: "tlc-i-vline", label: "수직선 (그 시각에 세로선)", ready: true },
     { k: "fib", icon: "tlc-i-fib", label: "피보나치 되돌림", ready: true },
     /* 10차(2026-09-02) — 파동을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
        label 을 "파동" 으로 되돌립니다. (같이 되돌릴 것 — READY_TOOLS·MULTI_TAP 의 wave) */
@@ -619,6 +667,11 @@ App.ChartDrawings = (function () {
        (같이 되돌릴 것 — READY_TOOLS 의 brush) */
     { k: "brush", icon: "tlc-i-brush", label: "브러시 (끌어서 자유롭게)", ready: true },
     { k: "sep2", sep: true },
+    /* 18차(2026-09-03) — 사각형·화살표를 열었습니다. 글자·표정과 같은 묶음에
+       둡니다(차트 위에 표시를 남기는 것들). 되돌리려면 이 두 줄을 지우고
+       READY_TOOLS·TWO_POINT·TWO_TAP 에서 rect·arrow 를 빼면 끝입니다. */
+    { k: "rect", icon: "tlc-i-rect", label: "사각형 (두 점으로 구간 묶기)", ready: true },
+    { k: "arrow", icon: "tlc-i-arrow", label: "화살표 (두 점 · 뒤에 찍은 쪽이 머리)", ready: true },
     { k: "text", icon: "tlc-i-text", label: "텍스트", ready: true },
     /* 11차(2026-09-02) — 표정을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
        label 을 "표정" 으로 되돌립니다. (같이 되돌릴 것 — READY_TOOLS 의 face) */
@@ -658,16 +711,18 @@ App.ChartDrawings = (function () {
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
   var READY_TOOLS = {
     cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1, channel: 1,
-    wave: 1, face: 1, alert: 1
+    wave: 1, face: 1, alert: 1,
+    /* 18차(2026-09-03) */
+    vline: 1, rect: 1, arrow: 1
   };
 
   /* 두 점을 찍어 "그림으로 남는" 도구 — 저장되고 나중에 다시 그려집니다 */
-  var TWO_POINT = { trend: 1, fib: 1, ruler: 1 };
+  var TWO_POINT = { trend: 1, fib: 1, ruler: 1, rect: 1, arrow: 1 };
 
   /* 두 번 톡 해서 쓰는 도구 전부 (미리보기·취소가 같은 방식으로 돕니다).
      돋보기는 그림으로 남지 않아서 TWO_POINT 에는 넣지 않았습니다 —
      찍고 나면 화면만 확대되고 저장에는 아무것도 안 들어갑니다. */
-  var TWO_TAP = { trend: 1, fib: 1, ruler: 1, zoom: 1 };
+  var TWO_TAP = { trend: 1, fib: 1, ruler: 1, zoom: 1, rect: 1, arrow: 1 };
 
   /* 세 번 톡 해서 만드는 도구 — 두 점으로 기준선을 긋고, 세 번째 점이 폭을
      정합니다. 바이낸스(트레이딩뷰 모드) 평행 채널과 같은 순서입니다. */
@@ -775,6 +830,19 @@ App.ChartDrawings = (function () {
   /** 그림 하나의 색. 옛 그림에는 c 가 없습니다 — 그때 보시던 금색 그대로입니다 */
   function shapeColor(s) {
     return s && s.c ? s.c : COLOR_DRAW;
+  }
+
+  /** 그 그림의 색을 그대로 쓰되 안쪽만 옅게 (사각형 채움 · 18차 2026-09-03).
+      FILL_DRAW 는 금색으로 굳어 있어서, 회원이 색을 바꾸면 테두리와 안쪽이
+      따로 놉니다. 새 색을 만드는 것이 아니라 「고른 색을 옅게」 하는 것입니다. */
+  function fillOf(hex, a) {
+    var h = String(hex || COLOR_DRAW).replace("#", "");
+    if (h.length !== 6) return FILL_DRAW;
+    var r = parseInt(h.slice(0, 2), 16);
+    var g = parseInt(h.slice(2, 4), 16);
+    var b = parseInt(h.slice(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return FILL_DRAW;
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
   }
 
   /** 그림 하나의 굵기. def 는 그 도구의 기본값(자 1 · 브러시 2 · 나머지 2) */
@@ -1728,6 +1796,114 @@ App.ChartDrawings = (function () {
     drawFaceOn(ctx, x, y, FACE_R, s.f, on ? COLOR_SELECTED : shapeColor(s), on ? flw : flw - 0.5);
     if (on) handle(ctx, x, y);
   }
+  /* ---------------- 수직선 (18차 2026-09-03) ----------------
+   * 「수평선의 짝」 입니다. 수평선은 시리즈의 createPriceLine 이 가격축
+   * 이름표까지 그려 주는데, 세로에는 라이브러리가 주는 것이 없습니다.
+   * 그래서 다른 그림과 같은 붓(프리미티브)으로 판 높이만큼 긋습니다.
+   * 판 높이(paneH)는 drawFrame 이 프레임마다 넣어 줍니다 — 돋보기 띠가
+   * 이미 그렇게 그리고 있어서 같은 값을 그대로 씁니다.
+   * ------------------------------------------------------- */
+  function drawVLine(ctx, s, on) {
+    var x = timeToX(s.t);
+    if (x === null) return;
+    var h = paneH || 0;
+    if (!h) return;
+    var lw = shapeWidth(s);
+    ctx.strokeStyle = on ? COLOR_SELECTED : shapeColor(s);
+    ctx.lineWidth = on ? lw + 1 : lw;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+    if (on) {
+      /* 손잡이는 「누른 자리의 높이」 에 하나만. 세로선은 위아래로 끌어도
+         달라지는 것이 없어서 끝점을 두 개 두면 헷갈립니다. */
+      var my = priceToY(s.p);
+      handle(ctx, x, my === null ? Math.round(h / 2) : my);
+    }
+  }
+
+  /* ---------------- 사각형 (18차 2026-09-03) ----------------
+   * 두 점이 마주 보는 모서리입니다. 어느 쪽을 먼저 찍어도 같게 보이도록
+   * 그릴 때 min/max 로 폅니다(끌다가 뒤집혀도 안 깨집니다).
+   * 안쪽 채움은 자(ruler) 상자와 같은 10% 입니다.
+   * ------------------------------------------------------- */
+  function drawRect(ctx, s, on, preview) {
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    var y1 = priceToY(s.p1);
+    var y2 = priceToY(s.p2);
+    if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+    var l = Math.min(x1, x2);
+    var r = Math.max(x1, x2);
+    var t = Math.min(y1, y2);
+    var b = Math.max(y1, y2);
+    var lw = shapeWidth(s);
+    ctx.fillStyle = fillOf(shapeColor(s), RECT_FILL_A);
+    ctx.fillRect(l, t, r - l, b - t);
+    ctx.strokeStyle = on ? COLOR_SELECTED : shapeColor(s);
+    ctx.lineWidth = on ? lw + 1 : lw;
+    ctx.setLineDash(preview ? [4, 4] : []);
+    ctx.strokeRect(l, t, r - l, b - t);
+    ctx.setLineDash([]);
+    if (on) {
+      var mx = Math.round((l + r) / 2);
+      var my = Math.round((t + b) / 2);
+      handle(ctx, l, t);
+      handle(ctx, r, t);
+      handle(ctx, l, b);
+      handle(ctx, r, b);
+      handle(ctx, mx, t);
+      handle(ctx, mx, b);
+      handle(ctx, l, my);
+      handle(ctx, r, my);
+    }
+  }
+
+  /* ---------------- 화살표 (18차 2026-09-03) ----------------
+   * 뒤에 찍은 점(t2·p2)이 머리입니다. 머리 크기는 선 굵기를 따라갑니다 —
+   * 1px 선에 큰 머리를 달면 머리만 보이고, 4px 선에 작은 머리를 달면
+   * 그냥 선으로 보입니다. 기본 굵기 2px 에서 12px 이 나오게 잡았습니다.
+   * 선이 머리보다 짧으면 머리를 선 길이까지 줄입니다(짧게 톡 찍었을 때).
+   * ------------------------------------------------------- */
+  function drawArrow(ctx, s, on, preview) {
+    var x1 = timeToX(s.t1);
+    var x2 = timeToX(s.t2);
+    var y1 = priceToY(s.p1);
+    var y2 = priceToY(s.p2);
+    if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+    var lw = shapeWidth(s);
+    var color = on ? COLOR_SELECTED : shapeColor(s);
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = on ? lw + 1 : lw;
+    ctx.setLineDash(preview ? [4, 4] : []);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (len >= 1) {
+      var hl = ARROW_HEAD + lw * ARROW_HEAD_W;
+      if (hl > len) hl = len;
+      var a = Math.atan2(dy, dx);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - hl * Math.cos(a - ARROW_SPREAD), y2 - hl * Math.sin(a - ARROW_SPREAD));
+      ctx.lineTo(x2 - hl * Math.cos(a + ARROW_SPREAD), y2 - hl * Math.sin(a + ARROW_SPREAD));
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (on) {
+      handle(ctx, x1, y1);
+      handle(ctx, x2, y2);
+    }
+  }
+
   function drawOne(ctx, s, on, preview) {
     var color = on ? COLOR_SELECTED : shapeColor(s);
     var lw = shapeWidth(s);
@@ -1772,6 +1948,18 @@ App.ChartDrawings = (function () {
       return;
     }
 
+    if (s.type === "vline") {
+      drawVLine(ctx, s, on);
+      return;
+    }
+    if (s.type === "rect") {
+      drawRect(ctx, s, on, preview);
+      return;
+    }
+    if (s.type === "arrow") {
+      drawArrow(ctx, s, on, preview);
+      return;
+    }
     if (s.type === "brush") {
       drawBrush(ctx, s, on, preview);
       return;
@@ -2482,6 +2670,48 @@ App.ChartDrawings = (function () {
           bestD = cd;
           best = { kind: "shape", id: s.id };
         }
+      } else if (s.type === "vline") {
+        /* 세로선은 위아래 어디를 눌러도 잡힙니다 (수평선을 90도 돌린 것과 같게) */
+        var vx = timeToX(s.t);
+        if (vx === null) continue;
+        var vd = Math.abs(x - vx);
+        if (vd < bestD) {
+          bestD = vd;
+          best = { kind: "shape", id: s.id };
+        }
+      } else if (s.type === "rect") {
+        /* 네 변 중 가장 가까운 것. 안쪽은 잡지 않습니다 — 큰 네모 하나가
+           차트 끌기를 통째로 막아 버립니다(자 상자와 같은 규칙입니다) */
+        var rx1 = timeToX(s.t1);
+        var rx2 = timeToX(s.t2);
+        var ry1 = priceToY(s.p1);
+        var ry2 = priceToY(s.p2);
+        if (rx1 === null || rx2 === null || ry1 === null || ry2 === null) continue;
+        var rl = Math.min(rx1, rx2);
+        var rr = Math.max(rx1, rx2);
+        var rtp = Math.min(ry1, ry2);
+        var rbt = Math.max(ry1, ry2);
+        var rd = Math.min(
+          distToSegment(x, y, rl, rtp, rr, rtp),
+          distToSegment(x, y, rl, rbt, rr, rbt),
+          distToSegment(x, y, rl, rtp, rl, rbt),
+          distToSegment(x, y, rr, rtp, rr, rbt)
+        );
+        if (rd < bestD) {
+          bestD = rd;
+          best = { kind: "shape", id: s.id };
+        }
+      } else if (s.type === "arrow") {
+        var wx1 = timeToX(s.t1);
+        var wx2 = timeToX(s.t2);
+        var wy1 = priceToY(s.p1);
+        var wy2 = priceToY(s.p2);
+        if (wx1 === null || wx2 === null || wy1 === null || wy2 === null) continue;
+        var wd = distToSegment(x, y, wx1, wy1, wx2, wy2);
+        if (wd < bestD) {
+          bestD = wd;
+          best = { kind: "shape", id: s.id };
+        }
       } else if (s.type === "brush" || s.type === "wave") {
         var bp = s.pts;
         if (!bp || bp.length < 2) continue;
@@ -2708,6 +2938,20 @@ App.ChartDrawings = (function () {
     }
 
     if (time === null) return;
+
+    /* 수직선 — 한 번 톡 (18차 2026-09-03). 수평선과 같은 손놀림이고,
+       저장 자리만 shapes() 입니다(시간에 매달린 그림이라 봉 간격별).
+       가격(p)도 같이 넣어 둡니다 — 그려지지는 않지만 손잡이 높이와
+       통째로 옮기기(shiftGeom)가 그 값을 씁니다. */
+    if (tool === "vline") {
+      pushUndo();
+      shapes().push({ id: newId(), type: "vline", t: time, p: price, c: drawColor, w: drawWidth });
+      saveStore();
+      paintChip();
+      finishDraw();
+      repaint();
+      return;
+    }
 
     /* 파동 — 점을 하나씩 이어 찍습니다. 다 채우면 저절로 끝납니다. */
     if (MULTI_TAP[tool]) {
@@ -3446,9 +3690,24 @@ App.ChartDrawings = (function () {
     var out = [];
     var i;
     if (!s) return out;
-    if (s.type === "trend" || s.type === "fib" || s.type === "ruler") {
+    if (s.type === "trend" || s.type === "fib" || s.type === "ruler" || s.type === "arrow") {
       out.push({ k: "a", t: s.t1, p: s.p1 });
       out.push({ k: "b", t: s.t2, p: s.p2 });
+    } else if (s.type === "rect") {
+      /* 모서리 4 + 변 4 (18차 2026-09-03). 변을 잡으면 그쪽 한 줄만 움직이고,
+         모서리를 잡으면 두 줄이 같이 움직입니다 — 트레이딩뷰 사각형과 같습니다.
+         가운데 값은 「시각의 가운데 · 가격의 가운데」 라 화면을 확대·축소해도
+         변 한가운데에 그대로 붙어 있습니다. */
+      var mt = (s.t1 + s.t2) / 2;
+      var mp = (s.p1 + s.p2) / 2;
+      out.push({ k: "a", t: s.t1, p: s.p1 });
+      out.push({ k: "b", t: s.t2, p: s.p2 });
+      out.push({ k: "ab", t: s.t1, p: s.p2 });
+      out.push({ k: "ba", t: s.t2, p: s.p1 });
+      out.push({ k: "eL", t: s.t1, p: mp });
+      out.push({ k: "eR", t: s.t2, p: mp });
+      out.push({ k: "eA", t: mt, p: s.p1 });
+      out.push({ k: "eB", t: mt, p: s.p2 });
     } else if (s.type === "channel") {
       /* 기준선 두 점 + 마주 보는 선의 두 점. 마주 보는 쪽을 끌면 폭(dp)만 바뀝니다 */
       var dp = s.dp || 0;
@@ -3555,6 +3814,32 @@ App.ChartDrawings = (function () {
 
   /** 끝점 하나만 옮기기 */
   function setHandleAt(s, k, t, p) {
+    /* 사각형만 손잡이가 여덟이라 먼저 갈라 봅니다 (18차 2026-09-03).
+       변 손잡이는 한 쪽만 바꿉니다 — eL/eR 은 시각만, eA/eB 는 가격만. */
+    if (s.type === "rect") {
+      if (k === "a") {
+        s.t1 = t;
+        s.p1 = p;
+      } else if (k === "b") {
+        s.t2 = t;
+        s.p2 = p;
+      } else if (k === "ab") {
+        s.t1 = t;
+        s.p2 = p;
+      } else if (k === "ba") {
+        s.t2 = t;
+        s.p1 = p;
+      } else if (k === "eL") {
+        s.t1 = t;
+      } else if (k === "eR") {
+        s.t2 = t;
+      } else if (k === "eA") {
+        s.p1 = p;
+      } else if (k === "eB") {
+        s.p2 = p;
+      }
+      return;
+    }
     if (k === "a") {
       s.t1 = t;
       s.p1 = p;
@@ -5855,6 +6140,10 @@ App.ChartDrawings = (function () {
     /* 여러선 계산부 — 테스트에서 그대로 씁니다 */
     lineYAt: lineYAt,
     CHANNEL: { width: CHANNEL_WIDTH, dash: CHANNEL_DASH, fill: FILL_CHANNEL },
+    /* 수직선 · 사각형 · 화살표 (18차 2026-09-03) — 값을 적은 곳은 여기 한 곳뿐입니다 */
+    ARROW: { head: ARROW_HEAD, headPerWidth: ARROW_HEAD_W, spread: ARROW_SPREAD },
+    RECT_FILL_A: RECT_FILL_A,
+    fillOf: fillOf,
     /* 색 · 굵기 (13차 2026-09-02). 색을 적은 곳은 DRAW_COLORS 한 곳뿐입니다 */
     DRAW_COLORS: DRAW_COLORS,
     DRAW_WIDTHS: DRAW_WIDTHS,

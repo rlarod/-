@@ -557,6 +557,7 @@ tests/chart-indicator-unit-registry-seal.test.js
 #   되돌리기·목록·잠금·숨김에 셋 다 들어간다 / 새 창을 아예 안 만든다.
 #   9절 돌연변이 — hitTest·손잡이·머리 채우기를 빼면 반드시 빨개집니다.
 # 되돌리기: 이 줄과 tests/chart-shape-seal.test.js 삭제
+tests/chart-shape-seal.test.js
 
 # 2026-09-03 (기록팀) — ★「전체」 단추가 알람을 건드리지 않는가★ (돈에 닿는 자리)
 #   왜 — 16차에 그린 것 목록이 생기면서 ★전체 숨김 · 전체 잠금 · 전체 지우기★ 가

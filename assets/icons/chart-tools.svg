@@ -12,14 +12,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute"
      fill="none" stroke="currentColor" stroke-width="1.5"
      stroke-linecap="round" stroke-linejoin="round">
-<!-- ── 세로 막대(선긋기 도구) 11개 ───────────────────────────────── -->
+<!-- ── 세로 막대(선긋기 도구) 14개 ───────────────────────────────── -->
 <symbol id="tlc-i-cursor" viewBox="0 0 16 16"><path d="M8 1.6v4M8 10.4v4M1.6 8h4M10.4 8h4"/></symbol>
 <symbol id="tlc-i-trendline" viewBox="0 0 16 16"><path d="M5 11 11 5"/><circle cx="3.4" cy="12.6" r="1.6"/><circle cx="12.6" cy="3.4" r="1.6"/></symbol>
 <symbol id="tlc-i-hline" viewBox="0 0 16 16"><path d="M1.6 8h12.8"/><circle cx="5.6" cy="8" r="1.6"/></symbol>
+<symbol id="tlc-i-vline" viewBox="0 0 16 16"><path d="M8 1.6v12.8"/><circle cx="8" cy="5.6" r="1.6"/></symbol>
 <symbol id="tlc-i-fib" viewBox="0 0 16 16"><path d="M1.8 3.6h12.4M1.8 8h12.4M1.8 12.4h12.4"/></symbol>
 <symbol id="tlc-i-wave" viewBox="0 0 16 16"><path d="m1.8 11.2 3.4-6 3 5 3-6.6 2.9 5"/></symbol>
 <symbol id="tlc-i-channel" viewBox="0 0 16 16"><path d="M1.8 8.2 8 2M1.8 13 12.8 2.2M7.2 14.2 14.2 7.2"/></symbol>
 <symbol id="tlc-i-brush" viewBox="0 0 16 16"><path d="m2.4 13.6 1.2-3.4 7.3-7.3 2.2 2.2-7.3 7.3z"/><path d="m10.2 3.8 2.2 2.2"/></symbol>
+<symbol id="tlc-i-rect" viewBox="0 0 16 16"><rect x="2.4" y="3.6" width="11.2" height="8.8" rx="1"/></symbol>
+<symbol id="tlc-i-arrow" viewBox="0 0 16 16"><path d="M2.8 13.2 12.4 3.6M7.2 3.6h5.2v5.2"/></symbol>
 <symbol id="tlc-i-text" viewBox="0 0 16 16"><path d="M3.4 3.6h9.2M8 3.6v8.8"/></symbol>
 <symbol id="tlc-i-face" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M5.6 9.6q2.4 2.3 4.8 0"/><circle cx="6" cy="6.4" r=".85" fill="currentColor" stroke="none"/><circle cx="10" cy="6.4" r=".85" fill="currentColor" stroke="none"/></symbol>
 <symbol id="tlc-i-ruler" viewBox="0 0 16 16"><rect x="1.6" y="5" width="12.8" height="6" rx="1"/><path d="M4.8 5v2.2M8 5v2.8M11.2 5v2.2"/></symbol>
