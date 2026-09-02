@@ -22,6 +22,18 @@
  *   Background : Color / Vert Grid Lines(체크+색) / Horz Grid Lines(체크+색)
  *   맨 아래  : Reset · Save
  *
+ * ── 2026-09-02 추가 : 세 번째 탭 "가격축" ─────────────────────────────
+ * 대표 지시로 ★차트 시스템은 트레이딩뷰를 따라갑니다★. 트레이딩뷰 차트
+ * 설정 창에는 Scales 탭이 따로 있고 거기에 Logarithmic / Percentage 가
+ * 있습니다. 우리 차트는 선형 고정이었습니다(코드 전체에 PriceScaleMode 0곳).
+ *   넣은 것 : 일반(Normal) · 로그(Logarithmic) · 퍼센트(Percentage)
+ *   안 넣은 것 : IndexedTo100 — 트레이딩뷰에서도 거의 안 쓰입니다
+ *   저장 : 나머지 항목과 같은 App.Storage 키("chart-style")에 함께 담깁니다
+ *   적용 대상 : 캔들이 붙은 오른쪽 축("right") 하나뿐입니다. 거래량 막대는
+ *              별도 오버레이 축("")이라 영향이 없습니다(js/chart.js:249).
+ *   되돌리기 : 이 파일을 이전 커밋으로 되돌리면 됩니다. 실행 중에는
+ *              가격축 탭에서 "일반" 을 고르고 저장하면 원래 화면입니다.
+ *
  * 로그인 없이 열립니다(로그아웃 상태에서 실제로 열어 확인). Original 모드
  * 전용입니다 — Trading View 모드로 바꾸면 가로 막대에서 육각형이 사라집니다
  * (그 모드 아이콘 전부를 훑어 육각형 path 가 없음을 확인).
@@ -111,6 +123,35 @@ App.ChartStyle = (function () {
      (바이낸스 실측은 #323C46 이지만 우리 배경 #0A0F1C 에는 이쪽이 맞습니다) */
   var GRID_DEFAULT = C_BORDER;
 
+  /* 가격축 눈금 방식 — 트레이딩뷰 Scales 를 따라갑니다 (2026-09-02 대표 지시).
+     Lightweight Charts 의 PriceScaleMode 숫자와 같습니다.
+       0 Normal · 1 Logarithmic · 2 Percentage · 3 IndexedTo100
+     트레이딩뷰에서 실제로 많이 쓰이는 것은 앞의 셋이라 3(IndexedTo100)은 넣지
+     않았습니다. 넣으려면 아래 목록에 한 줄만 더하면 됩니다.
+     숫자를 글자로 적지 않고 라이브러리 상수에서 읽습니다 — 라이브러리가 값을
+     바꾸면 여기만 옛 숫자로 남는 "조용한 고장" 이 되기 때문입니다. */
+  function scaleModeNum(name, fallback) {
+    try {
+      var M = window.LightweightCharts && window.LightweightCharts.PriceScaleMode;
+      if (M && typeof M[name] === "number") return M[name];
+    } catch (e) {
+      /* 무시 */
+    }
+    return fallback;
+  }
+  var MODE_NORMAL = scaleModeNum("Normal", 0);
+  var MODE_LOG = scaleModeNum("Logarithmic", 1);
+  var MODE_PCT = scaleModeNum("Percentage", 2);
+  var SCALE_MODES = [
+    { k: MODE_NORMAL, name: "일반", sub: "가격 그대로" },
+    { k: MODE_LOG, name: "로그", sub: "같은 비율이 같은 간격" },
+    { k: MODE_PCT, name: "퍼센트", sub: "화면 왼쪽 끝 대비 %" }
+  ];
+  function isScaleMode(v) {
+    for (var i = 0; i < SCALE_MODES.length; i++) if (SCALE_MODES[i].k === v) return true;
+    return false;
+  }
+
   /* ---------------- 상태 ---------------- */
   var chart = null;
   var candle = null;
@@ -165,6 +206,17 @@ App.ChartStyle = (function () {
     return !!candle;
   }
 
+  /* 캔들이 붙어 있는 오른쪽 가격축입니다 (js/chart.js:231 priceScaleId:"right").
+     거래량은 별도 오버레이 축("")이라 여기에 영향을 받지 않습니다. */
+  function rightScale() {
+    if (!findParts()) return null;
+    try {
+      return chart.priceScale("right");
+    } catch (e) {
+      return null;
+    }
+  }
+
   /* 처음 값을 그 자리에서 읽어옵니다.
      숫자를 여기 적어 두면 js/chart.js 가 바뀔 때 여기만 옛 색으로 남는
      "조용한 고장" 이 됩니다. 그래서 절대 적지 않습니다. */
@@ -195,9 +247,23 @@ App.ChartStyle = (function () {
       wickDown: hex6(o.wickDownColor || dn),
       gridV: false,
       gridH: false,
-      gridColor: GRID_DEFAULT.toLowerCase()
+      gridColor: GRID_DEFAULT.toLowerCase(),
+      scaleMode: readScaleMode()
     };
     return base;
+  }
+
+  /* 지금 축이 어떤 방식인지 그 자리에서 읽습니다. 못 읽으면 "일반" 입니다. */
+  function readScaleMode() {
+    var ps = rightScale();
+    if (!ps) return MODE_NORMAL;
+    try {
+      var o = ps.options();
+      if (o && isScaleMode(o.mode)) return o.mode;
+    } catch (e) {
+      /* 무시 */
+    }
+    return MODE_NORMAL;
   }
 
   /* <input type="color"> 는 #rrggbb 만 받습니다. rgb()/rgba() 도 들어올 수
@@ -224,20 +290,38 @@ App.ChartStyle = (function () {
   var KEYS = ["hollow", "up", "down", "borderOn", "borderUp", "borderDown",
               "wickUp", "wickDown", "gridV", "gridH", "gridColor"];
 
+  /* 가격축 눈금 방식은 위 흰 목록과 저장 칸을 나눠 씁니다.
+     이유 두 가지 —
+       ① 성격이 다릅니다. 위 11개는 "봉이 어떻게 생겼나" 이고 이건 "축을
+          어떤 자로 재나" 입니다. 되돌리기 버튼도 따로 눌리는 게 자연스럽습니다.
+       ② tests/chart-style-seal.test.js 가 KEYS 를 ★개수까지★ 세고 있습니다
+          (11개). 그 파일은 기록팀 것이라 저희가 못 고칩니다.
+     흰 목록으로 거르는 규칙은 그대로입니다 — isScaleMode() 를 통과한 값만
+     저장소에서 받아들입니다. */
+  var SCALE_KEYS = ["scaleMode"];
+  var SCALE_STORAGE_KEY = "chart-scale";
+
   function loadSaved() {
     try {
       if (!App.Storage || typeof App.Storage.load !== "function") return null;
       var s = App.Storage.load(STORAGE_KEY);
-      if (!s || typeof s !== "object") return null;
+      var sc = App.Storage.load(SCALE_STORAGE_KEY);
+      var hasStyle = !!(s && typeof s === "object");
+      var hasScale = !!(sc && typeof sc === "object" && isScaleMode(sc[SCALE_KEYS[0]]));
+      /* 둘 다 없으면 차트를 건드리지 않습니다 (오늘 화면 그대로) */
+      if (!hasStyle && !hasScale) return null;
       var b = readBase();
       if (!b) return null;
       var out = clone(b);
-      for (var i = 0; i < KEYS.length; i++) {
-        var k = KEYS[i];
-        if (!(k in s)) continue;
-        if (typeof b[k] === "boolean") out[k] = !!s[k];
-        else if (typeof s[k] === "string" && /^#[0-9a-fA-F]{6}$/.test(s[k])) out[k] = s[k].toLowerCase();
+      if (hasStyle) {
+        for (var i = 0; i < KEYS.length; i++) {
+          var k = KEYS[i];
+          if (!(k in s)) continue;
+          if (typeof b[k] === "boolean") out[k] = !!s[k];
+          else if (typeof s[k] === "string" && /^#[0-9a-fA-F]{6}$/.test(s[k])) out[k] = s[k].toLowerCase();
+        }
       }
+      if (hasScale) out[SCALE_KEYS[0]] = sc[SCALE_KEYS[0]];
       return out;
     } catch (e) {
       return null;
@@ -248,6 +332,14 @@ App.ChartStyle = (function () {
     try {
       if (!App.Storage) return;
       var b = readBase();
+      /* 가격축 먼저 — 기본값(일반)이면 저장소에 쓰레기를 안 남깁니다 */
+      if (b && st[SCALE_KEYS[0]] === b[SCALE_KEYS[0]]) {
+        if (typeof App.Storage.clear === "function") App.Storage.clear(SCALE_STORAGE_KEY);
+      } else if (typeof App.Storage.save === "function" && isScaleMode(st[SCALE_KEYS[0]])) {
+        var spack = {};
+        spack[SCALE_KEYS[0]] = st[SCALE_KEYS[0]];
+        App.Storage.save(SCALE_STORAGE_KEY, spack);
+      }
       if (b && same(st, b)) {
         /* 기본값 그대로면 저장할 것이 없습니다 */
         if (typeof App.Storage.clear === "function") App.Storage.clear(STORAGE_KEY);
@@ -303,6 +395,12 @@ App.ChartStyle = (function () {
           horzLines: { color: st.gridColor, visible: !!st.gridH }
         }
       });
+    } catch (e) {
+      /* 무시 */
+    }
+    try {
+      var ps = rightScale();
+      if (ps && isScaleMode(st.scaleMode)) ps.applyOptions({ mode: st.scaleMode });
     } catch (e) {
       /* 무시 */
     }
@@ -592,6 +690,44 @@ App.ChartStyle = (function () {
       return;
     }
 
+    if (tab === "scale") {
+      /* 가격축 탭 — 트레이딩뷰 Scales 의 Logarithmic / Percentage 자리입니다.
+         거래량 막대는 별도 축이라 여기서 바뀌지 않습니다. */
+      var opts = [];
+      for (var m = 0; m < SCALE_MODES.length; m++) {
+        opts.push({ k: String(SCALE_MODES[m].k), name: SCALE_MODES[m].name });
+      }
+      var s0 = row("눈금 방식", "일반 · 로그 · 퍼센트");
+      s0.ctl.appendChild(select(opts, String(st.scaleMode), function (v) {
+        var num = parseInt(v, 10);
+        if (!isScaleMode(num)) return;
+        st.scaleMode = num;
+        applyAll();
+        paintPane();
+      }));
+      pane.appendChild(s0);
+
+      var cur = null;
+      for (var m2 = 0; m2 < SCALE_MODES.length; m2++) {
+        if (SCALE_MODES[m2].k === st.scaleMode) cur = SCALE_MODES[m2];
+      }
+      var s1 = document.createElement("div");
+      s1.className = "tl-cs-note";
+      s1.textContent = cur
+        ? "지금: " + cur.name + " — " + cur.sub
+        : "지금: 일반";
+      pane.appendChild(s1);
+
+      var s2 = document.createElement("div");
+      s2.className = "tl-cs-note";
+      s2.textContent =
+        "로그는 오래된 구간과 최근 구간의 등락을 같은 눈으로 보게 해 줍니다. " +
+        "퍼센트는 축 숫자가 가격이 아니라 % 로 바뀝니다 — 진입가·청산가 가로선은 " +
+        "그대로 제 자리에 그려집니다. 거래량 막대는 따로 있는 축이라 바뀌지 않습니다.";
+      pane.appendChild(s2);
+      return;
+    }
+
     /* 배경 탭 */
     var b0 = row("배경색", "다크 하나로만 운영합니다");
     var fx = document.createElement("span");
@@ -665,7 +801,7 @@ App.ChartStyle = (function () {
     var tabs = document.createElement("div");
     tabs.className = "tl-cs-tabs";
     tabs.setAttribute("role", "tablist");
-    [{ k: "candle", name: "봉" }, { k: "bg", name: "배경" }].forEach(function (d) {
+    [{ k: "candle", name: "봉" }, { k: "bg", name: "배경" }, { k: "scale", name: "가격축" }].forEach(function (d) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "tl-cs-tab";

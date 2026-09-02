@@ -55,16 +55,36 @@ App.Config = (function () {
   //   js/interval-guard.js 가 1m 으로 되돌립니다(둘 다 그대로 둡니다).
   //   지금 눈에 보이는 동작은 바뀌지 않고, 나중에 그 자물쇠를 풀 때 1s 가
   //   조용히 멈추지 않도록 사실만 미리 맞춰 두는 것입니다.
+  // ── 2026-09-02 추가 : 3분 · 30분 · 2시간 · 6시간 · 12시간 · 1주 · 1개월 ──
+  //   9개 -> 16개. 일곱 개 전부 바이낸스 선물이 실제로 주는지 REST 로 직접
+  //   확인했습니다(fapi/v1/klines, 2026-09-02, 7/7 응답 정상).
+  //   ⚠ 화면에는 일곱 개가 버튼으로 나오지 않습니다. 360px 에서 버튼 줄이
+  //     터지기 때문에 js/interval-more.js 가 "더보기" 안으로 넣습니다.
+  //     (트레이딩뷰도 자주 쓰는 것만 밖에 두고 나머지는 메뉴 안입니다)
+  //   ⚠ 3시간 · 45분 · 10분 · 2분 은 넣지 않았습니다 — 바이낸스에 없거나
+  //     회원이 안 쓰는 단위입니다.
   const INTERVALS = [
     { value: "1s", label: "1초", seconds: 1, native: false },
     { value: "5s", label: "5초", seconds: 5, native: false },
     { value: "15s", label: "15초", seconds: 15, native: false },
     { value: "1m", label: "1분", seconds: 60, native: true },
+    { value: "3m", label: "3분", seconds: 180, native: true },
     { value: "5m", label: "5분", seconds: 300, native: true },
     { value: "15m", label: "15분", seconds: 900, native: true },
+    { value: "30m", label: "30분", seconds: 1800, native: true },
     { value: "1h", label: "1시간", seconds: 3600, native: true },
+    { value: "2h", label: "2시간", seconds: 7200, native: true },
     { value: "4h", label: "4시간", seconds: 14400, native: true },
+    { value: "6h", label: "6시간", seconds: 21600, native: true },
+    { value: "12h", label: "12시간", seconds: 43200, native: true },
     { value: "1d", label: "1일", seconds: 86400, native: true },
+    { value: "1w", label: "1주", seconds: 604800, native: true },
+    // "1M" 은 ★대문자 M★ 입니다 — 소문자 "1m" 은 1분입니다. 바이낸스 표기 그대로입니다.
+    // seconds 는 30일로 잡았습니다(달마다 실제 길이가 다릅니다). 이 값은 native:false
+    // 인 간격을 우리가 직접 묶을 때만 쓰이므로(js/websocket.js:149) 여기서는
+    // 쓰이지 않습니다. 그래도 0 이나 빈 값을 두면 나중에 누가 나눗셈에 쓸 때
+    // 조용히 터지므로 그럴듯한 값을 넣어 둡니다.
+    { value: "1M", label: "1개월", seconds: 2592000, native: true },
   ];
   let activeInterval = "1m";
 
