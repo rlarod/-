@@ -347,9 +347,9 @@ App.ChartTimezone = (function () {
       ".tl-tz-menu button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-tz-menu button.on{background:rgba(240,180,41,.12);border-color:" + C_POINT + ";" +
       "color:" + C_POINT + ";}" +
-      ".tl-tz-menu button i{font-style:normal;font-size:15px;font-weight:500;color:" + C_MUTED + ";}" +
+      ".tl-tz-menu button i{font-style:normal;font-size:17px;font-weight:500;color:" + C_MUTED + ";}" +
       ".tl-tz-menu button.on i{color:" + C_POINT + ";}" +
-      ".tl-tz-menu .tl-tz-warn{font-size:15px;color:" + C_MUTED + ";line-height:1.45;" +
+      ".tl-tz-menu .tl-tz-warn{font-size:17px;color:" + C_MUTED + ";line-height:1.45;" +
       "border-top:1px solid " + C_BORDER + ";padding-top:8px;}" +
       ".tl-tz-menu .tl-tz-warn b{color:" + C_TEXT + ";font-weight:700;}";
     var s = document.createElement("style");

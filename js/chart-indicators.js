@@ -513,7 +513,7 @@ App.ChartIndicators = (function () {
       ".tl-ind-bar{position:absolute;top:6px;left:8px;z-index:6;display:flex;gap:4px;" +
       "flex-wrap:wrap;pointer-events:none;}" +
       ".tl-ind-btn{pointer-events:auto;background:#0D1422;border:1px solid #1D273B;" +
-      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:600;" +
+      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:17px;font-weight:600;" +
       "line-height:1.5;cursor:pointer;font-family:inherit;opacity:.72;transition:.12s;" +
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-ind-btn:hover{opacity:1;border-color:#838DA4;}" +
@@ -530,7 +530,7 @@ App.ChartIndicators = (function () {
            DOM 순서를 건드리지 않고 보이는 자리만 맨 뒤로 보냅니다.
          · 접을 때 칩을 지우지 않습니다. 자리에 그대로 두고 감추기만 합니다. */
       ".tl-ind-fold{order:1;pointer-events:auto;background:#101727;border:1px solid #1D273B;" +
-      "color:#E7ECF5;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:600;" +
+      "color:#E7ECF5;border-radius:3px;padding:2px 7px;font-size:17px;font-weight:600;" +
       "line-height:1.5;cursor:pointer;font-family:inherit;opacity:.9;transition:.12s;" +
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-ind-fold:hover{opacity:1;border-color:#838DA4;}" +
@@ -585,8 +585,16 @@ App.ChartIndicators = (function () {
    *   그래서 넓은 화면이라도 칩이 많으면 접히고, 좁아도 적으면 안 접힙니다.
    * ===================================================================== */
   var FOLD_KEY = "chart-ind-fold";
-  var FOLD_LINE1 = 30; /* 한 줄 = 23px (실측). 이하면 접을 것이 없습니다 */
-  var FOLD_LINE2 = 56; /* 두 줄까지는 그냥 둡니다 (실측 2줄 49px) */
+  /* ⚠ 이 두 값은 ★칩 글씨 크기에 딸린 값★ 입니다. 칩 글씨를 바꾸면 같이 바꾸세요.
+     2026-09-03 칩 글씨 11px -> 17px (대표 지시 "글씨 다 키워줘") 로 줄 높이가
+     바뀌어 같이 올렸습니다. 안 올리면 ★뜻이 달라집니다★ — 실측으로 확인했습니다.
+       11px 시절  1줄 23px · 2줄 49px · 3줄 76px   -> 30 / 56
+       17px 지금  1줄 32px · 2줄 67px · 3줄 102.5px -> 40 / 80
+     그대로 두었을 때 (실측) 1440·기본 9칩이 2줄 67px > 56 이라 ★처음부터 접힌 채★
+     떴습니다. 회원은 칩 대신 "▾ 지표 9" 만 보게 됩니다. 뜻은 예전 그대로
+     — ★세 줄부터 접는다★ — 로 지키려고 값만 옮겼습니다. */
+  var FOLD_LINE1 = 40; /* 한 줄 = 32px (실측). 이하면 접을 것이 없습니다 */
+  var FOLD_LINE2 = 80; /* 두 줄까지는 그냥 둡니다 (실측 2줄 67px) */
   var foldBtn = null;
   var folded = false;
   var foldChosen = false; /* 회원이 직접 눌렀나 */

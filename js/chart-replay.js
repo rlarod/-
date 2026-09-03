@@ -630,7 +630,7 @@ App.ChartReplay = (function () {
       " word-break:keep-all; text-align:center;}",
       ".tl-rp-banner b{color:" + C.gold + "; font-weight:700;}",
       ".tl-rp-banner .l1{display:block;}",
-      ".tl-rp-banner .l2{display:block; color:" + C.sub + "; font-size:15px;}",
+      ".tl-rp-banner .l2{display:block; color:" + C.sub + "; font-size:17px;}",
       /* 시·고·저·종은 가격 그 자체라 캔들과 같은 상승·하락색을 씁니다
          (지표선에 상승·하락색을 쓰지 않는 규칙은 지표에 대한 것입니다) */
       ".tl-rp-banner .ohlc{margin-left:6px;}",
@@ -650,8 +650,8 @@ App.ChartReplay = (function () {
       " stroke-linecap:round; stroke-linejoin:round;}",
       ".tl-rp-b.on{color:" + C.gold + "; background:" + C.tile + ";}",
       ".tl-rp-speed{min-width:54px; height:38px; padding:0 10px; background:" + C.tile + "; color:" + C.text + ";" +
-      " border:1px solid " + C.line + "; border-radius:6px; font-size:15px; cursor:pointer;}",
-      ".tl-rp-date{color:" + C.sub + "; font-size:15px; padding:0 8px; white-space:nowrap;}",
+      " border:1px solid " + C.line + "; border-radius:6px; font-size:17px; cursor:pointer;}",
+      ".tl-rp-date{color:" + C.sub + "; font-size:17px; padding:0 8px; white-space:nowrap;}",
       /* 배속 목록은 조작 막대 바로 위에 붙습니다(막대가 sticky 라 같이 따라옵니다) */
       ".tl-rp-menu{position:absolute; bottom:100%; left:50%; transform:translateX(-50%);" +
       " margin-bottom:8px; background:" + C.card + "; border:1px solid " + C.line + ";" +
@@ -681,12 +681,16 @@ App.ChartReplay = (function () {
       " word-break:keep-all; text-align:center; display:none;}",
       ".tl-rp-banner .n{display:none;}",
       /* 폰(360)에서는 안내줄을 짧게 — 차트가 작아서 넉 줄이 되면 봉을 덮습니다.
-         글씨는 줄이지 않고 ★글자 수★ 를 줄입니다 (시·고·저를 접고 종가만). */
+         글씨는 줄이지 않고 ★글자 수★ 를 줄입니다 (시·고·저를 접고 종가만).
+         ⚠️ 2026-09-03 — 여기 두 줄이 실제로는 15px 라 위 기본(16px)보다 ★작았습니다★.
+            주석과 코드가 달랐던 것입니다. 대표 지시로 17px 로 올렸습니다.
+            이제 폰이 넓은 화면보다 1px 큽니다. 위 기본 16px 들은 배정 밖이라
+            안 건드렸고, PM 에게 따로 보고했습니다. */
       "@media (max-width:560px){" +
       " .tl-rp-date{display:none;}" +
       " .tl-rp-b{width:34px; height:34px;}" +
-      " .tl-rp-hint{font-size:15px; padding:7px 10px; max-width:92%; text-align:center;}" +
-      " .tl-rp-banner{font-size:15px; padding:7px 9px; margin:6px;}" +
+      " .tl-rp-hint{font-size:17px; padding:7px 10px; max-width:92%; text-align:center;}" +
+      " .tl-rp-banner{font-size:17px; padding:7px 9px; margin:6px;}" +
       " .tl-rp-banner .w{display:none;} .tl-rp-banner .n{display:inline;}" +
       " .tl-rp-lock .t{font-size:19px;} .tl-rp-lock .s{font-size:16px;} }",
       /* 폰의 아래 고정 주문 막대(.tl-order-bar)는 주문창과 다른 자리에 있습니다.

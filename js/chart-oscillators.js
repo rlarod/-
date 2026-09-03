@@ -477,14 +477,14 @@ App.ChartOscillators = (function () {
       /* 2단계 버튼과 크기·글씨·간격을 똑같이 맞춘 별도 클래스.
          같은 클래스를 쓰면 2단계 paintButtons() 가 우리 버튼 색을 덮습니다. */
       ".tl-osc-btn{pointer-events:auto;background:#0D1422;border:1px solid #1D273B;" +
-      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:600;" +
+      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:17px;font-weight:600;" +
       "line-height:1.5;cursor:pointer;font-family:inherit;opacity:.72;transition:.12s;" +
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-osc-btn:hover{opacity:1;border-color:#838DA4;}" +
       '.tl-osc-btn[aria-pressed="true"]{opacity:1;background:#101727;border-color:#838DA4;color:#E7ECF5;}' +
       ".tl-osc-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
       ".tl-osc-label{position:absolute;left:8px;top:2px;z-index:3;pointer-events:none;" +
-      "font-size:10px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
+      "font-size:17px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
       "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
       ".tl-osc-label b{font-weight:600;margin-left:6px;}";
     var st = document.createElement("style");

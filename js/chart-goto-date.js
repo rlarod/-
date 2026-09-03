@@ -216,7 +216,7 @@ App.ChartGotoDate = (function () {
       "padding:12px;width:290px;max-width:calc(100vw - 24px);" +
       "display:flex;flex-direction:column;gap:9px;}" +
       ".tl-gd-panel .tl-gd-title{font-size:17px;color:" + C_TEXT + ";font-weight:700;}" +
-      ".tl-gd-panel .tl-gd-help{font-size:15px;color:" + C_MUTED + ";line-height:1.4;}" +
+      ".tl-gd-panel .tl-gd-help{font-size:17px;color:" + C_MUTED + ";line-height:1.4;}" +
       ".tl-gd-panel input[type=date]{width:100%;box-sizing:border-box;background:" + C_TILE + ";" +
       "border:1px solid " + C_BORDER + ";border-radius:6px;color:" + C_TEXT + ";" +
       "font-family:var(--mono);font-size:19px;padding:9px 10px;color-scheme:dark;}" +
@@ -227,7 +227,7 @@ App.ChartGotoDate = (function () {
       ".tl-gd-panel .tl-gd-row button.go{background:rgba(240,180,41,.12);" +
       "border-color:" + C_POINT + ";color:" + C_POINT + ";}" +
       ".tl-gd-panel .tl-gd-row button:hover{border-color:" + C_MUTED + ";}" +
-      "#" + NOTE_ID + "{flex:1 1 100%;order:10;font-size:15px;color:" + C_MUTED + ";" +
+      "#" + NOTE_ID + "{flex:1 1 100%;order:10;font-size:17px;color:" + C_MUTED + ";" +
       "padding:2px 2px 3px;line-height:1.35;}" +
       "#" + NOTE_ID + ":empty{display:none;}";
     var s = document.createElement("style");

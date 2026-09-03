@@ -182,7 +182,7 @@ App.ChartDateRange = (function () {
     if (document.getElementById(STYLE_ID)) return;
     var css =
       "#" + WRAP_ID + "{display:flex;flex-wrap:wrap;align-items:center;gap:5px;order:1;}" +
-      "#" + WRAP_ID + " .tl-dr-label{font-size:15px;color:" + C_MUTED + ";" +
+      "#" + WRAP_ID + " .tl-dr-label{font-size:17px;color:" + C_MUTED + ";" +
       "white-space:nowrap;margin-right:3px;}" +
       "#" + WRAP_ID + " .tl-dr-tab{background:" + C_TILE + ";border:1px solid " + C_BORDER + ";" +
       "color:" + C_MUTED + ";padding:5px 10px;border-radius:3px;font-family:var(--mono);" +
@@ -191,7 +191,7 @@ App.ChartDateRange = (function () {
       "#" + WRAP_ID + " .tl-dr-tab.on{background:rgba(240,180,41,.12);" +
       "border-color:" + C_POINT + ";color:" + C_POINT + ";}" +
       /* 안내문은 ★자기 줄★ 을 씁니다 — 탭 위에 겹쳐 그리지 않습니다 */
-      "#" + NOTE_ID + "{flex:1 1 100%;order:9;font-size:15px;color:" + C_MUTED + ";" +
+      "#" + NOTE_ID + "{flex:1 1 100%;order:9;font-size:17px;color:" + C_MUTED + ";" +
       "padding:2px 2px 3px;line-height:1.35;}" +
       "#" + NOTE_ID + ":empty{display:none;}" +
       /* ★넓은 화면에서 한 줄로 만들기 위한 것입니다(글씨는 그대로 17px).★

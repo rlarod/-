@@ -2791,7 +2791,7 @@ App.ChartIndicatorKit = (function () {
     if (document.getElementById("chart-indicator-kit-style")) return;
     var css =
       ".tl-kit-btn{pointer-events:auto;background:#0D1422;border:1px solid #1D273B;" +
-      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:600;" +
+      "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:17px;font-weight:600;" +
       "line-height:1.5;cursor:pointer;font-family:inherit;opacity:.72;transition:.12s;" +
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-kit-btn:hover{opacity:1;border-color:#838DA4;}" +
@@ -2799,9 +2799,10 @@ App.ChartIndicatorKit = (function () {
       ".tl-kit-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
       /* 13.2 칸 이름표 - 차트 위에 얹기만 합니다(라이브러리 DOM 은 안 건드립니다).
          ⚠️ pointer-events:none - 이름표가 차트 조작을 먹으면 안 됩니다.
-         ⚠️ 글씨 11px - 칩 줄과 같은 크기. 좁은 화면에서 줄이지 않습니다. */
+         ⚠️ 글씨 17px - 칩 줄과 같은 크기. 좁은 화면에서 줄이지 않습니다.
+            (2026-09-03 대표 지시로 12px -> 17px. 칩 줄과 같이 올렸습니다) */
       ".tl-kit-plabel{position:absolute;left:8px;z-index:3;pointer-events:none;" +
-      "font-size:12px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
+      "font-size:17px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
       "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
       ".tl-kit-plabel b{font-weight:600;margin-left:6px;}";
     var st = document.createElement("style");
@@ -5414,6 +5415,194 @@ App.ChartIndicatorKit = (function () {
         st, x,
         Math.max(1, prm.fast | 0), Math.max(1, prm.slow | 0), Math.max(1, prm.sig | 0)
       );
+    }
+  });
+
+  /* -- ⭐ 값을 n봉 전과 비교하는 지표 두 개가 같이 쓰는 고리버퍼 ----------
+   * Momentum(차이) 과 ROC(변화율) 은 "지금 값 - n봉 전 값" 이라는 뼈대가 같습니다.
+   * 두 벌로 적으면 한쪽만 고치는 일이 생기므로 여기 한 곳에 둡니다.
+   *
+   * ⚠️ 칸을 ★p 가 아니라 p+1 개★ 로 잡았습니다. 이유가 있습니다 -
+   *    칸이 p 개면 "지금 값을 쓸 칸" 과 "n봉 전 값이 든 칸" 이 ★같은 칸★ 입니다.
+   *    그러면 진행 중인 봉으로 step 을 두 번째 부를 때 이미 지금 값으로
+   *    덮여 있어서 ★차이가 0 으로 보입니다.★ 오류도 안 나고 선만 0 에 붙습니다.
+   *    (이 파일의 CCI · Stochastic 은 덮어쓴 칸의 옛 값이 답에 안 쓰여서
+   *     p 칸으로 됐지만, 여기는 옛 값 자체가 답입니다)
+   *    p+1 칸이면 지금 값은 head 에, n봉 전 값은 (head+1)%(p+1) 에 있어
+   *    ★서로 다른 칸★ 입니다. 몇 번을 다시 불러도 답이 같습니다.
+   *
+   * -- step 이 O(1) 인 이유 ---------------------------------------------
+   *    칸 하나 쓰고 칸 하나 읽는 것이 전부입니다. 창을 훑지 않습니다.
+   * --------------------------------------------------------------------- */
+
+  function lagInit(p) {
+    return { buf: new Array(p + 1), head: 0, c: 0 };
+  }
+
+  function lagCopy(st) {
+    return { buf: st.buf.slice(), head: st.head, c: st.c };
+  }
+
+  /** 값 하나를 넣고 { now, old } 를 냅니다. 창이 덜 찼으면 old 가 null. */
+  function lagPush(st, x, p) {
+    var m = p + 1;
+    st.buf[st.head] = x;                       /* 덮어쓰는 칸은 head 하나뿐 */
+    var oldIdx = (st.head + 1) % m;            /* ★이번에 안 건드린 칸★ */
+    var old = st.c >= p ? st.buf[oldIdx] : null;
+    return {
+      now: x,
+      old: old,
+      state: { buf: st.buf, head: oldIdx, c: st.c < p ? st.c + 1 : st.c }
+    };
+  }
+
+  /* -- Momentum 모멘텀 ---------------------------------------------------
+   *   Mom = 지금 값 - n봉 전 값
+   *
+   * ⭐ 계산식 - 트레이딩뷰 Pine 참고서 ta.mom 원문 (2026-09-03 · 브라우저로 열어 읽음)
+   *      "Momentum of source price and source price length bars ago.
+   *       This is simply a difference: source - source[length]."
+   *    빼기 하나가 전부입니다. 나누지도 곱하지도 않습니다.
+   *
+   * ⭐ 기본 10 · 종가 - 트레이딩뷰 실측입니다.
+   *    ① 트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)에 내장 Momentum 을 얹었더니
+   *       범례가 ★"Mom 10 close 85.02"★ 였습니다. 기간 10 · 값 종류 종가.
+   *    ② 트레이딩뷰 도움말 "Technical Ratings" 도 구성 지표를 적으며
+   *       ★"Momentum (10)"★ 이라고 씁니다.
+   *
+   * ⚠️ 기준선을 ★안 그립니다★ - 같은 실측에서 Momentum 칸에는 가로 점선이
+   *    하나도 없었습니다(같은 화면의 ROC 칸에는 0선이 있었습니다). 값이 0 을
+   *    오가는 지표인데도 트레이딩뷰가 안 그리므로 우리도 안 그립니다.
+   *
+   * ⭐⭐ unit: "price" - ★값이 가격 차이입니다.★
+   *    실측(BTC 77,374 USDT · 1시간봉)에서 Mom(10) 이 85.02 였습니다. 이 85.02 는
+   *    "85.02 USDT" 라는 뜻입니다. 원화로 보는 회원 화면에 그냥 85.02 로 뜨면
+   *    회원은 그게 원인 줄 압니다 - 2026-09-03 에 ATR 이 당한 그 조용한 고장입니다.
+   *    ⚠️ PM 지시서에는 "여섯 다 지수라 unit 을 붙이지 말라" 고 적혀 있었지만,
+   *       tests/chart-indicator-unit-registry-seal.test.js 가 ★봉 값을 10배로 올려
+   *       재서★ 판정합니다. Momentum 은 10배가 그대로 10배로 나옵니다(가격).
+   *       재 본 결과를 따랐고, PM 에게 따로 보고했습니다.
+   * ------------------------------------------------------------------- */
+
+  define({
+    id: "mom",
+    name: "Momentum",
+    note: "지금 값과 n봉 전 값의 차이",
+    pane: "sub",
+    /* 13.3 값이 가격 차이라 표시 통화를 따라갑니다 - 위 주석 참조 */
+    unit: "price",
+    params: { p: 10 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    nameOf: function (prm) {
+      return "Mom(" + prm.p + ")";
+    },
+    /* 색 - 남색 #4974E9. 트레이딩뷰 내장 Momentum 의 파랑(#2962FF)에 우리
+       20색 중 가장 가까운 자리입니다. 같은 색을 쓰는 StochRSI %K 와는 칸이
+       달라 한 눈금 위에 같이 놓이지 않습니다. */
+    outputs: [{ key: "mom", kind: "line", color: "#4974E9", style: "solid" }],
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      var st = lagInit(p);
+
+      for (var i = 0; i < n; i++) {
+        var r = lagPush(st, src[i], p);
+        st = r.state;
+        if (r.old !== null) out.push({ time: bs.time[i], value: r.now - r.old });
+        if (i === n - 2) cap.state = lagCopy(st);
+      }
+      return { mom: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var r = lagPush(st, x, p);
+      return {
+        values: r.old === null ? {} : { mom: r.now - r.old },
+        state: r.state
+      };
+    }
+  });
+
+  /* -- ROC 변화율 (Rate Of Change) ---------------------------------------
+   *   ROC = (지금 값 - n봉 전 값) / n봉 전 값 × 100     (단위 %)
+   *
+   * ⭐ 계산식 - 트레이딩뷰 Pine 참고서 ta.roc 원문 (2026-09-03 · 브라우저로 열어 읽음)
+   *      "It is calculated by the formula: 100 * change(src, length) / src[length]."
+   *    도움말 "Rate of Change (ROC)" 도 같은 식입니다 -
+   *      "ROC = [(CurrentClose - Close n periods ago) / (Close n periods ago)] X 100"
+   *
+   * ⭐ 기본 9 · 종가 - 트레이딩뷰 실측입니다.
+   *    트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)에 내장 Rate Of Change 를 얹었더니
+   *    범례가 ★"ROC 9 close 0.23"★ 이었습니다.
+   *
+   * ⭐ 0선을 그립니다 - 같은 실측 화면에서 ROC 칸에 ★가로 점선 하나★ 가
+   *    0.00 자리에 있었습니다(Momentum 칸에는 없었습니다). 도움말도
+   *    "fluctuates above and below a Zero Line" 이라고 그 선을 두고 말합니다.
+   *
+   * ⚠️ 눈금은 고정하지 않고 keepGuides 만 씁니다.
+   *    도움말이 못 박아 둡니다 - "it is not bounded to a set range".
+   *    실측 눈금도 -2.00 ~ 2.00 으로 데이터를 따라 움직이고 있었습니다.
+   *    그렇다고 아무것도 안 걸면 계속 오르는 장에서 값이 늘 양수라 ★0선이
+   *    화면 밖★ 으로 나갑니다 - 그러면 위/아래를 가를 기준이 사라집니다.
+   *    트레이딩뷰의 hline 이 눈금 계산에 참여하는 것과 같은 뜻으로
+   *    scale: { keepGuides: true } 를 겁니다 (이 파일 13.1절 · CCI 와 같은 길).
+   *
+   * ⚠️ unit 을 ★안 붙입니다★ - 값이 %(지수) 입니다. 봉 값을 10배로 올려도
+   *    ROC 는 그대로입니다(분자·분모가 같이 커집니다). 붙이면 % 가 원으로
+   *    환산돼 뜻 없는 숫자가 됩니다.
+   *
+   * ⚠️ n봉 전 값이 0 이면 나눌 수가 없습니다. 트레이딩뷰는 무한대(na)를 내는데
+   *    우리는 그 자리를 ★비웁니다★ - 시세에 0 은 안 오지만, 오면 선이 화면
+   *    끝까지 튀어 눈금을 통째로 망가뜨립니다.
+   * ------------------------------------------------------------------- */
+
+  define({
+    id: "roc",
+    name: "Rate Of Change",
+    note: "n봉 전 대비 변화율 (%)",
+    pane: "sub",
+    params: { p: 9 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    useSource: true,
+    nameOf: function (prm) {
+      return "ROC(" + prm.p + ")";
+    },
+    /* 색 - 파랑 #499EE9. Momentum(남색)과 같은 파랑 계열이지만 한 단계 밝아
+       나란히 켜도 구분됩니다(ΔE76 22 이상은 LINE_COLORS 가 보장합니다). */
+    outputs: [{ key: "roc", kind: "line", color: "#499EE9", style: "solid" }],
+    guides: [{ price: 0 }],
+    scale: { keepGuides: true },
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var src = bs.src || bs.close;
+      var n = src.length;
+      var out = [];
+      var st = lagInit(p);
+
+      for (var i = 0; i < n; i++) {
+        var r = lagPush(st, src[i], p);
+        st = r.state;
+        if (r.old !== null && r.old !== 0) {
+          out.push({ time: bs.time[i], value: ((r.now - r.old) / r.old) * 100 });
+        }
+        if (i === n - 2) cap.state = lagCopy(st);
+      }
+      return { roc: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var x = typeof bar.src === "number" ? bar.src : bar.close;
+      var r = lagPush(st, x, p);
+      if (r.old === null || r.old === 0) return { values: {}, state: r.state };
+      return { values: { roc: ((r.now - r.old) / r.old) * 100 }, state: r.state };
     }
   });
 
