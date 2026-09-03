@@ -4679,7 +4679,23 @@ App.ChartDrawings = (function () {
     var ex = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=expand]") : null;
     if (ex) ex.setAttribute("aria-pressed", railOpen() ? "true" : "false");
     var fs = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=fullscreen]") : null;
-    if (fs) fs.setAttribute("aria-pressed", fullOn ? "true" : "false");
+    if (fs) {
+      fs.setAttribute("aria-pressed", fullOn ? "true" : "false");
+      /* 22차(2026-09-03 디자인팀) — 「색이 아니라 그림으로 상태를 알립니다」
+         전체화면은 회원이 차트를 보는 「내내 켜져 있는 상태」 입니다. 골드로
+         칠하면 전체화면으로 보는 회원은 화면에 골드가 늘 둘입니다(고른 도구 +
+         전체화면). 화살표가 밖을 보면 "켜면 커진다", 안을 보면 "누르면 돌아온다"
+         — 어디서나 통하는 그림이고 색을 하나도 안 씁니다.
+         잠금·숨김(21차)·여닫기 손잡이(20차)와 같은 방식입니다.
+         [주의] swapIcon 은 href 의 # 뒤만 바꿉니다. 스프라이트를 못 받아온
+           회원 화면(spriteFallback)에서도 아이콘이 안 사라집니다.
+         되돌리려면 — 이 중괄호를 풀어 setAttribute 한 줄만 남기고,
+           css/chart-toolbar.css 의 22차 토막과 assets/icons 두 파일의
+           tlc-i-fullscreen-off 를 같이 되돌립니다. */
+      swapIcon(fs, fullOn ? "tlc-i-fullscreen-off" : "tlc-i-fullscreen");
+      fs.setAttribute("title", fullOn ? "전체화면 끄기 (Esc 로도 돌아옵니다)" : "전체화면");
+      fs.setAttribute("aria-label", fs.getAttribute("title"));
+    }
     /* 알람은 가로 막대에 있지만 켜짐/꺼짐이 있는 도구라 같이 칠합니다 */
     var al = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=alert]") : null;
     if (al) al.setAttribute("aria-pressed", tool === "alert" ? "true" : "false");

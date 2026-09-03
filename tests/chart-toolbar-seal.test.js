@@ -348,8 +348,39 @@ ok("폰 .tlc-toolbar 도 overflow:visible 이다 (데스크톱의 overflow-x:aut
    *   이었습니다(360 실측 330x89). 통과하던 것이 사실이 아니었습니다.
    *   (css/chart-toolbar.css 20차 주석이 같은 오류를 먼저 잡아 놨습니다)
    *   그래서 여기도 "화면에 실제로 그려지는 수" 로 고쳤습니다. */
-  const 세로단추 = 14 + 3; /* 도구 14 + 손질 3(잠금·숨김·휴지통) */
-  const 가로단추 = 7 + 2 + 1; /* TOP_TOOLS 7 + 손질 2(되돌리기·다시하기) + 리플레이 1 */
+  /* ★2026-09-03 22차 (기록팀) — 손으로 적은 상수를 없앴습니다.
+   *   21차에 7 -> 10 으로 ★숫자만★ 고쳤는데, 감사팀 지적대로 ★그 구조 자체★ 가
+   *   오늘 잡힌 버그였습니다. js/chart-replay.js 가 단추를 하나 꽂아 화면엔 8개인데
+   *   이 계산은 7 로 세고 있었고, 아무도 몰랐습니다(그래서 "한 줄에 들어간다" 가
+   *   통과하고 있었습니다 — 사실이 아니었는데도).
+   *   숫자만 고치면 ★단추가 하나 더 늘어나는 날 또 똑같이 조용히 낡습니다.★
+   *   → 아래 [3] 이 쓰는 방식 그대로, ★화면에 실제로 그려진 단추를 셉니다.★
+   *     리플레이처럼 다른 파일이 꽂는 단추도 같이 태워서 셉니다. */
+  const 막대 = 실제단추수();
+  const 세로단추 = 막대.rail;
+  const 가로단추 = 막대.bar;
+  ok("가로 막대 단추 수를 손으로 적지 않고 화면에서 센다 (지금 " + 가로단추 + "개)",
+    가로단추 > 0, "한 개도 안 그려졌습니다 — 아래 계산이 전부 헛돕니다");
+  ok("세로 막대 단추 수도 화면에서 센다 (지금 " + 세로단추 + "개)",
+    세로단추 > 0, "한 개도 안 그려졌습니다");
+  {
+    /* 세는 창에 ★다른 파일이 꽂는 단추★ 가 빠지면 21차 이전과 똑같아집니다.
+       그래서 (가) 탐지된 파일이 실제로 단추를 늘렸는지, (나) 단추를 만드는
+       파일 중 탐지에서 새는 것이 없는지 둘 다 봅니다. */
+    const 혼자 = boot({ width: 1920 });
+    const 혼자바 = 혼자.win.document.querySelectorAll(".tlc-toolbar .tlc-btn").length;
+    혼자.win.close();
+    ok("막대에 단추를 꽂는 다른 파일을 같이 태웠다 (" + (막대.꽂는파일.join(",") || "없음") +
+      " → " + 혼자바 + "개 + " + (가로단추 - 혼자바) + "개)",
+      가로단추 >= 혼자바 && (막대.꽂는파일.length === 0 || 가로단추 > 혼자바),
+      "탐지는 됐는데 단추가 안 늘었습니다 — DOMContentLoaded 를 안 쏘았거나 그 파일이 안 꽂습니다");
+    const 새는파일 = 단추를만드는파일들().filter(
+      (f) => f !== "chart-drawings.js" && 막대.꽂는파일.indexOf(f) === -1);
+    ok("단추를 만드는 파일이 전부 이 셈에 들어와 있다 (탐지가 눈먼 곳이 없다)",
+      새는파일.length === 0,
+      "세지 못한 파일: " + 새는파일.join(",") +
+      " — 이 파일이 꽂는 단추만큼 아래 계산이 낡습니다. 탐지 조건을 넓히세요");
+  }
   const 폰차트칸 = 330; /* 2026-08-25 360 화면 localhost 실측 — .chart-wrap 330px */
   const 한줄칸수 = Math.floor(폰차트칸 / M_BTN);
   const 필요폭 = 세로단추 * M_BTN;
@@ -425,7 +456,51 @@ function boot(opts) {
     getActiveInterval: () => win.__iv || "1m"
   };
   win.eval(DRAW_SRC);
+  /* 막대에 단추를 꽂는 ★다른 파일★ 도 같이 태웁니다 (지금은 js/chart-replay.js).
+     그 파일들은 DOMContentLoaded 를 기다리므로 여기서 한 번 쏴 줍니다 —
+     안 쏘면 단추가 안 붙어서, 화면에는 있는 단추를 세지 못합니다. */
+  (opts.also || []).forEach(function (f) {
+    win.eval(read("js/" + f));
+  });
+  if (opts.also && opts.also.length) {
+    win.document.dispatchEvent(new win.Event("DOMContentLoaded", { bubbles: true }));
+  }
   return { dom, win, M: win.App.ChartDrawings };
+}
+
+/* ── 화면에 ★실제로 그려지는★ 단추 수 (2026-09-03 22차) ──────────────────────
+ * 아래 [2] 의 접힘 계산이 쓰던 손으로 적은 상수를 대신합니다.
+ * (function 선언이라 위쪽 [2] 에서 불러도 됩니다 — CSS 의 block() 과 같습니다)
+ * -------------------------------------------------------------------------- */
+
+/** 도구 막대를 직접 잡아 단추를 꽂는 ★다른★ js 파일 목록 (스스로 찾습니다) */
+function 막대에꽂는파일들() {
+  return fs
+    .readdirSync(path.join(REPO, "js"))
+    .filter((f) => f.slice(-3) === ".js" && f !== "chart-drawings.js")
+    .filter((f) =>
+      /querySelector\(\s*["']\.tlc-toolbar["']\s*\)/.test(stripComments(read("js/" + f))))
+    .sort();
+}
+/** .tlc-btn 을 ★새로 만드는★ js 파일 목록 — 위 탐지가 눈먼 곳을 잡는 그물입니다 */
+function 단추를만드는파일들() {
+  return fs
+    .readdirSync(path.join(REPO, "js"))
+    .filter((f) => f.slice(-3) === ".js")
+    .filter((f) => /className\s*=\s*["']tlc-btn|class=\\?"tlc-btn/.test(stripComments(read("js/" + f))))
+    .sort();
+}
+/** 실제로 그려진 단추를 세어 돌려줍니다 { rail, bar, 꽂는파일 } */
+function 실제단추수() {
+  const 꽂는파일 = 막대에꽂는파일들();
+  const W = boot({ width: 1920, also: 꽂는파일 });
+  const n = {
+    rail: W.win.document.querySelectorAll(".tlc-rail .tlc-btn").length,
+    bar: W.win.document.querySelectorAll(".tlc-toolbar .tlc-btn").length,
+    꽂는파일: 꽂는파일
+  };
+  W.win.close();
+  return n;
 }
 
 const A = boot({ width: 1920 });
@@ -706,11 +781,9 @@ console.log("\n[3-1] 손질 단추 — 되돌리기 · 잠금 · 숨김 · 휴�
     missing.length === 0, missing.join(","));
   ok("손질 단추 아이콘도 직접 그린 것이다 (스프라이트에 외부 주소가 없다)",
     !/https?:\/\//.test(SPRITE.replace(/xmlns="[^"]*"/g, "")), "외부 주소가 있습니다");
-  /* 스프라이트를 못 받아왔을 때 href 가 "파일경로#id" 가 되는데(spriteFallback),
-     아이콘을 갈아 끼울 때 그 앞부분을 지워 버리면 그 회원 화면에서만
-     아이콘이 사라집니다. 오류도 안 나는 조용한 고장이라 못 박아 둡니다. */
-  ok("아이콘을 갈아 끼울 때 # 앞을 지우지 않는다 (스프라이트 못 받은 회원 화면이 깨집니다)",
-    /function swapIcon[\s\S]{0,400}indexOf\("#"\)/.test(DRAW_CODE));
+  /* 아이콘 갈아 끼우기(swapIcon)가 "# 앞" 을 지키는지는 ★아래 [3-2]★ 에서
+     실제로 태워서 값으로 확인합니다. 여기에 글자 검사로 두지 않는 이유는
+     [3-2] 첫머리에 적어 뒀습니다 (2026-09-03 감사팀 지적). */
 
   /* ⚠ 자석 — 코드에 기능이 없으면 단추도 없어야 합니다.
      "아이콘은 있는데 눌러도 아무 일이 없는" 것이 이 프로젝트가 가장 싫어하는
@@ -721,6 +794,91 @@ console.log("\n[3-1] 손질 단추 — 되돌리기 · 잠금 · 숨김 · 휴�
   ok("자석을 왜 안 만들었는지 근거가 남아 있다 (다음 사람이 무심코 아이콘만 세우지 않게)",
     /자석\(magnet\)은 넣지 않았습니다/.test(DRAW_SRC));
 }
+
+/* =============================================================================
+ * 3-2) 아이콘 갈아 끼우기 — ★글자가 아니라 실제로 태워서★ 봅니다 (22차 2026-09-03)
+ * -----------------------------------------------------------------------------
+ * 무엇을 지키나
+ *   스프라이트(assets/icons/chart-tools.svg)를 못 받아온 회원은 spriteFallback()
+ *   덕분에 href 가 ★"assets/icons/chart-tools.svg#tlc-i-unlock"★ 처럼
+ *   ★파일경로가 앞에 붙은 상태★ 입니다. 자물쇠·눈 아이콘을 갈아 끼울 때
+ *   그 앞부분을 버리고 "#" + id 로 통째로 덮으면, ★그 회원 화면에서만★
+ *   아이콘이 사라집니다. 오류도 안 나고 다른 회원 화면은 멀쩡한 조용한 고장입니다.
+ *
+ * 왜 글자 검사를 버렸나 (2026-09-03 감사팀 지적 — 이 봉인은 가짜였습니다)
+ *   전에는 이렇게 돼 있었습니다:
+ *       /function swapIcon[\s\S]{0,400}indexOf\("#"\)/.test(DRAW_CODE)
+ *   ★indexOf("#") 라는 글자만 있으면 통과★ 합니다. 그래서 아래처럼 버그를
+ *   되살려도 초록이었습니다 — 지키는 것이 하나도 없었습니다:
+ *       var at = cur.indexOf("#");   // 글자는 있음
+ *       var want = "#" + id;         // 앞부분을 통째로 버림  ← 못 잡음
+ *
+ * 그래서 값으로 봅니다
+ *   폴백 상태(경로#id)를 실제로 만들어 놓고 단추를 눌러 swapIcon 을 태운 뒤,
+ *   ★# 앞의 경로가 그대로 남아 있는지★ 를 href 값 전체로 비교합니다.
+ *   (boot() 는 win.fetch 를 지워 두기 때문에 loadSprite() 가 spriteFallback()
+ *    으로 물러섭니다 — 이 창은 "스프라이트를 못 받은 회원" 그 화면입니다)
+ * -------------------------------------------------------------------------- */
+console.log("\n[3-2] 아이콘 갈아 끼우기 — 폴백 화면에서 실제로 눌러 봅니다");
+{
+  const SW = boot({
+    width: 1920,
+    seed: {
+      "chart-drawings": {
+        v: 1, ui: {},
+        bySymbol: {
+          BTCUSDT: {
+            hlines: [{ id: "h1", price: 100000 }],
+            byInterval: { "1m": [{ id: "s1", kind: "trend" }] }
+          }
+        }
+      }
+    }
+  });
+  const 단추 = (k) => SW.win.document.querySelector('.tlc-btn[data-tlc="' + k + '"]');
+  const href = (b) => (b.querySelector(".tlc-ico use").getAttribute("href") || "");
+  const 누름 = (b) => b.dispatchEvent(new SW.win.MouseEvent("click", { bubbles: true, cancelable: true }));
+  const 경로 = "assets/icons/chart-tools.svg";
+  const lk = 단추("lockall");
+  const hd = 단추("hideall");
+
+  /* 전제 — 이 창이 정말 "스프라이트를 못 받은 회원" 화면인가.
+     여기가 깨지면 아래 검사들이 전부 헛돌므로 먼저 못 박습니다. */
+  ok("폴백 화면이 실제로 재현됐다 — href 가 \"경로#id\" 다 (이 아래 검사들의 전제)",
+    href(lk) === 경로 + "#tlc-i-unlock", href(lk));
+
+  누름(lk);
+  ok("★잠근 뒤에도 # 앞의 파일경로가 그대로 남는다★ (\"#\"+id 로 덮으면 아이콘이 사라집니다)",
+    href(lk) === 경로 + "#tlc-i-lock", href(lk));
+  누름(lk);
+  ok("풀면 다시 열린 자물쇠로 돌아오고 경로도 그대로다 (되돌아올 때도 안 깨진다)",
+    href(lk) === 경로 + "#tlc-i-unlock", href(lk));
+  ok("여러 번 갈아 끼워도 경로가 겹쳐 붙지 않는다 (\"경로#id#id\" 가 되지 않는다)",
+    href(lk).split("#").length === 2, href(lk));
+
+  누름(hd);
+  ok("숨김 아이콘(눈→빗금)도 경로를 지킨다", href(hd) === 경로 + "#tlc-i-eye-off", href(hd));
+  누름(hd);
+  ok("다시 보이기로 돌아와도 경로를 지킨다", href(hd) === 경로 + "#tlc-i-eye", href(hd));
+
+  /* ★경로를 통째로 박아 넣는 방식(SPRITE_URL + "#" + id)도 막습니다.★
+     그렇게 짜면 위 검사는 전부 통과하지만, 스프라이트를 다른 자리에서
+     받아오게 바뀌는 날 조용히 깨집니다. "앞부분을 그대로 둔다" 가 규칙이지
+     "우리 경로를 붙인다" 가 규칙이 아닙니다. 그래서 낯선 앞부분을 넣어 봅니다. */
+  const 낯선앞 = "https://cdn.example.test/sprite.svg";
+  lk.querySelector(".tlc-ico use").setAttribute("href", 낯선앞 + "#tlc-i-unlock");
+  누름(lk);
+  ok("낯선 앞부분이어도 그대로 둔다 (우리 경로를 박아 넣는 방식이 아니다)",
+    href(lk) === 낯선앞 + "#tlc-i-lock", href(lk));
+
+  /* # 이 아예 없는 href(옛 브라우저에서 xlink:href 만 남는 등)도 안 터져야 합니다 */
+  hd.querySelector(".tlc-ico use").setAttribute("href", "");
+  누름(hd);
+  ok("href 가 비어 있어도 터지지 않고 \"#id\" 로 채운다", href(hd) === "#tlc-i-eye-off", href(hd));
+
+  SW.win.close();
+}
+
 {
   /* 되돌리기 — 이미 있던 undo()/redo() 를 그대로 부릅니다 */
   const un = barBtns.filter((x) => x.getAttribute("data-tlc") === "undo")[0];

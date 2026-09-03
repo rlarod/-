@@ -4,29 +4,62 @@
      버튼 안에서는 이렇게 씁니다:
        <svg class="tlc-ico" viewBox="0 0 16 16" aria-hidden="true"><use href="#tlc-i-cursor"/></svg>
      16px / 단색 / currentColor / stroke-width 1.5. 이모지 0개.
+
+     ⚠ 이 파일은 assets/icons/chart-tools.svg 와 ★같아야 합니다★.
+       2026-09-03 감사에서 원본 28개 / 이 파일 18개로 열 개가 어긋나 있었습니다.
+       화면은 .svg 를 받아 쓰니 아무 오류도 안 났고, 그래서 아무도 몰랐습니다.
+       하지만 위 안내대로 이 파일을 붙여넣는 사람이 나오면 그 순간 열 개가
+       빈칸이 됩니다 — 수직선·사각형·화살표·되돌리기·다시하기·잠금·숨김·휴지통.
+       ★아이콘을 새로 그리면 두 파일에 같이 넣으세요.★
+       tests/icon-sprite-doc-sync.test.js 가 두 파일의 id 집합을 대조합니다.
      =========================================================================== -->
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false"
      style="position:absolute;width:0;height:0;overflow:hidden"
      fill="none" stroke="currentColor" stroke-width="1.5"
      stroke-linecap="round" stroke-linejoin="round">
-<!-- ── 세로 막대(선긋기 도구) 11개 ───────────────────────────────── -->
+<!-- ── 세로 막대(선긋기 도구) 14개 ───────────────────────────────── -->
 <symbol id="tlc-i-cursor" viewBox="0 0 16 16"><path d="M8 1.6v4M8 10.4v4M1.6 8h4M10.4 8h4"/></symbol>
 <symbol id="tlc-i-trendline" viewBox="0 0 16 16"><path d="M5 11 11 5"/><circle cx="3.4" cy="12.6" r="1.6"/><circle cx="12.6" cy="3.4" r="1.6"/></symbol>
 <symbol id="tlc-i-hline" viewBox="0 0 16 16"><path d="M1.6 8h12.8"/><circle cx="5.6" cy="8" r="1.6"/></symbol>
+<symbol id="tlc-i-vline" viewBox="0 0 16 16"><path d="M8 1.6v12.8"/><circle cx="8" cy="5.6" r="1.6"/></symbol>
 <symbol id="tlc-i-fib" viewBox="0 0 16 16"><path d="M1.8 3.6h12.4M1.8 8h12.4M1.8 12.4h12.4"/></symbol>
 <symbol id="tlc-i-wave" viewBox="0 0 16 16"><path d="m1.8 11.2 3.4-6 3 5 3-6.6 2.9 5"/></symbol>
 <symbol id="tlc-i-channel" viewBox="0 0 16 16"><path d="M1.8 8.2 8 2M1.8 13 12.8 2.2M7.2 14.2 14.2 7.2"/></symbol>
 <symbol id="tlc-i-brush" viewBox="0 0 16 16"><path d="m2.4 13.6 1.2-3.4 7.3-7.3 2.2 2.2-7.3 7.3z"/><path d="m10.2 3.8 2.2 2.2"/></symbol>
+<symbol id="tlc-i-rect" viewBox="0 0 16 16"><rect x="2.4" y="3.6" width="11.2" height="8.8" rx="1"/></symbol>
+<symbol id="tlc-i-arrow" viewBox="0 0 16 16"><path d="M2.8 13.2 12.4 3.6M7.2 3.6h5.2v5.2"/></symbol>
 <symbol id="tlc-i-text" viewBox="0 0 16 16"><path d="M3.4 3.6h9.2M8 3.6v8.8"/></symbol>
 <symbol id="tlc-i-face" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M5.6 9.6q2.4 2.3 4.8 0"/><circle cx="6" cy="6.4" r=".85" fill="currentColor" stroke="none"/><circle cx="10" cy="6.4" r=".85" fill="currentColor" stroke="none"/></symbol>
 <symbol id="tlc-i-ruler" viewBox="0 0 16 16"><rect x="1.6" y="5" width="12.8" height="6" rx="1"/><path d="M4.8 5v2.2M8 5v2.8M11.2 5v2.2"/></symbol>
 <symbol id="tlc-i-zoom" viewBox="0 0 16 16"><circle cx="6.9" cy="6.9" r="4.8"/><path d="m10.5 10.5 3.4 3.4M4.7 6.9h4.4M6.9 4.7v4.4"/></symbol>
-<!-- ── 가로 막대 7개 ─────────────────────────────────────────────── -->
+<!-- ── 가로 막대 8개 ─────────────────────────────────────────────── -->
 <symbol id="tlc-i-chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol>
 <symbol id="tlc-i-candle" viewBox="0 0 16 16"><rect x="2.6" y="5.2" width="3.6" height="6" rx=".6"/><path d="M4.4 2.2v3M4.4 11.2v2.6"/><rect x="9.8" y="6.8" width="3.6" height="4.6" rx=".6"/><path d="M11.6 3.8v3M11.6 11.4v2.8"/></symbol>
 <symbol id="tlc-i-fx" viewBox="0 0 16 16"><path d="M6.6 13.4V5.1a2 2 0 0 1 2-2h.5M4.4 7.7h4.4M9.9 8.9l3.7 4.5M13.6 8.9l-3.7 4.5"/></symbol>
 <symbol id="tlc-i-alarm" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></symbol>
 <symbol id="tlc-i-hexagon" viewBox="0 0 16 16"><path d="M8 1.7 13.5 4.85v6.3L8 14.3 2.5 11.15v-6.3z"/></symbol>
 <symbol id="tlc-i-fullscreen" viewBox="0 0 16 16"><path d="M2.2 6.2V2.2h4M9.8 2.2h4v4M13.8 9.8v4h-4M6.2 13.8h-4v-4"/></symbol>
+<!-- 전체화면이 「켜져 있을 때」 의 그림 (2026-09-03 디자인팀 22차).
+     위 아이콘을 안팎으로 뒤집은 것입니다 — 모서리 갈고리가 바깥이 아니라
+     안쪽을 향합니다. "누르면 원래대로 줄어든다" 는 뜻이고, 전체화면 켜짐을
+     골드가 아니라 이 그림으로 알립니다.
+     js/chart-drawings.js 의 paintButtons() 가 갈아 끼웁니다. -->
+<symbol id="tlc-i-fullscreen-off" viewBox="0 0 16 16"><path d="M6.2 2.2v4h-4M9.8 2.2v4h4M9.8 13.8v-4h4M6.2 13.8v-4h-4"/></symbol>
 <symbol id="tlc-i-camera" viewBox="0 0 16 16"><rect x="1.7" y="4.9" width="12.6" height="9.2" rx="1.6"/><path d="M5.6 4.9 6.8 2.7h2.4l1.2 2.2"/><circle cx="8" cy="9.5" r="2.7"/></symbol>
+<!-- ── 되돌리기 / 다시하기 (2026-09-03 디자인팀 · 가로 막대 오른쪽 끝) ─────────
+     트레이딩뷰와 같은 자리·같은 모양(왼쪽으로 굽은 화살표 / 그 좌우 대칭)입니다.
+     그림을 가져다 쓴 것이 아니라 좌표를 직접 적었습니다.
+     ↷ 는 ↶ 를 x=8 축으로 뒤집은 값입니다(호의 sweep 만 1 -> 0). -->
+<symbol id="tlc-i-undo" viewBox="0 0 16 16"><path d="M4.4 4.3 1.9 6.8l2.5 2.5"/><path d="M1.9 6.8h7a3.6 3.6 0 0 1 0 7.2H6.2"/></symbol>
+<symbol id="tlc-i-redo" viewBox="0 0 16 16"><path d="M11.6 4.3 14.1 6.8l-2.5 2.5"/><path d="M14.1 6.8h-7a3.6 3.6 0 0 0 0 7.2h2.7"/></symbol>
+<!-- ── 세로 막대 아래 묶음 (2026-09-03 디자인팀) ─────────────────────────────
+     잠금·숨김은 켜짐/꺼짐이 있는 하나짜리 단추라 아이콘이 두 벌씩 필요합니다.
+     (자물쇠 닫힘 <-> 열림 / 눈 <-> 눈에 빗금)
+     ⚠ 자석(magnet)은 우리 코드에 기능 자체가 없어서 아이콘도 만들지 않았습니다.
+       아이콘만 있고 눌러도 아무 일이 없으면 그게 조용한 고장입니다. -->
+<symbol id="tlc-i-lock" viewBox="0 0 16 16"><rect x="3.2" y="7.2" width="9.6" height="6.6" rx="1.2"/><path d="M5.6 7.2V5.4a2.4 2.4 0 0 1 4.8 0v1.8"/></symbol>
+<symbol id="tlc-i-unlock" viewBox="0 0 16 16"><rect x="3.2" y="7.2" width="9.6" height="6.6" rx="1.2"/><path d="M5.6 7.2V5.4a2.4 2.4 0 0 1 4.8 0"/></symbol>
+<symbol id="tlc-i-eye" viewBox="0 0 16 16"><path d="M1.4 8s2.5-4.3 6.6-4.3S14.6 8 14.6 8s-2.5 4.3-6.6 4.3S1.4 8 1.4 8z"/><circle cx="8" cy="8" r="1.9"/></symbol>
+<symbol id="tlc-i-eye-off" viewBox="0 0 16 16"><path d="M6.4 4a7.4 7.4 0 0 1 1.6-.3c4.1 0 6.6 4.3 6.6 4.3a13 13 0 0 1-2.1 2.7M10.9 11.7a6.9 6.9 0 0 1-2.9.6C3.9 12.3 1.4 8 1.4 8a13 13 0 0 1 3.3-3.6"/><path d="M2.3 2.3 13.7 13.7"/></symbol>
+<symbol id="tlc-i-trash" viewBox="0 0 16 16"><path d="M2.6 4.4h10.8"/><path d="M6.2 4.4V2.9h3.6v1.5"/><path d="m4.3 4.4.7 9a1.1 1.1 0 0 0 1.1 1h3.8a1.1 1.1 0 0 0 1.1-1l.7-9"/><path d="M6.8 7v4.3M9.2 7v4.3"/></symbol>
 </svg>

@@ -718,3 +718,14 @@ tests/chart-replay-font-floor.test.js
 #   [0] 절이 수리 전·후 소스로 브라우저 실측을 재현해 흉내가 맞는지 먼저 봅니다.
 # 되돌리기: 이 줄과 tests/chart-settings-goto-order-bar-floor.test.js 삭제
 tests/chart-settings-goto-order-bar-floor.test.js
+
+# 2026-09-03 기록팀 — 아이콘 원본(.svg)과 붙여넣기 문서(.html)가 어긋나는 것을 막습니다
+#   감사에서 실측 — assets/icons/chart-tools.svg 28개 vs
+#   assets/icons/chart-tools-symbols.html 18개. ★10개가 안 따라왔습니다★
+#   (vline rect arrow undo redo lock unlock eye eye-off trash)
+#   문서 스스로 "index.html 에 붙여넣으세요" 라고 적힌 ★재료★ 라, 그대로 붙이는
+#   날 그 10개가 빈칸이 됩니다. 오류도 안 나는 조용한 고장입니다.
+#   ⚠️ 이 봉인은 지금 ★빨간 채로★ 들어갑니다 — 그게 발견입니다.
+#      고치는 곳은 assets/icons/chart-tools-symbols.html 이고 기록팀 범위 밖입니다.
+# 되돌리기: 이 줄과 tests/icon-sprite-doc-sync.test.js 삭제
+tests/icon-sprite-doc-sync.test.js
