@@ -377,6 +377,30 @@ App.ChartGotoDate = (function () {
   /* 창을 화면 안으로 넣습니다 (js/interval-more.js 와 같은 처리).
      기본은 버튼 ★위쪽★ 입니다 — 이 줄이 화면 아래쪽에 있어서
      아래로 열면 잘립니다. 위쪽도 모자라면 아래로 뒤집습니다. */
+  /* 창이 내려갈 수 있는 화면상의 마지노선 (창 아래끝이 이 값을 넘으면 안 됩니다).
+     폰의 하단 고정 매수/매도 바(.tl-order-bar) 위로는 안 내려갑니다.
+     전체화면일 때는 그 바가 화면에 안 그려지므로 세지 않습니다.
+
+     ⚠️ js/chart-indicator-menu.js 의 floorY() 와 ★같은 것★ 입니다.
+        js/chart-indicator-settings.js 에도 같은 것이 있습니다 — 셋을 같이 고치세요. */
+  function floorY(m) {
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    var lim = vh - m;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim;
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - m < lim) lim = r.top - m;
+    return lim;
+  }
+
   function clampPanel() {
     if (!isOpen()) return;
     try {
@@ -388,12 +412,56 @@ App.ChartGotoDate = (function () {
       if (r.left + shift < 8) shift = 8 - r.left;
       if (shift) panel.style.left = Math.round(shift) + "px";
 
-      var vh = document.documentElement.clientHeight;
+      /* ⚠️ 2026-09-03 수리팀 (P3) — 그전에는 세로를 clientHeight 로만 봤습니다.
+           ① 하단 주문 바를 몰라서 아래로 뒤집으면 그 밑에 깔렸습니다.
+              실측 640x360 — 창 아래끝 356 / 바 윗변 287 / 겹침 69px,
+              elementFromPoint("이동" 한가운데) 가 tl-order-bar-long 을 돌려줬습니다.
+              "이동" 자리에서 ★매수/롱★ 이 눌립니다.
+           ② 위로도 아래로도 다 안 들어가면 ★잘린 채 그냥 남는 갈래★ 가 있었습니다.
+              (세로 화면은 멀쩡하고 폰을 눕혔을 때만 납니다)
+         그래서 위·아래 쓸 수 있는 키를 재서 고르고, 둘 다 모자라면
+         넓은 쪽에 붙인 뒤 ★그 키에 맞춰 줄이고 스크롤★ 시킵니다. */
+
+      /* 잰 값이 지난번 자르기에 물들지 않게 되돌리고 시작합니다 */
+      panel.style.maxHeight = "";
+      panel.style.overflowY = "";
+
+      var m = 8;
+      var GAP = 6; /* 버튼과 창 사이 (CSS 의 calc(100% + 6px) 와 같은 값) */
+      var 바닥 = floorY(m);
       var br = btn.getBoundingClientRect();
-      var r2 = panel.getBoundingClientRect();
-      if (r2.top < 8 && br.bottom + r2.height + 6 <= vh - 8) {
+      var h = panel.getBoundingClientRect().height;
+
+      /* ⚠️ "버튼 위에 놓으면 된다" 가 아닙니다 — ★버튼 자체가 막대 밑에 있을 수 있습니다★.
+           실측 640x360 — 버튼 윗변 362 인데 화면은 360 이고 막대 윗변은 287 입니다.
+           버튼 위에 붙이면 창 아래끝이 356 이 돼서 막대를 69px 덮습니다.
+           그래서 버튼이 아니라 ★막대 윗변★ 을 기준으로 끌어올립니다. */
+      var 위끝 = Math.min(br.top - GAP, 바닥); /* 위에 놓았을 때 창의 아래끝 */
+      var 위칸 = 위끝 - m; /* 위로 쓸 수 있는 키 */
+      var 아래칸 = 바닥 - (br.bottom + GAP); /* 아래로 쓸 수 있는 키 */
+
+      /* 위에 놓을 때 CSS 기본(6px)보다 더 들어올려야 하는 양 */
+      var 들기 = GAP + Math.max(0, br.top - GAP - 바닥);
+
+      if (h <= 위칸) {
+        panel.style.top = "auto";
+        panel.style.bottom = "calc(100% + " + Math.round(들기) + "px)";
+      } else if (h <= 아래칸) {
         panel.style.bottom = "auto";
-        panel.style.top = "calc(100% + 6px)";
+        panel.style.top = "calc(100% + " + GAP + "px)";
+      } else {
+        /* 어느 쪽도 통째로는 안 들어갑니다 — 넓은 쪽에 붙이고 그 키에 맞춥니다.
+           ⚠️ 자리만 옮기고 키를 그대로 두면 ★안 옮겨집니다★ — 잘린 채 남습니다. */
+        if (아래칸 >= 위칸) {
+          panel.style.bottom = "auto";
+          panel.style.top = "calc(100% + " + GAP + "px)";
+          panel.style.maxHeight = Math.max(0, Math.floor(아래칸)) + "px";
+        } else {
+          panel.style.top = "auto";
+          panel.style.bottom = "calc(100% + " + Math.round(들기) + "px)";
+          panel.style.maxHeight = Math.max(0, Math.floor(위칸)) + "px";
+        }
+        panel.style.overflowY = "auto";
       }
     } catch (e) {
       /* 무시 */

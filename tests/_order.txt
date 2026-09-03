@@ -693,3 +693,28 @@ tests/chart-popup-font-floor.test.js
 #         눈으로는 못 잡습니다. 그래서 "10배 올려도 값이 그대로냐" 로 잽니다.
 # 되돌리기: 이 줄과 tests/chart-indicator-mfi-cmf-trix-ao.test.js 삭제
 tests/chart-indicator-mfi-cmf-trix-ao.test.js
+
+# 2026-09-03 수리팀 — 리플레이 글씨 바닥값 17px + ★역전 금지★ (대표 지시 네 번째)
+#   chart-popup-font-floor.test.js 가 chart-replay.js 에 대해서만
+#   "17px 미만 7개까지" 한도를 열어뒀습니다(그때 배정 밖이었음).
+#   이 파일이 그 구멍을 ★한도 0★ 으로 닫습니다.
+#   같이 보는 것 — 좁은 폭 @media 가 넓은 화면보다 ★크면★ 도 빨강.
+#   ⚠️ 실측으로 실제 있던 역전 — .tl-rp-hint / .tl-rp-banner 가 기본 16px 인데
+#      폰 분기만 17px 이었습니다. 한쪽만 올리면 이렇게 조용히 뒤집힙니다.
+#   ⚠️ 바닥이지 천장이 아닙니다. 바이낸스 13px 에 맞춰 내리지 마세요.
+# 되돌리기: 이 줄과 tests/chart-replay-font-floor.test.js 삭제
+tests/chart-replay-font-floor.test.js
+
+
+# 2026-09-03 수리팀 — 지표 설정판(P1) · 날짜 창(P3) 이 폰 하단 주문막대 밑으로 안 간다
+#   ★둘 다 돈이 오가는 자리였습니다.★
+#   설정판 360x640 — 단추줄(기본값·취소·확인) 세 개가 통째로 바 밑에 깔려
+#     elementFromPoint("확인" 한가운데) 가 tl-order-bar-short 를 돌려줬습니다.
+#     "확인" 을 눌렀다고 믿는데 ★매도/숏 주문창★ 이 열립니다 (겹침 52px · 24개 중 15개).
+#   날짜 창 640x360 — "이동" 자리에 매수/롱 (겹침 69px). 눕혔을 때만 납니다.
+#   ⚠️ 날짜 창은 원인이 처음 본 것과 달랐습니다 — 창이 큰 게 아니라
+#      ★기준으로 삼은 버튼 자체가 바보다 아래★ 였습니다(버튼 윗변 362 · 화면 360).
+#   같이 보는 것 — 자리만 밀고 ★키(maxHeight)를 안 줄이면★ 판이 안 밀리고 안쪽만 잘립니다.
+#   [0] 절이 수리 전·후 소스로 브라우저 실측을 재현해 흉내가 맞는지 먼저 봅니다.
+# 되돌리기: 이 줄과 tests/chart-settings-goto-order-bar-floor.test.js 삭제
+tests/chart-settings-goto-order-bar-floor.test.js

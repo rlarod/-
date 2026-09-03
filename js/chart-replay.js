@@ -623,10 +623,10 @@ App.ChartReplay = (function () {
       ".tl-rp-pickline{position:absolute; top:0; bottom:0; width:0; border-left:1px dashed " + C.gold + "; display:none;}",
       ".tl-rp-hint{position:sticky; top:8px; align-self:center; margin:8px;" +
       " background:" + C.card + "; border:1px solid " + C.gold + "; color:" + C.text + ";" +
-      " border-radius:10px; padding:8px 14px; font-size:16px; line-height:1.35;}",
+      " border-radius:10px; padding:8px 14px; font-size:17px; line-height:1.35;}",
       ".tl-rp-banner{position:sticky; top:8px; margin:8px; display:none;" +
       " background:" + C.card + "; border:1px solid " + C.gold + "; border-radius:10px;" +
-      " padding:9px 12px; color:" + C.text + "; font-size:16px; line-height:1.4;" +
+      " padding:9px 12px; color:" + C.text + "; font-size:17px; line-height:1.4;" +
       " word-break:keep-all; text-align:center;}",
       ".tl-rp-banner b{color:" + C.gold + "; font-weight:700;}",
       ".tl-rp-banner .l1{display:block;}",
@@ -657,7 +657,7 @@ App.ChartReplay = (function () {
       " margin-bottom:8px; background:" + C.card + "; border:1px solid " + C.line + ";" +
       " border-radius:10px; padding:4px; display:none; pointer-events:auto;}",
       ".tl-rp-menu button{display:block; width:100%; background:transparent; border:0; color:" + C.text + ";" +
-      " font-size:16px; padding:9px 20px; text-align:left; cursor:pointer; border-radius:6px;}",
+      " font-size:17px; padding:9px 20px; text-align:left; cursor:pointer; border-radius:6px;}",
       ".tl-rp-menu button:hover{background:" + C.tile + ";}",
       ".tl-rp-menu button.on{color:" + C.gold + "; font-weight:700;}",
       ".tl-rp-lock{position:absolute; inset:0; z-index:40;" +
@@ -677,30 +677,31 @@ App.ChartReplay = (function () {
       'html[data-tl-replay="on"] .tl-ohlc{display:none;}',
       ".tl-rp-toast{position:sticky; bottom:74px; align-self:center; margin:0 0 4px;" +
       " background:" + C.card + "; border:1px solid " + C.down + "; color:" + C.text + ";" +
-      " border-radius:10px; padding:10px 16px; font-size:16px; line-height:1.4; max-width:88%;" +
+      " border-radius:10px; padding:10px 16px; font-size:17px; line-height:1.4; max-width:88%;" +
       " word-break:keep-all; text-align:center; display:none;}",
       ".tl-rp-banner .n{display:none;}",
       /* 폰(360)에서는 안내줄을 짧게 — 차트가 작아서 넉 줄이 되면 봉을 덮습니다.
          글씨는 줄이지 않고 ★글자 수★ 를 줄입니다 (시·고·저를 접고 종가만).
-         ⚠️ 2026-09-03 — 여기 두 줄이 실제로는 15px 라 위 기본(16px)보다 ★작았습니다★.
-            주석과 코드가 달랐던 것입니다. 대표 지시로 17px 로 올렸습니다.
-            이제 폰이 넓은 화면보다 1px 큽니다. 위 기본 16px 들은 배정 밖이라
-            안 건드렸고, PM 에게 따로 보고했습니다. */
+         ⚠️ 2026-09-03 — 한때 폰 분기가 15px 라 기본(16px)보다 작았고, 그걸 17px 로
+            올리면서 이번엔 폰이 넓은 화면보다 큰 ★역전★ 이 남았습니다.
+            같은 날 대표 지시(네 번째)로 기본쪽 16px 7군데도 17px 로 올려 역전을 없앴습니다.
+            ★이 파일의 글씨는 이제 전부 17px 이상★ 입니다 (본문 17 / 안내제목 19·21).
+            ⚠️ 바이낸스를 천장으로 쓰지 않습니다 — 거기가 13px 라고 내리지 마세요. */
       "@media (max-width:560px){" +
       " .tl-rp-date{display:none;}" +
       " .tl-rp-b{width:34px; height:34px;}" +
       " .tl-rp-hint{font-size:17px; padding:7px 10px; max-width:92%; text-align:center;}" +
       " .tl-rp-banner{font-size:17px; padding:7px 9px; margin:6px;}" +
       " .tl-rp-banner .w{display:none;} .tl-rp-banner .n{display:inline;}" +
-      " .tl-rp-lock .t{font-size:19px;} .tl-rp-lock .s{font-size:16px;} }",
+      " .tl-rp-lock .t{font-size:19px;} .tl-rp-lock .s{font-size:17px;} }",
       /* 폰의 아래 고정 주문 막대(.tl-order-bar)는 주문창과 다른 자리에 있습니다.
          리플레이 중에는 그 위를 덮어 누르지 못하게 합니다. */
       ".tl-rp-mlock{position:fixed; z-index:9000; display:flex; align-items:center;" +
       " justify-content:center; gap:10px; background:rgba(10,15,28,.94);" +
-      " border-top:1px solid " + C.gold + "; color:" + C.gold + "; font-size:16px;" +
+      " border-top:1px solid " + C.gold + "; color:" + C.gold + "; font-size:17px;" +
       " font-weight:700; text-align:center; padding:8px 10px; word-break:keep-all;}",
       ".tl-rp-mlock button{background:" + C.gold + "; color:#0A0F1C; border:0; border-radius:8px;" +
-      " padding:10px 14px; font-size:16px; font-weight:700; cursor:pointer; white-space:nowrap;}"
+      " padding:10px 14px; font-size:17px; font-weight:700; cursor:pointer; white-space:nowrap;}"
     ].join("\n");
     document.head.appendChild(s);
   }

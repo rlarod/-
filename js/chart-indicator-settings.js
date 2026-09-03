@@ -288,12 +288,51 @@ App.ChartIndicatorSettings = (function () {
     picker = null;
   }
 
+  /* 판이 내려갈 수 있는 화면상의 마지노선 (top + 높이 가 이 값을 넘으면 안 됩니다).
+     폰의 하단 고정 매수/매도 바(.tl-order-bar) 위로는 안 내려갑니다.
+     전체화면일 때는 그 바가 화면에 안 그려지므로 세지 않습니다.
+
+     ⚠️ 2026-09-03 수리팀 (P1) — 그전에는 화면 아래끝(innerHeight)만 봤습니다.
+        하단 주문 바를 몰라서 ★단추줄 세 개가 통째로 바 밑에 깔렸습니다★.
+        실측 360x640 — 단추 577~619 / 바 윗변 567 / 겹침 52px,
+        elementFromPoint(확인 한가운데) 가 tl-order-bar-short 를 돌려줬습니다.
+        오류도 안 나고 화면도 멀쩡한데 "확인" 자리에서 ★매도/숏 주문창★이 열립니다.
+        돈이 오가는 자리라 P1 로 잡았습니다.
+
+     ⚠️ js/chart-indicator-menu.js 의 floorY() 와 ★같은 것★ 입니다.
+        거기서 이미 검증된 방법이라 새로 만들지 않고 그대로 맞췄습니다.
+        한쪽만 고치면 같은 화면에서 두 판이 서로 다르게 놓입니다 — 같이 고치세요. */
+  function floorY(m) {
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    var lim = vh - m;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim;
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - m < lim) lim = r.top - m;
+    return lim;
+  }
+
   /** 화면 안으로 밀어 넣습니다. 360 에서도 밖으로 안 나가게. */
   function place(box, anchor) {
     var m = 8;
     var vw = window.innerWidth;
-    var vh = window.innerHeight;
-    box.style.maxHeight = vh - m * 2 + "px";
+    var bottom = floorY(m);
+
+    /* ⚠️ 자리만 위로 밀고 최대 높이를 그대로 두면 ★판이 안 밀립니다★.
+       키가 그대로라 위로 못 올라가고 안쪽만 잘립니다.
+       (오늘 js/chart-timezone.js 가 똑같은 함정에 빠졌던 자리입니다)
+       그래서 마지노선에서 위 여백까지 뺀 값을 최대 높이로 줍니다.
+       머리줄·단추줄은 flex:0 0 auto 라 안 줄고, 가운데 .tl-cfg-body 만
+       overflow-y:auto 로 스크롤됩니다 — 단추는 항상 보입니다. */
+    box.style.maxHeight = Math.max(0, bottom - m) + "px";
     var w = box.offsetWidth || 400;
     var h = box.offsetHeight || 400;
 
@@ -303,12 +342,14 @@ App.ChartIndicatorSettings = (function () {
       left = r.left + r.width / 2 - w / 2;
       top = r.top;
     } else {
+      /* 가운데 정렬도 ★쓸 수 있는 칸★ 안에서 합니다.
+         화면 한가운데(vh/2)로 잡으면 바 밑으로 내려갑니다. */
       left = vw / 2 - w / 2;
-      top = vh / 2 - h / 2;
+      top = m + (bottom - m - h) / 2;
     }
     if (left + w > vw - m) left = vw - m - w;
     if (left < m) left = m;
-    if (top + h > vh - m) top = vh - m - h;
+    if (top + h > bottom) top = bottom - h;
     if (top < m) top = m;
     box.style.left = Math.round(left) + "px";
     box.style.top = Math.round(top) + "px";

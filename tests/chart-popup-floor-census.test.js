@@ -43,9 +43,10 @@
  *
  * ── ⚠️ 이 파일이 못 박는 사실 (2026-09-03 census) ─────────────────────
  *   보호됨  js/chart-drawings.js · js/chart-candle-type.js ·
- *           js/chart-indicator-menu.js · ★js/interval-more.js★ ·
- *           ★js/chart-timezone.js★   (js/chart-replay.js 는 바를 덮는 쪽)
- *   ★안 보고 있음★  js/chart-goto-date.js · js/chart-indicator-settings.js
+ *           js/chart-indicator-menu.js · js/interval-more.js · js/chart-timezone.js ·
+ *           ★js/chart-goto-date.js★ · ★js/chart-indicator-settings.js★
+ *           (js/chart-replay.js 는 바를 덮는 쪽)
+ *   ★안 보고 있음★  ★없습니다 — 2026-09-03 에 0 이 됐습니다★
  *
  * ⚠ js/interval-more.js 는 2026-09-03 수리팀이 고쳐 보호군으로 옮겼습니다.
  *   그전 실측 — 360x800 에서 메뉴가 바닥을 +10px 넘어 7줄 중 1줄이 바에
@@ -61,11 +62,16 @@
  *   tests/chart-timezone-order-bar-floor.test.js 가 합니다.
  *   여기서는 바닥 함수만 봅니다(두 벌로 안 봅니다 — 5절 참조).
  *
- * 뒤 셋은 화면 아래끝(vh − 8)까지만 막습니다. 그런데 ≤700px 에서 화면 아래
- * 72px 는 매수·매도 바가 덮고 있고(style.css), 그 바의 z-index 는 990 이라
- * 이 창들(60 · 70 · 960)보다 ★위★ 입니다. 창의 아래쪽이 바 밑에 깔립니다.
- * ★기록팀은 사이트 코드를 못 고칩니다 — 이 사실을 숫자와 함께 적어 두고
- *   PM 에게 올립니다. 누가 고치면 4절이 빨개지고 그때 보호군으로 옮깁니다.★
+ * ⚠ js/chart-indicator-settings.js · js/chart-goto-date.js 도 2026-09-03 에
+ *   수리팀이 고쳐 보호군으로 옮겼습니다. ★둘 다 돈이 오가는 자리였습니다.★
+ *     설정판 — 360x640 에서 단추줄(기본값·취소·확인) 세 개가 통째로 바 밑에 깔려
+ *              elementFromPoint("확인" 한가운데) 가 tl-order-bar-short 를 돌려줬습니다.
+ *              ★"확인" 을 누르면 매도/숏 주문창이 열립니다★ (겹침 52px · P1).
+ *     날짜 창 — 눕힌 화면 640x360 에서 "이동" 자리에 매수/롱 (겹침 69px · P3).
+ *   지금은 둘 다 floorY() 로 바를 봅니다. 2절이 회귀를 막습니다.
+ *
+ * ★4절은 이제 비었습니다.★ 화면 기준인데 바를 안 보는 것이 0 개입니다 —
+ *   하나라도 늘면 그건 전부 ★새 구멍★ 이고 그 자리에서 빨개집니다.
  *
  * ── 되돌리는 방법 ─────────────────────────────────────────────────────
  * tests/_order.txt 의 등록 줄과 이 파일을 지우면 끝입니다.
@@ -246,7 +252,13 @@ ok("칸·문서 좌표로 띄우는 것이 알려진 3개 그대로다 (" + 칸�
 
 const 보호군 = 화면기준.filter((m) => m.바를봄).map((m) => m.파일);
 const 알려진보호군 = [
-  "chart-candle-type.js", "chart-drawings.js", "chart-indicator-menu.js",
+  "chart-candle-type.js", "chart-drawings.js",
+  /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (P1 · P3)
+     chart-indicator-settings.js — 설정판 단추줄 세 개가 바 밑에 깔려
+       "확인" 자리에서 ★매도/숏★ 이 눌렸습니다 (360x640 겹침 52px)
+     chart-goto-date.js — 눕힌 화면에서 "이동" 자리에 ★매수/롱★
+       (640x360 겹침 69px). 둘 다 floorY() 로 바를 봅니다 */
+  "chart-goto-date.js", "chart-indicator-menu.js", "chart-indicator-settings.js",
   /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (둘 다 menuFloorY) */
   "chart-timezone.js", "interval-more.js"
 ];
@@ -387,13 +399,25 @@ function 바지우기(본문) {
 절("[4] 아직 하단 바를 안 보는 것 (PM 보고용 · 고쳐지면 여기가 빨개집니다)");
 
 const 미보호 = 화면기준.filter((m) => !m.바를봄).map((m) => m.파일);
-const 알려진미보호 = ["chart-goto-date.js", "chart-indicator-settings.js"];
-ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 그대로다★ (" + 미보호.join(" · ") + ")",
+/* ⚠️ 2026-09-03 — ★비었습니다.★ 마지막 둘(chart-goto-date · chart-indicator-settings)을
+   수리팀이 고쳐 2절 보호군으로 옮겼습니다. 이 절이 예고한 대로입니다.
+   이제 이 줄은 "새 구멍이 뚫렸는지" 를 보는 자리입니다 —
+   ★하나라도 늘면 그건 전부 새 구멍입니다.★ */
+const 알려진미보호 = [];
+ok("★화면 기준인데 바를 안 보는 것이 " + 알려진미보호.length + "개다★ (" +
+  (미보호.length ? 미보호.join(" · ") : "없음") + ")",
   미보호.slice().sort().join(",") === 알려진미보호.slice().sort().join(","),
   "지금: " + 미보호.join(",") + " / 알려진: " + 알려진미보호.join(",") +
-  "\n         → 하나가 고쳐졌으면 2절 알려진보호군 으로 옮기세요. " +
-  "새로 하나가 늘었으면 그건 ★새 구멍★ 입니다");
+  "\n         → 늘었으면 ★새 구멍★ 입니다. 고쳐서 2절 알려진보호군 으로 옮기세요");
 
+/* ⚠️ 2026-09-03 — 아래 두 덩이는 ★남은 것이 있을 때만★ 봅니다.
+   지금은 0 개라 빈 배열에 대고 "다 그렇다" 를 물으면 ★무조건 초록★ 이 됩니다.
+   그건 확인이 아니라 거짓 안심입니다 — "창 아래 64px 이 깔린다" 는 말도
+   이제 사실이 아닙니다. 그래서 감싸 두고, 비었으면 비었다고 적습니다.
+   새 구멍이 생겨 4절이 다시 채워지면 이 덩이들이 저절로 살아납니다. */
+if (!알려진미보호.length) {
+  ok("남은 것이 없어 「얼마나 깔리나」 · 「바보다 아래인가」 는 잴 것이 없다", true);
+} else {
 /* 얼마나 깔리나 — CSS 에서 읽은 값으로 계산합니다(숫자를 안 적습니다) */
 {
   /* 이 넷은 전부 화면 아래끝에서 8px 을 남깁니다 (원본에서 읽어 확인).
@@ -436,6 +460,7 @@ ok("★아직 안 보는 것이 알려진 " + 알려진미보호.length + "개 �
     밑에깔림.length === 알려진미보호.length,
     "지금 밑에 깔리는 것: " + 밑에깔림.join(",") +
     " → 하나가 바보다 위로 올라갔으면 「깔림」 은 풀리지만 「가림」 은 남습니다");
+}
 }
 
 /* =====================================================================
