@@ -5606,6 +5606,529 @@ App.ChartIndicatorKit = (function () {
     }
   });
 
+  /* =====================================================================
+   * 14단계 (2026-09-03) - 트레이딩뷰 내장 지표 넷을 더 얹습니다
+   *   MFI · CMF · TRIX · AO
+   * 앞 열셋과 같은 자리에 같은 모양으로 들어갑니다. 새로 낸 길은 ★창(window)
+   * 합 도우미★ 하나뿐이고, 나머지는 이미 있던 틀을 그대로 씁니다.
+   * 되돌리기 - 이 주석부터 AO 정의 끝까지를 지우면 13단계 화면 그대로입니다.
+   * ===================================================================== */
+
+  /* -- 창(window) 합 도우미 - MFI · CMF · AO 가 같이 씁니다 --------------
+   * "마지막 p개의 합" 을 O(1) 로 굴립니다. MA 의 step 과 ★같은 방식★ 입니다
+   *     합(t) = 합(t-1) + 값(t) - 값(t-p)
+   *
+   * ⚠️ ★같은 봉으로 여러 번 불려도 답이 같아야 합니다.★ 진행 중인 봉은 시세가
+   *    올 때마다 다시 계산되기 때문입니다(초당 수십 번). 그래서 이 도우미는
+   *    ★buf 의 head 칸 하나만★ 덮어쓰고, 합(S)과 곧 빠질 값(oldest)은
+   *    ★돌려주는 새 상태★ 에만 담습니다. 넘겨받은 st 는 S·oldest 가 그대로라
+   *    두 번째 호출도 "닫힌 봉까지의 합 + 지금 값" 에서 다시 시작합니다.
+   *    (MA · WMA 가 몇 달째 쓰고 있는 그 방식이고, 새로 만든 것이 아닙니다)
+   *
+   * ⚠️ 창이 덜 찼을 때는 빈 칸이 0 이라 합이 저절로 맞습니다. "몇 개 들어왔나"
+   *    는 각 지표가 c 로 따로 셉니다 - 도우미가 세면 지표마다 첫 점 자리가
+   *    다른 것(MFI 는 p, CMF 는 p-1)을 표현할 수 없습니다.
+   * ------------------------------------------------------------------- */
+  function winInit(p) {
+    var m = Math.max(1, p | 0);
+    var buf = new Array(m);
+    for (var i = 0; i < m; i++) buf[i] = 0;
+    return { S: 0, oldest: 0, buf: buf, head: 0 };
+  }
+
+  /** 확정 상태를 떠 옮길 때 - buf 를 ★복사★ 합니다. 안 하면 뒤 봉들이
+   *  같은 배열을 계속 고쳐서 "확정" 이 확정이 아니게 됩니다. */
+  function winCopy(st) {
+    return { S: st.S, oldest: st.oldest, buf: st.buf.slice(), head: st.head };
+  }
+
+  function winPush(st, x) {
+    var sum = st.S + x - st.oldest;
+    var len = st.buf.length || 1;
+    st.buf[st.head] = x;                     /* 덮어쓰는 칸은 여기 하나뿐 */
+    var head = (st.head + 1) % len;
+    return {
+      sum: sum,
+      state: { S: sum, oldest: st.buf[head], buf: st.buf, head: head }
+    };
+  }
+
+  /* -- MFI 자금흐름지수 (Money Flow Index) -------------------------------
+   *   típical(대표가격) = (고 + 저 + 종) / 3
+   *   원자금흐름         = 대표가격 x 거래량
+   *   대표가격이 ★오른 봉★ 의 원자금흐름을 p개 더한 것 = 양(+)
+   *   대표가격이 ★내린 봉★ 의 원자금흐름을 p개 더한 것 = 음(-)
+   *   MFI = 100 - 100 / (1 + 양/음)
+   *
+   * ⭐ 계산식 근거 - 트레이딩뷰 도움말 "Money Flow (MFI)" 원문
+   *    (2026-09-03 · WebFetch 로 열어 읽음)
+   *      "100 - 100/(1 + Money Flow Ratio) = Money Flow Index"
+   *      "The time period to be used in calculating the MFI. 14 is the default."
+   *      "Traditional overbought territory starts above 80 and oversold
+   *       territory starts below 20."
+   *
+   * ⭐⭐ 값을 ★실제 트레이딩뷰 차트와 맞춰 봤습니다★ (2026-09-03 · 실측)
+   *    트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)를 띄워 내장 MFI 를 얹으니
+   *    범례가 ★"MFI 14  65.12"★ 였습니다. 같은 순간 바이낸스 API 에서 받은
+   *    1시간봉 500개로 위 식을 계산하니 ★65.17★ 이었습니다(진행 중인 봉이
+   *    그 사이 움직인 만큼의 차이). 기간 14 · 대표가격 hlc3 · 등가(=)일 때
+   *    양쪽 어디에도 안 넣는 것까지 맞습니다.
+   *
+   * ⭐ 기준선 20 · 80 과 눈금 - 같은 실측 화면에서 MFI 칸에 가로 점선이
+   *    ★두 줄★ (80 · 20) 있었고 그 사이가 옅게 칠해져 있었습니다.
+   *    ⚠️ 트레이딩뷰의 눈금은 0~100 고정이 ★아니었습니다★ - 실측 눈금이
+   *       10.00 ~ 80.00 이었습니다(데이터 + 기준선에 맞춰 늘어남).
+   *       우리는 ★0~100 으로 고정합니다.★ 이유 둘 -
+   *         1) MFI 는 정의상 0~100 을 벗어날 수 없는 지표입니다
+   *         2) 이 틀의 RSI · StochRSI · Stochastic 셋이 이미 0~100 고정이라,
+   *            MFI 만 출렁이면 회원이 아래 칸마다 다른 자를 대고 읽게 됩니다
+   *       고정하면 20 · 80 이 ★절대★ 화면 밖으로 못 나갑니다
+   *       (2026-09-03 에 StochRSI · Stochastic · CCI 에서 났던 사고).
+   *
+   * ⚠️ unit 을 ★안 붙입니다★ - 값이 0~100 지수입니다. 봉 값을 10배로 올려도
+   *    대표가격이 분자·분모에서 같이 커져 비(比)가 그대로입니다(실측 1.000).
+   *
+   * ⚠️ 거래량을 씁니다 - 켜기 전에 거래량이 진짜 오는지 먼저 쟀습니다.
+   *    2026-09-03 실측(localhost · 1920 · BTCUSDT · 1분봉 1002개) -
+   *    0 인 봉 ★0개★ · 최소 2.648 · 최대 1,700.806 · 합 105,546.109.
+   *    그래도 앞으로 0 이 될 수 있어 OBV · VWAP 과 같은 안전장치를 씁니다.
+   *
+   * ⚠️ 음(-)이 0 이면 나눌 수가 없습니다. 트레이딩뷰(Pine)는 무한대를 태워
+   *    100 을 냅니다 - 우리도 100 을 냅니다. 양·음이 ★둘 다★ 0 이면
+   *    (p봉 내내 대표가격이 한 번도 안 움직인 경우) 뜻이 없어 ★비웁니다.★
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    창 두 개(양 · 음)를 굴리는 것이 전부입니다. 위 winPush 참조.
+   *    상태는 { pos, neg, ptp, c } 넷이고 창을 훑지 않습니다.
+   * ------------------------------------------------------------------- */
+  function mfiOne(st, high, low, close, vol, p) {
+    var tp = (high + low + close) / 3;
+    var v = typeof vol === "number" && isFinite(vol) ? vol : 0;
+    var up = 0;
+    var dn = 0;
+    if (st.ptp !== null) {
+      if (tp > st.ptp) up = tp * v;
+      else if (tp < st.ptp) dn = tp * v;
+      /* 같으면 양쪽 어디에도 안 넣습니다 (Pine 의 <= · >= 와 같은 뜻) */
+    }
+    var P = winPush(st.pos, up);
+    var N = winPush(st.neg, dn);
+    /* ⚠️ 첫 봉은 "앞 봉과의 차이" 가 없어 ★세지 않습니다.★ 안 그러면 첫 점이
+       한 봉 빨라져 트레이딩뷰와 어긋납니다 (첫 점은 p번째 봉). */
+    var c = st.ptp === null ? 0 : (st.c < p ? st.c + 1 : p);
+    var value = null;
+    if (c >= p) {
+      if (N.sum > 0) value = 100 - 100 / (1 + P.sum / N.sum);
+      else if (P.sum > 0) value = 100;
+      /* ⚠️ 0 · 100 으로 ★잘라 둡니다.★ 값을 바꾸는 것이 아니라 ★부동소수점
+         찌꺼기★ 를 지우는 것입니다. 창 합을 O(1) 로 굴리면(합 + 새 값 - 옛 값)
+         한 봉씩 아주 작은 오차가 쌓이는데, p봉 내내 오른 장에서 음(-)합이
+         참값 0 이어야 할 때 그 자리에 −2.8e-14 같은 것이 남습니다.
+         그러면 MFI 가 −0.00000000000003 이 되어 ★정의상 있을 수 없는 음수★ 가
+         화면에 뜹니다(실측 - 봉 400개에서 최소 −2.842e-14).
+         MFI 는 정의상 0 ~ 100 을 벗어날 수 없어서 자르는 것이 안전합니다.
+         ⚠️ 이 자르기가 ★진짜 오차를 덮지는 못합니다★ - 1e-13 이 아니라 눈에
+            보일 만큼 벗어나면 참조식 대조(tests/chart-indicator-mfi-cmf-trix-ao)가
+            그 자리에서 빨개집니다. */
+      if (value !== null) {
+        if (value < 0) value = 0;
+        else if (value > 100) value = 100;
+      }
+    }
+    return {
+      value: value,
+      state: { pos: P.state, neg: N.state, ptp: tp, c: c }
+    };
+  }
+
+  function mfiCopy(st) {
+    return { pos: winCopy(st.pos), neg: winCopy(st.neg), ptp: st.ptp, c: st.c };
+  }
+
+  define({
+    id: "mfi",
+    name: "MFI",
+    note: "자금흐름지수 (거래량을 실은 RSI)",
+    pane: "sub",
+    params: { p: 14 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    nameOf: function (prm) {
+      return "MFI(" + prm.p + ")";
+    },
+    /* 색 - 연남색 #9197F3. 트레이딩뷰 내장 MFI 의 보라(#7E57C2)에 우리 20색 중
+       가장 가까운 자리이면서, ★어느 아래 칸에도 안 쓰이는 색★ 입니다
+       (지금은 주 차트의 SAR 점만 씁니다 - 칸이 달라 한 눈금에 같이 안 놓입니다).
+       ⚠️ 트레이딩뷰 색을 그대로 베끼지 않습니다 - 대표 지시(확정 팔레트 유지). */
+    outputs: [{ key: "mfi", kind: "line", color: "#9197F3", style: "solid" }],
+    guides: [{ price: 80 }, { price: 20 }],
+    /* 13.1 눈금 고정 - 위 주석 참조. 20 · 80 이 절대 화면 밖으로 못 나갑니다.
+       여백 0.12 는 StochRSI · Stochastic · RSI 와 같은 값입니다(두 벌 금지). */
+    scale: { min: 0, max: 100, top: 0.12, bottom: 0.12 },
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var n = bs.close.length;
+      var out = [];
+      if (volumeAllZero(bs, "MFI")) return { mfi: out };
+      var st = { pos: winInit(p), neg: winInit(p), ptp: null, c: 0 };
+      for (var i = 0; i < n; i++) {
+        var r = mfiOne(st, bs.high[i], bs.low[i], bs.close[i], bs.volume[i], p);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        /* 확정 상태 - "마지막으로 닫힌 봉까지". 진행 중인 봉을 넣으면
+           그 오차를 창이 p봉 동안 끌고 다닙니다. */
+        if (i === n - 2) cap.state = mfiCopy(st);
+      }
+      return { mfi: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var r = mfiOne(st, bar.high, bar.low, bar.close, bar.volume, p);
+      return { values: r.value === null ? {} : { mfi: r.value }, state: r.state };
+    }
+  });
+
+  /* -- CMF 차이킨자금흐름 (Chaikin Money Flow) ---------------------------
+   *   자금흐름배수 = ((종 - 저) - (고 - 종)) / (고 - 저)      -1 ~ +1
+   *   자금흐름량   = 자금흐름배수 x 거래량
+   *   CMF = p봉 자금흐름량 합 / p봉 거래량 합                 -1 ~ +1
+   *
+   * ⭐ 계산식 근거 - 트레이딩뷰 도움말 "Chaikin Money Flow (CMF)" 원문
+   *    (2026-09-03 · WebFetch 로 열어 읽음)
+   *      "[(Close - Low) - (High - Close)] / (High - Low) = Money Flow Multiplier"
+   *      "Money Flow Multiplier x Volume for the Period = Money Flow Volume"
+   *      "21 Period Sum of Money Flow Volume / 21 Period Sum of Volume = 21 Period CMF"
+   *    ⚠️ 도움말은 예시를 21 로 들고 ★기본값을 안 적습니다★ ("the most popular
+   *       settings would be 20 or 21 days"). 그래서 아래처럼 ★실측★ 했습니다.
+   *
+   * ⭐⭐ 기본 20 - ★트레이딩뷰 화면에서 직접 읽었습니다★ (2026-09-03)
+   *    트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)에 내장 CMF 를 얹으니 범례가
+   *    ★"CMF 20  −0.05"★ 였습니다. 도움말의 21 이 아니라 ★20★ 입니다.
+   *    같은 순간 바이낸스 1시간봉 500개로 위 식을 계산하니 ★−0.046★ 이었습니다.
+   *
+   * ⭐ 0선 - 같은 실측 화면에서 CMF 칸 0.00 자리에 가로 점선이 ★한 줄★
+   *    있었습니다. 도움말도 "toggle the visibility of the Zero Line" 이라고
+   *    그 선을 두고 말합니다.
+   *
+   * ⚠️ 눈금은 고정하지 않고 keepGuides 만 겁니다. 실측 눈금이 −0.30 ~ 0.20 으로
+   *    데이터를 따라 움직이고 있었습니다. 이론상 −1 ~ +1 이지만 실제로는
+   *    ±0.3 안에서 노는 지표라 −1~1 로 고정하면 선이 ★한 줄로 눌러붙습니다.★
+   *    그렇다고 아무것도 안 걸면 한쪽으로 쏠린 장에서 ★0선이 화면 밖★ 으로
+   *    나가 위/아래를 가를 기준이 사라집니다 (CCI · ROC 와 같은 길 · 13.1절).
+   *
+   * ⚠️ unit 을 ★안 붙입니다★ - 값이 비(比)입니다. 자금흐름배수가 이미 나눗셈이라
+   *    봉 값을 10배로 올려도 그대로입니다(실측 1.000).
+   *
+   * ⚠️ 거래량을 씁니다 - MFI 위 주석의 실측(0 인 봉 0개)과 같은 근거이고,
+   *    안전장치도 OBV · VWAP · MFI 와 같습니다.
+   *
+   * ⚠️ 고 == 저 인 봉(값이 하나도 안 움직인 봉)은 나눌 수가 없어 ★0★ 으로 둡니다.
+   *    트레이딩뷰 내장 CMF 도 같은 자리에서 0 을 씁니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    창 두 개(자금흐름량 · 거래량)를 굴리는 것이 전부입니다. 위 winPush 참조.
+   * ------------------------------------------------------------------- */
+  function cmfOne(st, high, low, close, vol, p) {
+    var v = typeof vol === "number" && isFinite(vol) ? vol : 0;
+    var rng = high - low;
+    var mfv = rng > 0 ? ((2 * close - low - high) / rng) * v : 0;
+    var A = winPush(st.mfv, mfv);
+    var B = winPush(st.vol, v);
+    var c = st.c < p ? st.c + 1 : p;
+    /* 거래량 합이 0 이면 나눌 수가 없습니다 - 비웁니다(0 을 찍으면 회원이
+       "자금이 딱 균형" 으로 읽는데 사실이 아닙니다) */
+    var value = c >= p && B.sum > 0 ? A.sum / B.sum : null;
+    return { value: value, state: { mfv: A.state, vol: B.state, c: c } };
+  }
+
+  function cmfCopy(st) {
+    return { mfv: winCopy(st.mfv), vol: winCopy(st.vol), c: st.c };
+  }
+
+  define({
+    id: "cmf",
+    name: "CMF",
+    note: "차이킨자금흐름 (거래량으로 본 매수·매도 압력)",
+    pane: "sub",
+    params: { p: 20 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    nameOf: function (prm) {
+      return "CMF(" + prm.p + ")";
+    },
+    /* 색 - 하늘 #49C9E9. ★어느 아래 칸에도 안 쓰이는 색★ 입니다(지금은 주 차트의
+       EMA · Supertrend 만 씁니다 - 칸이 달라 한 눈금에 같이 안 놓입니다).
+       바로 위 MFI(#9197F3)와 ΔE2000 26.21 떨어져 있습니다.
+       ⚠️ 트레이딩뷰 내장 CMF 는 ★초록★ 인데 그대로 못 씁니다 - 초록은 손익
+       상승색이라 지표선에 금지입니다(확정 팔레트 규칙). */
+    outputs: [{ key: "cmf", kind: "line", color: "#49C9E9", style: "solid" }],
+    guides: [{ price: 0 }],
+    scale: { keepGuides: true },
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var n = bs.close.length;
+      var out = [];
+      if (volumeAllZero(bs, "CMF")) return { cmf: out };
+      var st = { mfv: winInit(p), vol: winInit(p), c: 0 };
+      for (var i = 0; i < n; i++) {
+        var r = cmfOne(st, bs.high[i], bs.low[i], bs.close[i], bs.volume[i], p);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = cmfCopy(st);
+      }
+      return { cmf: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var r = cmfOne(st, bar.high, bar.low, bar.close, bar.volume, p);
+      return { values: r.value === null ? {} : { cmf: r.value }, state: r.state };
+    }
+  });
+
+  /* -- TRIX 삼중지수평활 (Triple Exponential Average) --------------------
+   *   1) 로그종가를 EMA(p) 로 한 번 다듬고
+   *   2) 그것을 또 EMA(p) 로 다듬고
+   *   3) 또 한 번 EMA(p) 로 다듬은 뒤
+   *   4) ★한 봉 사이의 변화★ 에 10000 을 곱합니다
+   *      TRIX = 10000 x ( 삼중값(t) - 삼중값(t-1) )
+   *
+   * ⭐ 기본 18 · 종가 - ★트레이딩뷰 화면에서 직접 읽었습니다★ (2026-09-03)
+   *    트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)에 내장 TRIX 를 얹으니 범례가
+   *    ★"TRIX 18  −2.54"★ 였습니다. 도움말도 "18 Period EMA of Closing Price"
+   *    라고 적습니다(트레이딩뷰 도움말 "TRIX" · 같은 날 열어 읽음).
+   *
+   * ⭐⭐ ★왜 로그이고 왜 10000 배인가 - 눈대중이 아니라 재서 정했습니다.★
+   *    도움말은 "1 Period Percent Change of Triple Smoothed EMA" 라고만 적어
+   *    ★배수를 알 수 없습니다.★ 그래서 실측 눈금과 맞춰 봤습니다.
+   *      실측 - 트레이딩뷰 TRIX 칸 눈금이 −8.00 ~ 32.00, 값이 −2.54
+   *      후보 A  10000 x (로그삼중값 차이)          →  ★−2.5428★   ✅ 맞음
+   *      후보 B    100 x (로그삼중값 차이)          →    −0.0254   눈금이 100배 작음
+   *      후보 C    100 x (로그 안 쓴 삼중값 변화율) →    −0.0255   같은 이유로 틀림
+   *    (같은 순간 바이낸스 1시간봉 500개로 셋 다 계산한 값입니다.
+   *     A 만 트레이딩뷰 −2.54 와 소수 셋째 자리까지 맞습니다.)
+   *    ⚠️ 로그를 쓰기 때문에 ★종목 가격대가 달라도 값의 크기가 같습니다.★
+   *       비트코인(7만)과 알트(0.5)를 같은 눈금으로 읽을 수 있다는 뜻입니다.
+   *
+   * ⭐ 0선 - 실측 화면 0.00 자리에 가로 점선이 한 줄 있었습니다.
+   *    도움말도 "Zero Line crossovers" 를 그 선을 두고 말합니다.
+   *
+   * ⚠️ 눈금은 고정하지 않고 keepGuides 만 겁니다. 범위가 정해진 지표가 아니고
+   *    (실측 눈금이 −8 ~ 32 로 데이터를 따라 움직였습니다), 아무것도 안 걸면
+   *    계속 오르는 장에서 값이 늘 양수라 ★0선이 화면 밖★ 으로 나갑니다.
+   *    CCI · ROC · CMF 와 같은 길입니다 (13.1절).
+   *
+   * ⚠️ unit 을 ★안 붙입니다★ - 값이 지수입니다. 로그를 쓰기 때문에 봉 값을
+   *    10배로 올리면 삼중값이 log(10) 만큼 통째로 올라가고, ★차이★ 를 낼 때
+   *    그 상수가 그대로 지워집니다(실측 1.000). 붙이면 지수가 원으로 환산돼
+   *    뜻 없는 숫자가 됩니다.
+   *
+   * ⚠️ 종가가 0 이하이면 로그를 못 취합니다. 시세에 그런 값은 안 오지만
+   *    오면 −Infinity 가 눈금을 통째로 망가뜨리므로 그 자리를 ★비웁니다.★
+   *
+   * -- 시작값 (트레이딩뷰와 같게) ----------------------------------------
+   *    EMA 세 개 모두 ★앞 p개의 단순평균★ 으로 시작합니다 - 이 파일의 EMA ·
+   *    MACD 와 같은 방식입니다. 그래서 첫 점이 3p−2 번째 봉입니다
+   *    (p=18 이면 52번째 봉). 실측 대조에서 이 시작값으로 트레이딩뷰와
+   *    소수 셋째 자리까지 맞았습니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    EMA 는 직전 값 하나면 다음 값이 나옵니다. 창을 훑지 않습니다.
+   *    상태가 { e1, e2, e3, prev } 넷뿐이고 배열이 없어 같은 봉으로 몇 번
+   *    다시 불려도 답이 같습니다(새 객체를 냅니다).
+   * ------------------------------------------------------------------- */
+  function trixOne(st, close, p) {
+    if (!(close > 0)) return { value: null, state: st };
+    var k = 2 / (Math.max(1, p) + 1);
+    var x = Math.log(close);
+    var e1 = x * k + st.e1 * (1 - k);
+    var e2 = e1 * k + st.e2 * (1 - k);
+    var e3 = e2 * k + st.e3 * (1 - k);
+    return {
+      value: 10000 * (e3 - st.e3),
+      state: { e1: e1, e2: e2, e3: e3 }
+    };
+  }
+
+  define({
+    id: "trix",
+    name: "TRIX",
+    note: "삼중지수평활 변화율",
+    pane: "sub",
+    params: { p: 18 },
+    inputs: [{ key: "p", label: "기간", min: 1, max: 1000 }],
+    nameOf: function (prm) {
+      return "TRIX(" + prm.p + ")";
+    },
+    /* 색 - 모래 #F5D7B8. ★지금 어느 지표도 안 쓰는 색★ 입니다.
+       MFI(#9197F3)와 ΔE2000 41.00 · CMF(#49C9E9)와 35.25 떨어져 있습니다.
+       ⚠️ 트레이딩뷰 내장 TRIX 는 ★빨강★ 인데 그대로 못 씁니다 - 빨강은 손익
+       하락색이라 지표선에 금지입니다(확정 팔레트 규칙). 따뜻한 쪽에서
+       초록·빨강 구간 밖인 자리를 골랐습니다. */
+    outputs: [{ key: "trix", kind: "line", color: "#F5D7B8", style: "solid" }],
+    guides: [{ price: 0 }],
+    scale: { keepGuides: true },
+
+    seed: function (bs, prm, cap) {
+      var p = Math.max(1, prm.p | 0);
+      var n = bs.close.length;
+      var out = [];
+      if (n < 3 * p - 1) return { trix: out };
+
+      var i;
+      var k = 2 / (p + 1);
+      var lg = new Array(n);
+      for (i = 0; i < n; i++) lg[i] = bs.close[i] > 0 ? Math.log(bs.close[i]) : null;
+
+      /* 1차 - 앞 p개의 단순평균으로 시작한 뒤 평활 (EMA · MACD 와 같은 방식) */
+      var a = new Array(n);
+      var sum = 0;
+      for (i = 0; i < p; i++) {
+        if (lg[i] === null) return { trix: out };
+        sum += lg[i];
+      }
+      a[p - 1] = sum / p;
+      for (i = p; i < n; i++) {
+        if (lg[i] === null) return { trix: out };
+        a[i] = lg[i] * k + a[i - 1] * (1 - k);
+      }
+
+      /* 2차 - 1차의 앞 p개(= 봉 p-1 .. 2p-2)의 단순평균으로 시작 */
+      var b = new Array(n);
+      sum = 0;
+      for (i = p - 1; i <= 2 * p - 2; i++) sum += a[i];
+      b[2 * p - 2] = sum / p;
+      for (i = 2 * p - 1; i < n; i++) b[i] = a[i] * k + b[i - 1] * (1 - k);
+
+      /* 3차 - 2차의 앞 p개(= 봉 2p-2 .. 3p-3)의 단순평균으로 시작 */
+      var c = new Array(n);
+      sum = 0;
+      for (i = 2 * p - 2; i <= 3 * p - 3; i++) sum += b[i];
+      c[3 * p - 3] = sum / p;
+      for (i = 3 * p - 2; i < n; i++) c[i] = b[i] * k + c[i - 1] * (1 - k);
+
+      /* 값 - 삼중값의 한 봉 차이 x 10000. 첫 점은 3p-2 번째 봉입니다 */
+      for (i = 3 * p - 2; i < n; i++) {
+        out.push({ time: bs.time[i], value: 10000 * (c[i] - c[i - 1]) });
+        /* 확정 상태 - "마지막으로 닫힌 봉까지" */
+        if (i === n - 2) cap.state = { e1: a[i], e2: b[i], e3: c[i] };
+      }
+      return { trix: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p = Math.max(1, prm.p | 0);
+      var r = trixOne(st, bar.close, p);
+      return { values: r.value === null ? {} : { trix: r.value }, state: r.state };
+    }
+  });
+
+  /* -- AO 어썸오실레이터 (Awesome Oscillator) ----------------------------
+   *   중간값 = (고 + 저) / 2
+   *   AO = 중간값의 단순평균(빠른) - 중간값의 단순평균(느린)
+   *
+   * ⭐ 계산식 · 기본값 근거 - 트레이딩뷰 도움말 "Awesome Oscillator (AO)" 원문
+   *    (2026-09-03 · WebFetch 로 열어 읽음)
+   *      "AO = sma((high+low)/2, lengthAO1) - sma((high+low)/2, lengthAO2)"
+   *      "5 periods" · "34 periods"
+   *      "midpoints, calculated as (high+low)/2"   ★종가가 아닙니다★
+   *      "a histogram of red and green bars" · "Histogram is the default"
+   *      "designed to have values that fluctuate above and below a Zero Line"
+   *
+   * ⭐⭐ 값을 ★실제 트레이딩뷰 차트와 맞춰 봤습니다★ (2026-09-03 · 실측)
+   *    트레이딩뷰 차트(BINANCE:BTCUSDT · 1시간)에 내장 AO 를 얹으니 범례가
+   *    ★"AO  46.02"★ 였습니다. 같은 순간 바이낸스 1시간봉 500개로 위 식을
+   *    계산하니 ★46.02★ - ★소수 둘째 자리까지 그대로★ 맞았습니다.
+   *    (범례에 5 · 34 가 안 뜹니다 - 트레이딩뷰 AO 는 기간 칸이 없습니다.
+   *     우리는 이 틀의 다른 지표와 같게 회원이 고칠 수 있게 열어 둡니다.)
+   *
+   * ⭐ 막대(kind:"hist") - 위 도움말 원문 "Histogram is the default" 그대로입니다.
+   *    실측 화면도 막대였습니다. 이 틀에서 막대는 MACD 에 이어 두 번째입니다.
+   *    ⚠️ 트레이딩뷰는 막대를 ★직전 막대보다 높으면 초록 · 낮으면 빨강★ 으로
+   *       칠하는데 우리는 ★한 색★ 입니다. 초록 · 빨강은 손익 색이라 지표에
+   *       쓰지 않습니다(확정 팔레트 규칙). 이 틀도 막대 색을 봉마다 달리
+   *       칠하는 길이 없습니다 - MACD 막대도 한 색입니다.
+   *
+   * ⭐ 0선 - 값이 0 을 오가는 것이 이 지표의 전부입니다(위 도움말).
+   *    ⚠️ 실측 화면의 AO 칸에는 트레이딩뷰가 0선을 ★따로 안 그렸습니다★ -
+   *       막대가 0 에서 자라 0 자리가 저절로 보이기 때문입니다. 우리는
+   *       그립니다. 이유 - 이 틀의 눈금은 그린 값만 보고 정해서, 계속 오르는
+   *       장처럼 AO 가 오래 양수면 ★0 이 화면 밖★ 으로 나가 막대의 뿌리가
+   *       안 보입니다. 0선 + keepGuides 를 걸면 0 이 늘 눈금 안에 들어옵니다
+   *       (CCI · ROC · CMF · TRIX 와 같은 길 · 13.1절).
+   *
+   * ⭐⭐ unit: "price" ★필수★ - ★값이 가격 차이입니다.★
+   *    ⚠️ PM 지시서에는 "MFI · CMF · TRIX · AO 넷 다 지수" 라고 적혀 있었지만
+   *       ★재 보니 AO 만 가격★ 이었습니다. 단순평균 두 개의 뺄셈이라 MACD 와
+   *       뿌리가 같습니다. 실측 - 봉 값을 10배로 올리니 AO 도 ★10.000배★
+   *       (같은 재기에서 MFI · CMF · TRIX 는 1.000배).
+   *       안 붙이면 원화로 보는 회원 화면에 USDT 숫자가 그대로 뜹니다 -
+   *       2026-09-03 에 ATR 이 당한 그 조용한 고장입니다. PM 에게 보고했습니다.
+   *
+   * -- step 이 O(1) 인 이유 -----------------------------------------------
+   *    창 두 개(빠른 · 느린)를 굴리는 것이 전부입니다. 위 winPush 참조.
+   * ------------------------------------------------------------------- */
+  function aoOne(st, high, low, p1, p2) {
+    var m = (high + low) / 2;
+    var F = winPush(st.f, m);
+    var S = winPush(st.s, m);
+    var need = p1 > p2 ? p1 : p2;
+    var c = st.c < need ? st.c + 1 : need;
+    var value = c >= need ? F.sum / p1 - S.sum / p2 : null;
+    return { value: value, state: { f: F.state, s: S.state, c: c } };
+  }
+
+  function aoCopy(st) {
+    return { f: winCopy(st.f), s: winCopy(st.s), c: st.c };
+  }
+
+  define({
+    id: "ao",
+    name: "AO",
+    note: "어썸오실레이터 (중간값 단기평균 - 장기평균)",
+    pane: "sub",
+    /* 13.3 값이 가격 차이라 표시 통화를 따라갑니다 - 위 주석 참조 */
+    unit: "price",
+    params: { fast: 5, slow: 34 },
+    inputs: [
+      { key: "fast", label: "빠른 기간", min: 1, max: 1000 },
+      { key: "slow", label: "느린 기간", min: 1, max: 1000 }
+    ],
+    nameOf: function (prm) {
+      return "AO(" + prm.fast + "," + prm.slow + ")";
+    },
+    /* 색 - 연자주 #BB81AC. ★어느 아래 칸에도 안 쓰이는 색★ 입니다(지금은 주
+       차트의 일목균형표 기준선만 씁니다). MFI(#9197F3)와 ΔE2000 20.98 ·
+       CMF(#49C9E9)와 48.44 · TRIX(#F5D7B8)와 35.35 떨어져 있습니다.
+       ⚠️ 트레이딩뷰는 초록 · 빨강 두 색인데 그대로 못 씁니다(위 주석 참조). */
+    outputs: [{ key: "ao", kind: "hist", color: "#BB81AC" }],
+    guides: [{ price: 0 }],
+    scale: { keepGuides: true },
+
+    seed: function (bs, prm, cap) {
+      var p1 = Math.max(1, prm.fast | 0);
+      var p2 = Math.max(1, prm.slow | 0);
+      var n = bs.close.length;
+      var out = [];
+      var st = { f: winInit(p1), s: winInit(p2), c: 0 };
+      for (var i = 0; i < n; i++) {
+        var r = aoOne(st, bs.high[i], bs.low[i], p1, p2);
+        st = r.state;
+        if (r.value !== null) out.push({ time: bs.time[i], value: r.value });
+        if (i === n - 2) cap.state = aoCopy(st);
+      }
+      return { ao: out };
+    },
+
+    step: function (st, bar, prm) {
+      var p1 = Math.max(1, prm.fast | 0);
+      var p2 = Math.max(1, prm.slow | 0);
+      var r = aoOne(st, bar.high, bar.low, p1, p2);
+      return { values: r.value === null ? {} : { ao: r.value }, state: r.state };
+    }
+  });
+
   /* ---------------------------------------------------------------------
    * 옛 MA 를 대신하는 인스턴스 - ★여기 한 곳에만★ 적습니다.
    *

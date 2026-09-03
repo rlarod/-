@@ -676,3 +676,20 @@ tests/chart-indicator-mom-roc.test.js
 #   ⚠️ 실측 — FOLD_LINE 을 안 옮기면 1440 기본 9칩이 처음부터 접힌 채 뜹니다.
 # 되돌리기: 이 줄과 tests/chart-popup-font-floor.test.js 삭제
 tests/chart-popup-font-floor.test.js
+
+# 2026-09-03 차트팀 — MFI(14) · CMF(20) · TRIX(18) · AO(5,34) 넷을 얹었습니다
+#   기본값 근거: 트레이딩뷰 차트를 실제로 띄워 범례 실측
+#     "MFI 14 65.12" · "CMF 20 -0.05" · "TRIX 18 -2.54" · "AO 46.02"
+#     (AO 5/34 · hl2 는 트레이딩뷰 도움말 원문 "sma((high+low)/2, ...)")
+#   이 파일이 보는 것 — 참조식과 대조 / 첫 점 자리(넷이 다 다름) /
+#   진행중 봉 5번에도 안 흔들림 / ★거래량 0 이면 MFI·CMF 가 안 그림★ /
+#   ★봉 값 10배로 올려 AO 만 10배(가격) · 셋은 1배(지수)★ / 값 범위 / 정의 약속
+#   ⚠️ 이 넷의 구멍 셋 —
+#      ① MFI·CMF 는 ★거래량★ 을 씁니다. 0 이 오면 평평한 선이 되는데 오류가
+#         안 납니다(조용한 고장). 그래서 거래량 0 짜리 봉으로 실제로 태웁니다.
+#      ② ★AO 만 값이 가격★ 입니다(단순평균 뺄셈 · MACD 와 같은 뿌리).
+#         PM 지시서는 "넷 다 지수" 였지만 재 보니 10.000 배였습니다.
+#      ③ ★TRIX 는 로그 · 10000배★ 입니다. 100배로 고쳐도 선 모양이 똑같아
+#         눈으로는 못 잡습니다. 그래서 "10배 올려도 값이 그대로냐" 로 잽니다.
+# 되돌리기: 이 줄과 tests/chart-indicator-mfi-cmf-trix-ao.test.js 삭제
+tests/chart-indicator-mfi-cmf-trix-ao.test.js
