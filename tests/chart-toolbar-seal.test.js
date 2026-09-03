@@ -18,6 +18,32 @@
  *      → 그래서 이 파일은 "한 벌"이 아니라 "데스크톱 값 + 폰 값" 두 벌을 봅니다.
  *        두 벌을 각각 못 박아 두면 한쪽만 조용히 되돌아가도 잡힙니다.
  *
+ *      ★2026-09-03 21차 — 데스크톱 값을 E안 -> F안(버튼 38 / 아이콘 28)으로
+ *        갱신했습니다. 근거를 남깁니다(기준을 슬쩍 낮춘 것이 아닙니다):
+ *
+ *        (가) 대표 지시 원문 (2026-09-03) — ★"줄인다 — 트레이딩뷰처럼"★
+ *             위 (1) 의 2026-08-26 "더 키워" 를 ★대표가 직접 뒤집으셨습니다.★
+ *             PM 이 "8월 26일에 두 번 키우라고 하신 값인데 줄여도 되겠습니까"
+ *             를 물어 받은 답입니다. 그러니 이 파일의 데스크톱 숫자를 E안으로
+ *             되돌리는 것은 대표 지시를 되돌리는 일입니다 — 다시 물어보세요.
+ *
+ *        (나) 줄이지 않으면 못 넣는 것이 있었습니다 (1440 실측, localhost)
+ *             가로 막대 784px 중 E안이 이미 720px 을 쓰고 남는 칸 87px.
+ *             되돌리기/다시하기를 넣으려면 60+60+11 = 131px 이 필요해
+ *             ★44px 이 모자랐습니다.★ F안이면 38+38+11 = 87px 로 딱 맞습니다.
+ *             세로 막대도 E안 14개 = 989px 인데 3개를 더하면 1169px 로
+ *             차트 칸(1150px)을 넘습니다. F안이면 17개 = 688px 입니다.
+ *
+ *        (다) 아이콘은 28px 로 남겼습니다 — 위 (1) 의 "작다" 하한을 그대로 지킵니다.
+ *             28px 은 업비트·바이낸스·트레이딩뷰 실측값이고 16px 의 175% 입니다.
+ *             버튼만 60 -> 38 이고 아이콘은 36 -> 28 입니다.
+ *             ★.tlc-txt 글자 15px 은 한 픽셀도 안 줄였습니다.★
+ *
+ *        (라) ★폰 44px 하한은 그대로입니다.★ 아래 M_BTN >= 44 검사를 살려 뒀고,
+ *             오히려 "폰이 데스크톱보다 작아지면 안 된다" 를 새로 못 박았습니다.
+ *             데스크톱을 마우스에 맞춰 줄이는 흐름에 폰이 딸려 내려가는 것이
+ *             앞으로 가장 있을 법한 사고라서, 그 방향을 막는 검사를 넣었습니다.
+ *
  *  (2) 폰에서 도구가 숨는 방식으로 되돌아가면 안 됩니다.
  *      C안은 세로막대 11칸 × 44px = 484px 인데 360 화면의 차트 칸은 330px 입니다.
  *      옆으로 미는 방식(overflow-x:auto)은 오버레이 스크롤바라 밀기 전에는
@@ -128,30 +154,48 @@ ok(
   ICO >= 28,
   "지금 " + ICO + "px = 기준의 " + Math.round((ICO / 28) * 100) + "%"
 );
+/* ★ 데스크톱 버튼 하한은 2026-09-03 에 44 -> 34 로 갱신했습니다 (21차).
+     낮춘 것이 아니라 "무엇을 지키는 하한인지" 를 나눈 것입니다 —
+       폰(<=767)   44px : ★손가락★ 규격(애플 권고 44pt). 그대로 둡니다(아래 M_BTN 검사)
+       데스크톱     34px : ★마우스★ 규격. 트레이딩뷰·업비트·바이낸스 실측이 38px 이라
+                          그보다 더 줄면 실측 밑으로 내려가는 것이라 막습니다
+     44 를 데스크톱에도 걸어 두면 "손가락 하한" 이라는 이름과 실제(마우스로 누르는
+     화면)가 어긋나고, 대표 지시("줄인다 — 트레이딩뷰처럼")를 실행할 수 없습니다. */
 ok(
-  "버튼 한 칸이 44px 아래로 내려가지 않는다 (손가락으로 누르는 칸. 애플 권고 44pt)",
-  BTN >= 44,
+  "데스크톱 버튼 한 칸이 34px 아래로 내려가지 않는다 (마우스로 누르는 칸. 트레이딩뷰 실측 38px)",
+  BTN >= 34,
   "지금 " + BTN + "px"
 );
-ok("세로 막대 폭이 52px 아래로 내려가지 않는다 (업비트·바이낸스 둘 다 52px)", RAIL_W >= 52, "지금 " + RAIL_W + "px");
-ok("가로 막대 높이가 46px 아래로 내려가지 않는다", BAR_H >= 46, "지금 " + BAR_H + "px");
-ok("폰 막대 한 줄 높이가 44px 아래로 내려가지 않는다", BAR_H_M >= 44, "지금 " + BAR_H_M + "px");
+ok("세로 막대 폭이 46px 아래로 내려가지 않는다 (버튼 38 + 8. 트레이딩뷰 실측 막대는 52px 이지만 그건 버튼이 가로로 긴 52x38 이고 우리 버튼은 정사각입니다)",
+  RAIL_W >= 46, "지금 " + RAIL_W + "px");
+ok("가로 막대 높이가 40px 아래로 내려가지 않는다 (트레이딩뷰 줄 높이 38px + 1px 선 두 줄)",
+  BAR_H >= 40, "지금 " + BAR_H + "px");
+ok("데스크톱 --tlc-bar-h-m 이 데스크톱 버튼과 같다 (폰 값은 아래 M_BAR_H_M 이 따로 봅니다)",
+  BAR_H_M === BTN, "지금 " + BAR_H_M + "px");
 
 /* 2026-08-26 대표 "더 키워" 두 번째 → 데스크톱 E안, 폰은 C안 유지.
-   옛 기준 "전 폭 공통 C안 (46/52/44/28/1/44)" → "데스크톱 E안 + 폰 C안" 두 벌.
+   2026-09-03 대표 "줄인다 — 트레이딩뷰처럼" → 데스크톱 F안, 폰은 C안 그대로.
+   옛 기준 "전 폭 공통 C안" → "데스크톱 값 + 폰 값" 두 벌.
    한 벌만 보면 한쪽이 조용히 되돌아가도 못 잡습니다. */
-ok("데스크톱(>=768) 값이 확정된 E안 그대로다 (62 / 68 / 60 / 36 / 0.9 / 60)",
-  BAR_H === 62 && RAIL_W === 68 && BTN === 60 && ICO === 36 && STROKE === 0.9 && BAR_H_M === 60,
+ok("데스크톱(>=768) 값이 확정된 F안 그대로다 (40 / 46 / 38 / 28 / 1 / 38)",
+  BAR_H === 40 && RAIL_W === 46 && BTN === 38 && ICO === 28 && STROKE === 1 && BAR_H_M === 38,
   [BAR_H, RAIL_W, BTN, ICO, STROKE, BAR_H_M].join(" / "));
 ok("폰(<=767) 값이 확정된 C안 그대로다 (버튼 44 / 아이콘 28 / 획 1 / 한 줄 44)",
   M_BTN === 44 && M_ICO === 28 && M_STROKE === 1 && M_BAR_H_M === 44,
   [M_BTN, M_ICO, M_STROKE, M_BAR_H_M].join(" / "));
-ok("폰이 데스크톱보다 작다 (반대로 뒤집히면 폰에서 막대가 세 줄이 됩니다)",
-  M_BTN < BTN && M_ICO < ICO, M_BTN + "/" + M_ICO + " vs " + BTN + "/" + ICO);
+/* ★ 2026-09-03 21차 — 방향이 뒤집혔습니다.
+   E안 때는 데스크톱이 더 컸고(60 > 44), F안에서는 폰이 더 큽니다(44 > 38).
+   앞으로 가장 있을 법한 사고는 "데스크톱을 줄이는 김에 폰도 같이 내리는 것"
+   입니다. 그러면 폰이 손가락 하한 44px 밑으로 갑니다. 그 방향을 막습니다. */
+ok("★폰 버튼이 데스크톱 버튼보다 작아지지 않는다★ (폰은 손가락, 데스크톱은 마우스)",
+  M_BTN >= BTN, M_BTN + " vs " + BTN);
+ok("아이콘은 폰·데스크톱이 같다 (28px — 업비트·바이낸스·트레이딩뷰 실측)",
+  M_ICO === ICO, M_ICO + " vs " + ICO);
 ok("폰 아이콘이 업비트·바이낸스 실측 28px 아래로는 안 내려간다", M_ICO >= 28, "지금 " + M_ICO + "px");
-ok("폰 버튼이 손가락 권고 44px 아래로는 안 내려간다", M_BTN >= 44, "지금 " + M_BTN + "px");
-ok("폰도 아이콘 / 버튼 이 0.60~0.64 다 (안을 섞으면 아이콘이 버튼 밖으로 나갑니다)",
-  M_ICO / M_BTN >= 0.6 && M_ICO / M_BTN <= 0.64, (M_ICO / M_BTN).toFixed(3));
+ok("★폰 버튼이 손가락 권고 44px 아래로는 안 내려간다★ (이 검사는 어떤 경우에도 지웁니다 X)",
+  M_BTN >= 44, "지금 " + M_BTN + "px");
+ok("폰도 아이콘 / 버튼 이 0.60~0.75 다 (안을 섞으면 아이콘이 버튼 밖으로 나갑니다)",
+  M_ICO / M_BTN >= 0.6 && M_ICO / M_BTN <= 0.75, (M_ICO / M_BTN).toFixed(3));
 ok("폰 막대 한 줄 = 폰 버튼", M_BAR_H_M === M_BTN, M_BAR_H_M + " vs " + M_BTN);
 {
   const ss = M_STROKE * (M_ICO / 16);
@@ -162,8 +206,12 @@ ok("폰 막대 한 줄 = 폰 버튼", M_BAR_H_M === M_BTN, M_BAR_H_M + " vs " + 
 ok("세로 막대 = 버튼 + 8", RAIL_W === BTN + 8, RAIL_W + " vs " + (BTN + 8));
 ok("가로 막대 = 버튼 + 2", BAR_H === BTN + 2, BAR_H + " vs " + (BTN + 2));
 ok("폰 막대 한 줄 = 버튼", BAR_H_M === BTN, BAR_H_M + " vs " + BTN);
-ok("아이콘 ÷ 버튼 이 0.60~0.64 (A~E 안 전부 이 안에 듭니다)",
-  ICO / BTN >= 0.6 && ICO / BTN <= 0.64, (ICO / BTN).toFixed(3));
+/* 2026-09-03 — 위끝을 0.64 -> 0.75 로 넓혔습니다.
+   A~E 안은 전부 0.60~0.64 였지만, F안은 트레이딩뷰 실측(버튼 38 / 아이콘 28)을
+   그대로 쓴 0.74 입니다. 실측을 못 담는 범위라 실측 쪽에 맞춰 넓혔습니다.
+   아래끝 0.60 은 그대로입니다 — 아이콘이 버튼 안에서 너무 작아지는 것은 여전히 막습니다. */
+ok("아이콘 ÷ 버튼 이 0.60~0.75 (A~F 안 전부 이 안에 듭니다. 0.74 는 트레이딩뷰 실측)",
+  ICO / BTN >= 0.6 && ICO / BTN <= 0.75, (ICO / BTN).toFixed(3));
 
 /* 아이콘 획 — 스프라이트 viewBox 가 0 0 16 16 이라 화면 획 = 값 × (아이콘 ÷ 16) */
 const screenStroke = STROKE * (ICO / 16);
@@ -171,9 +219,10 @@ ok("화면에 찍히는 아이콘 획이 1.5~2.1px (얇아서 안 보이거나 �
   screenStroke >= 1.5 && screenStroke <= 2.1, screenStroke.toFixed(2) + "px");
 
 /* 되돌릴 근거가 파일에 남아 있는가 — 이게 없으면 다음 사람이 다시 헤맵니다 */
-ok("주석에 A~E 안 이름이 다 남아 있다", ["A안", "B안", "C안", "D안", "E안"].every((n) => CSS_RAW.indexOf(n) !== -1));
+ok("주석에 A~F 안 이름이 다 남아 있다",
+  ["A안", "B안", "C안", "D안", "E안", "F안"].every((n) => CSS_RAW.indexOf(n) !== -1));
 [
-  ["A안", "16px"], ["B안", "22px"], ["C안", "28px"], ["D안", "32px"], ["E안", "36px"]
+  ["A안", "16px"], ["B안", "22px"], ["C안", "28px"], ["D안", "32px"], ["E안", "36px"], ["F안", "28px"]
 ].forEach(function (p) {
   ok("주석의 갈아끼우기 상자에 " + p[0] + " 아이콘 " + p[1] + " 이 남아 있다",
     CSS_RAW.indexOf("--tlc-ico:" + p[1]) !== -1);
@@ -182,10 +231,18 @@ ok("주석에 업비트 실측(막대 52 / 아이콘 28)이 남아 있다",
   /업비트[\s\S]{0,600}52/.test(CSS_RAW) && /업비트[\s\S]{0,600}28/.test(CSS_RAW));
 ok("주석에 바이낸스 실측이 남아 있다", /바이낸스[\s\S]{0,600}52px/.test(CSS_RAW));
 ok("A안이 왜 퇴짜맞았는지(기준의 57%) 근거가 남아 있다", /57%/.test(CSS_RAW));
-ok("어느 안이 확정인지 적혀 있다 (2026-08-25 C안 → 2026-08-26 데스크톱 E / 폰 C)",
-  /2026-08-25 대표 확정: C안/.test(CSS_RAW) && /2026-08-26 대표 확정/.test(CSS_RAW));
+ok("어느 안이 확정인지 적혀 있다 (2026-08-25 C안 → 2026-08-26 E안 → 2026-09-03 F안)",
+  /2026-08-25 대표 확정: C안/.test(CSS_RAW) && /2026-08-26 대표 확정/.test(CSS_RAW) &&
+  /2026-09-03 대표 확정/.test(CSS_RAW));
+/* ★ 2026-09-03 — "대표가 8월 지시를 직접 뒤집으셨다" 는 사실을 CSS 에도 남깁니다.
+   이게 없으면 다음 사람이 8월 주석("더 키워" 두 번)만 읽고 "누가 몰래 줄였네"
+   로 읽습니다. 지시 원문 한 줄이 그 오해를 막습니다. */
+ok("F안으로 줄인 대표 지시 원문이 CSS 주석에 남아 있다",
+  /줄인다 — 트레이딩뷰처럼/.test(CSS_RAW), "CSS 주석에서 못 찾음");
+ok("8월 '더 키워' 를 대표가 직접 뒤집으셨다는 사실이 적혀 있다",
+  /뒤집으셨습니다/.test(CSS_RAW));
 ok("폰만 C안으로 남긴 이유가 숫자로 적혀 있다 (다음 사람이 무심코 합치지 않게)",
-  /폰을 같이 안 올린 이유/.test(CSS_RAW) && /330px/.test(CSS_RAW));
+  /폰을 같이 안 줄인 이유/.test(CSS_RAW) && /330px/.test(CSS_RAW));
 ok("되돌리는 방법이 적혀 있다", /되돌리는 방법/.test(CSS_RAW));
 
 /* 크기 변수가 여러 곳에 선언되면 뒤엣것이 앞을 덮어 수정이 안 먹힙니다.
@@ -282,26 +339,47 @@ ok("폰 .tlc-toolbar 도 overflow:visible 이다 (데스크톱의 overflow-x:aut
      360 에서 한 줄 7칸이라 딱 두 줄(7 + 7)이고, 마지막 줄에 7개가 남습니다.
      아래 세 검사가 그것을 그대로 다시 계산합니다 — 숫자만 바꾼 것이 아니라
      "세 줄이 되지 않는다 / 마지막 줄에 둘 이상" 이 여전히 참인지 봅니다. */
-  const 세로도구수 = 14;
-  const 가로도구수 = 7;
+  /* ★ 2026-09-03 21차 — 가로 단추 수를 7 -> 10 으로 바로잡았습니다.
+   *   그중 하나는 이 검사가 ★원래부터 틀렸던 것★ 입니다:
+   *   js/chart-replay.js 가 리플레이 단추를 알람 뒤에 꽂기 때문에 화면에는
+   *   늘 TOP_TOOLS 7 개 + 1 개 = 8 개가 있었습니다. 그런데 이 검사는 7 로 세서
+   *   "360 에서 한 줄에 들어간다" 를 통과시키고 있었습니다.
+   *   실측하면 8 x 44 = 352px > 330px 이라 ★2026-09-03 이전에도 이미 두 줄★
+   *   이었습니다(360 실측 330x89). 통과하던 것이 사실이 아니었습니다.
+   *   (css/chart-toolbar.css 20차 주석이 같은 오류를 먼저 잡아 놨습니다)
+   *   그래서 여기도 "화면에 실제로 그려지는 수" 로 고쳤습니다. */
+  const 세로단추 = 14 + 3; /* 도구 14 + 손질 3(잠금·숨김·휴지통) */
+  const 가로단추 = 7 + 2 + 1; /* TOP_TOOLS 7 + 손질 2(되돌리기·다시하기) + 리플레이 1 */
   const 폰차트칸 = 330; /* 2026-08-25 360 화면 localhost 실측 — .chart-wrap 330px */
   const 한줄칸수 = Math.floor(폰차트칸 / M_BTN);
-  const 필요폭 = 세로도구수 * M_BTN;
+  const 필요폭 = 세로단추 * M_BTN;
+  const 줄수 = (n) => Math.ceil(n / 한줄칸수);
+  const 마지막줄 = (n) => n - (줄수(n) - 1) * 한줄칸수;
 
-  ok("세로 도구 11칸이 360 화면 한 줄에 물리적으로 안 들어간다 → 접기가 필수다",
+  ok("세로 막대 17칸이 360 화면 한 줄에 물리적으로 안 들어간다 → 접기가 필수다",
     필요폭 > 폰차트칸, 필요폭 + "px 필요 / " + 폰차트칸 + "px 있음");
-  ok("두 줄이면 다 보인다 (한 줄에 최소 6칸)", 한줄칸수 >= 6,
+  ok("한 줄에 최소 6칸은 들어간다", 한줄칸수 >= 6,
     "한 줄 " + 한줄칸수 + "칸 (폰 버튼 " + M_BTN + "px)");
 
-  /* 늘 보이는 가로 막대가 두 줄이 되면, 세로 막대를 펴지도 않은 회원까지
-     손해를 봅니다. 폰을 E안으로 올리면(60px) 5칸뿐이라 7개가 2줄이 됩니다. */
-  ok("늘 보이는 가로 막대 7개가 360 에서 한 줄에 들어간다 (접힘으로 못 가리는 자리)",
-    가로도구수 <= 한줄칸수, 가로도구수 + "개 / 한 줄 " + 한줄칸수 + "칸");
-  ok("세로 막대가 세 줄이 되지 않는다", Math.ceil(세로도구수 / 한줄칸수) <= 2,
-    Math.ceil(세로도구수 / 한줄칸수) + "줄");
-  ok("마지막 줄에 버튼이 둘 이상 남는다 (한 개만 남으면 깨져 보입니다)",
-    세로도구수 - (Math.ceil(세로도구수 / 한줄칸수) - 1) * 한줄칸수 >= 2,
-    "마지막 줄 " + (세로도구수 - (Math.ceil(세로도구수 / 한줄칸수) - 1) * 한줄칸수) + "개");
+  /* 늘 보이는 가로 막대가 길어지면, 세로 막대를 펴지도 않은 회원까지 손해입니다.
+     360·375 는 예나 지금이나 두 줄입니다(위 ★ 참고). 390 은 8칸이라 8개가
+     한 줄이었는데, 되돌리기·다시하기를 넣으면서 10개가 되어 두 줄이 됐습니다.
+     그 대가로 폰에 없던 되돌리기가 생겼습니다 — 폰에는 Ctrl+Z 가 없어서
+     단추가 없으면 아예 못 쓰던 기능입니다. 두 줄까지는 허용하고,
+     ★세 줄이 되는 것은 막습니다★ (그때는 정말로 늘 손해입니다). */
+  ok("늘 보이는 가로 막대가 360 에서 두 줄을 넘지 않는다 (접힘으로 못 가리는 자리)",
+    줄수(가로단추) <= 2, 가로단추 + "개 / " + 줄수(가로단추) + "줄 / 한 줄 " + 한줄칸수 + "칸");
+  /* 21차에 오히려 좋아진 자리 — 전에는 8개라 마지막 줄에 카메라 하나만
+     덩그러니 남았습니다(360 실측으로 확인). 10개가 되면서 3개가 됩니다. */
+  ok("가로 막대 마지막 줄에 단추가 둘 이상 남는다 (한 개만 남으면 깨져 보입니다)",
+    마지막줄(가로단추) >= 2, "마지막 줄 " + 마지막줄(가로단추) + "개");
+
+  /* 세로 막대는 폰에서 ★기본이 접힘★ 입니다. 편 회원에게만 줄이 늘어납니다.
+     14개 2줄(89px) -> 17개 3줄(133px). 네 줄이 되면 카드가 너무 길어집니다. */
+  ok("세로 막대가 네 줄이 되지 않는다 (폰 기본은 접힘이라 편 회원에게만 보입니다)",
+    줄수(세로단추) <= 3, 줄수(세로단추) + "줄");
+  ok("세로 막대 마지막 줄에 단추가 둘 이상 남는다 (한 개만 남으면 깨져 보입니다)",
+    마지막줄(세로단추) >= 2, "마지막 줄 " + 마지막줄(세로단추) + "개");
 }
 
 /* CSS 기준(767) 과 JS 기준(768) 이 어긋나면 폰에서 막대가 두 번 접히거나 안 접힙니다 */
@@ -354,9 +432,35 @@ const A = boot({ width: 1920 });
 const railBtns = Array.from(A.win.document.querySelectorAll(".tlc-rail .tlc-btn"));
 const barBtns = Array.from(A.win.document.querySelectorAll(".tlc-toolbar .tlc-btn"));
 
-ok("세로 막대 버튼 14개가 실제로 그려진다 (2026-09-03 수직선·사각형·화살표를 열어 11 -> 14)",
-  railBtns.length === 14, "지금 " + railBtns.length + "개");
-ok("가로 막대 버튼 7개가 실제로 그려진다", barBtns.length === 7, "지금 " + barBtns.length + "개");
+/* ── 2026-09-03 21차 — 숫자가 늘어난 이유 ────────────────────────────────────
+ * 세로 14 -> 17 · 가로 7 -> 9. ★기능을 새로 만든 것이 하나도 없습니다.★
+ * 이미 있던 것을 막대로 꺼낸 것뿐이라 "지금 무엇이 있는지" 로 맞췄습니다.
+ *   가로 +2  되돌리기(undo) · 다시하기(redo)
+ *           — Ctrl+Z / Ctrl+Shift+Z 로만 되던 것입니다(13차 2026-09-02).
+ *             폰에는 키보드가 없어서 단추가 없으면 아예 못 쓰던 기능입니다.
+ *   세로 +3  전체 잠금(lockall) · 전체 숨김(hideall) · 모두 지우기(clearall)
+ *           — "그린 것 목록" 안에 숨어 있던 것입니다(16차 2026-09-02).
+ * ⚠ 자석(magnet)은 안 넣었습니다 — 코드에 기능 자체가 없습니다(grep 0건).
+ *   아이콘만 세워 두면 눌러도 아무 일이 없는 조용한 고장이 됩니다.
+ * ⚠ 이 다섯은 data-kind="act" 입니다. 도구(tool)가 아니라 "한 번 일하고 끝나는"
+ *   단추라, 아래 "눌러보면 그 도구가 켜진다" 검사에서 일부러 뺍니다.
+ * -------------------------------------------------------------------------- */
+ok("세로 막대 버튼 17개가 실제로 그려진다 (도구 14 + 손질 3)",
+  railBtns.length === 17, "지금 " + railBtns.length + "개");
+ok("가로 막대 버튼 9개가 실제로 그려진다 (도구 7 + 되돌리기·다시하기 2)",
+  barBtns.length === 9, "지금 " + barBtns.length + "개");
+{
+  /* 도구와 손질이 섞이지 않았는지 — 섞이면 paintButtons() 가 잠금·숨김의
+     켜짐 표시를 매번 꺼 버립니다(21차에 실제로 조심한 자리입니다) */
+  const railTool = railBtns.filter((b) => b.getAttribute("data-kind") === "tool").length;
+  const railAct = railBtns.filter((b) => b.getAttribute("data-kind") === "act").length;
+  const barTop = barBtns.filter((b) => b.getAttribute("data-kind") === "top").length;
+  const barAct = barBtns.filter((b) => b.getAttribute("data-kind") === "act").length;
+  ok("세로 막대가 도구 14 + 손질 3 으로 나뉘어 있다", railTool === 14 && railAct === 3,
+    railTool + " + " + railAct);
+  ok("가로 막대가 도구 7 + 손질 2 로 나뉘어 있다", barTop === 7 && barAct === 2,
+    barTop + " + " + barAct);
+}
 ok("차트 칸이 .tlc-body 안으로 들어갔다",
   !!A.win.document.querySelector(".tlc-body > .chart-wrap"));
 
@@ -428,12 +532,14 @@ ok("가로 막대 준비중이 0개다 (2026-09-02 알람을 열어 1 -> 0)",
    위 검사에서 걸리고, 이름은 여기서 걸립니다. (2026-09-02) */
 {
   /* 2026-09-03 18차 — arrow · rect · vline 셋이 늘었습니다 */
-  const wantRail = "arrow,brush,channel,cursor,face,fib,hline,rect,ruler,text,trend,vline,wave,zoom";
-  const wantBar = "alert,camera,candletype,expand,fullscreen,fx,hex";
+  /* 2026-09-03 21차 — 손질 단추 다섯이 들어왔습니다(clearall·hideall·lockall / redo·undo).
+     ⚠ 이 줄에서 이름을 ★빼면★ 그 기능이 화면에서 사라진 것입니다. 지우지 마세요. */
+  const wantRail = "arrow,brush,channel,clearall,cursor,face,fib,hideall,hline,lockall,rect,ruler,text,trend,vline,wave,zoom";
+  const wantBar = "alert,camera,candletype,expand,fullscreen,fx,hex,redo,undo";
   const gotRail = railBtns.map((b) => b.getAttribute("data-tlc")).sort().join(",");
   const gotBar = barBtns.map((b) => b.getAttribute("data-tlc")).sort().join(",");
-  ok("세로 막대 단추 열네 개가 이름 그대로 전부 그려진다", gotRail === wantRail, gotRail);
-  ok("가로 막대 단추 일곱 개가 이름 그대로 전부 그려진다", gotBar === wantBar, gotBar);
+  ok("세로 막대 단추 열일곱 개가 이름 그대로 전부 그려진다", gotRail === wantRail, gotRail);
+  ok("가로 막대 단추 아홉 개가 이름 그대로 전부 그려진다", gotBar === wantBar, gotBar);
   const anySoon = railBtns.concat(barBtns).filter((b) => b.hasAttribute("data-soon"))
     .map((b) => b.getAttribute("data-tlc"));
   ok("도구 막대 전체에 준비중이 하나도 없다 (2026-09-02 세 개를 마지막으로 다 열었습니다)",
@@ -528,14 +634,36 @@ function click(btn) {
      세로 막대 단추를 하나씩 다 눌러서 그 도구가 켜지는지 봅니다. */
   A.M.setTool("cursor");
   const notOn = [];
-  railBtns.forEach(function (b) {
+  /* ★ 2026-09-03 21차 — [data-kind=tool] 로 좁혔습니다.
+     이유는 "손질 단추가 통과 못 해서" 가 아니라 ★검사의 뜻이 다르기 때문★입니다.
+       도구(tool)  누르면 그 도구가 켜진 채로 남습니다 → getTool() 로 확인
+       손질(act)   누르면 한 번 일하고 끝납니다. 켜지는 게 없어서 getTool() 로는
+                   확인할 수 없고, 확인해서도 안 됩니다(켜지면 오히려 고장입니다)
+     손질 단추는 바로 아래 [3-1] 에서 ★실제로 눌러 무슨 일이 일어나는지★ 로 봅니다.
+     검사를 없앤 것이 아니라 맞는 검사로 옮긴 것입니다. */
+  const toolBtns = railBtns.filter((b) => b.getAttribute("data-kind") === "tool");
+  ok("세로 막대에서 도구(tool)로 셀 단추가 14개다 (좁힌 범위가 비어버리지 않았는지)",
+    toolBtns.length === 14, "지금 " + toolBtns.length + "개");
+  toolBtns.forEach(function (b) {
     const k = b.getAttribute("data-tlc");
     A.M.setTool("cursor");
     click(b);
     if (A.M.getTool() !== k) notOn.push(k + "->" + A.M.getTool());
   });
   A.M.setTool("cursor");
-  ok("세로 막대 단추를 하나씩 다 눌러보면 전부 그 도구가 켜진다", notOn.length === 0, notOn.join(" "));
+  ok("세로 막대 도구 단추를 하나씩 다 눌러보면 전부 그 도구가 켜진다", notOn.length === 0, notOn.join(" "));
+  /* 반대로 — 손질 단추를 누르면 ★도구가 바뀌면 안 됩니다★.
+     바뀌면 회원이 잠금을 누른 뒤 차트를 톡 했을 때 엉뚱한 선이 그어집니다. */
+  {
+    const bad = [];
+    railBtns.concat(barBtns).filter((b) => b.getAttribute("data-kind") === "act").forEach(function (b) {
+      A.M.setTool("cursor");
+      click(b);
+      if (A.M.getTool() !== "cursor") bad.push(b.getAttribute("data-tlc") + "->" + A.M.getTool());
+    });
+    A.M.setTool("cursor");
+    ok("손질 단추를 눌러도 그리기 도구가 바뀌지 않는다", bad.length === 0, bad.join(" "));
+  }
   const waveBtn = railBtns.filter((x) => x.getAttribute("data-tlc") === "wave")[0];
   click(waveBtn);
   ok("파동 버튼을 누르면 파동이 켜진다 (2026-09-02 10차)", A.M.getTool() === "wave", A.M.getTool());
@@ -556,6 +684,176 @@ function click(btn) {
   ok("브러시 버튼을 누르면 브러시가 켜진다 (2026-08-28)", A.M.getTool() === "brush", A.M.getTool());
   A.M.setTool("cursor");
 }
+/* =============================================================================
+ * 3-1) 손질 단추 (21차 2026-09-03) — 되돌리기·다시하기 / 잠금·숨김·휴지통
+ * -----------------------------------------------------------------------------
+ * 여기서 지키는 것은 딱 둘입니다.
+ *   (가) ★기능을 새로 만들지 않았다★ — 전부 이미 있던 함수를 부릅니다
+ *   (나) ★눌러서 실제로 일이 일어난다★ — 아이콘만 세워 둔 조용한 고장이 아니다
+ * -------------------------------------------------------------------------- */
+console.log("\n[3-1] 손질 단추 — 되돌리기 · 잠금 · 숨김 · 휴지통");
+{
+  const SPRITE = read("assets/icons/chart-tools.svg");
+  const acts = A.M.TOOLS.railActs.concat(A.M.TOOLS.topActs).filter((d) => !d.sep);
+  ok("손질 단추가 다섯이다 (잠금·숨김·휴지통·되돌리기·다시하기)", acts.length === 5,
+    "지금 " + acts.length + "개");
+  const missing = [];
+  acts.forEach(function (d) {
+    if (d.icon && SPRITE.indexOf("id=\"" + d.icon + "\"") === -1) missing.push(d.icon);
+    if (d.icon2 && SPRITE.indexOf("id=\"" + d.icon2 + "\"") === -1) missing.push(d.icon2);
+  });
+  ok("손질 단추 아이콘이 전부 우리 스프라이트에 있다 (밖에서 받아온 그림이 없다)",
+    missing.length === 0, missing.join(","));
+  ok("손질 단추 아이콘도 직접 그린 것이다 (스프라이트에 외부 주소가 없다)",
+    !/https?:\/\//.test(SPRITE.replace(/xmlns="[^"]*"/g, "")), "외부 주소가 있습니다");
+  /* 스프라이트를 못 받아왔을 때 href 가 "파일경로#id" 가 되는데(spriteFallback),
+     아이콘을 갈아 끼울 때 그 앞부분을 지워 버리면 그 회원 화면에서만
+     아이콘이 사라집니다. 오류도 안 나는 조용한 고장이라 못 박아 둡니다. */
+  ok("아이콘을 갈아 끼울 때 # 앞을 지우지 않는다 (스프라이트 못 받은 회원 화면이 깨집니다)",
+    /function swapIcon[\s\S]{0,400}indexOf\("#"\)/.test(DRAW_CODE));
+
+  /* ⚠ 자석 — 코드에 기능이 없으면 단추도 없어야 합니다.
+     "아이콘은 있는데 눌러도 아무 일이 없는" 것이 이 프로젝트가 가장 싫어하는
+     조용한 고장입니다. 나중에 자석을 진짜로 만들면 이 검사를 뒤집으세요. */
+  ok("자석(magnet) 단추가 없다 — 기능 자체가 코드에 없기 때문",
+    !/magnet|자석/.test(DRAW_CODE) &&
+      barBtns.concat(railBtns).every((b) => b.getAttribute("data-tlc") !== "magnet"));
+  ok("자석을 왜 안 만들었는지 근거가 남아 있다 (다음 사람이 무심코 아이콘만 세우지 않게)",
+    /자석\(magnet\)은 넣지 않았습니다/.test(DRAW_SRC));
+}
+{
+  /* 되돌리기 — 이미 있던 undo()/redo() 를 그대로 부릅니다 */
+  const un = barBtns.filter((x) => x.getAttribute("data-tlc") === "undo")[0];
+  const re = barBtns.filter((x) => x.getAttribute("data-tlc") === "redo")[0];
+  ok("되돌리기 단추가 가로 막대에 있다", !!un);
+  ok("다시하기 단추가 가로 막대에 있다", !!re);
+  /* 트레이딩뷰처럼 ★맨 오른쪽★ 인가 — 카메라(오른쪽 묶음의 끝)보다 뒤에 있어야 합니다 */
+  const order = barBtns.map((b) => b.getAttribute("data-tlc"));
+  ok("되돌리기·다시하기가 가로 막대 맨 오른쪽 두 자리다 (트레이딩뷰와 같은 자리)",
+    order[order.length - 2] === "undo" && order[order.length - 1] === "redo", order.join(","));
+  ok("되돌리기 앞에 구분선이 있다 (묶음이 나뉘어 보입니다)",
+    !!un && un.previousElementSibling && un.previousElementSibling.className === "tlc-sep",
+    un && un.previousElementSibling ? un.previousElementSibling.className : "없음");
+
+  /* 되돌릴 것이 없으면 흐리게 (트레이딩뷰도 같습니다).
+     ⚠ disabled 가 아니라 aria-disabled 입니다 — 이 프로젝트에서 disabled 는
+       "준비중(아직 안 만든 것)" 이라는 뜻으로 이미 쓰고 있습니다. */
+  ok("되돌릴 것이 없으면 되돌리기가 흐리다", un.getAttribute("aria-disabled") === "true",
+    un.getAttribute("aria-disabled"));
+  ok("다시 할 것이 없으면 다시하기가 흐리다", re.getAttribute("aria-disabled") === "true");
+  ok("흐린 것을 disabled 로 잠그지 않는다 (준비중과 뜻이 섞이면 안 됩니다)",
+    !un.hasAttribute("disabled") && !un.hasAttribute("data-soon"));
+}
+{
+  /* ── 여기부터는 ★그린 것이 있는 화면★ 이 필요합니다 ────────────────────────
+   * 위의 A 는 빈 화면이라 잠금·숨김·휴지통이 할 일이 없습니다.
+   * 그리기는 캔버스를 톡 해야 생기는데 jsdom 에는 캔버스가 없어서,
+   * 저장해 둔 것을 되살리는 방식(seed)으로 수평선 1 · 추세선 1 을 깔고 봅니다.
+   * 새 창을 따로 띄우는 이유 — A 를 더럽히면 뒤따르는 검사들이 흔들립니다.
+   * ------------------------------------------------------------------------ */
+  const B = boot({
+    width: 1920,
+    seed: {
+      "chart-drawings": {
+        v: 1, ui: {},
+        bySymbol: {
+          BTCUSDT: {
+            hlines: [{ id: "h1", price: 100000 }],
+            byInterval: { "1m": [{ id: "s1", kind: "trend" }] }
+          }
+        }
+      }
+    }
+  });
+  const bRail = Array.from(B.win.document.querySelectorAll(".tlc-rail .tlc-btn"));
+  const bBar = Array.from(B.win.document.querySelectorAll(".tlc-toolbar .tlc-btn"));
+  const bClick = (btn) => btn.dispatchEvent(new B.win.MouseEvent("click", { bubbles: true, cancelable: true }));
+  const pick = (arr, k) => arr.filter((x) => x.getAttribute("data-tlc") === k)[0];
+  const cnt = () => B.M.getDrawings().hlines.length + B.M.getDrawings().shapes.length;
+  /* href 는 스프라이트를 못 받아왔을 때 "파일경로#id" 가 됩니다(spriteFallback).
+     그래서 ★# 뒤만★ 봅니다 — 앞부분까지 보면 되는 화면에서도 빨개집니다. */
+  const useHref = (b) => {
+    const h = b.querySelector(".tlc-ico use").getAttribute("href") || "";
+    return h.slice(h.indexOf("#"));
+  };
+
+  const lk = pick(bRail, "lockall");
+  const hd = pick(bRail, "hideall");
+  const cl = pick(bRail, "clearall");
+  const un = pick(bBar, "undo");
+  const re = pick(bBar, "redo");
+  ok("전체 잠금 단추가 세로 막대에 있다", !!lk);
+  ok("전체 숨김 단추가 세로 막대에 있다", !!hd);
+  ok("모두 지우기 단추가 세로 막대에 있다", !!cl);
+  ok("깔아 둔 그림 2개가 되살아났다 (이 아래 검사들의 전제)", cnt() === 2, "지금 " + cnt() + "개");
+
+  const kids = Array.from(B.win.document.querySelector(".tlc-rail").children);
+  ok("손질 묶음이 세로 막대 ★맨 아래★ 세 자리다",
+    kids.slice(-3).map((e) => e.getAttribute("data-tlc")).join(",") === "lockall,hideall,clearall",
+    kids.slice(-3).map((e) => e.getAttribute("data-tlc")).join(","));
+  ok("도구와 손질 묶음 사이에 가로 구분선이 있다",
+    kids[kids.length - 4].className === "tlc-sep", kids[kids.length - 4].className);
+
+  ok("그린 것이 있으면 잠금·숨김·휴지통이 흐리지 않다",
+    [lk, hd, cl].every((b) => b.getAttribute("aria-disabled") !== "true"),
+    [lk, hd, cl].map((b) => b.getAttribute("aria-disabled")).join(","));
+
+  /* 잠금 — 색이 아니라 ★자물쇠 모양★ 으로 상태를 알립니다 */
+  ok("잠기지 않았을 때는 열린 자물쇠다", useHref(lk) === "#tlc-i-unlock", useHref(lk));
+  bClick(lk);
+  ok("잠금 단추를 누르면 실제로 다 잠긴다 (목록의 '전체 잠금' 과 같은 함수)",
+    B.M.getLockedCount() === 2, "잠긴 것 " + B.M.getLockedCount() + "개");
+  ok("잠기면 닫힌 자물쇠로 바뀐다 (색이 아니라 그림으로)", useHref(lk) === "#tlc-i-lock", useHref(lk));
+  ok("잠기면 읽어주는 프로그램에도 켜짐으로 간다", lk.getAttribute("aria-pressed") === "true");
+  bClick(lk);
+  ok("한 번 더 누르면 잠금이 풀린다 (회원이 갇히지 않는다)", B.M.getLockedCount() === 0,
+    "잠긴 것 " + B.M.getLockedCount() + "개");
+  ok("풀리면 열린 자물쇠로 돌아온다", useHref(lk) === "#tlc-i-unlock");
+
+  /* 숨김 — 눈 ↔ 눈에 빗금 */
+  ok("숨기지 않았을 때는 눈이다", useHref(hd) === "#tlc-i-eye", useHref(hd));
+  bClick(hd);
+  ok("숨김 단추를 누르면 실제로 다 숨는다", B.M.getHiddenCount() === 2,
+    "숨은 것 " + B.M.getHiddenCount() + "개");
+  ok("숨기면 눈에 빗금이 그어진다", useHref(hd) === "#tlc-i-eye-off", useHref(hd));
+  ok("★숨겨도 그린 것이 지워지지는 않는다★ (자료는 그대로 남습니다)", cnt() === 2, "지금 " + cnt() + "개");
+  bClick(hd);
+  ok("한 번 더 누르면 다시 보인다", B.M.getHiddenCount() === 0 && useHref(hd) === "#tlc-i-eye");
+
+  /* 휴지통 — ★한 번에 안 지워집니다.★ 그리는 도구 바로 아래라 스칠 수 있는 자리입니다 */
+  bClick(cl);
+  ok("휴지통을 한 번 누른 것으로는 지워지지 않는다 (스쳐도 안전하다)",
+    cnt() === 2, "지금 " + cnt() + "개");
+  ok("한 번 눌러 두면 '한 번 더' 상태로 켜져 보인다", cl.getAttribute("aria-pressed") === "true");
+  bClick(cl);
+  ok("두 번째로 누르면 지워진다", cnt() === 0, "지금 " + cnt() + "개");
+  ok("지운 뒤에는 '한 번 더' 상태가 풀린다", cl.getAttribute("aria-pressed") !== "true");
+  ok("다 지우고 나면 잠금·숨김·휴지통이 도로 흐려진다",
+    [lk, hd, cl].every((b) => b.getAttribute("aria-disabled") === "true"),
+    [lk, hd, cl].map((b) => b.getAttribute("aria-disabled")).join(","));
+
+  /* ★ 실수로 지웠을 때 되돌릴 수 있는가 — 여기가 이 묶음에서 제일 중요합니다 ★
+     휴지통이 있는데 되돌리기가 없으면 그린 것이 영영 사라집니다. */
+  ok("지우고 나면 되돌리기가 흐리지 않다 (되돌릴 것이 생겼다)",
+    un.getAttribute("aria-disabled") !== "true", un.getAttribute("aria-disabled"));
+  bClick(un);
+  ok("★되돌리기 단추를 누르면 지웠던 것이 도로 살아난다★ (Ctrl+Z 와 같은 함수)",
+    cnt() === 2, "지금 " + cnt() + "개");
+  ok("되돌린 뒤에는 다시하기가 흐리지 않다", re.getAttribute("aria-disabled") !== "true");
+  bClick(re);
+  ok("다시하기 단추를 누르면 도로 지워진다", cnt() === 0, "지금 " + cnt() + "개");
+  bClick(un);
+  ok("정리 — 되돌려 놓았다", cnt() === 2, "지금 " + cnt() + "개");
+
+  /* 잠근 것은 남깁니다 — 16차 규칙이 이 단추에서도 그대로인지 */
+  bClick(lk);
+  bClick(cl);
+  bClick(cl);
+  ok("★잠근 것은 휴지통으로도 안 지워진다★ (16차 규칙 그대로)", cnt() === 2,
+    "지금 " + cnt() + "개");
+  B.win.close();
+}
+
 {
   const hline = railBtns.filter((x) => x.getAttribute("data-tlc") === "hline")[0];
   click(hline);
@@ -571,8 +869,8 @@ function click(btn) {
   const body = P.win.document.querySelector(".tlc-body");
   ok("폰(360)에서는 세로 막대가 접힌 채로 시작한다", body.getAttribute("data-rail") === "off",
     body.getAttribute("data-rail"));
-  ok("접혀 있어도 버튼 14개는 그대로 남아 있다 (지운 게 아니라 접은 것)",
-    P.win.document.querySelectorAll(".tlc-rail .tlc-btn").length === 14);
+  ok("접혀 있어도 버튼 17개는 그대로 남아 있다 (지운 게 아니라 접은 것)",
+    P.win.document.querySelectorAll(".tlc-rail .tlc-btn").length === 17);
   P.M.toggleRail();
   ok("폰에서 접기/펴기를 누르면 펴진다", body.getAttribute("data-rail") === "on");
   P.win.close();

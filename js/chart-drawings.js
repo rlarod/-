@@ -724,6 +724,57 @@ App.ChartDrawings = (function () {
     { k: "camera", icon: "tlc-i-camera", label: "카메라 (차트 그림 저장)", ready: true }
   ];
 
+  /* ---------------------------------------------------------------------
+   * "손질" 단추 (21차 2026-09-03 디자인팀)
+   *
+   * 왜 TOP_TOOLS · LEFT_TOOLS 와 따로 두나 — 「종류가 다릅니다」
+   *   도구(tool)  누르면 그 도구가 「켜진 채로 남습니다」. setTool 이 걸리고
+   *               READY_TOOLS 관문을 지납니다. 켜짐/꺼짐이 있습니다.
+   *   손질(act)   누르면 「한 번 일을 하고 끝납니다」. 켜진 채로 남지 않고
+   *               setTool 과 아무 관계가 없습니다.
+   *   섞어 두면 paintButtons() 가 "지금 켜진 도구" 를 칠할 때 이 단추들의
+   *   aria-pressed 를 같이 꺼 버립니다. 그래서 data-kind 를 "act" 로 나눕니다.
+   *
+   * 「기능을 새로 만든 것이 하나도 없습니다」 다섯 가지 전부 이미 있던 것을
+   * 꺼낸 것뿐입니다 —
+   *   undo / redo        Ctrl+Z · Ctrl+Shift+Z 로만 되던 것 (13차)
+   *   lockall / hideall  "그린 것 목록" 안에 숨어 있던 것 (16차)
+   *   clearall           칩의 지우기와 같은 함수. 잠근 것은 남습니다
+   *
+   * [주의] 자석(magnet)은 넣지 않았습니다 — 「우리 코드에 기능 자체가 없습니다」
+   *   (grep magnet / 자석 / snapTo 전부 0건, 2026-09-03 확인)
+   *   기능을 새로 만드는 것은 디자인팀 범위 밖입니다. 아이콘만 세워 두면
+   *   눌러도 아무 일이 없는 조용한 고장이 되므로 아예 안 만들었습니다.
+   *   자석을 넣게 되면 여기 lockall 앞에 한 칸 넣으면 자리는 맞습니다.
+   *
+   * icon2 — 켜짐/꺼짐이 있는 단추의 "켜졌을 때" 아이콘입니다.
+   *   「색이 아니라 그림으로 상태를 알립니다」 (자물쇠 열림 <-> 닫힘, 눈 <-> 빗금).
+   *   여닫기 손잡이를 ‹ › 로 바꾼 20차와 같은 방식이고, 골드를 늘리지 않습니다.
+   *
+   * 되돌리는 방법 — 이 두 배열을 지우고, mount() 의 fillBar 두 줄
+   *   (RAIL_ACTIONS · TOP_ACTIONS) 과 onButton() 의 "act" 토막,
+   *   paintActions() 를 지우면 2026-09-03 이전으로 돌아갑니다.
+   *   화면에서만 빼려면 css/chart-toolbar.css 에
+   *     .tlc-btn[data-kind="act"]{display:none;}
+   *   한 줄이면 됩니다(마크업은 남습니다).
+   * ------------------------------------------------------------------- */
+  var RAIL_ACTIONS = [
+    { k: "sep4", sep: true },
+    { k: "lockall", icon: "tlc-i-unlock", icon2: "tlc-i-lock", ready: true,
+      label: "전체 잠금 (옮기기·지우기를 막습니다)" },
+    { k: "hideall", icon: "tlc-i-eye", icon2: "tlc-i-eye-off", ready: true,
+      label: "전체 숨김 (자료는 그대로 남습니다)" },
+    { k: "clearall", icon: "tlc-i-trash", ready: true,
+      label: "그린 것 모두 지우기 (두 번 눌러야 지워집니다)" }
+  ];
+
+  /* 트레이딩뷰와 같이 위 막대 「맨 오른쪽」, 구분선 뒤입니다 */
+  var TOP_ACTIONS = [
+    { k: "sep6", sep: true },
+    { k: "undo", icon: "tlc-i-undo", label: "되돌리기 (Ctrl+Z)", ready: true },
+    { k: "redo", icon: "tlc-i-redo", label: "다시하기 (Ctrl+Shift+Z)", ready: true }
+  ];
+
   /* 실제로 그릴 수 있는 도구 (나머지는 고를 수조차 없습니다) */
   var READY_TOOLS = {
     cursor: 1, trend: 1, hline: 1, text: 1, fib: 1, ruler: 1, zoom: 1, brush: 1, channel: 1,
@@ -4180,7 +4231,9 @@ App.ChartDrawings = (function () {
     els.rail = rail;
 
     fillBar(rail, LEFT_TOOLS, "tool");
+    fillBar(rail, RAIL_ACTIONS, "act"); /* 21차 — 세로 막대 아래 손질 묶음 */
     fillBar(bar, TOP_TOOLS, "top");
+    fillBar(bar, TOP_ACTIONS, "act"); /* 21차 — 가로 막대 맨 오른쪽 되돌리기·다시하기 */
     applyRail();
     paintButtons();
     return true;
@@ -4250,6 +4303,10 @@ App.ChartDrawings = (function () {
   }
 
   function onButton(def, kind) {
+    if (kind === "act") {
+      onAction(def.k);
+      return;
+    }
     if (kind === "tool") {
       setTool(def.k);
       return;
@@ -4293,6 +4350,135 @@ App.ChartDrawings = (function () {
       var cs = window.App && App.ChartStyle;
       if (cs && typeof cs.toggle === "function") cs.toggle();
     }
+  }
+
+  /* =====================================================================
+   * 손질 단추가 하는 일 (21차 2026-09-03 디자인팀)
+   * ---------------------------------------------------------------------
+   * 전부 이미 있던 함수를 그대로 부릅니다. 새로 만든 동작이 없습니다.
+   *
+   * 휴지통만 「두 번 눌러야」 지워집니다. 세로 막대는 그리는 도구 바로 아래라
+   * 잘못 스칠 수 있는 자리인데, 한 번에 지우면 그린 것이 통째로 날아갑니다.
+   * (칩의 지우기도 같은 방식입니다 — askingClear. 그쪽과 상태를 섞지 않으려고
+   *  여기는 따로 셉니다. 섞으면 한쪽을 눌러 놓고 다른 쪽에서 지워집니다.)
+   * 4초 안에 다시 안 누르면 저절로 풀립니다.
+   * ===================================================================== */
+  var RAIL_CLEAR_MS = 4000;
+  var railClearAt = 0; /* 휴지통을 처음 누른 시각 (0 이면 안 눌린 상태) */
+
+  function onAction(k) {
+    if (k === "undo") {
+      undo();
+      return;
+    }
+    if (k === "redo") {
+      redo();
+      return;
+    }
+    if (k === "lockall") {
+      if (!listItems().length) {
+        toast("그린 것이 없습니다");
+        return;
+      }
+      toggleLockAll();
+      return;
+    }
+    if (k === "hideall") {
+      if (!listItems().length) {
+        toast("그린 것이 없습니다");
+        return;
+      }
+      toggleHideAll();
+      return;
+    }
+    if (k === "clearall") {
+      if (!listItems().length) {
+        toast("지울 것이 없습니다");
+        return;
+      }
+      var now = Date.now();
+      if (railClearAt && now - railClearAt < RAIL_CLEAR_MS) {
+        railClearAt = 0;
+        clearAll(); /* 잠근 것은 남습니다 — 16차 규칙 그대로 */
+        toast("모두 지웠습니다");
+        return;
+      }
+      railClearAt = now;
+      toast("한 번 더 누르면 그린 것을 모두 지웁니다");
+      paintActions();
+      setTimeout(function () {
+        if (!railClearAt || Date.now() - railClearAt < RAIL_CLEAR_MS) return;
+        railClearAt = 0;
+        paintActions();
+      }, RAIL_CLEAR_MS + 60);
+    }
+  }
+
+  /** 손질 단추 하나를 찾습니다 */
+  function actButton(host, k) {
+    if (!host || !host.querySelector) return null;
+    return host.querySelector('.tlc-btn[data-kind="act"][data-tlc="' + k + '"]');
+  }
+
+  /** 아이콘을 갈아 끼웁니다 (자물쇠 열림 <-> 닫힘 · 눈 <-> 빗금)
+   *  [주의] 앞부분을 그대로 두고 # 뒤만 바꿉니다.
+   *    스프라이트를 못 받아왔을 때 spriteFallback() 이 href 를
+   *    "#tlc-i-lock" -> "assets/icons/chart-tools.svg#tlc-i-lock" 으로
+   *    바꿔 놓기 때문입니다. "#" + id 로 통째로 덮으면 그 회원 화면에서만
+   *    아이콘이 사라집니다(오류도 안 납니다 — 조용한 고장). */
+  function swapIcon(btn, id) {
+    if (!btn) return;
+    var u = btn.querySelector(".tlc-ico use");
+    if (!u) return;
+    var cur = u.getAttribute("href") || "";
+    var at = cur.indexOf("#");
+    var want = (at === -1 ? cur : cur.slice(0, at)) + "#" + id;
+    if (cur !== want) u.setAttribute("href", want);
+  }
+
+  /** 지금 할 수 있는 일이 없으면 흐리게 (트레이딩뷰도 같습니다).
+   *  [주의] disabled 를 쓰지 않습니다 — 이 프로젝트에서 disabled 는 "준비중"
+   *    (아직 안 만든 것) 이라는 뜻으로 이미 쓰고 있어서, 여기 쓰면
+   *    "만들다 만 기능" 으로 읽힙니다. 흐리게만 하고 눌리게 둡니다.
+   *    누르면 왜 아무 일이 없는지 글로 알려 줍니다("되돌릴 것이 없습니다"). */
+  function dimAct(btn, off) {
+    if (!btn) return;
+    if (off) btn.setAttribute("aria-disabled", "true");
+    else btn.removeAttribute("aria-disabled");
+  }
+
+  function paintActions() {
+    var un = actButton(els.bar, "undo");
+    var re = actButton(els.bar, "redo");
+    /* 파동을 찍는 중이면 "점 하나 무르기" 가 되므로 되돌릴 것이 있는 셈입니다 */
+    dimAct(un, !undoStack.length && !(wavePts && wavePts.length));
+    dimAct(re, !redoStack.length);
+
+    var lk = actButton(els.rail, "lockall");
+    var hd = actButton(els.rail, "hideall");
+    var cl = actButton(els.rail, "clearall");
+    var n = listItems().length;
+    var allLocked = n > 0 && countFlag("l") === n;
+    var allHidden = n > 0 && countFlag("h") === n;
+
+    swapIcon(lk, allLocked ? "tlc-i-lock" : "tlc-i-unlock");
+    swapIcon(hd, allHidden ? "tlc-i-eye-off" : "tlc-i-eye");
+    if (lk) {
+      lk.setAttribute("aria-pressed", allLocked ? "true" : "false");
+      lk.setAttribute("title", allLocked ? "잠금 풀기 (그린 것 전부)" : "전체 잠금 (옮기기·지우기를 막습니다)");
+      lk.setAttribute("aria-label", lk.getAttribute("title"));
+    }
+    if (hd) {
+      hd.setAttribute("aria-pressed", allHidden ? "true" : "false");
+      hd.setAttribute("title", allHidden ? "다시 보이기 (그린 것 전부)" : "전체 숨김 (자료는 그대로 남습니다)");
+      hd.setAttribute("aria-label", hd.getAttribute("title"));
+    }
+    /* 휴지통은 "한 번 더 누르면 지웁니다" 인 동안만 켜진 것으로 보입니다.
+       화면에서 골드가 늘지 않게, 켜져 있는 시간은 4초뿐입니다. */
+    if (cl) cl.setAttribute("aria-pressed", railClearAt ? "true" : "false");
+    dimAct(lk, !n);
+    dimAct(hd, !n);
+    dimAct(cl, !n);
   }
 
   /* 가로 막대에서 버튼 하나를 찾아 줍니다 (목록이 붙을 자리 기준점) */
@@ -4497,6 +4683,10 @@ App.ChartDrawings = (function () {
     /* 알람은 가로 막대에 있지만 켜짐/꺼짐이 있는 도구라 같이 칠합니다 */
     var al = els.bar ? els.bar.querySelector(".tlc-btn[data-tlc=alert]") : null;
     if (al) al.setAttribute("aria-pressed", tool === "alert" ? "true" : "false");
+    /* 21차 — 손질 단추(되돌리기·잠금·숨김·휴지통)의 흐림/아이콘도 같이 맞춥니다.
+       [주의] 위 for 문이 [data-kind=tool] 만 고르는 것이 중요합니다. 손질 단추까지
+         쓸어 담으면 잠금·숨김의 켜짐 표시가 매번 꺼집니다. */
+    paintActions();
   }
 
   /* ---------------- 아이콘 스프라이트 ----------------
@@ -4981,6 +5171,9 @@ App.ChartDrawings = (function () {
        [주의] 여기는 시세 틱마다 불리는 자리가 아닙니다 —
        알람이 실제로 울렸을 때·그림이 늘거나 줄었을 때만 불립니다. */
     paintList();
+    /* 21차 — 그림이 늘거나 줄면 세로 막대 아래 묶음(잠금·숨김·휴지통)의
+       흐림과 자물쇠·눈 모양도 같이 바뀌어야 합니다. 여기가 그 자리입니다. */
+    paintActions();
     if (!els.chip) return;
     var n = countAll();
     var an = alertCount();
@@ -6169,6 +6362,10 @@ App.ChartDrawings = (function () {
     FIB_LEVELS: FIB_LEVELS,
     TOOLS: {
       left: LEFT_TOOLS, top: TOP_TOOLS, ready: READY_TOOLS,
+      /* 21차 2026-09-03 — 손질 단추. left/top 과 섞지 않습니다(종류가 다릅니다).
+         [주의] left/top 안에 넣으면 setTool 이 걸려 "누르면 켜진 채로 남는" 도구가
+           됩니다. 되돌리기·휴지통은 한 번 일하고 끝나는 것이라 그러면 안 됩니다. */
+      railActs: RAIL_ACTIONS, topActs: TOP_ACTIONS,
       twoPoint: TWO_POINT, twoTap: TWO_TAP, threeTap: THREE_TAP, multiTap: MULTI_TAP
     },
     /* 여러선 계산부 — 테스트에서 그대로 씁니다 */

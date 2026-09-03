@@ -35,4 +35,20 @@
 <symbol id="tlc-i-hexagon" viewBox="0 0 16 16"><path d="M8 1.7 13.5 4.85v6.3L8 14.3 2.5 11.15v-6.3z"/></symbol>
 <symbol id="tlc-i-fullscreen" viewBox="0 0 16 16"><path d="M2.2 6.2V2.2h4M9.8 2.2h4v4M13.8 9.8v4h-4M6.2 13.8h-4v-4"/></symbol>
 <symbol id="tlc-i-camera" viewBox="0 0 16 16"><rect x="1.7" y="4.9" width="12.6" height="9.2" rx="1.6"/><path d="M5.6 4.9 6.8 2.7h2.4l1.2 2.2"/><circle cx="8" cy="9.5" r="2.7"/></symbol>
+<!-- ── 되돌리기 / 다시하기 (2026-09-03 디자인팀 · 가로 막대 오른쪽 끝) ─────────
+     트레이딩뷰와 같은 자리·같은 모양(왼쪽으로 굽은 화살표 / 그 좌우 대칭)입니다.
+     그림을 가져다 쓴 것이 아니라 좌표를 직접 적었습니다.
+     ↷ 는 ↶ 를 x=8 축으로 뒤집은 값입니다(호의 sweep 만 1 -> 0). -->
+<symbol id="tlc-i-undo" viewBox="0 0 16 16"><path d="M4.4 4.3 1.9 6.8l2.5 2.5"/><path d="M1.9 6.8h7a3.6 3.6 0 0 1 0 7.2H6.2"/></symbol>
+<symbol id="tlc-i-redo" viewBox="0 0 16 16"><path d="M11.6 4.3 14.1 6.8l-2.5 2.5"/><path d="M14.1 6.8h-7a3.6 3.6 0 0 0 0 7.2h2.7"/></symbol>
+<!-- ── 세로 막대 아래 묶음 (2026-09-03 디자인팀) ─────────────────────────────
+     잠금·숨김은 켜짐/꺼짐이 있는 하나짜리 단추라 아이콘이 두 벌씩 필요합니다.
+     (자물쇠 닫힘 <-> 열림 / 눈 <-> 눈에 빗금)
+     ⚠ 자석(magnet)은 우리 코드에 기능 자체가 없어서 아이콘도 만들지 않았습니다.
+       아이콘만 있고 눌러도 아무 일이 없으면 그게 조용한 고장입니다. -->
+<symbol id="tlc-i-lock" viewBox="0 0 16 16"><rect x="3.2" y="7.2" width="9.6" height="6.6" rx="1.2"/><path d="M5.6 7.2V5.4a2.4 2.4 0 0 1 4.8 0v1.8"/></symbol>
+<symbol id="tlc-i-unlock" viewBox="0 0 16 16"><rect x="3.2" y="7.2" width="9.6" height="6.6" rx="1.2"/><path d="M5.6 7.2V5.4a2.4 2.4 0 0 1 4.8 0"/></symbol>
+<symbol id="tlc-i-eye" viewBox="0 0 16 16"><path d="M1.4 8s2.5-4.3 6.6-4.3S14.6 8 14.6 8s-2.5 4.3-6.6 4.3S1.4 8 1.4 8z"/><circle cx="8" cy="8" r="1.9"/></symbol>
+<symbol id="tlc-i-eye-off" viewBox="0 0 16 16"><path d="M6.4 4a7.4 7.4 0 0 1 1.6-.3c4.1 0 6.6 4.3 6.6 4.3a13 13 0 0 1-2.1 2.7M10.9 11.7a6.9 6.9 0 0 1-2.9.6C3.9 12.3 1.4 8 1.4 8a13 13 0 0 1 3.3-3.6"/><path d="M2.3 2.3 13.7 13.7"/></symbol>
+<symbol id="tlc-i-trash" viewBox="0 0 16 16"><path d="M2.6 4.4h10.8"/><path d="M6.2 4.4V2.9h3.6v1.5"/><path d="m4.3 4.4.7 9a1.1 1.1 0 0 0 1.1 1h3.8a1.1 1.1 0 0 0 1.1-1l.7-9"/><path d="M6.8 7v4.3M9.2 7v4.3"/></symbol>
 </svg>
