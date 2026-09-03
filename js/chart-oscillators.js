@@ -483,8 +483,22 @@ App.ChartOscillators = (function () {
       ".tl-osc-btn:hover{opacity:1;border-color:#838DA4;}" +
       '.tl-osc-btn[aria-pressed="true"]{opacity:1;background:#101727;border-color:#838DA4;color:#E7ECF5;}' +
       ".tl-osc-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
-      ".tl-osc-label{position:absolute;left:8px;top:2px;z-index:3;pointer-events:none;" +
+      /* 오른쪽 끝 (2026-09-03 수리팀 22차) — js/chart-indicator-kit.js 의
+         .tl-kit-plabel 과 ★글자까지 똑같은 쌍둥이★ 라 같이 막습니다.
+         고치기 전에는 left 만 있고 right 도 max-width 도 없었습니다.
+         position:absolute + white-space:nowrap 이면 상자가 글자 길이 그대로
+         무한정 늘어나고, overflow-x 가 전부 visible 이라 문서가 옆으로 밀립니다.
+         (kit 쪽 실측 — 360 원화에서 문서가 31px 밀렸습니다)
+
+         ⚠️ 지금 이 이름표는 화면에 ★0개★ 입니다 — 지표틀(kit)이 옛 칩을
+         걷어가기 때문입니다. 그래서 지금은 아무 일도 안 합니다.
+         ★지표틀 초기화가 실패한 회원 브라우저에서는 되살아납니다.★
+         그때 똑같이 밀리는 것을 미리 막아 둡니다 — 잠들어 있는 함정입니다.
+
+         되돌리려면 right · overflow · text-overflow 셋만 지우면 됩니다. */
+      ".tl-osc-label{position:absolute;left:8px;right:8px;top:2px;z-index:3;pointer-events:none;" +
       "font-size:17px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
+      "overflow:hidden;text-overflow:ellipsis;" +
       "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
       ".tl-osc-label b{font-weight:600;margin-left:6px;}";
     var st = document.createElement("style");

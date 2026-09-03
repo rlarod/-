@@ -738,3 +738,26 @@ tests/icon-sprite-doc-sync.test.js
 #   지표 이름을 두 벌로 안 적음(틀의 listDefs 를 읽음) · 옛 메뉴 파일 무수정.
 # 되돌리기: 이 줄과 tests/chart-indicator-picker.test.js 삭제
 tests/chart-indicator-picker.test.js
+
+# 2026-09-03 수리팀 (22차) — 그리기 칩 · 색굵기 창 · 입력칸 · 도구막대 글씨 바닥 17px
+#   대표가 ★네 번째로★ "팝업창 글씨가 안 보인다" 고 하셨습니다.
+#   tests/chart-popup-font-floor.test.js 가 지난번 16곳을 지키는데
+#   ★js/chart-drawings.js 와 css/chart-toolbar.css 는 안 봅니다★ —
+#   그래서 칩·입력칸이 11 · 12px 로, 도구막대가 15px 로 남아 있었습니다.
+#   값을 못 박지 않고 ★바닥 17px★ 만 놓습니다. 더 키워도 안 빨개집니다.
+#   같이 지키는 것 — "안 들어가면 글씨 대신 줄 수로 푼다"(flex-wrap + fitChip),
+#   입력칸은 글씨만 키우지 않고 폭도 같이, 칩이 두 줄이어도 주문 바 밑으로 안 감.
+# 되돌리기: 이 줄과 tests/chart-draw-chip-font-floor.test.js 삭제
+tests/chart-draw-chip-font-floor.test.js
+
+# 2026-09-03 수리팀 (22차) — 칸 이름표가 문서를 옆으로 밀고 가격축을 덮던 것
+#   조사팀이 한 줄까지 짚었습니다 — .tl-kit-plabel 에 ★오른쪽 끝이 없었습니다★.
+#   position:absolute + nowrap 이면 상자가 글자 길이 그대로 늘어나고,
+#   overflow-x 가 전부 visible 이라 문서가 그대로 밀립니다.
+#   360 원화 실측 — 문서 31px 밀림 / 그림 영역을 MACD 140px · StochRSI 74 ·
+#   KDJ 40 · DMI 40 만큼 올라타 가격축 숫자를 덮었습니다. 달러는 28자라 안 밀려서
+#   ★달러로만 보면 안 보이는 고장★ 이었습니다(문턱 32자).
+#   js/chart-oscillators.js 의 .tl-osc-label 이 글자까지 같은 쌍둥이라 같이 막았습니다.
+#   ★글씨로 풀지 않았습니다★ — 17px 그대로 두고 상자에 오른쪽 끝을 줬습니다.
+# 되돌리기: 이 줄과 tests/chart-pane-label-fit.test.js 삭제
+tests/chart-pane-label-fit.test.js

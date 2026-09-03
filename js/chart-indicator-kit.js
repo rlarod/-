@@ -1647,6 +1647,16 @@ App.ChartIndicatorKit = (function () {
   }
 
   /** 칸이 늘거나 줄면 자리가 밀립니다. 그때마다 다시 잽니다. */
+  /* 칸 이름표 가로 자리 (2026-09-03 수리팀 22차).
+     PLABEL_LEFT 는 CSS 의 left:8px 과 ★같은 값이어야 합니다★ — 여기만 바꾸면
+     이름표가 그림 영역보다 그만큼 더 나가거나 덜 나갑니다. */
+  var PLABEL_LEFT = 8;   /* CSS 의 .tl-kit-plabel 규칙 left:8px 과 짝입니다.
+                            ⚠️ 여기에 「.tl-kit-plabel + 여는중괄호」 를 붙여 쓰면
+                            tests/chart-popup-font-floor.test.js 가 ★주석을 규칙으로
+                            잘못 집습니다★ (2026-09-03 에 실제로 났습니다). 띄어 씁니다. */
+  var PLABEL_GAP = 6;    /* 그림 영역 오른끝에서 띄우는 여백 */
+  var PLABEL_MIN_W = 80; /* 이보다 좁아지면 그냥 이만큼 씁니다 (글씨는 안 줄입니다) */
+
   function positionPaneLabels() {
     var i;
     var any = false;
@@ -1677,6 +1687,25 @@ App.ChartIndicatorKit = (function () {
       if (idx < 0 || idx >= rows.length) continue;
       var r = rows[idx].getBoundingClientRect();
       it.live.label.el.style.top = Math.round(r.top - wr.top + 2) + "px";
+      /* 가로도 같이 잡습니다 (2026-09-03 수리팀 22차).
+         이름표는 .chart-wrap(그림 + 가격축 전체) 안에 있어서 ★그림 영역이
+         어디서 끝나는지를 몰랐습니다★ — left:8px 하나뿐이었습니다.
+         그래서 값이 길어지면 가격축 위로 올라타 숫자를 덮었습니다.
+           360 · 원화 실측(2026-09-03 13:33) — 그림 영역 오른끝 252 인데
+           MACD 이름표 오른끝 391 로 ★140px★ 올라탔습니다.
+           MACD 만이 아닙니다 — 같은 화면에서 StochRSI +74 · KDJ +40 · DMI +40.
+         이 tr 은 세 칸(왼축 · 그림 · 오른축)이고 가운데가 그림입니다.
+         paneRows() 가 이미 「자식 셋인 tr」 만 골라 두었습니다.
+         ★글씨를 줄이지 않습니다★ — 상자만 그림 영역에 맞추고, 넘는 글자는
+         CSS 의 text-overflow:ellipsis 가 … 로 줄입니다. */
+      var 가운데 = rows[idx].children && rows[idx].children[1];
+      if (가운데 && 가운데.getBoundingClientRect) {
+        var g = 가운데.getBoundingClientRect();
+        /* 이름표 왼끝은 CSS 의 left:8px 입니다. 오른쪽에 PLABEL_GAP 을 띄워
+           … 이 가격축 눈금에 닿지 않게 합니다. */
+        var 폭 = g.right - wr.left - PLABEL_LEFT - PLABEL_GAP;
+        it.live.label.el.style.maxWidth = (폭 > PLABEL_MIN_W ? Math.round(폭) : PLABEL_MIN_W) + "px";
+      }
     }
   }
 
@@ -2801,8 +2830,32 @@ App.ChartIndicatorKit = (function () {
          ⚠️ pointer-events:none - 이름표가 차트 조작을 먹으면 안 됩니다.
          ⚠️ 글씨 17px - 칩 줄과 같은 크기. 좁은 화면에서 줄이지 않습니다.
             (2026-09-03 대표 지시로 12px -> 17px. 칩 줄과 같이 올렸습니다) */
-      ".tl-kit-plabel{position:absolute;left:8px;z-index:3;pointer-events:none;" +
+      /* 13.2-1 오른쪽 끝 (2026-09-03 수리팀 22차)
+         ⚠️ 고치기 전에는 left 만 있고 right 도 max-width 도 없었습니다.
+         position:absolute + white-space:nowrap 이면 상자가 ★글자 길이 그대로★
+         무한정 늘어납니다. .chart-wrap 부터 <html> 까지 overflow-x 가 전부
+         visible 이라 늘어난 만큼 문서가 옆으로 밀립니다.
+           360 · 원화 실측(2026-09-03 13:33) — MACD 이름표 폭 368px,
+           오른끝 391 (화면 360) → ★문서가 31px 밀림★.
+           달러는 28자라 안 밀리고 원화는 35자라 밀립니다 — 문턱은 32자입니다.
+         ★같은 병을 이미 고친 선례가 있습니다★ — style.css 의 .tl-ind-bar
+         (2026-08-27, right:138px + @media 82px). 이름표는 그때 없던 요소라
+         같은 처방을 못 받았습니다.
+
+         right:8px 은 ★막는 바닥★ 입니다 — 어떤 경우에도 차트 칸 밖으로
+         안 나가게 합니다. 그림 영역(가운데 td) 경계는 그보다 안쪽이고,
+         그건 positionPaneLabels() 가 max-width 로 잰 값을 넣습니다.
+
+         ⚠️ nowrap 은 그대로 둡니다. 지표 이름에 띄어쓰기가 없어서 nowrap 을
+         풀어도 안 접힙니다(조사팀 실험으로 확인). 대신 overflow:hidden 과
+         text-overflow:ellipsis 로 ★끝을 … 로 줄입니다★.
+         ★글씨는 안 줄입니다★ — 대표가 네 번 말씀하신 것입니다(17px 그대로).
+
+         되돌리려면 right · max-width · overflow · text-overflow 네 개만 지우면
+         2026-09-03 이전(오른쪽 끝 없음)으로 돌아갑니다. */
+      ".tl-kit-plabel{position:absolute;left:8px;right:8px;z-index:3;pointer-events:none;" +
       "font-size:17px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
+      "overflow:hidden;text-overflow:ellipsis;" +
       "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
       ".tl-kit-plabel b{font-weight:600;margin-left:6px;}";
     var st = document.createElement("style");

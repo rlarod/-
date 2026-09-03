@@ -408,9 +408,14 @@
  *       [봉종류] │ [지표 ∨] │ [격자] │ [⏰ 얼러트] │ [◀◀ 리플레이] │ ↶ ↷
  *   글자가 붙는 것은 지표 · 얼러트 · 리플레이 셋입니다.
  *
- *   ★ 글씨를 줄이지 않았습니다 — 15px 입니다.
- *     대표가 작은 글씨를 못 읽으십니다. 12px 로 내리지 마세요.
- *     (js/chart-drawings.js 의 LIST_FONT 15 와 같은 이유·같은 크기입니다)
+ *   ★ 글씨를 줄이지 않았습니다 — 17px 입니다.
+ *     대표가 작은 글씨를 못 읽으십니다. 줄이지 마세요.
+ *     22차 2026-09-03 — 대표가 ★네 번째★ 로 "팔업창 글씨가 안 보인다" 고
+ *     하셔서 15 -> 17px 로 올렸습니다.
+ *     ⚠ 가로 막대가 넣어질까 봐 먼저 재었습니다(2026-09-03 실측) —
+ *       여유 71px 에 늘어나는 것은 약 16px 입니다. 줄 수는 그대로입니다.
+ *       768 미만에서는 이 글자가 아예 display:none 이라 폰은 영향이 없습니다.
+ *     (js/chart-drawings.js 의 LIST_FONT 와 같은 이유입니다)
  *
  *   색은 아이콘 색을 그대로 물려받습니다(color:inherit).
  *   그래서 꺼짐 #838DA4 / 올림 #E7ECF5 / 켜짐 #F0B429 가 아이콘과 글자에
@@ -427,7 +432,7 @@
 }
 .tlc-txt,
 .tlc-toolbar > .tlc-btn[title^="리플레이"]::after{
-  font-size:15px; font-weight:500; line-height:1;
+  font-size:17px; font-weight:500; line-height:1;
   letter-spacing:-.01em; white-space:nowrap;
   color:inherit;
 }

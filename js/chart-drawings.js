@@ -4757,12 +4757,23 @@ App.ChartDrawings = (function () {
          position:fixed 칩이 (화면폭 - left) 만큼으로 눌려 두 줄로 접히고,
          그 접힌 폭을 placeChips() 가 다시 읽어 자리를 잡아 오른쪽 끝에
          달라붙습니다(스스로 되풀이됨). 2026-08-28 360px 실측.
-         되돌리려면 두 곳의 white-space:nowrap; 만 지우면 됩니다. */
-      ".tl-draw-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
+         되돌리려면 두 곳의 white-space:nowrap; 만 지우면 됩니다.
+
+         22차 2026-09-03 — 글씨를 11px -> 17px 로 올렸습니다(대표가 네 번째로
+         말씀하신 것). 그러면서 칩이 차트 칸보다 넓어졌습니다 —
+           360 실측  파동 칩 293.5 -> 409.9px  ·  알람 칩 321.6 -> 465.4px
+         「글씨는 줄이지 않습니다」 가 규칙이라 「줄 수로」 풉니다:
+           flex-wrap:wrap  로 단추를 아랫줄로 접고,
+           placeChips() 의 fitChip() 이 칩을 차트 칸 폭 안으로 묶습니다.
+         nowrap 은 그대로 둡니다 — 이제 낱말이 아니라 「단추 단위」 로 접힙니다
+         (한글이 아무 글자에서나 갈리는 것은 그대로 막힙니다).
+         위에 적힌 「스스로 되풀이됨」 은 fitChip() 이 재기 전에 left 를 0 으로
+         되돌려 막습니다 — placeToast 가 15차에 쓴 것과 같은 방법입니다. */
+      ".tl-draw-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;flex-wrap:wrap;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
-      "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
+      "font-size:17px;line-height:1.6;color:" + C_MUTED + ";}" +
       ".tl-draw-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
-      "border-radius:5px;font-size:11px;line-height:1.6;padding:1px 7px;cursor:pointer;font-family:inherit;}" +
+      "border-radius:5px;font-size:17px;line-height:1.6;padding:1px 7px;cursor:pointer;font-family:inherit;}" +
       ".tl-draw-chip button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-draw-chip button[data-dim=1]{color:" + C_MUTED + ";}" +
       ".tl-draw-chip button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
@@ -4776,11 +4787,11 @@ App.ChartDrawings = (function () {
       "text-decoration:underline;text-underline-offset:2px;}" +
       ".tl-draw-chip button.lbl:hover{color:" + C_TEXT + ";}" +
       /* 확대 되돌리기 칩 — "그린 것" 칩과 같은 생김새, 자리만 오른쪽 아래 */
-      ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;white-space:nowrap;" +
+      ".tl-zoom-chip{position:fixed;left:0;top:0;z-index:6;display:none;align-items:center;flex-wrap:wrap;white-space:nowrap;" +
       "gap:6px;padding:3px 6px;border-radius:6px;background:" + C_CARD + ";border:1px solid " + C_BORDER + ";" +
-      "font-size:11px;line-height:1.6;color:" + C_MUTED + ";}" +
+      "font-size:17px;line-height:1.6;color:" + C_MUTED + ";}" +
       ".tl-zoom-chip button{border:1px solid " + C_BORDER + ";background:" + C_BG + ";color:" + C_TEXT + ";" +
-      "border-radius:5px;font-size:11px;line-height:1.6;padding:1px 7px;cursor:pointer;font-family:inherit;}" +
+      "border-radius:5px;font-size:17px;line-height:1.6;padding:1px 7px;cursor:pointer;font-family:inherit;}" +
       ".tl-zoom-chip button:hover{border-color:" + C_MUTED + ";}" +
       ".tl-draw-toast{position:fixed;left:0;top:0;z-index:9;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";border-radius:6px;" +
@@ -4800,7 +4811,7 @@ App.ChartDrawings = (function () {
       /* 색·굵기 고르는 창 — 단추 32px (폰에서 손가락으로 누릅니다) */
       ".tl-style-pick{position:fixed;left:0;top:0;z-index:7;padding:6px;border-radius:8px;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";}" +
-      ".tl-style-pick .hd{font-size:11px;line-height:1.6;color:" + C_MUTED + ";margin-bottom:4px;}" +
+      ".tl-style-pick .hd{font-size:17px;line-height:1.6;color:" + C_MUTED + ";margin-bottom:4px;}" +
       ".tl-style-pick .row{display:flex;gap:2px;}" +
       ".tl-style-pick .wrow{margin-top:4px;}" +
       ".tl-style-pick button{width:" + STYLE_BTN + "px;height:" + STYLE_BTN + "px;padding:0;display:flex;" +
@@ -4851,7 +4862,15 @@ App.ChartDrawings = (function () {
       "font-family:inherit;justify-content:center;}" +
       ".tl-style-pick .srow button.on{border-color:" + COLOR_DRAW + ";color:" + COLOR_DRAW + ";}" +
       ".tl-draw-input{position:absolute;z-index:9;background:" + C_CARD + ";border:1px solid " + COLOR_DRAW + ";" +
-      "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:12px;width:150px;font-family:inherit;}" +
+      /* 폭도 같이 넓혔습니다 (22차 2026-09-03). 글씨만 12 -> 17px 로 올리고
+         폭 150px 을 두면 「보이는 글자 수가 줄어듭니다」 —
+         360 실측  12px 때 한글 약 12자  ->  17px 에 그대로 두면 약 9자
+         (maxlength 는 40자입니다. 옆으로 밀려 나간 글자는 안 보입니다)
+         한글 10자 = 156px 이라 안쪽 폭을 그만큼 잡아 200px 로 넓혔습니다.
+         차트 칸이 330px(360 화면)이라 자리를 잡는 쪽에서 다 들어갑니다.
+         「알림글(placeholder) 글을 쓰고 Enter」 는 17px 에서 115px 이라
+         150px 때도 안 잘렸습니다 — 잘린 것을 고친 게 아니라 「글자 수」 입니다. */
+      "color:" + C_TEXT + ";border-radius:6px;padding:2px 6px;font-size:17px;width:200px;font-family:inherit;}" +
       /* 잡을 수 있는 자리에 오면 커서가 바뀝니다 (13차 2026-09-02).
          라이브러리가 캔버스에 crosshair 를 직접 걸어 두어서 컨테이너에만
          적으면 안 먹습니다. 캔버스까지 내려가 덮습니다. */
@@ -4886,6 +4905,10 @@ App.ChartDrawings = (function () {
    * 그려지므로 세지 않습니다.
    * ===================================================================== */
   var CHIP_EDGE = 8;
+  /* 칩 최소 폭 (22차 2026-09-03) — 차트 칸이 이보다도 좁으면 그때는 묶지
+     않습니다. 여기서 더 줄이면 단추 글자가 한 줄에 한 글자씩 떨어집니다.
+     「글씨를 줄이는 길은 쓰지 않습니다」 — 대표가 네 번 말씀하신 것입니다. */
+  var CHIP_MIN_W = 120;
 
   function vpW() {
     return window.innerWidth || document.documentElement.clientWidth || 0;
@@ -4930,6 +4953,22 @@ App.ChartDrawings = (function () {
     el.style.top = Math.round(top) + "px";
   }
 
+  /* 칩을 차트 칸 폭 안으로 묶습니다 (22차 2026-09-03).
+     글씨를 17px 로 올리면서 칩이 화면보다 넓어졌습니다 —
+       360 실측  파동 칩 409.9px  ·  알람 칩 465.4px  (차트 칸은 344px)
+     글씨를 줄이지 않고 「줄 수로」 풉니다. CSS 의 flex-wrap:wrap 과 한 쌍입니다.
+
+     [주의] 재기 전에 left 를 0 으로 되돌리는 것이 핵심입니다.
+     폭을 안 정해 둔 position:fixed 칸의 폭은 「남은 자리 = 화면폭 - left」 라,
+     지난번에 밀어 둔 left 를 그대로 둔 채 재면 값이 실제보다 좁게 나오고,
+     그 좁은 값으로 다시 자리를 잡아 스스로 되풀이됩니다.
+     (placeToast 가 15차에 같은 문제를 같은 방법으로 풀었습니다) */
+  function fitChip(el, box) {
+    el.style.left = "0px";
+    var m = box.right - box.left - CHIP_EDGE * 2;
+    el.style.maxWidth = (m > CHIP_MIN_W ? m : CHIP_MIN_W) + "px";
+  }
+
   /* 칩 두 개 — 왼쪽 아래(그린 것) · 오른쪽 아래(확대됨).
      좁아서 둘이 겹치면 확대 칩을 한 줄 위로 올립니다. */
   function placeChips() {
@@ -4944,6 +4983,10 @@ App.ChartDrawings = (function () {
       return;
     }
     var baseY = box.bottom - CHIP_EDGE;
+    /* 재기 전에 폭을 묶습니다 — 아래 offsetWidth · offsetHeight 가
+       「접힌 뒤」 의 값이어야 자리가 맞습니다 */
+    if (a) fitChip(a, box);
+    if (b) fitChip(b, box);
     if (a) {
       a.style.visibility = "visible";
       /* 위로 삐져나가지 않게 막습니다 — 아래 확대 칩에는 원래 있던 것을
@@ -4952,6 +4995,18 @@ App.ChartDrawings = (function () {
          (보이는 칸이 47px 밖에 안 남는 자리까지 스크롤했을 때) */
       var ay = baseY - a.offsetHeight;
       if (ay < box.top) ay = box.top;
+      /* 「아래 막기가 위 막기보다 나중입니다」 — placeToast · placeStyle 과 같은 차례입니다.
+         22차 2026-09-03 실측으로 잡힌 것 —  글씨를 17px 로 올려 칩이 두 줄(63.2px)이
+         되면서, 보이는 칸이 47px 밖에 안 남는 자리(360 · 스크롤 44)에서 위 막기가
+         칩을 아래로 밀어 「하단 매수·매도 바 밑으로 8.2px」 내려갔습니다.
+         3px 씩 261번 훑어 세 자리(스크롤 44 · 47 · 50)에서 났습니다 —
+         20px 씩 훑었을 때는 「한 번도 안 잡혔습니다」.
+         11px 시절에는 칩이 한 줄(29.6px)이라 보이는 칸(최소 44px)보다 늘 작아
+         이 일이 날 수 없었습니다. 글씨를 키우면서 생긴 자리입니다.
+         위는 placeStyle 과 똑같이 「화면 위끝」 까지만 막습니다 — 차트 칸 위끝으로
+         막으면 아래가 다시 주문 바 밑으로 내려갑니다. */
+      if (ay + a.offsetHeight > box.bottom) ay = box.bottom - a.offsetHeight;
+      if (ay < CHIP_EDGE) ay = CHIP_EDGE;
       putFixed(a, box.left + CHIP_EDGE, ay);
     }
     if (b) {
@@ -4962,6 +5017,9 @@ App.ChartDrawings = (function () {
       if (a && bx < box.left + CHIP_EDGE + a.offsetWidth + 6) by -= a.offsetHeight + 6;
       if (bx < box.left + CHIP_EDGE) bx = box.left + CHIP_EDGE;
       if (by < box.top) by = box.top;
+      /* 확대 칩도 같은 차례로 막습니다 (22차 2026-09-03) */
+      if (by + b.offsetHeight > box.bottom) by = box.bottom - b.offsetHeight;
+      if (by < CHIP_EDGE) by = CHIP_EDGE;
       putFixed(b, bx, by);
     }
   }
@@ -5995,14 +6053,19 @@ App.ChartDrawings = (function () {
        누른 곳 725 → 칸 713~736, 막대 위끝 727 보다 9px 아래(실측).
        오른쪽도 화면 끝(360)에 딱 붙어 여유가 0 이었습니다.
        표정 고르는 창(openFacePicker)과 「같은 규칙」 으로 맞춥니다.
-       [주의] 글씨(12px)·폭(150px)은 안 건드립니다. 자리만 옮깁니다.
+       [주의] 17차에는 글씨(12px)·폭(150px)을 안 건드렸습니다.
+       22차 2026-09-03 에 대표 지시로 글씨 17px · 폭 200px 으로 올렸습니다.
        글자가 찍히는 자리는 누른 곳의 (시각, 가격) 이라 그대로입니다 —
        입력칸만 보이는 데로 옮겨 놓는 것입니다. */
     var wr2 = wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : { width: 0, height: 0 };
-    var iw = inp.offsetWidth || 164;
-    var ih = inp.offsetHeight || 23;
+    var iw = inp.offsetWidth || 200; /* border-box 라 width 값 그대로입니다 — 22차 실측 200 */
+    var ih = inp.offsetHeight || 31;  /* 17px 한 줄 + 여백 4 + 테두리 2 — 22차 실측 31px */
     var ileft = o.x + x;
-    var itop = o.y + y - 12;
+    /* -12 는 「12px 글씨일 때 칸 키(23px)의 절반」 을 손으로 적어 둔 값이었습니다.
+       글씨를 17px 로 올리자 칸이 31px 이 되어 누른 곳보다 3.5px 위로 떴습니다.
+       숫자를 다시 적지 않고 「그때그때 잰 키의 절반」 을 씁니다 —
+       다음에 또 글씨를 키워도 여기를 고칠 일이 없습니다. (22차 2026-09-03) */
+    var itop = o.y + y - ih / 2;
     if (wr2.width && ileft + iw > wr2.width - 4) ileft = wr2.width - iw - 4;
     if (ileft < 4) ileft = 4;
     var i바닥 = wr2.height ? wr2.height - 4 : Infinity;

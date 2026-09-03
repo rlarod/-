@@ -80,7 +80,7 @@ function 절(제목) { console.log("\n" + 제목); }
  * ========================================================================= */
 절("[0] 준비 - 자리잡기 계산부를 원본에서 그대로 떼어낸다");
 
-const GEOM = ["vpW", "vpH", "chipFloorY", "visibleBox", "putFixed", "placeChips", "placeToast"];
+const GEOM = ["vpW", "vpH", "chipFloorY", "visibleBox", "putFixed", "fitChip", "placeChips", "placeToast"];
 
 /** function 이름(...) { ... } 한 덩어리를 중괄호 짝을 세어 잘라냅니다 */
 function 함수떼기(name) {
@@ -111,6 +111,11 @@ ok("자리잡기 함수 " + GEOM.length + "개를 원본에서 찾았다",
 const m칩여백 = /var\s+CHIP_EDGE\s*=\s*(\d+)\s*;/.exec(SRC);
 ok("화면 가장자리 여백(CHIP_EDGE)이 원본에 있다", !!m칩여백, String(m칩여백));
 const CHIP_EDGE = m칩여백 ? Number(m칩여백[1]) : 8;
+
+/* 칩 최소 폭 — fitChip 이 쓰는 값입니다 (2026-09-03 수리팀) */
+const m칩최소 = /var\s+CHIP_MIN_W\s*=\s*(\d+)\s*;/.exec(SRC);
+ok("칩 최소 폭(CHIP_MIN_W)이 원본에 있다", !!m칩최소, "fitChip 이 쓰는 값입니다");
+const CHIP_MIN_W = m칩최소 ? Number(m칩최소[1]) : 120;
 ok("여백이 8px 다 (바뀌면 아래 기대값도 같이 봐야 합니다)", CHIP_EDGE === 8, String(CHIP_EDGE));
 
 /* =========================================================================
@@ -225,7 +230,7 @@ function 화면만들기(설정) {
     console: { warn: function () {}, log: function () {} } };
   vm.createContext(sandbox);
   vm.runInContext(
-    "var CHIP_EDGE = " + CHIP_EDGE + ";\n" + GEOM.map(function (n) { return 조각[n]; }).join("\n"),
+    "var CHIP_EDGE = " + CHIP_EDGE + ";\nvar CHIP_MIN_W = " + CHIP_MIN_W + ";\n" + GEOM.map(function (n) { return 조각[n]; }).join("\n"),
     sandbox, { filename: "geom-lifted.js" }
   );
   sandbox.__box = sandbox.visibleBox();

@@ -591,8 +591,16 @@ const M = runModule();
   ok("안내 글자를 적은 곳은 한 곳뿐이다 (두 벌 금지)",
     (CODE.split(M.ALERT_NOTE_1).length - 1) === 1 && (CODE.split(M.ALERT_NOTE_2).length - 1) === 1,
     (CODE.split(M.ALERT_NOTE_1).length - 1) + " / " + (CODE.split(M.ALERT_NOTE_2).length - 1));
-  ok("글씨를 줄이지 않았다 (칩은 그대로 11px)",
-    /\.tl-draw-chip\{[^}]*font-size:11px/.test(SRC));
+  /* 2026-09-03 수리팀 — 원래는 "칩은 그대로 11px" 로 못 박혀 있었습니다.
+     대표가 네 번째로 "팝업창 글씨가 안 보인다" 고 하셔서 17px 로 올렸습니다.
+     ★"안 들어가니까 줄인다" 가 지난 네 번의 실패 경로★ 라, 값을 못 박지 않고
+     ★바닥값★ 만 둡니다 — 더 키워도 안 빨개지고, 줄이면 그 자리에서 터집니다. */
+  {
+    const m칩글씨 = new RegExp("\\.tl-draw-chip\\{[^}]*font-size:(\\d+)px").exec(SRC);
+    ok("칩 글씨가 17px 이상이다 (★줄이지 마세요★ — 대표 지시)",
+      !!m칩글씨 && Number(m칩글씨[1]) >= 17,
+      m칩글씨 ? "지금 " + m칩글씨[1] + "px" : "규칙을 못 찾았습니다");
+  }
   ok("브라우저 알림을 거절해도 화면 알림줄은 돈다 (권한 확인 뒤에만 알림을 만든다)",
     /Notification\.permission !== "granted"/.test(CODE));
   ok("소리는 파일을 받지 않고 브라우저가 만든다 (용량 0 · 돈 0)",
