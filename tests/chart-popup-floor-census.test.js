@@ -161,7 +161,14 @@ const 띄우는것 = 훑기(갈래전부);
    화면 기준이면 하단 바를 보는지 확인하는 것입니다(2·4절이 자동으로 검사합니다). */
 const 알려진띄우는것 = [
   "chart-candle-type.js", "chart-drawings.js", "chart-goto-date.js",
-  "chart-indicator-kit.js", "chart-indicator-menu.js", "chart-indicator-settings.js",
+  "chart-indicator-kit.js", "chart-indicator-menu.js",
+  /* 2026-09-03 차트팀 — 대표 지시로 만든 ★지표 고르는 창★.
+     트레이딩뷰 "Indicators, metrics, and strategies" 를 실측해 옮긴 것입니다.
+     화면 전체를 덮는 판(ⓒ갈래)이고 ★화면 기준이며 하단 바를 봅니다★ —
+     그래서 아래 2절 보호군에 같이 넣었습니다. 실측(2026-09-03) —
+     360x800 · 375x812 · 390x844 · 360x640 넷 다 창 아래끝이 바 윗변보다
+     ★16px 위★ 였습니다(침범 -16). */
+  "chart-indicator-picker.js", "chart-indicator-settings.js",
   "chart-oscillators.js", "chart-replay.js", "chart-style.js", "chart-timezone.js",
   "interval-more.js", "jitter-probe.js", "stream-loading-hint.js",
   "symbol-stream-switch.js"
@@ -222,9 +229,17 @@ ok("칸·문서 좌표로 띄우는 것이 알려진 3개 그대로다 (" + 칸�
  * 안 사라지면 그 갈래는 아무것도 안 잡고 있는 것입니다. */
 {
   const 덮개끔 = 훑기({ 명시: true, cssText: true, 덮개: false }).map((m) => m.파일);
-  ok("★ⓒ덮개 갈래를 끄면 chart-style.js 가 레이더에서 사라진다★",
-    덮개끔.indexOf("chart-style.js") < 0 && 덮개끔.length === 띄우는것.length - 1,
-    "덮개 갈래가 헛돌고 있습니다 — 지금: " + 덮개끔.length + "개");
+  /* ⓒ갈래로만 잡히는 것 — 자리를 잡는 코드가 아예 없고 네 변을 0 으로 묶는 판들.
+     ⚠️ 2026-09-03 에 하나에서 ★둘★ 로 늘었습니다. 차트팀의 지표 고르는 창이
+        같은 모양(fixed + left/top/right/bottom:0)이라 여기 같이 걸립니다.
+        ★기준을 무르게 한 것이 아닙니다★ — "몇 개 사라지나" 를 "누가 사라지나"
+        로 바꿔 ★더 엄하게★ 봅니다. 다른 파일이 하나라도 같이 사라지면 터집니다. */
+  const 덮개전용 = ["chart-indicator-picker.js", "chart-style.js"];
+  const 사라진것 = 띄우는것.map((m) => m.파일).filter((f) => 덮개끔.indexOf(f) < 0).sort();
+  ok("★ⓒ덮개 갈래를 끄면 " + 덮개전용.join(" · ") + " 가 레이더에서 사라진다★",
+    사라진것.join(",") === 덮개전용.join(","),
+    "덮개 갈래가 헛돌고 있습니다 — 사라진 것: " + (사라진것.join(",") || "(없음)") +
+    " / 사라져야 할 것: " + 덮개전용.join(","));
 
   const cssText끔 = 훑기({ 명시: true, cssText: false, 덮개: true }).map((m) => m.파일);
   ok("★ⓑcssText 갈래를 끄면 jitter-probe.js · symbol-stream-switch.js 둘이 사라진다★",
@@ -258,7 +273,10 @@ const 알려진보호군 = [
        "확인" 자리에서 ★매도/숏★ 이 눌렸습니다 (360x640 겹침 52px)
      chart-goto-date.js — 눕힌 화면에서 "이동" 자리에 ★매수/롱★
        (640x360 겹침 69px). 둘 다 floorY() 로 바를 봅니다 */
-  "chart-goto-date.js", "chart-indicator-menu.js", "chart-indicator-settings.js",
+  "chart-goto-date.js", "chart-indicator-menu.js",
+  /* 2026-09-03 차트팀 — 지표 고르는 창. 처음부터 floorY() 로 바를 보게
+     만들었습니다(4절을 거치지 않고 바로 보호군). */
+  "chart-indicator-picker.js", "chart-indicator-settings.js",
   /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (둘 다 menuFloorY) */
   "chart-timezone.js", "interval-more.js"
 ];

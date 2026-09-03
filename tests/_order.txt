@@ -729,3 +729,12 @@ tests/chart-settings-goto-order-bar-floor.test.js
 #      고치는 곳은 assets/icons/chart-tools-symbols.html 이고 기록팀 범위 밖입니다.
 # 되돌리기: 이 줄과 tests/icon-sprite-doc-sync.test.js 삭제
 tests/icon-sprite-doc-sync.test.js
+
+# 2026-09-03 차트팀 — 지표 고르는 창 (fx 지표 버튼)
+#   대표 지시로 트레이딩뷰의 "Indicators, metrics, and strategies" 창을
+#   ★tradingview.com/chart/ 에서 직접 열어 DOM 을 재서★ 옮겼습니다(로그인 안 함).
+#   지키는 것 — 글씨 바닥값 17px(대표가 네 번 말씀하신 것) · 확정 팔레트만 ·
+#   폰 하단 매수·매도 바 밑으로 안 내려감(오늘 P1 이 난 자리) ·
+#   지표 이름을 두 벌로 안 적음(틀의 listDefs 를 읽음) · 옛 메뉴 파일 무수정.
+# 되돌리기: 이 줄과 tests/chart-indicator-picker.test.js 삭제
+tests/chart-indicator-picker.test.js

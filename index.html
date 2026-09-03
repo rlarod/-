@@ -1444,6 +1444,13 @@
      넷 다 무수정입니다. 이 한 줄을 지우면 설정 창만 사라지고 어제 화면 그대로입니다.
      반드시 chart-indicator-kit.js 뒤. -->
 <script src="js/chart-indicator-settings.js"></script>
+<!-- 지표 고르는 창 - 트레이딩뷰 "Indicators, metrics, and strategies" 실측(2026-09-03).
+     fx 지표 버튼을 누르면 옛 목록 대신 이 창이 뜹니다. 옛 메뉴의 open/toggle 을
+     감싸기만 하고 js/chart-indicator-menu.js · js/chart.js 는 무수정입니다.
+     지표 이름은 틀(chart-indicator-kit)이 든 정의를 그대로 읽습니다(두 벌 금지).
+     이 한 줄을 지우면 옛 fx 목록이 그대로 다시 뜹니다.
+     반드시 chart-indicator-menu.js 와 chart-indicator-kit.js 뒤. -->
+<script src="js/chart-indicator-picker.js"></script>
 <!-- 가로 막대의 "봉 종류" 버튼 — 캔들 / 라인 / 바 / 영역 (chart.js 무수정).
      바이낸스 선물 Original 차트의 Chart Style 에 있는 것이 정확히 이 넷입니다.
      캔들 시리즈를 갈아끼우지 않고 색만 투명으로 만든 뒤 위에 얹는 방식이라
