@@ -211,6 +211,39 @@
 .tlc-btn[aria-pressed="true"]{color:var(--tlc-on); background:var(--tlc-tile);}
 .tlc-btn[aria-pressed="true"]:hover{color:var(--tlc-on); background:var(--tlc-tile);}
 
+/* ── 막대 접기/펴기(˅) 는 골드를 쓰지 않습니다 (2026-09-03 디자인팀) ──────────
+ * 실측 (1440, localhost, 수정 전) — 화면에 골드가 두 곳이었습니다.
+ *   .tlc-toolbar [data-tlc=expand]  color rgb(240,180,41) · bg rgb(13,20,34)
+ *   .tlc-rail    [data-tlc=cursor]  color rgb(240,180,41) · bg rgb(13,20,34)
+ * cursor 는 "지금 고른 도구" 라 골드가 맞습니다. expand 는 도구가 아니라
+ * 옆 막대를 여닫는 손잡이인데, 막대를 편 동안 계속 켜져 있어서 늘 골드였습니다.
+ * 지침의 "골드는 지금 여기가 중요하다 한 곳에만" 과 어긋나고, 대표가 보내주신
+ * 트레이딩뷰 화면에서도 접기 손잡이는 강조되어 있지 않습니다.
+ *
+ * 색 대신 ★방향★ 으로 상태를 알립니다 — 편 상태는 ‹ (왼쪽으로 접어라),
+ * 접힌 상태는 › (오른쪽으로 펴라). 색을 하나도 안 쓰는 신호입니다.
+ * 팔레트 값은 한 개도 바꾸지 않았습니다.
+ *
+ * 되돌리는 방법 — 이 토막을 통째로 지우면 다시 골드로 켜집니다.
+ * -------------------------------------------------------------------------- */
+.tlc-toolbar > .tlc-btn[data-tlc="expand"][aria-pressed="true"]{
+  color:var(--tlc-idle); background:transparent;
+}
+.tlc-toolbar > .tlc-btn[data-tlc="expand"][aria-pressed="true"]:hover{
+  color:var(--tlc-hover); background:rgba(255,255,255,.04);
+}
+.tlc-toolbar > .tlc-btn[data-tlc="expand"][aria-pressed="true"]:active{
+  color:var(--tlc-hover); background:rgba(255,255,255,.08);
+}
+/* ˅ 를 돌려 방향으로 상태를 보입니다 (스프라이트는 아래를 보는 ˅ 하나뿐입니다) */
+.tlc-toolbar > .tlc-btn[data-tlc="expand"] .tlc-ico{
+  transform:rotate(-90deg);            /* 접힘 → ›  "눌러서 펴세요" */
+  transition:transform .12s;
+}
+.tlc-toolbar > .tlc-btn[data-tlc="expand"][aria-pressed="true"] .tlc-ico{
+  transform:rotate(90deg);             /* 펴짐 → ‹  "눌러서 접으세요" */
+}
+
 /* 아직 안 만든 도구 — 되는 척하지 않습니다.
    차트팀: <button class="tlc-btn" data-soon="1" disabled title="준비중"> 로 씁니다.
    아이콘 자리에는 "준비중" 글자가 안 들어가서 오른쪽 위 회색 점으로 표시합니다. */
@@ -240,6 +273,72 @@
   fill:none; stroke:currentColor; stroke-width:var(--tlc-stroke);
   stroke-linecap:round; stroke-linejoin:round;
   pointer-events:none;
+}
+
+/* -----------------------------------------------------------------------------
+ * 4-1) 이름표가 붙는 버튼 (2026-09-03 디자인팀 · 대표 지시 "트레이딩뷰 똑같이")
+ *
+ *   대표가 보내주신 트레이딩뷰 위 도구막대는 아이콘만 있는 버튼과
+ *   "아이콘 + 글자" 버튼이 섞여 있습니다.
+ *       [봉종류] │ [지표 ∨] │ [격자] │ [⏰ 얼러트] │ [◀◀ 리플레이] │ ↶ ↷
+ *   글자가 붙는 것은 지표 · 얼러트 · 리플레이 셋입니다.
+ *
+ *   ★ 글씨를 줄이지 않았습니다 — 15px 입니다.
+ *     대표가 작은 글씨를 못 읽으십니다. 12px 로 내리지 마세요.
+ *     (js/chart-drawings.js 의 LIST_FONT 15 와 같은 이유·같은 크기입니다)
+ *
+ *   색은 아이콘 색을 그대로 물려받습니다(color:inherit).
+ *   그래서 꺼짐 #838DA4 / 올림 #E7ECF5 / 켜짐 #F0B429 가 아이콘과 글자에
+ *   똑같이 걸립니다. 팔레트 밖 색을 새로 만들지 않았습니다.
+ *
+ *   되돌리는 방법 — 이 4-1) 토막을 통째로 지우고,
+ *   js/chart-drawings.js 의 TOP_TOOLS 에서 text·caret 칸만 지우면
+ *   2026-09-02 이전(아이콘만) 으로 돌아갑니다.
+ * -------------------------------------------------------------------------- */
+.tlc-btn.tlc-lbl,
+.tlc-toolbar > .tlc-btn[title^="리플레이"]{
+  width:auto; min-width:var(--tlc-btn);
+  padding:0 10px; gap:6px;
+}
+.tlc-txt,
+.tlc-toolbar > .tlc-btn[title^="리플레이"]::after{
+  font-size:15px; font-weight:500; line-height:1;
+  letter-spacing:-.01em; white-space:nowrap;
+  color:inherit;
+}
+/* 펼침 표시 ∨ — 글자 옆에 작게. 아이콘 본체보다 확실히 작아야 "메뉴가 열린다"
+   는 뜻으로 읽힙니다(트레이딩뷰도 같습니다). */
+.tlc-cv{
+  width:calc(var(--tlc-ico) * 0.4); height:calc(var(--tlc-ico) * 0.4);
+  stroke-width:calc(var(--tlc-stroke) * 2);   /* 작아진 만큼 획을 올려 같은 굵기로 */
+  margin-left:-2px; opacity:.85;
+}
+
+/* ── 리플레이 버튼 ────────────────────────────────────────────────────────────
+ * 이 버튼은 js/chart-replay.js 가 만들어 붙입니다(차트팀 파일).
+ * 그 파일을 한 글자도 안 고치고, 여기서 이름표와 묶음선만 얹었습니다.
+ * 붙잡는 기준은 title 입니다 — "리플레이 (과거로 돌아가 한 봉씩 다시 보기)".
+ * ⚠ chart-replay.js 의 title 첫 낱말이 바뀌면 이 두 줄이 조용히 안 걸립니다.
+ *   그때는 아이콘만 남고 아무것도 깨지지 않습니다(기능은 그대로입니다).
+ * -------------------------------------------------------------------------- */
+.tlc-toolbar > .tlc-btn[title^="리플레이"]{
+  position:relative;
+  margin-left:11px;              /* .tlc-sep 하나와 같은 자리값 (1px + 좌우 5px) */
+}
+.tlc-toolbar > .tlc-btn[title^="리플레이"]::after{ content:"리플레이"; }
+/* 얼러트와 리플레이 사이 묶음선. .tlc-sep 을 못 끼우는 자리라(차트팀이
+   알람 버튼 바로 뒤에 꽂습니다) 같은 모양을 여기서 그립니다. */
+.tlc-toolbar > .tlc-btn[title^="리플레이"]::before{
+  content:""; position:absolute; left:-6px; top:50%;
+  transform:translateY(-50%);
+  width:1px; height:calc(var(--tlc-btn) / 2);
+  background:var(--tlc-line);
+}
+/* 리플레이 아이콘만 viewBox 가 0 0 24 24 입니다(다른 것은 16).
+   같은 --tlc-stroke 를 쓰면 화면 획이 2.03px 이 아니라 1.35px 로 저 혼자
+   얇게 나옵니다. 24/16 = 1.5 를 곱해 다른 아이콘과 굵기를 맞춥니다. */
+.tlc-toolbar > .tlc-btn[title^="리플레이"] .tlc-ico{
+  stroke-width:calc(var(--tlc-stroke) * 1.5);
 }
 
 /* -----------------------------------------------------------------------------
@@ -321,6 +420,45 @@
     flex-wrap:wrap; overflow:visible;
   }
 
+  /* ── 폰에서는 이름표와 묶음선을 뺍니다 (2026-09-03 디자인팀) ────────────────
+   * 글씨를 작게 줄인 것이 아니라 아예 안 보이게 한 것입니다.
+   * 이유 — 360 실측. 차트 칸이 330px 이고 폰 버튼은 44px 입니다.
+   *   지금(아이콘만)        7 x 44 = 308px            ≤ 330  한 줄
+   *   묶음선 4개를 살리면   308 + 4 x 11 = 352px      > 330  두 줄
+   *   이름표까지 살리면     약 640px                  > 330  세 줄
+   * 늘 보이는 막대라 두 줄이 되면 세로 막대를 펴지도 않은 회원까지 손해입니다.
+   * (위 6) 머리말의 "이 구간에서는 구분선을 뺍니다" 와 같은 이유입니다)
+   *
+   * 기능은 하나도 안 없앴습니다. 버튼 7개가 전부 그대로 있고, 무엇인지는
+   * 길게 누르면 뜨는 title 로 읽힙니다.
+   * 되살리려면 아래 세 줄만 지우면 폰에서도 글자가 나옵니다(두세 줄이 됩니다).
+   * -------------------------------------------------------------------- */
+  /* 폰에서는 세로막대가 옆이 아니라 ★아래로★ 펴집니다. 그래서 접기 손잡이도
+     ‹ › 가 아니라 ˅ ˄ 여야 뜻이 맞습니다 (위 4)의 돌림을 여기서 되돌립니다). */
+  .tlc-toolbar > .tlc-btn[data-tlc="expand"] .tlc-ico{transform:none;}
+  .tlc-toolbar > .tlc-btn[data-tlc="expand"][aria-pressed="true"] .tlc-ico{transform:rotate(180deg);}
+
+  /* ⚠ 2026-09-03 (20차) — 위 주석의 셈이 틀려서 실제로 재고 숫자를 바로잡았습니다.
+     "버튼 7개 = 308px" 이라고 적혀 있는데 실제 버튼은 ★8개★ 입니다(리플레이 포함).
+     그래서 선이 없어도 8 x 44 = 352px > 330px 이라 360 은 원래부터 두 줄이었습니다.
+
+     구분선을 되살려 보고 세 폭을 다시 쟀습니다 (localhost, data-rail=on)
+                   선 숨김(지금)        선 보임
+       360         330x89  두 줄        330x89  두 줄     ← 같음
+       375         345x89  두 줄        345x89  두 줄     ← 같음
+       390         360x45  ★한 줄★     360x89  두 줄     ← ★한 줄 늘어남★
+     360·375 에서는 공짜지만 390 에서 +44px 입니다. 390 은 아이폰 표준이고
+     가로막대는 늘 보이는 자리라, 세 폭을 따로 놀게 하지 않고 숨김으로 통일합니다.
+     (숨긴 판단 자체는 맞았고, 근거로 적힌 숫자만 틀렸습니다.)
+
+     되살리고 싶으면 아래 한 줄을 지우세요 — 390 이 두 줄이 됩니다. */
+  .tlc-toolbar > .tlc-sep{display:none;}
+  .tlc-txt, .tlc-cv{display:none;}
+  .tlc-btn.tlc-lbl,
+  .tlc-toolbar > .tlc-btn[title^="리플레이"]{width:var(--tlc-btn); padding:0; gap:0; margin-left:0;}
+  .tlc-toolbar > .tlc-btn[title^="리플레이"]::after,
+  .tlc-toolbar > .tlc-btn[title^="리플레이"]::before{display:none; content:none;}
+
   /* 세로 막대(11개) — 눕히고 넘치면 접습니다 */
   .tlc-rail{
     flex:0 0 auto; width:auto; height:auto;
@@ -350,4 +488,5 @@
  * -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion:reduce){
   .tlc-btn{transition:none;}
+  .tlc-toolbar > .tlc-btn[data-tlc="expand"] .tlc-ico{transition:none;}
 }

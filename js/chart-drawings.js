@@ -692,18 +692,34 @@ App.ChartDrawings = (function () {
     { k: "candletype", icon: "tlc-i-candle", label: "봉 종류", ready: true },
     /* 3차(2026-08-27) — fx 를 열었습니다. 되돌리려면 이 줄의 ready 를 false 로.
        목록 자체는 js/chart-indicator-menu.js 가 만듭니다. */
-    { k: "fx", icon: "tlc-i-fx", label: "fx 지표", ready: true },
-    /* 12차(2026-09-02) — 알람을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
-       label 을 "알람" 으로 되돌리고, READY_TOOLS 의 alert 와 onButton() 의
-       alert 토막을 지웁니다. 알람 자료는 별도 저장칸(chart-alerts)이라
-       그대로 남지만 아무 동작도 하지 않습니다. */
-    { k: "alert", icon: "tlc-i-alarm", label: "알람 (가격을 지나면 알려줍니다)", ready: true },
+    { k: "sep2", sep: true },
+    /* 19차(2026-09-03 디자인팀) — 대표가 보내주신 트레이딩뷰 화면에 맞춰
+       "지표" 글자와 펼침 표시(∨)를 붙였습니다. 글자만 붙인 것이고, 눌렀을 때
+       하는 일은 그대로입니다(지표 목록이 열립니다).
+       되돌리려면 이 줄에서 text·caret 두 칸만 지우면 아이콘만 남습니다. */
+    { k: "fx", icon: "tlc-i-fx", label: "fx 지표", text: "지표", caret: true, ready: true },
+    { k: "sep3", sep: true },
     /* 9차(2026-08-28) — 육각형을 열었습니다. 바이낸스 Original 차트에서 이
        아이콘의 이름표가 "Chart Style"(차트 스타일) 이었습니다(실측).
        창은 js/chart-style.js 가 만듭니다. 되돌리려면 이 줄의 ready 를 false,
        label 을 "육각형" 으로 되돌리고 onButton() 의 hex 토막을 지웁니다. */
     { k: "hex", icon: "tlc-i-hexagon", label: "차트 스타일 (봉 색·격자선)", ready: true },
+    { k: "sep4", sep: true },
+    /* 12차(2026-09-02) — 알람을 열었습니다. 되돌리려면 이 줄의 ready 를 false 로,
+       label 을 "알람" 으로 되돌리고, READY_TOOLS 의 alert 와 onButton() 의
+       alert 토막을 지웁니다. 알람 자료는 별도 저장칸(chart-alerts)이라
+       그대로 남지만 아무 동작도 하지 않습니다. */
+    { k: "alert", icon: "tlc-i-alarm", label: "알람 (가격을 지나면 알려줍니다)", text: "얼러트", ready: true },
+    /* 리플레이 버튼이 여기(알람 바로 뒤)에 끼어듭니다 — js/chart-replay.js 가 붙입니다.
+       그래서 이 자리에는 구분선을 두지 않습니다. 리플레이 왼쪽 구분선은
+       css/chart-toolbar.css 의 [title^="리플레이"]::before 가 그립니다. */
     { k: "spacer", spacer: true },
+    /* 20차(2026-09-03 디자인팀) — sep5 를 spacer 앞에서 뒤로 옮겼습니다.
+       앞에 두면 리플레이 다음에 선이 하나 붙고 그 오른쪽이 289px(1440 실측) 빈 칸이라,
+       아무것도 안 나누는 선이 허공에 떠 보였습니다. 뒤로 옮기면 오른쪽 묶음
+       (전체화면·카메라)을 실제로 나눕니다.
+       되돌리려면 이 줄을 spacer 앞으로 되돌리면 됩니다. */
+    { k: "sep5", sep: true },
     { k: "fullscreen", icon: "tlc-i-fullscreen", label: "전체화면", ready: true },
     { k: "camera", icon: "tlc-i-camera", label: "카메라 (차트 그림 저장)", ready: true }
   ];
@@ -4194,8 +4210,26 @@ App.ChartDrawings = (function () {
     b.className = "tlc-btn";
     b.setAttribute("data-tlc", def.k);
     b.setAttribute("data-kind", kind);
-    b.innerHTML =
+    /* ── 아이콘 + (있으면) 글자 + (있으면) 펼침 표시 ─────────────────────────
+     * 19차(2026-09-03 디자인팀). 대표가 보내주신 트레이딩뷰 화면에서 위 막대는
+     * 아이콘만 있는 버튼과 "아이콘 + 글자" 버튼이 섞여 있습니다.
+     * def.text 가 있을 때만 글자가 붙고, def.caret 이 있을 때만 ∨ 가 붙습니다.
+     * 글자 크기는 css/chart-toolbar.css 의 .tlc-txt 한 곳에서만 정합니다
+     * (여기에 px 을 적지 않습니다).
+     * 되돌리려면 — TOP_TOOLS 에서 text·caret 칸만 지우면 이 토막은 저절로
+     * 아이콘 하나만 그립니다. 이 함수는 안 고쳐도 됩니다.
+     * ------------------------------------------------------------------ */
+    var html =
       "<svg class=\"tlc-ico\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><use href=\"#" + def.icon + "\"></use></svg>";
+    if (def.text) {
+      html += "<span class=\"tlc-txt\">" + def.text + "</span>";
+      b.className = "tlc-btn tlc-lbl";
+    }
+    if (def.caret) {
+      html +=
+        "<svg class=\"tlc-ico tlc-cv\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><use href=\"#tlc-i-chevron\"></use></svg>";
+    }
+    b.innerHTML = html;
     if (def.ready) {
       b.setAttribute("title", def.label);
       b.setAttribute("aria-label", def.label);
