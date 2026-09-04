@@ -347,7 +347,10 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
    기존처럼 라벨 위/값 아래 큰 글씨 유지, 나머지 통계는 라벨+값을
    같은 줄에 붙여서 훨씬 조밀하게 표시합니다. */
 .stat-block:not(.main-price-block){flex-direction:row;align-items:baseline;gap:6px;}
-.stat-label{font-size:15px;color:var(--text-faint);white-space:nowrap;}
+/* 이름표 15px -> 17px (2026-09-04) — 폰 첫 화면에서 이름표만 15px 이라
+   숫자(18~24px)와 대비가 아니라 그냥 잔글씨로 보였습니다.
+   되돌리기: 17px 을 15px 으로 되돌리면 됩니다. */
+.stat-label{font-size:17px;color:var(--text-faint);white-space:nowrap;}
 .stat-value{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);white-space:nowrap;}
 .main-price-block .stat-value.price{font-size:27px;font-weight:700;color:var(--gold);}
 .stat-value.up{color:var(--green);}
@@ -2071,7 +2074,9 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 /* 헤더의 통화 전환(USDT/KRW) — ui.js가 .interval-btn 클래스로 만들어 넣습니다.
    차트 시간봉 버튼과 같은 클래스라, 헤더 안에 있는 것만 작게 맞춥니다(ui.js 무수정). */
 #currency-toggle .interval-btn{
-  font-size:13px;font-weight:600;padding:4px 10px;border-radius:3px;
+  /* 13px -> 17px (2026-09-04). 어느 폭에서도 넘침 0 이라 그대로 올렸습니다.
+     되돌리기: 17px 을 13px 으로. */
+  font-size:17px;font-weight:600;padding:4px 10px;border-radius:3px;
 }
 
 /* 좁은 화면 헤더 — 02단계에서 nowrap으로 바꾸면서 390px에서 가로 스크롤이
@@ -4122,7 +4127,10 @@ html[data-theme="dark"] .board-page-btn.active{
 /* .stats-bar > .stat-block{order:0 !important;} */   /* ← 끄는 스위치 */
 
 /* 기본은 0. 우선 항목만 음수로 당깁니다(가격 블록은 항상 맨 앞 유지). */
-.stats-bar > .stat-block{order:0;}
+/* max-width/flex-wrap 은 아래 [이름표 17px] 설명에 이유가 적혀 있습니다.
+   같은 선택자를 두 벌로 만들면 tests/css-duplicate-rules.test.js 가 잡으므로
+   이 한 벌에 같이 둡니다. */
+.stats-bar > .stat-block{order:0;max-width:100%;flex-wrap:wrap;}
 .stats-bar > .main-price-block{order:-3;}
 .stats-bar > .tl-stat-order-1{order:-2;}   /* 마크가격 */
 .stats-bar > .tl-stat-order-2{order:-1;}   /* 펀딩비 */
@@ -5256,3 +5264,36 @@ html[data-cur="KRW"] .ob-mark-price-row{font-size:13px;white-space:nowrap;}
  * 되돌리는 법 — 아래 한 줄을 지우면 비회원에게도 다시 보입니다.
  * ========================================================================= */
 #mypage-panel:has(#mh-logout.login-required) .mypage-grid{display:none;}
+
+/* =========================================================================
+ * [이름표 17px] 시세 바 — 키운 뒤 "펀딩비" 칸이 넘치던 것      2026-09-04
+ * =========================================================================
+ * 이름표(.stat-label)를 15px -> 17px 로 키우자, 이름표가 가장 긴
+ * "펀딩비 (다음 정산까지)" 칸만 혼자 넓어져 시세 바 밖으로 나갔습니다.
+ *
+ *   실측 (360px, 시세 바 안쪽 폭 342px)
+ *     이름표 15px  ->  펀딩비 칸 334.0px   넘침 0
+ *     이름표 16px  ->  펀딩비 칸 343.5px   넘침 2px
+ *     이름표 17px  ->  펀딩비 칸 353.0px   넘침 11px  (페이지도 2px 밀림)
+ *
+ * 이름표를 줄이거나 "(다음 정산까지)" 를 지우는 방법은 쓰지 않았습니다 —
+ * 펀딩비는 8시간마다 잔고에서 실제로 빠지는 돈이고, 언제 정산되는지가
+ * 값만큼 중요합니다(폰용 접기 CSS 에 같은 판단이 적혀 있습니다).
+ *
+ * 그래서 칸이 시세 바보다 넓어질 수 없게 막고(max-width:100%), 그때만
+ * 칸 안에서 이름표와 값이 두 줄로 나뉘게 합니다(flex-wrap:wrap).
+ * 넘치지 않는 칸은 지금과 똑같이 한 줄입니다. 항목은 하나도 안 지웠습니다.
+ *
+ *   실측 (360px, 적용 뒤)  펀딩비 칸 342px / 시세 바 넘침 0 / 페이지 넘침 0
+ *                          시세 바 높이 192.3px -> 222.1px (+29.8px, 한 줄분)
+ *
+ * ⚠️ 두 값은 위 4136행 `.stats-bar > .stat-block` 한 벌에 들어 있습니다.
+ *    여기에 같은 선택자를 또 쓰면 중복 검사에 걸립니다.
+ * ⚠️ .stats-bar 자체의 flex-wrap:nowrap / overflow-x:auto 는 건드리지
+ *    않았습니다. 폰·데스크톱의 줄바꿈은 지금처럼 별도 CSS 파일 둘이
+ *    그대로 담당합니다.
+ *
+ * 되돌리는 방법 — 4136행에서 `max-width:100%;flex-wrap:wrap;` 두 값을 빼고,
+ *   .stat-label 도 17px -> 15px 으로 같이 되돌립니다(둘 중 하나만 되돌리면
+ *   360 에서 페이지가 2px 옆으로 밀립니다).
+ * ========================================================================= */

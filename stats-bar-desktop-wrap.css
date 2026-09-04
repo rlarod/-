@@ -37,9 +37,16 @@
 @media (min-width:701px){
   .stats-bar{
     flex-wrap:wrap;overflow-x:visible;
-    column-gap:8px;row-gap:6px;
+    /* 2026-09-04 — 이름표(.stat-label)를 15px -> 17px 로 키우면서 한 줄에
+       필요한 폭이 1405px -> 1466.8px 이 됐습니다(1440 실측, 쓸 수 있는 폭 1422px).
+       그대로 두면 1440·1920 에서 "24H 거래량" 이 둘째 줄로 내려가
+       시세 바가 71.8px -> 103px 으로 높아졌습니다.
+       글자를 도로 줄이지 않고 간격만 8 -> 5px 으로 좁혀 한 줄을 지킵니다.
+       되돌리기: 5px 을 8px 으로. */
+    column-gap:5px;row-gap:6px;
   }
-  .stats-bar > .stat-block{padding-right:10px;}
+  /* 같은 이유로 10 -> 5px (2026-09-04). 되돌리기: 5px 을 10px 으로. */
+  .stats-bar > .stat-block{padding-right:5px;}
   /* 접히면 가로로 스크롤될 것이 없습니다. 반올림으로 1~2px 이 남아
      힌트가 깜박이지 않도록 이 구간에서는 꺼 둡니다
      (js/stats-bar-priority.js 는 그대로 두고 보이는 것만 끕니다). */
