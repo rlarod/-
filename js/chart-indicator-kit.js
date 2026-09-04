@@ -2192,6 +2192,149 @@ App.ChartIndicatorKit = (function () {
     positionPaneLabels();
   }
 
+  /* =====================================================================
+   * 5.5 자리 - 아래 칸이 값 배지를 다 못 담으면 그 지표는 「쉬는 중」 입니다
+   *
+   * ⚠️ ★회원이 켜 둔 것을 끄지 않습니다.★  it.on 은 true 그대로 두고
+   *    화면에만 안 그립니다. saveState() 도 부르지 않습니다 -
+   *    setOn(id,false) 를 부르면 8절의 saveState() 가 ★회원 설정을 덮어씁니다★.
+   *    창을 넓히면 applyRoom() 이 저절로 다시 켭니다.
+   *
+   * 재는 규칙(계수 · 여유폭)은 ★js/chart-indicator-room.js 한 곳★ 에만
+   * 있습니다. 그 파일이 없으면 아래 세 함수가 전부 「자리는 늘 있다」로 답해
+   * 2026-09-04 이전과 똑같이 동작합니다.
+   * ===================================================================== */
+
+  function roomMod() {
+    var R = App.ChartIndicatorRoom;
+    return R && isFn(R.plan) && isFn(R.check) ? R : null;
+  }
+
+  /** 그림영역(칸들 + 칸 사이 구분선). 칸을 몇 개 만들든 늘 같은 값입니다. */
+  function roomGeo() {
+    if (!chart || !isFn(chart.panes)) return null;
+    try {
+      var ps = chart.panes();
+      if (!ps || !ps.length) return null;
+      var sum = 0;
+      for (var i = 0; i < ps.length; i++) {
+        if (!isFn(ps[i].getHeight)) return null;
+        var h = ps[i].getHeight();
+        if (!isFinite(h) || h <= 0) return null;
+        sum += h;
+      }
+      return { drawArea: sum + (ps.length - 1), ratio: PANE_RATIO };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 지금 켜 둔 ★아래 칸★ 지표들 - instOrder 순서 그대로 */
+  function onSubItems(skipId) {
+    var out = [];
+    for (var i = 0; i < instOrder.length; i++) {
+      var it = insts[instOrder[i]];
+      if (!it || !it.on || it.pane !== "sub") continue;
+      if (skipId && it.id === skipId) continue;
+      var d = defs[it.def];
+      out.push({
+        id: it.id,
+        values: d && d.outputs ? d.outputs.length : 1,
+        name: nameOfInst(it)
+      });
+    }
+    return out;
+  }
+
+  /** 자리가 없어 쉬어야 할 것들 - { id: {need, have, name} } */
+  function restPlan() {
+    var out = {};
+    var R = roomMod();
+    if (!R) return out;
+    var geo = roomGeo();
+    if (!geo) return out;
+    var p;
+    try {
+      p = R.plan(onSubItems(), geo);
+    } catch (e) {
+      return out;
+    }
+    if (!p || !p.rest) return out;
+    for (var i = 0; i < p.rest.length; i++) out[p.rest[i].id] = p.rest[i];
+    return out;
+  }
+
+  /** 이 인스턴스를 지금 켤 수 있는가 - { ok, msg, need, have } */
+  function canTurnOn(id) {
+    var it = insts[id];
+    if (!it) return { ok: false, msg: "" };
+    if (it.pane !== "sub") return { ok: true, msg: "" };
+    var R = roomMod();
+    if (!R) return { ok: true, msg: "" };
+    var geo = roomGeo();
+    if (!geo) return { ok: true, msg: "" };
+    var d = defs[it.def];
+    try {
+      return R.check(onSubItems(id), d && d.outputs ? d.outputs.length : 1, geo, nameOfInst(it));
+    } catch (e) {
+      return { ok: true, msg: "" };
+    }
+  }
+
+  /** 이 정의를 ★한 줄 더★ 얹을 자리가 있는가 - 창(picker)이 부릅니다 */
+  function hasRoomFor(defId) {
+    var d = defs[defId];
+    if (!d) return { ok: false, msg: "" };
+    if (d.pane !== "sub") return { ok: true, msg: "" };
+    var R = roomMod();
+    if (!R) return { ok: true, msg: "" };
+    if (!chart) ensureChart();
+    var geo = roomGeo();
+    if (!geo) return { ok: true, msg: "" };
+    try {
+      return R.check(onSubItems(), d.outputs ? d.outputs.length : 1, geo, d.name);
+    } catch (e) {
+      return { ok: true, msg: "" };
+    }
+  }
+
+  /** 지금 자리에 맞게 다시 배치합니다(창 크기가 바뀌었을 때).
+   *  자리가 생긴 것은 다시 켜고, 자리가 없어진 것은 쉬게 합니다. */
+  function applyRoom(quiet) {
+    if (!anyOn()) return false;
+    if (!ensureChart()) return false;
+    if (!barsReady && !syncBars()) return false;
+    var skip = restPlan();
+    var changed = false;
+    var wentToRest = [];
+    for (var i = 0; i < instOrder.length; i++) {
+      var it = insts[instOrder[i]];
+      if (!it || !it.on) continue;
+      var rest = !!skip[it.id];
+      if (rest && it.live) {
+        turnOff(it.id);
+        changed = true;
+        wentToRest.push(skip[it.id]);
+      } else if (!rest && !it.live) {
+        turnOn(it.id);
+        changed = true;
+      }
+      /* ★쉬게 된 것과 돌아온 것을 똑같이 셉니다★ (2026-09-04 반려로 고침).
+         전에는 그리기(live)가 바뀔 때만 다시 칠했습니다. 표시(rest)만 바뀌는
+         경우가 하나라도 있으면 ★멀쩡한 지표에 「쉬는 중」 이 남습니다★ -
+         「켜는 코드는 도는데 끄는 코드가 안 도는」 자리입니다. 둘 다 셉니다. */
+      if (!!it.rest !== rest) changed = true;
+      it.rest = rest;
+    }
+    if (changed) {
+      paintButtons();
+      paintMenu();
+      var R = roomMod();
+      if (!quiet && wentToRest.length && R && isFn(R.say)) R.say(R.restMsg(wentToRest));
+    }
+    return changed;
+  }
+
   /** 켜진 것 전부를 다시 그립니다(봉 간격 · 종목이 바뀌었을 때만). */
   function reseedAll() {
     var i;
@@ -2204,8 +2347,14 @@ App.ChartIndicatorKit = (function () {
     if (!ensureChart()) return;
     syncBars();
     if (!barsReady) return;
+    /* 5.5절 - 자리가 없는 것은 ★건너뜁니다★. 끄지 않습니다(저장도 안 합니다) */
+    var skip = restPlan();
     for (i = 0; i < instOrder.length; i++) {
-      if (insts[instOrder[i]].on) turnOn(instOrder[i]);
+      var it = insts[instOrder[i]];
+      if (!it.on) continue;
+      it.rest = !!skip[it.id];
+      if (it.rest) continue;
+      turnOn(it.id);
     }
   }
 
@@ -2376,14 +2525,27 @@ App.ChartIndicatorKit = (function () {
    * ===================================================================== */
   function setOn(id, on) {
     var it = insts[id];
-    if (!it) return;
+    if (!it) return false;
     on = !!on;
-    if (it.on === on) return;
+    if (it.on === on) return true;
+
+    /* 5.5절 - 켤 자리가 없으면 켜지 않습니다. ★조용히 안 되는 일은 없게★
+       이유를 알림줄로 보여줍니다(눌러도 아무 일이 안 나면 조용한 고장입니다). */
+    if (on) {
+      var room = canTurnOn(id);
+      if (!room.ok) {
+        var R = roomMod();
+        if (R && isFn(R.say)) R.say(room.msg);
+        return false;
+      }
+    }
+
     it.on = on;
+    it.rest = false;
     saveState();
 
     if (on) {
-      if (!ensureChart()) return;
+      if (!ensureChart()) return true;
       if (!barsReady) syncBars();
       startTimer();
       turnOn(id);
@@ -2393,14 +2555,17 @@ App.ChartIndicatorKit = (function () {
         clearBars();
         stopTimer();
       }
+      /* 하나 껐으니 자리가 남습니다 - 쉬고 있던 것이 있으면 돌아옵니다 */
+      applyRoom(true);
     }
     paintButtons();
     paintMenu();
+    return true;
   }
 
   function toggle(id) {
-    if (!insts[id]) return;
-    setOn(id, !insts[id].on);
+    if (!insts[id]) return false;
+    return setOn(id, !insts[id].on);
   }
 
   function isOn(id) {
@@ -2773,6 +2938,16 @@ App.ChartIndicatorKit = (function () {
   function createInstance(defId, opts) {
     opts = copy(opts || {});
     var want = !!opts.on;
+    /* 5.5절 - ★얹기 전에★ 자리를 봅니다. 만들어 놓고 못 켜면 목록에만 남는
+       「켜지지도 않는 줄」 이 생깁니다. 자리가 없으면 이유를 보여주고 null. */
+    if (want) {
+      var room = hasRoomFor(defId);
+      if (!room.ok) {
+        var R = roomMod();
+        if (R && isFn(R.say)) R.say(room.msg);
+        return null;
+      }
+    }
     opts.on = false;
     var id = addInstance(defId, opts);
     if (!id) return null;
@@ -2904,6 +3079,24 @@ App.ChartIndicatorKit = (function () {
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-kit-btn:hover{opacity:1;border-color:#838DA4;}" +
       '.tl-kit-btn[aria-pressed="true"]{opacity:1;background:#101727;border-color:#838DA4;color:#E7ECF5;}' +
+      /* 5.5절 「쉬는 중」 - 켜 뒀지만 차트 칸이 좁아 값을 못 담아 안 그리는 상태.
+         ⚠️ 표시가 없으면 「칩은 켜짐인데 선이 없다」 는 조용한 고장이 됩니다.
+         테두리를 점선으로 바꾸고 뒤에 "쉼" 을 붙입니다. ★글씨는 안 줄입니다★ -
+         칩 막대는 폭이 모자라면 다음 줄로 접힙니다(원래 그렇게 돼 있습니다).
+
+         ⚠️ ★속성이 아니라 클래스로 답니다★ (2026-09-04 게이트 2 반려로 고침).
+         처음에는 data-kit-rest 에 "1"/"0" 을 넣었습니다. removeAttribute 가
+         테스트의 가짜 DOM 에 없어서 「지우는 대신 0 을 넣는」 길을 골랐던 것인데,
+         그 결과 ★쉬지도 않는 칩 15개에 전부 data-kit-rest 가 눌러 붙었습니다★.
+         PM 이 [data-kit-rest] 로 세어 15개를 보고 「멀쩡한 것까지 쉬는 중이라고
+         한다」 로 읽었습니다. 화면의 "쉼" 글자는 안 나왔지만, ★남의 눈에
+         그렇게 읽히는 흔적을 남긴 것 자체★ 가 결함입니다.
+         className 은 진짜 DOM 에서도 가짜 DOM 에서도 그냥 글자라, 안 쉴 때는
+         ★흔적이 아예 안 남습니다★. (classList 는 가짜 DOM 에 없습니다 -
+          js/chart-indicators.js:695 가 같은 이유로 className 을 씁니다)
+         되돌리려면 이 두 줄만 지우면 됩니다. */
+      '.tl-kit-btn.tl-kit-rest{border-style:dashed;color:#838DA4;}' +
+      '.tl-kit-btn.tl-kit-rest::after{content:"쉼";margin-left:4px;color:#838DA4;font-weight:600;}' +
       ".tl-kit-dot{width:6px;height:6px;border-radius:50%;background:#1D273B;flex:0 0 auto;}" +
       /* 13.2 칸 이름표 - 차트 위에 얹기만 합니다(라이브러리 DOM 은 안 건드립니다).
          ⚠️ pointer-events:none - 이름표가 차트 조작을 먹으면 안 됩니다.
@@ -2959,6 +3152,25 @@ App.ChartIndicatorKit = (function () {
       var dot = kids[i].querySelector(".tl-kit-dot");
       var bg = on ? kids[i].getAttribute("data-color") : "#1D273B";
       if (dot && dot.style.background !== bg) dot.style.background = bg;
+      /* 5.5절 - 「켜짐인데 선이 없는」 상태를 회원이 알 수 있게 표시합니다.
+         이것이 없으면 칩만 켜져 보이고 차트에는 아무것도 없는 조용한 고장입니다.
+
+         ⚠️ ★붙이는 쪽과 떼는 쪽을 한 줄에서 정합니다★ (2026-09-04 반려로 고침).
+         갈래를 둘로 나눠 두면 「붙이기는 도는데 떼기는 안 도는」 상태가 생기고,
+         그때 회원은 ★멀쩡히 그려지는 지표를 쉬는 중으로 읽습니다★ -
+         조용한 고장의 반대입니다. 아래처럼 want 를 먼저 정하고 한 번만 쓰면
+         떼는 길이 따로 없어서 「떼기만 안 도는」 상태가 만들어지지 않습니다.
+
+         ⚠️ className 만 씁니다. classList · hasAttribute · removeAttribute 는
+         테스트의 가짜 DOM 에 없어서 그 자리에서 터집니다(2026-09-04 실제로 겪음). */
+      var rest = on && !!(insts[id] && insts[id].rest);
+      var want = rest ? "tl-kit-btn tl-kit-rest" : "tl-kit-btn";
+      if (kids[i].className !== want) {
+        kids[i].className = want;
+        kids[i].title = rest
+          ? "차트 칸이 좁아 잠시 쉬는 중입니다. 창을 키우면 돌아옵니다."
+          : "";
+      }
     }
   }
 
@@ -6913,6 +7125,31 @@ App.ChartIndicatorKit = (function () {
   /* =====================================================================
    * 12. 시작
    * ===================================================================== */
+  /* 5.5절 - 창 크기가 바뀌면 자리를 ★다시 잽니다★.
+     폭이 아니라 칸 높이를 보기 때문에, 폰을 눕히거나 창을 줄이면 그때마다
+     다시 계산해야 합니다. 늦추는 시간(150ms)은 js/chart-axis-fit.js 와 같습니다. */
+  var roomTimer = null;
+  function scheduleRoom() {
+    if (roomTimer) clearTimeout(roomTimer);
+    roomTimer = setTimeout(function () {
+      roomTimer = null;
+      try {
+        applyRoom(false);
+      } catch (e) {
+        console.warn("[chart-indicator-kit] 자리 다시 재기 실패:", e);
+      }
+    }, 150);
+  }
+
+  var roomWatched = false;
+  function watchRoom() {
+    if (roomWatched || typeof window === "undefined" || !window.addEventListener) return;
+    roomWatched = true;
+    window.addEventListener("resize", scheduleRoom);
+    window.addEventListener("orientationchange", scheduleRoom);
+    document.addEventListener("fullscreenchange", scheduleRoom);
+  }
+
   function init() {
     loadState(DEFAULT_INSTANCES);
     /* 옛 MA 옮기기 - 옛 모듈이 이미 상태를 읽었으면 여기서 끝납니다.
@@ -6929,6 +7166,7 @@ App.ChartIndicatorKit = (function () {
 
     wrapMenuBridge();
     watchMenu();
+    watchRoom();
 
     /* 차트는 chart.js 가 나중에 만들고, 과거 캔들은 그보다 더 나중에
        도착합니다(REST 조회). 둘 다 준비될 때까지만 잠깐 기다립니다. */
@@ -6986,6 +7224,20 @@ App.ChartIndicatorKit = (function () {
     toggle: toggle,
     setOn: setOn,
     isOn: isOn,
+    /* 5.5 자리 - 창(picker)이 「얹을 자리가 있나」 를 물어봅니다 */
+    hasRoomFor: hasRoomFor,
+    applyRoomForTest: applyRoom,
+    roomGeoForTest: roomGeo,
+    onSubItemsForTest: onSubItems,
+    /** 지금 「켜짐인데 쉬는 중」 인 것들 - 눈이 아니라 숫자로 셉니다 */
+    getRestingForTest: function () {
+      var out = [];
+      for (var i = 0; i < instOrder.length; i++) {
+        var it = insts[instOrder[i]];
+        if (it && it.on && it.rest) out.push(it.id);
+      }
+      return out;
+    },
     /* 옛 MA 옮기기 (12.5절) */
     restoreLegacyMA: restoreLegacyMA,
     isMovedForTest: movedMA,

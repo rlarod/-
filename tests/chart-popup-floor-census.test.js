@@ -168,7 +168,13 @@ const 알려진띄우는것 = [
      그래서 아래 2절 보호군에 같이 넣었습니다. 실측(2026-09-03) —
      360x800 · 375x812 · 390x844 · 360x640 넷 다 창 아래끝이 바 윗변보다
      ★16px 위★ 였습니다(침범 -16). */
-  "chart-indicator-picker.js", "chart-indicator-settings.js",
+  "chart-indicator-picker.js",
+  /* 2026-09-04 수리팀 — 지표 자리 알림줄(js/chart-indicator-room.js).
+     아래 칸이 좁아 값 배지가 잘릴 때 「왜 안 켜지는지」를 한 줄로 알립니다.
+     ⓐ명시 갈래이고 ★화면 기준이며 하단 바를 봅니다★ — 아래 2절 보호군에
+     같이 넣었고, 3절이 그 바닥 함수를 실제로 돌려 봅니다.
+     자리잡기 규칙은 chart-drawings.js 의 placeToast() 를 그대로 옮긴 것입니다. */
+  "chart-indicator-room.js", "chart-indicator-settings.js",
   "chart-oscillators.js", "chart-replay.js", "chart-style.js", "chart-timezone.js",
   "interval-more.js", "jitter-probe.js", "stream-loading-hint.js",
   "symbol-stream-switch.js"
@@ -276,7 +282,10 @@ const 알려진보호군 = [
   "chart-goto-date.js", "chart-indicator-menu.js",
   /* 2026-09-03 차트팀 — 지표 고르는 창. 처음부터 floorY() 로 바를 보게
      만들었습니다(4절을 거치지 않고 바로 보호군). */
-  "chart-indicator-picker.js", "chart-indicator-settings.js",
+  "chart-indicator-picker.js",
+  /* 2026-09-04 수리팀 — 지표 자리 알림줄. 처음부터 floorY() 로 바를 보게
+     만들었습니다(4절을 거치지 않고 바로 보호군). */
+  "chart-indicator-room.js", "chart-indicator-settings.js",
   /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (둘 다 menuFloorY) */
   "chart-timezone.js", "interval-more.js"
 ];
@@ -361,7 +370,9 @@ const 대상 = [
   { 파일: "chart-candle-type.js", 함수: "floorY", 여백: "EDGE" },
   { 파일: "chart-indicator-menu.js", 함수: "floorY", 여백: "EDGE" },
   { 파일: "interval-more.js", 함수: "menuFloorY", 여백: "EDGE" },
-  { 파일: "chart-timezone.js", 함수: "menuFloorY", 여백: "EDGE" }
+  { 파일: "chart-timezone.js", 함수: "menuFloorY", 여백: "EDGE" },
+  /* 2026-09-04 수리팀 — 지표 자리 알림줄도 ★글자가 아니라 동작으로★ 봅니다 */
+  { 파일: "chart-indicator-room.js", 함수: "floorY", 여백: "EDGE" }
 ];
 const 폰화면 = { h: 800, 바: 바높이 };
 const 데스크 = { h: 900, 바: null };

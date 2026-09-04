@@ -130,6 +130,10 @@ App.ChartIndicatorPicker = (function () {
   var query = "";
   var favs = {};
   var wrapped = false;
+  /* 「자리 없음」 줄을 눌렀을 때 이유를 적는 자리. 창을 닫으면 지웁니다.
+     ⚠️ 틀의 알림줄은 차트 위에 있고 이 창은 그 위를 통째로 덮기 때문에
+        여기서는 안 보입니다 — 그래서 창 안에 따로 한 줄을 둡니다. */
+  var noteMsg = "";
   var prevOpen = null;
   var prevToggle = null;
 
@@ -294,6 +298,17 @@ App.ChartIndicatorPicker = (function () {
       "  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
       ".tl-ipick-on{flex:0 0 auto;margin-left:auto;color:" + C_POINT + ";font-size:17px;",
       "  font-weight:700;}",
+      /* 자리 없음 — 차트 아래 칸이 좁아 값이 잘려 나가는 지표는 미리 흐리게 두고
+         이유를 적습니다. ★줄은 지우지 않습니다★ — 창을 키우면 그대로 살아납니다.
+         (판단은 js/chart-indicator-room.js 한 곳에서 합니다) */
+      ".tl-ipick-row[aria-disabled=true]{opacity:.45;cursor:default;}",
+      ".tl-ipick-row[aria-disabled=true]:hover{background:transparent;}",
+      ".tl-ipick-noroom{flex:0 0 auto;margin-left:auto;color:" + C_MUTED + ";font-size:17px;",
+      "  font-weight:700;white-space:nowrap;}",
+      /* 이유 한 줄 — ★글씨는 17px 그대로★ 이고 안 들어가면 줄 수로 풉니다 */
+      ".tl-ipick-msg{margin:0 0 8px;padding:9px 12px;border-radius:8px;",
+      "  background:" + C_TILE + ";border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";",
+      "  font-size:17px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere;}",
 
       ".tl-ipick-hit{font-weight:600;}",
 
@@ -441,6 +456,20 @@ App.ChartIndicatorPicker = (function () {
     });
   }
 
+  /** 이 지표를 얹을 자리가 있는가. 틀에게 물어봅니다 —
+   *  숫자(칸 높이 · 배지 크기)는 js/chart-indicator-room.js 한 곳에만 있습니다.
+   *  틀이나 그 파일이 없으면 늘 「있다」 로 답해 예전과 똑같이 동작합니다. */
+  function roomFor(defId) {
+    try {
+      var K = App.ChartIndicatorKit;
+      if (!K || typeof K.hasRoomFor !== "function") return { ok: true, msg: "" };
+      var r = K.hasRoomFor(defId);
+      return r && typeof r.ok === "boolean" ? r : { ok: true, msg: "" };
+    } catch (e) {
+      return { ok: true, msg: "" };
+    }
+  }
+
   function onCount(defId) {
     try {
       var K = App.ChartIndicatorKit;
@@ -483,22 +512,26 @@ App.ChartIndicatorPicker = (function () {
     var list = wrap.querySelector(".tl-ipick-list");
     var rows = visibleRows();
     var q = query.trim().toLowerCase();
+    var note = noteMsg ? '<div class="tl-ipick-msg" role="status">' + esc(noteMsg) + "</div>" : "";
     if (!rows.length) {
-      list.innerHTML = '<div class="tl-ipick-empty">' +
+      list.innerHTML = note + '<div class="tl-ipick-empty">' +
         (section === "favs"
           ? "즐겨찾기가 비어 있습니다. 목록에서 별을 누르면 여기에 모입니다."
           : "찾는 지표가 없습니다.") + "</div>";
       return;
     }
-    var html = "";
+    var html = note;
     rows.forEach(function (d) {
       var n = onCount(d.id);
-      html += '<div class="tl-ipick-row" data-def="' + esc(d.id) + '" role="button" tabindex="0">' +
+      var room = roomFor(d.id);
+      html += '<div class="tl-ipick-row" data-def="' + esc(d.id) + '" role="button" tabindex="0"' +
+        (room.ok ? "" : ' aria-disabled="true"') + ">" +
         '<button type="button" class="tl-ipick-star" data-fav="' + esc(d.id) + '" ' +
           'aria-pressed="' + (favs[d.id] ? "true" : "false") + '" aria-label="즐겨찾기">' + IC_STAR + "</button>" +
         '<span class="tl-ipick-nm">' + mark(d.name, q) + "</span>" +
         (d.note ? '<span class="tl-ipick-note">' + mark(d.note, q) + "</span>" : "") +
         (n ? '<span class="tl-ipick-on">켜짐 ' + n + "</span>" : "") +
+        (room.ok ? "" : '<span class="tl-ipick-noroom">자리 없음</span>') +
         "</div>";
     });
     list.innerHTML = html;
@@ -515,7 +548,17 @@ App.ChartIndicatorPicker = (function () {
     });
     list.querySelectorAll(".tl-ipick-row").forEach(function (r) {
       r.addEventListener("click", function () {
-        add(r.getAttribute("data-def"));
+        var id = r.getAttribute("data-def");
+        /* 자리가 없는 줄도 ★눌리기는 합니다★ — 대신 왜 안 되는지 적습니다.
+           아무 반응이 없으면 회원은 창이 고장난 줄 압니다. */
+        var room = roomFor(id);
+        if (!room.ok) {
+          noteMsg = room.msg || "차트 칸이 좁아 이 지표를 얹을 자리가 없습니다.";
+          paintList();
+          return;
+        }
+        noteMsg = "";
+        add(id);
       });
     });
   }
@@ -526,11 +569,16 @@ App.ChartIndicatorPicker = (function () {
   function add(defId) {
     try {
       var K = App.ChartIndicatorKit;
-      if (!K || !K.createInstance) return;
-      K.createInstance(defId, { on: true });
+      if (!K || !K.createInstance) return false;
+      /* ★반환값을 봅니다★ — 2026-09-04 이전에는 버리고 있었습니다. 그래서
+         자리가 없어 안 얹힌 경우에 ★눌러도 아무 일이 안 나고 이유도 없었습니다★
+         (조용한 고장). 안 얹혔으면 틀이 알림줄로 이유를 이미 보여줍니다. */
+      var made = K.createInstance(defId, { on: true });
       paintList();
+      return !!made;
     } catch (e) {
       console.warn("[chart-indicator-picker] 지표를 얹지 못했습니다 - " + defId, e);
+      return false;
     }
   }
 
@@ -562,6 +610,7 @@ App.ChartIndicatorPicker = (function () {
   function close() {
     if (!wrap) return;
     open_ = false;
+    noteMsg = ""; /* 이유 한 줄은 창을 닫으면 지웁니다 */
     wrap.className = "tl-ipick-off";
   }
 

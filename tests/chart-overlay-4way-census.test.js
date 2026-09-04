@@ -106,7 +106,14 @@ const 겹침목록 = 겹침요소들();
 const 알려진 = [
   ".tl-kit-plabel|3", ".tl-osc-label|3", ".tl-draw-chip|6", ".tl-ind-bar|6", ".tl-zoom-chip|6",
   ".tl-style-pick|7", ".tl-draw-list|8", ".tl-draw-input|9", ".tl-draw-toast|9",
-  ".tl-face-pick|9", ".tl-rp-layer|18", ".tl-rp-lock|40", ".tl-gd-panel|70",
+  ".tl-face-pick|9",
+  /* 2026-09-04 추가 — 지표 자리 알림줄(js/chart-indicator-room.js).
+     그림 알림줄(.tl-draw-toast|9)과 ★같은 자리·같은 모양★ 이고 한 층 위입니다.
+     둘이 동시에 뜨면 이것이 위에 옵니다 — 「왜 안 켜지는지」가 그림 안내보다
+     급합니다. pointer-events:none 이라 차트 조작은 안 먹습니다.
+     칩 줄(6)·목록(8) 위, 리플레이 층(18) 아래라 넷과 싸우지 않습니다. */
+  ".tl-room-toast|10",
+  ".tl-rp-layer|18", ".tl-rp-lock|40", ".tl-gd-panel|70",
   ".tl-tz-menu|70", ".tl-rp-mlock|9000"
 ];
 const 지금 = 겹침목록.map((e) => e.선택자 + "|" + e.z);
