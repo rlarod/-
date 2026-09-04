@@ -36,6 +36,22 @@
  * 아니라 본부장 판단이므로 **지금 상태를 그대로 박아 두고, 여기서 하나라도
  * 늘면 실패**시킵니다. 고치면 아래 목록에서 그 줄을 지우면 통과합니다.
  *
+ * ── ★2026-09-04 갱신 — 규칙 원문을 글자 그대로 대조하던 것을 뺐습니다★ ──
+ *   아래 [돌연변이] (가)·(나) 가 style.css 의 규칙을 ★값까지 글자 그대로★ 적어
+ *   두고 찾았습니다.
+ *
+ *       const 뒤규칙 = ".top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}";
+ *
+ *   대표 지시로 상단 메뉴 글씨를 13px -> 15px, 여백 5px -> 3px 으로 바꾸는
+ *   작업이 예정돼 있는데, 그러면 이 줄이 ★카스케이드 순서와 아무 상관 없는
+ *   이유로★ 빨개집니다. 그런 봉인은 다음 사람이 "낡았다" 고 보고 지웁니다.
+ *   그래서 값 대신 ★자리★ 로 찾도록 블록안규칙원문() 을 넣었습니다.
+ *   (같은 날 tests/narrow-360-fit-seal.test.js 도 "정확히 13px" 을 뺐습니다)
+ *
+ * 되돌리기: 이 파일은 새로 만든 것이 아니라 갱신입니다.
+ *           git checkout -- tests/media-cascade-order.test.js  로 2026-09-04 갱신 전으로 돌아갑니다.
+ *           (되돌리면 [돌연변이] (가) 가 다시 값을 글자 그대로 대조합니다)
+ *
  * style.css 는 읽기만 합니다. 이 파일은 사이트 코드를 아무것도 고치지 않습니다.
  */
 "use strict";
@@ -132,6 +148,40 @@ function 최소폭(mediaArr) {
   return parseFloat(mn[0].match(/(\d+(?:\.\d+)?)/)[1]);
 }
 
+/* -------------------------------------------------------------------------
+ * 블록안규칙원문(css, 미디어머리, 선택자)
+ *   ★값을 글자 그대로 적어 두지 않기 위한 도구입니다 (2026-09-04 추가).★
+ *   "@media (max-width:400px){ ... .top-banner-nav-btn{ ... } ... }" 에서
+ *   그 규칙 한 덩어리를 ★안에 무슨 값이 들었든★ 통째로 잘라 돌려줍니다.
+ *   ⚠️ 미디어 머리가 여러 번 나오면 ★맨 뒤 것★ 을 봅니다 - 카스케이드에서
+ *      실제로 이기는 쪽이 맨 뒤라서입니다.
+ *   못 찾으면 null 입니다(테스트가 "(준비)" 줄에서 빨개집니다).
+ * ----------------------------------------------------------------------- */
+function 블록안규칙원문(css, 미디어머리, 선택자) {
+  const 시작 = css.lastIndexOf(미디어머리);
+  if (시작 < 0) return null;
+  /* 미디어 블록의 끝을 중괄호 깊이로 찾습니다 */
+  let i = 시작 + 미디어머리.length, 깊이 = 1;
+  while (i < css.length && 깊이 > 0) {
+    if (css[i] === "{") 깊이++;
+    else if (css[i] === "}") 깊이--;
+    i++;
+  }
+  const 블록 = css.slice(시작, i);
+  /* 블록 안에서 선택자를 찾습니다. 앞에 다른 글자가 붙은 것(.a.top-banner-nav-btn)은 거릅니다 */
+  const re = new RegExp("(^|[\\s;{}])(" + 선택자.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\s*\\{", "g");
+  let m, 자리 = -1;
+  while ((m = re.exec(블록)) !== null) { 자리 = m.index + m[1].length; break; }
+  if (자리 < 0) return null;
+  let j = 블록.indexOf("{", 자리) + 1, d = 1;
+  while (j < 블록.length && d > 0) {
+    if (블록[j] === "{") d++;
+    else if (블록[j] === "}") d--;
+    j++;
+  }
+  return 블록.slice(자리, j);
+}
+
 /* 공통 뼈대 - 폭을 뽑는 함수와 "A 가 B 보다 좁은가" 판정만 갈아 끼웁니다. */
 function 역전찾기(cssText, 폭뽑기, 더좁나, 이름표) {
   const bySel = new Map();
@@ -225,6 +275,30 @@ console.log("\n  [자체검증] 탐지기가 진짜로 잡는가");
 
   ok("쉼표로 여러 조건이면 건너뛴다 (오탐 방지)",
     최대폭(["@media (max-width:400px), print"]) === null);
+
+  /* 2026-09-04 - 값을 글자 그대로 안 적으려고 만든 도구입니다. 이게 헐거우면
+     아래 [돌연변이] (가) 가 "(준비)" 줄에서만 빨개지고 진짜 검사는 안 돕니다. */
+  {
+    const 샘플 =
+      "@media (max-width:400px){\n  .a{color:red;}\n  .top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}\n}\n";
+    ok("블록안규칙원문() 이 400 블록 안의 규칙을 값과 무관하게 집어온다",
+      블록안규칙원문(샘플, "@media (max-width:400px){", ".top-banner-nav-btn")
+        === ".top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}",
+      String(블록안규칙원문(샘플, "@media (max-width:400px){", ".top-banner-nav-btn")));
+    ok("블록안규칙원문() 은 값이 15px 로 바뀌어도 똑같이 집어온다 (★이게 이번 갱신의 요점★)",
+      블록안규칙원문(샘플.replace("8.5px 5px;font-size:13px", "8.5px 3px;font-size:15px"),
+        "@media (max-width:400px){", ".top-banner-nav-btn")
+        === ".top-banner-nav-btn{padding:8.5px 3px;font-size:15px;}");
+    ok("블록안규칙원문() 은 미디어 머리가 여러 번이면 맨 뒤 블록을 본다 (카스케이드에서 이기는 쪽)",
+      블록안규칙원문("@media (max-width:400px){.top-banner-nav-btn{font-size:9px;}}\n" + 샘플,
+        "@media (max-width:400px){", ".top-banner-nav-btn").indexOf("13px") >= 0);
+    ok("블록안규칙원문() 은 다른 선택자에 붙은 이름을 잘못 집지 않는다",
+      블록안규칙원문("@media (max-width:400px){.x.top-banner-nav-btn{gap:1px;}}",
+        "@media (max-width:400px){", ".top-banner-nav-btn") === null);
+    ok("블록안규칙원문() 은 없는 것을 있다고 하지 않는다",
+      블록안규칙원문(샘플, "@media (max-width:400px){", ".없는것") === null &&
+      블록안규칙원문(샘플, "@media (max-width:9999px){", ".top-banner-nav-btn") === null);
+  }
 
   ok("겹치나() 가 padding 과 padding-left 를 겹친다고 본다", 겹치나("padding", "padding-left") === true);
   ok("겹치나() 가 gap 과 row-gap 을 겹친다고 본다", 겹치나("gap", "row-gap") === true);
@@ -404,14 +478,30 @@ console.log("\n  [돌연변이] 되돌리면 정말 잡히는가");
 {
   /* (가) 진짜 사고 되돌리기 - 맨 뒤 400 메뉴 규칙을 505행 블록으로 되돌린다.
          고치기 전 style.css 와 같은 배치가 되므로, 이걸 못 잡으면 이 테스트는
-         "이번 버그를 잡을 수 있었는가" 에 답하지 못합니다. */
+         "이번 버그를 잡을 수 있었는가" 에 답하지 못합니다.
+   *
+   * ── ★2026-09-04 - 규칙 원문을 글자 그대로 찾던 것을 그만뒀습니다★ ─────
+   *   여기 있던 코드는 이랬습니다.
+   *
+   *       const 뒤규칙 = ".top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}";
+   *
+   *   ★값이 글자 그대로 박혀 있어서, 디자인팀이 한 글자만 바꿔도 터집니다.★
+   *   실제로 지금 15px + 여백 3px 작업이 예정돼 있고, 그러면 이 봉인이
+   *   "카스케이드 순서" 와 아무 상관 없는 이유로 빨개집니다. 그러면 다음 사람은
+   *   봉인이 낡았다고 보고 ★검사 자체를 지웁니다.★ 그게 제일 나쁩니다.
+   *
+   *   그래서 값을 안 보고 ★자리★ 로 찾습니다 - "@media(max-width:400px) 블록 안의
+   *   .top-banner-nav-btn 규칙" 이 무엇이든 통째로 집어옵니다.
+   *   (tests/_font-size.js 를 만들 때와 같은 방식입니다 - 글자 대조 대신 값 판정)
+   */
   {
-    const 뒤규칙 = ".top-banner-nav-btn{padding:8.5px 5px;font-size:13px;}";
-    ok("(준비) 맨 뒤 400 메뉴 규칙 원문을 찾았다", CSS.indexOf(뒤규칙) >= 0);
+    const 원문 = 블록안규칙원문(CSS, "@media (max-width:400px){", ".top-banner-nav-btn");
+    ok("(준비) 맨 뒤 400 블록의 메뉴 규칙을 값과 무관하게 찾았다 (지금: " + 원문 + ")", !!원문);
+    /* 그 규칙을 통째로 빼서 ★첫 번째★ 400 블록(505행) 머리에 도로 끼웁니다.
+       String.replace 는 첫 짝만 바꾸므로 앞 블록에 들어갑니다. */
     const 되돌림 = CSS
-      .replace(뒤규칙, "/* 여기서 빼서 505행으로 되돌림 */")
-      .replace("  .stats-bar{gap:10px;}",
-        "  .stats-bar{gap:10px;}\n  .top-banner-nav-btn{padding:8.5px 8px;font-size:13px;}");
+      .replace(원문, "/* 여기서 빼서 505행으로 되돌림 */")
+      .replace("@media (max-width:400px){", "@media (max-width:400px){\n  " + (원문 || ""));
     const r = 좁은게앞_미디어(되돌림);
     const 새 = r.filter((x) => 기준선_미디어.map(열쇠).indexOf(열쇠(x)) < 0);
     ok("고치기 전 배치로 되돌리면 'TL 마켓' 사고가 새 역전으로 잡힌다",
@@ -419,9 +509,10 @@ console.log("\n  [돌연변이] 되돌리면 정말 잡히는가");
       새.join(" / ") || "아무것도 안 잡힘");
   }
 
-  /* (나) 새 규칙을 잘못된 자리에 끼워 넣는다 - 앞으로 가장 흔할 실수 */
+  /* (나) 새 규칙을 잘못된 자리에 끼워 넣는다 - 앞으로 가장 흔할 실수.
+         2026-09-04 - 여기도 블록 안의 규칙 원문을 적어 두던 것을 머리만 보게 줄였습니다. */
   {
-    const 머리 = "@media (max-width:520px){\n  .menu-bar-inner{padding:0 4px;}";
+    const 머리 = "@media (max-width:520px){";
     const 오염 = CSS.replace(머리,
       "@media (max-width:360px){\n  .board-search-row input{min-width:0;}\n}\n" + 머리);
     ok("(준비) 520 블록 머리를 찾았다", 오염 !== CSS);
