@@ -612,7 +612,9 @@ App.ChartDrawings = (function () {
    * ===================================================================== */
   var LIST_MAX_H = 240; /* 목록 창 최대 높이. 넘으면 안에서 스크롤합니다 */
   var LIST_ROW_H = 34; /* 한 줄 높이 — 폰에서 손가락으로 누릅니다 */
-  var LIST_FONT = 15; /* 목록 글씨. 12px 로 내리지 않습니다(대표가 못 읽습니다) */
+  var LIST_FONT = 17; /* 목록 글씨. 23차 2026-09-04 — 15px 이던 것을 17px 로 올렸습니다.
+     12px 로 내리지 않습니다(대표가 못 읽습니다). 좁아도 줄이지 말고
+     .rows 가 안에서 세로로 스크롤합니다 */
   var LIST_DOT = 10; /* 색 점 지름 */
 
   /* 그림 종류 이름 — 회원이 목록에서 보는 말입니다. 적는 곳은 여기 한 곳뿐입니다 */
@@ -4823,7 +4825,8 @@ App.ChartDrawings = (function () {
       ".tl-style-pick button.on{border-color:" + C_TEXT + ";}" +
       /* 그린 것 목록 (16차 2026-09-02) — 칩·알림줄과 같은 화면(viewport) 기준입니다.
          자리는 JS(placeList)가 넣습니다. left/top 은 0 에서 시작합니다.
-         [주의] 글씨 15px 입니다. 좁다고 줄이지 말고 안에서 세로로 스크롤합니다. */
+         [주의] 글씨 17px 입니다 (23차 2026-09-04 · 15 -> 17).
+         좁다고 줄이지 말고 안에서 세로로 스크롤합니다. */
       ".tl-draw-list{position:fixed;left:0;top:0;z-index:8;display:block;width:360px;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:8px;" +
       "font-size:" + LIST_FONT + "px;line-height:1.4;color:" + C_TEXT + ";overflow:hidden;}" +

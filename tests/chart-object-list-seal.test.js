@@ -408,7 +408,9 @@ console.log("\n그린 것 목록 · 숨김 · 잠금 · 계속 그리기");
 절("[7] 목록 글씨 - 대표가 작은 글씨를 못 읽습니다");
 {
   const t = 띄우기({ width: 360, 칸너비: 330 });
-  ok("목록 글씨가 15px 아래로 안 내려간다", t.M.LIST_FONT >= 15, String(t.M.LIST_FONT));
+  /* 23차 2026-09-04 — 15 -> 17 로 올렸습니다(대표 지시). 바닥도 같이 올립니다.
+     15 로 두면 되돌아가도 이 검사가 안 잡습니다. */
+  ok("목록 글씨가 17px 아래로 안 내려간다", t.M.LIST_FONT >= 17, String(t.M.LIST_FONT));
   ok("줄 높이가 손가락으로 누를 만하다 (30px 이상)", t.M.LIST_ROW_H >= 30, String(t.M.LIST_ROW_H));
 
   const css = t.win.document.getElementById("chart-drawings-style");
