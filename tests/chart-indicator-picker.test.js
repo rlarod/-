@@ -137,23 +137,231 @@ const 알맹이 = src ? 주석뺀(src) : "";
 
 /* =======================================================================
  * [3] 확정 팔레트 — 트레이딩뷰 색을 베끼지 않았는가
+ *
+ * ⚠️ 2026-09-04 · 감사팀이 구멍을 찾아와 기록팀이 다시 썼습니다.
+ *
+ *    그전 검사는 정규식 하나뿐이었습니다 —  /#[0-9A-Fa-f]{6}\b/
+ *    즉 ★색★ 이 아니라 ★여섯 글자★ 를 보고 있었습니다.
+ *    감사팀이 사본에 넣어 ★초록으로 통과시킨 것★ (실측):
+ *        var x = "rgb(91,156,246)";   ← 트레이딩뷰 링크색 #5B9CF6 과 같은 색
+ *        var y = "#5AF";              ← 3자리, #55AAFF. 역시 팔레트 밖
+ *    같은 색을 6자리로 적으면 빨간색 + 종료코드 1 로 제대로 잡혔습니다.
+ *    ★표기만 바꾸면 지나가던 것입니다.★
+ *
+ * ── 왜 정규식을 늘리지 않고 "정규화" 로 갔나 ─────────────────────────────
+ *    정규식을 늘리면 표기가 하나 늘 때마다 구멍이 하나 생깁니다.
+ *    (3자리 · 4자리 · 8자리 · rgb · rgba · hsl · hsla · 공백 구분 · 슬래시
+ *     알파 · deg/turn/rad · % 성분 … 이미 열 가지가 넘습니다)
+ *    그래서 어떤 표기로 적혀 있든 ★#RRGGBB 한 모양으로 바꾼 뒤★ 팔레트와
+ *    맞춥니다. 표기가 새로 생겨도 색뽑기() 한 곳만 고치면 됩니다.
+ *
+ *    · 투명도(알파)는 떼고 봅니다 — #5B9CF6FF 도 #5B9CF6 도 같은 색을 칠합니다.
+ *      알파를 붙였다고 봐주면 다시 글자 검사로 돌아갑니다.
+ *      단 ★알파가 0 이면 아무것도 안 칠하므로 세지 않습니다★ (rgba(0,0,0,0)).
+ *    · 예외는 ★하나★ 입니다 — 카드 위쪽 흰색 3% 얇은 선(box-shadow inset).
+ *      CLAUDE.md 확정 팔레트 항목이 "그림자 대신 이것만" 이라고 정해 둔 것이고,
+ *      이 소스도 242줄에서 실제로 씁니다. 예외 범위는 아래 네 줄로 못 박았습니다
+ *    · 못 알아본 토큰은 버립니다 — querySelector("#tl-ipick") 같은 것이
+ *      색으로 잡히면 안 되기 때문입니다. 16진수 글자로만 이뤄진 3·4·6·8자리만 색으로 봅니다.
+ *
+ * ── 아직 못 잡는 것 (다음 사람에게) ─────────────────────────────────────
+ *    · 이름색(red · dodgerblue) → 아래 ②에서 CSS 값 자리만 따로 봅니다
+ *    · 값을 계산으로 만드는 것 ("#" + a + b, String.fromCharCode…) → 못 잡습니다
+ *      정적 검사로는 한계입니다. 그건 눈으로 보는 수밖에 없습니다
  * ===================================================================== */
-절("[3] 확정 팔레트 밖 색 금지");
+절("[3] 확정 팔레트 밖 색 금지 (표기가 달라도 잡는다)");
 {
   const 팔레트 = [
     "#0A0F1C", "#101727", "#0D1422", "#1D273B",
     "#E7ECF5", "#838DA4", "#26C281", "#F0506E", "#F0B429"
   ];
-  const 쓴색 = [...new Set((알맹이.match(/#[0-9A-Fa-f]{6}\b/g) || []).map((s) => s.toUpperCase()))];
+
+  const 클램프 = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const 두자리 = (v) => (v < 16 ? "0" : "") + v.toString(16).toUpperCase();
+  const 묶기 = (r, g, b) => "#" + 두자리(클램프(r)) + 두자리(클램프(g)) + 두자리(클램프(b));
+
+  /** "128" · "50%" 를 0~255 로 */
+  function 성분(s) {
+    s = String(s).trim();
+    if (s.slice(-1) === "%") return (parseFloat(s) * 255) / 100;
+    return parseFloat(s);
+  }
+  /** "214.8" · "214.8deg" · "0.6turn" · "3.7rad" · "238grad" 를 도(°)로 */
+  function 각도(s) {
+    s = String(s).trim().toLowerCase();
+    const v = parseFloat(s);
+    if (s.indexOf("turn") >= 0) return v * 360;
+    if (s.indexOf("grad") >= 0) return v * 0.9;
+    if (s.indexOf("rad") >= 0) return (v * 180) / Math.PI;
+    return v; /* deg 또는 단위 없음 */
+  }
+  /** hsl → rgb (CSS 표준 식 그대로) */
+  function hslRGB(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    s = s / 100;
+    l = l / 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return 묶기((r + m) * 255, (g + m) * 255, (b + m) * 255);
+  }
+
+  /** 이름색 — 전부는 아니고 ★어두운 배경에서 실제로 쓰고 싶어질 만한 것★ 만.
+   *  148개를 다 적으면 "black" 같은 흔한 낱말이 코드에 섞여 오탐이 납니다.
+   *  그래서 ②에서 ★CSS 값 자리★ 에 붙은 것만 봅니다. */
+  const 이름색 = {
+    red: "#FF0000", blue: "#0000FF", green: "#008000", lime: "#00FF00",
+    orange: "#FFA500", gold: "#FFD700", yellow: "#FFFF00", cyan: "#00FFFF",
+    aqua: "#00FFFF", magenta: "#FF00FF", fuchsia: "#FF00FF", purple: "#800080",
+    violet: "#EE82EE", pink: "#FFC0CB", teal: "#008080", navy: "#000080",
+    white: "#FFFFFF", black: "#000000", gray: "#808080", grey: "#808080",
+    silver: "#C0C0C0", dodgerblue: "#1E90FF", royalblue: "#4169E1",
+    cornflowerblue: "#6495ED", deepskyblue: "#00BFFF", steelblue: "#4682B4",
+    crimson: "#DC143C", tomato: "#FF6347", coral: "#FF7F50",
+    seagreen: "#2E8B57", limegreen: "#32CD32", darkorange: "#FF8C00"
+  };
+  /* 색이 아닌 CSS 값 — 여기 있는 것은 그냥 넘어갑니다 */
+  const 색아님 = ["transparent", "none", "inherit", "initial", "unset", "currentcolor", "auto"];
+
+  /** 소스에서 색을 전부 뽑아 {표기, 값} 으로 돌려줍니다. 값은 늘 #RRGGBB 입니다. */
+  function 색뽑기(text) {
+    const out = [];
+    let m;
+
+    /* ① # 표기 — 3 · 4 · 6 · 8 자리.
+       토큰을 ★통째로★ 떼어 길이를 봅니다. {6} 만 보면 #5AF 가 지나갑니다.
+       (querySelector("#tl-ipick") 처럼 16진수가 아닌 글자가 섞이면 버립니다) */
+    const hre = /#([0-9A-Za-z_-]*)/g;
+    while ((m = hre.exec(text)) !== null) {
+      const t = m[1];
+      if (!t || !/^[0-9A-Fa-f]+$/.test(t)) continue;
+      if (t.length === 3 || t.length === 4) {
+        out.push({
+          표기: m[0],
+          값: 묶기(parseInt(t[0] + t[0], 16), parseInt(t[1] + t[1], 16), parseInt(t[2] + t[2], 16))
+        });
+      } else if (t.length === 6 || t.length === 8) {
+        out.push({
+          표기: m[0],
+          값: 묶기(parseInt(t.slice(0, 2), 16), parseInt(t.slice(2, 4), 16), parseInt(t.slice(4, 6), 16))
+        });
+      }
+    }
+
+    /* ② rgb() rgba() hsl() hsla() — 쉼표든 공백이든 슬래시든, 대문자든 소문자든 */
+    const fre = /\b(rgba?|hsla?)\s*\(([^()]*)\)/gi;
+    while ((m = fre.exec(text)) !== null) {
+      const 이름 = m[1].toLowerCase();
+      const 인자 = m[2].split(/[\s,/]+/).map((s) => s.trim()).filter((s) => s.length);
+      if (인자.length < 3) continue;
+      if (인자.length >= 4) {
+        /* 알파 0 이면 아무것도 안 칠합니다 — 색으로 세지 않습니다 */
+        const a = 인자[3].slice(-1) === "%" ? parseFloat(인자[3]) / 100 : parseFloat(인자[3]);
+        if (a === 0) continue;
+      }
+      /* ★얇은 흰 선 예외★ — CLAUDE.md 확정 팔레트 항목:
+         "그림자를 쓰지 않습니다. 대신 카드 위쪽에 흰색 3% 얇은 선(inset)만 넣습니다"
+         이건 팔레트 위반이 아니라 ★프로젝트가 정해 둔 카드 윗선★ 입니다.
+         범위를 좁게 둡니다 — 흰색이고 · 알파 6% 이하이고 · box-shadow inset 일 때만.
+         color:rgba(255,255,255,.03) 처럼 다른 자리에 쓰면 그대로 빨개집니다. */
+      const 앞 = text.slice(Math.max(0, m.index - 80), m.index);
+      const 흰 = 성분(인자[0]) === 255 && 성분(인자[1]) === 255 && 성분(인자[2]) === 255;
+      const 알파 = 인자.length >= 4
+        ? (인자[3].slice(-1) === "%" ? parseFloat(인자[3]) / 100 : parseFloat(인자[3]))
+        : 1;
+      if (이름 === "rgba" && 흰 && 알파 <= 0.06 && /box-shadow[^;{}]*inset/.test(앞)) continue;
+
+      if (이름[0] === "r") {
+        out.push({ 표기: m[0], 값: 묶기(성분(인자[0]), 성분(인자[1]), 성분(인자[2])) });
+      } else {
+        out.push({ 표기: m[0], 값: hslRGB(각도(인자[0]), parseFloat(인자[1]), parseFloat(인자[2])) });
+      }
+    }
+
+    /* ③ 이름색 — ★CSS 값 자리에 붙은 것만★ 봅니다.
+       코드 어디에나 있는 "red" 라는 낱말까지 잡으면 오탐이 납니다. */
+    const nre = /(?:^|[;{"'\s])(?:color|background|background-color|border-color|border-top-color|border-bottom-color|border-left-color|border-right-color|fill|stroke|outline-color|caret-color)\s*:\s*([A-Za-z]+)/g;
+    while ((m = nre.exec(text)) !== null) {
+      const w = m[1].toLowerCase();
+      if (색아님.indexOf(w) >= 0) continue;
+      if (이름색[w]) out.push({ 표기: m[1], 값: 이름색[w] });
+    }
+    return out;
+  }
+
+  const 뽑힘 = 색뽑기(알맹이);
+  const 쓴색 = [...new Set(뽑힘.map((c) => c.값))];
   const 밖 = 쓴색.filter((c) => 팔레트.indexOf(c) < 0);
-  ok("확정 팔레트 9색 밖의 색을 안 쓴다", 밖.length === 0, 밖.join(" "));
-  console.log("      쓰는 색 — " + 쓴색.join(" "));
+  ok("확정 팔레트 9색 밖의 색을 안 쓴다", 밖.length === 0,
+    밖.map((c) => c + " (원문: " +
+      [...new Set(뽑힘.filter((x) => x.값 === c).map((x) => x.표기))].join(" · ") + ")").join(" / "));
+  console.log("      쓰는 색 — " + (쓴색.join(" ") || "(없음)"));
 
   /* 트레이딩뷰가 실제로 쓰던 값이 그대로 들어오면 바로 잡습니다.
-     실측(2026-09-03) — 피봇선 #FB8C00 · 파란 작성자 링크 계열 #2962FF */
-  ["#FB8C00", "#2962FF", "#089981", "#F23645"].forEach((c) => {
-    ok("트레이딩뷰 색 " + c + " 을 안 베꼈다", 알맹이.toUpperCase().indexOf(c) < 0);
+     실측(2026-09-03) — 피봇선 #FB8C00 · 파란 작성자 링크 계열 #2962FF
+     #5B9CF6 은 2026-09-04 감사팀이 우회에 쓴 링크색입니다.
+     ★이제는 글자가 아니라 정규화한 값으로 봅니다★ — rgb() 로 적어도 잡힙니다. */
+  const 쓴색집합 = new Set(쓴색);
+  ["#FB8C00", "#2962FF", "#089981", "#F23645", "#5B9CF6"].forEach((c) => {
+    ok("트레이딩뷰 색 " + c + " 을 안 베꼈다 (어떤 표기로 적어도)", !쓴색집합.has(c));
   });
+
+  /* ── ★돌연변이 자체검증★ ───────────────────────────────────────────────
+     아래 표기를 실제로 넣어 보고 ① 같은 색으로 정규화되는지 ② 팔레트 밖으로
+     잡히는지 둘 다 봅니다. 하나라도 놓치면 이 봉인은 그 표기에 대해
+     ★아무것도 지키지 않는 것★ 입니다.
+     2026-09-04 이전 봉인은 첫 줄(6자리) 하나만 잡고 나머지를 전부 놓쳤습니다. */
+  const 밖인가 = (글자) => 색뽑기(글자).map((c) => c.값).filter((v) => 팔레트.indexOf(v) < 0).length > 0;
+  const 파랑표기 = [
+    ['"#5B9CF6"', "6자리 (옛 봉인도 잡던 것)"],
+    ['"#5b9cf6"', "소문자"],
+    ['"#5B9CF6FF"', "8자리 · 알파 붙임"],
+    ['"rgb(91,156,246)"', "rgb — ★감사팀이 통과시킨 그 줄★"],
+    ['"RGB( 91 , 156 , 246 )"', "대문자 + 공백 낀 것"],
+    ['"rgba(91,156,246,.8)"', "rgba"],
+    ['"rgb(91 156 246)"', "공백 구분 (요즘 표기)"],
+    ['"rgb(35.7%,61.2%,96.5%)"', "% 성분"],
+    ['"hsl(214.8,89.6%,66.1%)"', "hsl"],
+    ['"hsla(214.8deg 89.6% 66.1% / 80%)"', "hsla + deg + 슬래시"]
+  ];
+  파랑표기.forEach((p) => {
+    const 값 = 색뽑기(p[0]).map((c) => c.값);
+    ok("★돌연변이★ " + p[1] + " → #5B9CF6 으로 잡는다", 값.indexOf("#5B9CF6") >= 0,
+      "잡은 값: " + (값.join(",") || "(하나도 못 잡았습니다 — 이 표기는 무방비입니다)"));
+  });
+  ok("★돌연변이★ 3자리 " + '"#5AF"' + " 가 #55AAFF 로 잡히고 팔레트 밖이다",
+    색뽑기('"#5AF"').map((c) => c.값).indexOf("#55AAFF") >= 0 && 밖인가('"#5AF"'),
+    "감사팀이 통과시킨 두 번째 줄입니다");
+  ok("★돌연변이★ 이름색 " + '"color:dodgerblue"' + " 도 팔레트 밖으로 잡힌다",
+    밖인가('a{color:dodgerblue;}'));
+  ok("★돌연변이★ 거의 같은 색(hsl 반올림) 도 팔레트 밖으로 잡힌다",
+    밖인가('"hsl(215,90%,66%)"'));
+
+  /* 반대쪽 — 팔레트 색과 색 아닌 것에 ★거짓 경보★ 가 안 나야 합니다.
+     오탐이 나면 다음 사람이 봉인을 통째로 꺼버립니다. */
+  ok("(오탐) 팔레트 색은 어떤 표기로 적어도 통과한다",
+    !밖인가('"#0A0F1C" "#0a0f1c" "rgb(10,15,28)" "#101727FF"'));
+  ok("(오탐) id 선택자 · transparent 는 색으로 안 센다",
+    색뽑기('querySelector("#tl-ipick-wrap"); "background:transparent;"').length === 0);
+  ok("(오탐) 알파 0 은 아무것도 안 칠하므로 안 센다",
+    색뽑기('"background:rgba(0,0,0,0);"').length === 0);
+
+  /* ── 얇은 흰 선(inset) 예외의 ★경계★ ────────────────────────────────────
+     CLAUDE.md 가 허락한 것은 "카드 위쪽 흰색 3% 얇은 선(inset)" 하나뿐입니다.
+     예외가 넓어지면 rgba 가 통째로 자유통행증이 됩니다. 네 줄로 못 박습니다. */
+  ok("(예외) 카드 윗선 box-shadow:inset 흰색 3% 는 통과한다",
+    !밖인가('.c{box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}'),
+    "CLAUDE.md 확정 팔레트 항목이 허락한 유일한 흰색입니다");
+  ok("★돌연변이★ 같은 흰색이라도 box-shadow 가 아니면 잡는다",
+    밖인가('.c{color:rgba(255,255,255,.03);}'));
+  ok("★돌연변이★ box-shadow inset 이라도 흰색이 아니면 잡는다",
+    밖인가('.c{box-shadow:inset 0 1px 0 rgba(91,156,246,.03);}'));
+  ok("★돌연변이★ box-shadow inset 흰색이라도 진하면(50%) 잡는다",
+    밖인가('.c{box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}'));
 }
 
 /* =======================================================================
@@ -313,3 +521,5 @@ if (fail) {
   실패목록.forEach((s) => console.log("  · " + s));
   process.exit(1);
 }
+
+process.exit(0);
