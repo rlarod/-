@@ -175,6 +175,14 @@ const 알려진띄우는것 = [
      같이 넣었고, 3절이 그 바닥 함수를 실제로 돌려 봅니다.
      자리잡기 규칙은 chart-drawings.js 의 placeToast() 를 그대로 옮긴 것입니다. */
   "chart-indicator-room.js", "chart-indicator-settings.js",
+  /* 2026-09-04 차트팀 — 지표 ★이름표 버튼★(.tl-leg-acts, 눈·설정·지우기).
+     차트 상단 1단계에서 만든 것입니다. 트레이딩뷰 범례가 이름 위에 마우스를
+     올리면 버튼을 내주는 것(.buttons-quatTGAC{opacity:0} -> :hover 1)을
+     실측(2026-09-04)해 옮겼습니다. 폰은 hover 가 없어 탭하면 뜹니다.
+     ⓐ명시 갈래이고 ★화면 기준이며 하단 바를 봅니다★ — 아래 2절 보호군.
+     바닥 함수는 actsFloorY() 이고 chart-drawings.js 의 chipFloorY() 와
+     같은 모양입니다(그 함수가 밖으로 안 나와 있어 같은 것을 이 파일에 둡니다). */
+  "chart-indicators.js",
   "chart-oscillators.js", "chart-replay.js", "chart-style.js", "chart-timezone.js",
   "interval-more.js", "jitter-probe.js", "stream-loading-hint.js",
   "symbol-stream-switch.js"
@@ -286,6 +294,20 @@ const 알려진보호군 = [
   /* 2026-09-04 수리팀 — 지표 자리 알림줄. 처음부터 floorY() 로 바를 보게
      만들었습니다(4절을 거치지 않고 바로 보호군). */
   "chart-indicator-room.js", "chart-indicator-settings.js",
+  /* 2026-09-04 차트팀 — 지표 이름표 버튼(.tl-leg-acts). 4절을 거치지 않고
+     바로 보호군입니다. ★단, 처음 올렸을 때는 안 보고 있었고 이 census 가
+     그 자리에서 빨개져서 잡았습니다★ — 봉인이 제 일을 했습니다.
+     고친 뒤 3px 간격으로 스크롤을 훑어 실측했습니다
+     (여덟 크기 · 스크롤 6,918칸 · 단추 자리 5,461회) —
+       360x640  바 침범 ★-8px★ (단추 아래끝 559 · 바 윗변 567)
+       360x800  ★-9px★ · 375x812 ★-10px★ · 390x844 ★-15px★
+       768x1024 · 800x360(눕힘) · 1440x900 · 1920x1080 — 바 없음
+       화면 밖  여덟 크기 전부 ★-8px★ (가장자리 안쪽 8px)
+     고치기 전에는 360x640 에서 ★바를 160px 침범★ 했습니다.
+     ⚠ 키를 줄이지 않고 ★칩 위로 뒤집는★ 방식입니다. 한 줄짜리 단추 띠라
+       줄이면 손가락 하한(44) 밑으로 내려갑니다. 칩이 화면 띠 밖이면 아예
+       안 띄웁니다 — 못 누르는 유령 단추를 만들지 않기 위해서입니다. */
+  "chart-indicators.js",
   /* 2026-09-03 수리팀이 고쳐 4절에서 옮겨 왔습니다 (둘 다 menuFloorY) */
   "chart-timezone.js", "interval-more.js"
 ];

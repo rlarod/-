@@ -121,9 +121,17 @@ App.ChartOhlcLegend = (function () {
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var css =
-      "." + EL_CLASS + "{flex:0 0 auto;display:flex;flex-wrap:wrap;" +
-      "align-items:baseline;gap:2px 14px;padding:5px 2px 6px;" +
-      "border-bottom:1px solid " + C_BORDER + ";margin-bottom:4px;" +
+      /* ── 2단계 (2026-09-04) — ★자기 줄에서 차트 안 겹침으로★ ──────────
+         트레이딩뷰 실측(2026-09-04, 1440): 범례가 차트판(top 42) 안 top 46 에
+         겹쳐 있고, 차트를 ★0px★ 밀어냅니다. 우리는 여기까지 자기 줄이라
+         차트를 데스크톱 35 · 폰 60 만큼 밀어냈습니다.
+         지표 칩 줄(.tl-ind-bar)과 같은 방식으로 얹습니다 — 그 줄도 원래부터
+         차트 위에 겹쳐 그립니다(js/chart-indicators.js 13절).
+         ⚠ 글자를 고르거나 긁을 일이 없으므로 pointer-events 를 끕니다 —
+           안 끄면 이 투명한 상자가 캔들 위 십자선·드래그를 먹습니다. */
+      "." + EL_CLASS + "{position:absolute;top:6px;left:8px;z-index:6;" +
+      "pointer-events:none;display:flex;flex-wrap:wrap;" +
+      "align-items:baseline;gap:2px 14px;padding:0;" +
       "font-family:var(--mono);font-size:17px;line-height:1.35;" +
       "color:" + C_TEXT + ";white-space:nowrap;}" +
       "." + EL_CLASS + " .k{color:" + C_MUTED + ";margin-right:3px;font-weight:600;}" +
@@ -133,11 +141,44 @@ App.ChartOhlcLegend = (function () {
       /* 좁은 화면에서는 절대 변동값을 감춥니다(퍼센트는 남습니다).
          ★지우는 게 아니라 가리는 것★ 입니다 — 마크업은 그대로 있습니다.
          이걸 안 하면 360 에서 줄이 3줄이 되어 차트를 그만큼 밀어냅니다. */
-      "@media (max-width:767px){." + EL_CLASS + " .abs{display:none;}}";
+      /* 예비 길 — .chart-wrap 을 못 찾았을 때만 쓰는 ★예전 모양★(자기 줄) */
+      "." + EL_CLASS + ".tl-ohlc-row{position:static;padding:5px 2px 6px;" +
+      "pointer-events:auto;border-bottom:1px solid " + C_BORDER + ";margin-bottom:4px;}" +
+      /* ── 좁은 화면 (2026-09-04, 2단계) ────────────────────────────────
+         2단계에서 이 줄이 차트 ★위로 올라왔기 때문에★, 두 줄이 되면 캔들을
+         그만큼 덮습니다(360 실측 48). 자기 줄이던 때는 안 덮었습니다.
+         트레이딩뷰도 좁아지면 O·H·L 을 먼저 감춥니다 —
+         실측(2026-09-04): .valueItem-quatTGAC 다섯 칸 중 O·H·L 셋에만
+         unimportant-quatTGAC 가 붙어 있고,
+         .hideUniportantValueItems ... .unimportant{display:none} 규칙이 있습니다.
+         ★다만 우리는 한 가지를 더 합니다★ — 십자선이 실제로 봉을 짚고 있는
+         동안에는 O·H·L 을 다시 보여 줍니다(tl-ohlc-live). 폰에서 봉을 눌러
+         값을 읽는 것이 이 줄의 주된 쓸모라, 그것까지 없애면 기능이 줄어듭니다. */
+      "@media (max-width:767px){." + EL_CLASS + " .abs{display:none;}" +
+      "." + EL_CLASS + " .ohlc-min{display:none;}" +
+      "." + EL_CLASS + ".tl-ohlc-live .ohlc-min{display:inline;}}";
     var s = document.createElement("style");
     s.id = STYLE_ID;
     s.textContent = css;
     (document.head || document.documentElement).appendChild(s);
+  }
+
+  /** 이 줄의 높이를 .chart-wrap 에 알립니다.
+   *  지표 칩 줄(js/chart-indicators.js 의 .tl-ind-bar)이 이 값만큼 아래에서
+   *  시작합니다 — 안 알리면 둘이 ★같은 자리에 겹쳐★ 글자가 포개집니다.
+   *  값은 CSS 변수 한 개(--tl-ohlc-h)로만 주고받습니다. 두 파일이 서로의
+   *  숫자를 베껴 적지 않게 하려는 것입니다(어긋나면 바로 겹칩니다). */
+  function publishHeight() {
+    if (!el || !el.parentNode || !el.parentNode.style) return;
+    var h = 0;
+    try {
+      h = Math.round(el.offsetHeight || 0);
+    } catch (e) {
+      return;
+    }
+    if (!h) return;
+    if (el.parentNode.style.getPropertyValue("--tl-ohlc-h") === h + "px") return;
+    el.parentNode.style.setProperty("--tl-ohlc-h", h + "px");
   }
 
   function item(key) {
@@ -153,10 +194,30 @@ App.ChartOhlcLegend = (function () {
     return { wrap: wrap, v: v };
   }
 
+  var reflowRaf = 0;
+  function watchReflow() {
+    if (!window.addEventListener) return;
+    window.addEventListener("resize", function () {
+      if (reflowRaf) return;
+      if (!window.requestAnimationFrame) {
+        publishHeight();
+        return;
+      }
+      reflowRaf = window.requestAnimationFrame(function () {
+        reflowRaf = 0;
+        publishHeight();
+      });
+    });
+  }
+
   function build() {
     var panel = document.querySelector(".chart-panel");
+    /* 2단계 — 차트 ★안★ 에 얹습니다. .chart-wrap 은 js/chart-indicators.js 가
+       이미 position:relative 로 만들어 두는 자리입니다(지표 칩 줄과 같은 기준점).
+       못 찾으면 예전처럼 자기 줄로 넣습니다 — 화면이 비는 것보다 낫습니다. */
+    var wrap = panel && (panel.querySelector(".chart-wrap") || null);
     var body = panel && panel.querySelector(".tlc-body");
-    if (!panel || !body) return false;
+    if (!panel || (!wrap && !body)) return false;
     injectStyle();
     el = document.createElement("div");
     el.className = EL_CLASS;
@@ -169,6 +230,11 @@ App.ChartOhlcLegend = (function () {
       l: item("L"),
       c: item("C")
     };
+    /* O·H·L 은 좁은 화면에서 먼저 접히는 칸입니다(위 CSS 주석 참고).
+       C 와 변동은 늘 남습니다 — 트레이딩뷰와 같은 고르기입니다. */
+    parts.o.wrap.className = "ohlc-min";
+    parts.h.wrap.className = "ohlc-min";
+    parts.l.wrap.className = "ohlc-min";
     el.appendChild(parts.o.wrap);
     el.appendChild(parts.h.wrap);
     el.appendChild(parts.l.wrap);
@@ -189,7 +255,16 @@ App.ChartOhlcLegend = (function () {
     parts.abs = abs;
     parts.pct = pct;
 
-    panel.insertBefore(el, body);
+    if (wrap) {
+      if (!wrap.style.position) wrap.style.position = "relative";
+      wrap.appendChild(el);
+      publishHeight();
+      watchReflow();
+    } else {
+      /* 예비 길 — 예전과 같은 자기 줄 */
+      el.className = EL_CLASS + " tl-ohlc-row";
+      panel.insertBefore(el, body);
+    }
     return true;
   }
 
@@ -218,9 +293,18 @@ App.ChartOhlcLegend = (function () {
     var pct = b.open ? (diff / b.open) * 100 : 0;
     var dir = diff > 0 ? "up" : diff < 0 ? "down" : "";
     var key = b.open + "|" + b.high + "|" + b.low + "|" + b.close + "|" +
-      (App.Config && App.Config.getDisplayCurrency ? App.Config.getDisplayCurrency() : "");
+      (App.Config && App.Config.getDisplayCurrency ? App.Config.getDisplayCurrency() : "") +
+      /* 십자선이 짚었는지도 열쇠에 넣습니다 — 값이 같아도 O·H·L 을 폈다
+         접었다 해야 하는데, 안 넣으면 아래 "같으면 안 그림" 에 걸립니다. */
+      "|" + (hoverBar ? "1" : "0");
     if (key === shownKey) return;
     shownKey = key;
+    /* 십자선이 봉을 짚는 동안에는 좁은 화면에서도 O·H·L 을 펼칩니다 */
+    var live = EL_CLASS + (hoverBar ? " tl-ohlc-live" : "");
+    if (el.className !== live && el.className.indexOf("tl-ohlc-row") === -1) el.className = live;
+    /* 값이 바뀌면 줄 수가 달라질 수 있습니다(숫자가 길어져 줄바꿈).
+       그때마다 지표 칩 줄이 내려앉을 자리를 다시 알립니다. */
+    publishHeight();
 
     parts.o.v.textContent = money(b.open);
     parts.h.v.textContent = money(b.high);

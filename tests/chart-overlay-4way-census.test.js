@@ -105,6 +105,15 @@ const 겹침목록 = 겹침요소들();
    그때 할 일은 "이 새 창이 넷 중 누구와 겹칠 수 있나" 를 사람이 한 번 보는 것입니다. */
 const 알려진 = [
   ".tl-kit-plabel|3", ".tl-osc-label|3", ".tl-draw-chip|6", ".tl-ind-bar|6", ".tl-zoom-chip|6",
+  /* 2026-09-04 추가 — 지표 ★이름표 버튼★(.tl-leg-acts, js/chart-indicators.js).
+     칩에 마우스를 올리거나(폰은 탭) 뜨는 눈·설정·지우기 세 개입니다.
+     ★왜 7 인가★ — 자기 주인인 칩 줄(.tl-ind-bar|6) ★바로 위★ 여야 합니다.
+     그 아래면 칩에 가려 못 누르고, 8 이상이면 그린 것 목록(.tl-draw-list|8)과
+     알림줄(9)을 덮습니다. 칩에 딸린 작은 띠가 목록·안내를 덮을 이유가 없습니다.
+     색·굵기 창(.tl-style-pick|7)과 같은 층이지만 둘이 같이 뜰 일이 없습니다 —
+     이 띠는 칩에서 마우스가 떠나거나 스크롤하면 바로 사라집니다.
+     리플레이 층(18) 아래라 넷과 싸우지 않습니다. */
+  ".tl-leg-acts|7",
   ".tl-style-pick|7", ".tl-draw-list|8", ".tl-draw-input|9", ".tl-draw-toast|9",
   ".tl-face-pick|9",
   /* 2026-09-04 추가 — 지표 자리 알림줄(js/chart-indicator-room.js).

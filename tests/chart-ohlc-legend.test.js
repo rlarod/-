@@ -236,11 +236,19 @@ console.log("\n십자선 O·H·L·C 범례 (js/chart-ohlc-legend.js)");
   ok("줄이 만들어진다", !!el);
   ok("문서에 실제로 붙어 있다", !!el && el.isConnected === true);
 
-  const body = t.win.document.querySelector(".chart-panel .tlc-body");
-  ok("차트(.tlc-body) ★앞★ 에 있다 (겹쳐 덮지 않고 자기 줄을 씁니다)",
-    !!el && !!body && el.parentNode === body.parentNode &&
-      Array.prototype.indexOf.call(el.parentNode.children, el) <
-      Array.prototype.indexOf.call(el.parentNode.children, body));
+  /* ⚠ 2026-09-04 에 ★뜻이 뒤집혔습니다★ (차트 상단 2단계).
+     예전: "차트(.tlc-body) 앞에 자기 줄로 둔다 — 겹쳐 덮지 않는다"
+     지금: "차트 안(.chart-wrap)에 겹쳐 얹는다 — 차트를 밀어내지 않는다"
+     왜 바꿨나 — 트레이딩뷰 실측(2026-09-04, 1440)에서 범례가 차트판 안에
+     겹쳐 있고 차트를 0px 밀어냅니다. 우리는 자기 줄이라 데스크톱 35 · 폰 60
+     만큼 밀어내고 있었습니다. 대표 지시가 "트레이딩뷰랑 똑같이 가자" 입니다.
+     예전 결정의 근거였던 "360 에서 지표 칩이 이미 위쪽을 덮는다" 는
+     1단계(켠 것만 보이기)로 사라졌습니다 — 기본 상태 칩 줄이 67 -> 32 입니다.
+     되돌리려면 아래를 예전 문장으로 돌리고 js/chart-ohlc-legend.js 의
+     build() 에서 wrap 갈래를 지우면 됩니다. */
+  const wrap = t.win.document.querySelector(".chart-panel .chart-wrap");
+  ok("차트 안(.chart-wrap)에 겹쳐 얹는다 (차트를 밀어내지 않습니다)",
+    !!el && !!wrap && el.parentNode === wrap);
 
   ok("무슨 줄인지 읽어 주는 이름표가 있다",
     !!el && (el.getAttribute("aria-label") || "").length > 0, el && el.getAttribute("aria-label"));

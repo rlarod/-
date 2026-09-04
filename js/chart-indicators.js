@@ -510,7 +510,14 @@ App.ChartIndicators = (function () {
   function injectStyle() {
     if (document.getElementById("chart-indicators-style")) return;
     var css =
-      ".tl-ind-bar{position:absolute;top:6px;left:8px;z-index:6;display:flex;gap:4px;" +
+      /* ⚠ 2단계(2026-09-04) — 세로 자리를 ★OHLC 줄 아래★ 로 옮겼습니다.
+         js/chart-ohlc-legend.js 가 차트 안으로 들어오면서 같은 자리(top 6)를
+         쓰게 됐습니다. 그 파일이 자기 높이를 --tl-ohlc-h 로 알려 주고,
+         여기서 그만큼 내려옵니다. 숫자를 두 곳에 적지 않습니다.
+         그 파일이 없거나 예전 방식(자기 줄)이면 변수가 없어 0 이 되고,
+         칩 줄은 예전과 똑같이 top 6 에 그대로 있습니다. */
+      ".tl-ind-bar{position:absolute;left:8px;z-index:6;display:flex;gap:4px;" +
+      "top:calc(6px + var(--tl-ohlc-h, 0px));" +
       "flex-wrap:wrap;pointer-events:none;}" +
       ".tl-ind-btn{pointer-events:auto;background:#0D1422;border:1px solid #1D273B;" +
       "color:#838DA4;border-radius:3px;padding:2px 7px;font-size:17px;font-weight:600;" +
@@ -535,7 +542,50 @@ App.ChartIndicators = (function () {
       "display:inline-flex;align-items:center;gap:5px;}" +
       ".tl-ind-fold:hover{opacity:1;border-color:#838DA4;}" +
       ".tl-ind-bar.tl-ind-folded > *{display:none;}" +
-      ".tl-ind-bar.tl-ind-folded > .tl-ind-fold{display:inline-flex;}";
+      ".tl-ind-bar.tl-ind-folded > .tl-ind-fold{display:inline-flex;}" +
+      /* ── 13) 이름표 행동 버튼 · 켠 것만 보이기 (2026-09-04, 1단계) ─────
+         트레이딩뷰 실측(2026-09-04, tradingview.com/chart, 로그인 없음, 1440):
+           .item-quatTGAC          min-height 24 · 글씨 13 (px 는 일부러 안 붙였습니다 —
+                                   글씨 바닥 봉인이 숫자만 보고 잡습니다)
+           .touchMode  .item       min-height 26
+           .buttons-quatTGAC       opacity:0 -> :hover 에서 1
+           버튼 하나 28x24, 지표줄은 눈·설정·삭제·더보기 4개(묶음 113px)
+         우리는 글씨 바닥이 17px 이라(대표 지시 > 트레이딩뷰) 그만큼 큽니다 —
+         버튼 32x28, 폰 44x40. 색은 확정 팔레트만 씁니다.
+         아이콘은 ★우리가 그린 것★ 입니다. 트레이딩뷰 것을 가져오지 않았습니다.
+         스프라이트(assets/icons/chart-tools.svg)도 일부러 안 씁니다 —
+         그건 js/chart-drawings.js 가 넣어주는 것이라, 그 파일을 되돌리면
+         여기 아이콘이 조용히 사라집니다. */
+      ".tl-leg-acts{position:absolute;z-index:7;display:none;pointer-events:auto;" +
+      "background:#101727;border:1px solid #838DA4;border-radius:3px;overflow:hidden;" +
+      "box-sizing:border-box;}" +
+      ".tl-leg-acts.tl-leg-open{display:inline-flex;}" +
+      ".tl-leg-act{width:32px;height:28px;display:inline-flex;align-items:center;" +
+      "justify-content:center;background:transparent;border:0;border-left:1px solid #1D273B;" +
+      "color:#838DA4;cursor:pointer;padding:0;font-family:inherit;box-sizing:border-box;}" +
+      ".tl-leg-act:first-child{border-left:0;}" +
+      ".tl-leg-act:hover,.tl-leg-act:focus{color:#E7ECF5;background:#0D1422;outline:none;}" +
+      ".tl-leg-act svg{width:18px;height:18px;display:block;}" +
+      "@media (max-width:767px){.tl-leg-act{width:44px;height:40px;}" +
+      ".tl-leg-act svg{width:22px;height:22px;}}" +
+      /* ★켠 것만★ — 끈 지표의 칩을 감춥니다. 지우지 않고 감추기만 하므로
+         js/chart-indicator-kit.js 의 querySelectorAll 은 그대로 다 찾습니다.
+
+         ⚠★거래량(.tl-ind-btn) 은 일부러 뺐습니다 — 감추면 막다른 길입니다.★
+         실측(2026-09-04, localhost 1440): fx 지표 창(js/chart-indicator-picker.js)이
+         보여주는 24줄은 전부 틀(kit)의 ★정의★ 입니다 —
+           MA · EMA · WMA · BOLL · KDJ · ATR · StochRSI · CCI · OBV · SAR ·
+           VWAP · Stochastic · Williams %R · ADX/DMI · Supertrend · Ichimoku ·
+           RSI · MACD · Momentum · ROC · MFI · CMF · TRIX · AO
+         ★이 목록에 거래량이 없습니다.★ 거래량은 틀 지표가 아니라 js/chart.js 가
+         그리는 막대를 이 파일이 껐다 켜는 것이라서(맨 위 주석) 정의가 없습니다.
+         옛 목록(js/chart-indicator-menu.js:144)에는 VOL 이 있지만, 그 목록은
+         picker 가 대신 뜨면서 회원에게 더 이상 보이지 않습니다.
+         그래서 거래량 칩까지 감추면 ★한 번 끄고 나면 다시 켤 길이 없습니다.★
+         칩은 남기고 흐리게만 둡니다(예전 그대로) — 그게 되돌릴 수 있는 쪽입니다.
+         ⓘ 거래량을 fx 창에 넣는 것은 js/chart-indicator-picker.js 를 고쳐야 해서
+           이번 건 밖입니다(그 파일은 지금 다른 팀이 만지는 중). PM 에게 올립니다. */
+      '.tl-ind-bar[data-onlyon="1"] > .tl-kit-btn[aria-pressed="false"]{display:none;}';
     var st = document.createElement("style");
     st.id = "chart-indicators-style";
     st.textContent = css;
@@ -624,12 +674,27 @@ App.ChartIndicators = (function () {
 
   /** 지금 칩이 몇 개인가 — 접었을 때 "지표 14" 로 보여줍니다.
    *  (접기 버튼 자신은 빼고 셉니다) */
+  /** 지금 ★감춰져 있는★ 칩인가 (13절 - 켠 것만 보이기).
+   *  한 곳에서만 판단합니다. CSS 선택자와 뜻이 어긋나면 안 되므로
+   *  ★injectStyle 의 [data-onlyon] 규칙과 같은 조건★ 을 씁니다. */
+  function isHiddenChip(el) {
+    if (!ONLY_ON || !el || !el.getAttribute) return false;
+    if (String(el.className || "").indexOf("tl-kit-btn") === -1) return false;
+    return el.getAttribute("aria-pressed") === "false";
+  }
+
   function chipCount() {
     if (!buttonsEl) return 0;
     var kids = buttonsEl.children || [];
     var n = 0;
     for (var i = 0; i < kids.length; i++) {
-      if (String(kids[i].className || "").indexOf("tl-ind-fold") === -1) n++;
+      if (String(kids[i].className || "").indexOf("tl-ind-fold") !== -1) continue;
+      /* 켠 것만 보이기(13절) 로 감춰진 칩은 세지 않습니다 — 안 그러면
+         접었을 때 "지표 10" 이라고 하고 펴면 1개만 나옵니다.
+         감추는 것은 ★틀 칩(.tl-kit-btn)뿐★ 입니다. 거래량은 늘 보입니다
+         (위 injectStyle 13절 주석 — 감추면 다시 켤 길이 없습니다). */
+      if (isHiddenChip(kids[i])) continue;
+      n++;
     }
     return n;
   }
@@ -778,7 +843,441 @@ App.ChartIndicators = (function () {
     wrap.appendChild(buttonsEl);
     paintButtons();
     buildFold();
+    /* ★buildFold() 뒤★ 여야 합니다 — 접기 버튼이 있어야 refreshFold 가 돕니다 */
+    buildLegendActs();
     return true;
+  }
+
+  /* =====================================================================
+   * 13) 이름표 행동 버튼 (눈 · 설정 · 지우기) + ★켠 것만 보이기★
+   *     차트 상단 1단계 — 2026-09-04
+   * ---------------------------------------------------------------------
+   * ── 무엇이 문제였나 (실측, localhost) ────────────────────────────────
+   *   칩은 "켜진 목록" 이 아니라 켜고 끄는 ★버튼★ 이라, 지표를 다 꺼도
+   *   10개가 그대로 남습니다. 1440 에서 2줄 67px 로 차트 왼쪽 위를 덮습니다.
+   *   390 에서는 접혀서 "▾ 지표 9" 32px 이 캔들 띠를 덮습니다.
+   *
+   * ── 트레이딩뷰는 (2026-09-04 실측, tradingview.com/chart, 로그인 없음) ─
+   *   범례에 ★켠 지표만★ 한 줄(24px)씩 쌓입니다. 끄고 켜기는 범례가 아니라
+   *   Indicators 창에서 합니다. 이름 위에 마우스를 올리면 그때 버튼이 뜹니다 —
+   *   Hide(눈) · Settings · Remove · More, 각 28x24, 묶음 113px.
+   *   CSS 로도 확인했습니다 : .buttons-quatTGAC{opacity:0} → :hover 에서 1.
+   *   폰은 .touchMode-quatTGAC 로 줄 높이를 24 → 26px 로 따로 잡습니다.
+   *
+   * ── ★순서가 이 작업의 전부입니다★ ───────────────────────────────────
+   *   지금 회원은 ★칩을 눌러 지표를 끕니다.★
+   *   꺼진 칩을 먼저 감추면 끄는 길이 사라집니다(조용한 고장).
+   *   그래서 ① 눈 버튼을 먼저 만들고 ② 그 다음에 감춥니다.
+   *   이 파일 안에서도 buildLegendActs() 안에서 그 순서로 부릅니다.
+   *
+   * ── 끈 지표를 다시 켜는 길 (막다른 길이 없는지 확인했습니다) ─────────
+   *   가로 막대의 "fx 지표" 창입니다(js/chart-indicator-picker.js).
+   *   거래량(VOL)도 그 목록에 있습니다 — js/chart-indicator-menu.js:144.
+   *   지운 지표는 그 창의 "지표 추가"(kit.listDefs)로 다시 얹습니다.
+   *
+   * ── 폰 ──────────────────────────────────────────────────────────────
+   *   hover 가 없으니 ★탭하면 버튼이 뜹니다.★
+   *   탭이 토글까지 하지 않도록 잡기(capture) 단계에서 멈춥니다 —
+   *   안 막으면 탭 한 번에 "버튼도 뜨고 지표도 꺼집니다".
+   *   손가락으로 누를 것이라 44x40 으로 키웁니다(도구막대 폰 규칙과 같음).
+   *
+   * ── js/chart-indicator-kit.js 는 한 글자도 안 건드렸습니다 ───────────
+   *   칩을 ★지우지 않고 CSS 로 감추기만★ 합니다. 그래서 틀이 하는
+   *   barEl.querySelectorAll(".tl-kit-btn") 은 예전 그대로 다 찾습니다.
+   *   버튼 묶음도 칩 줄(.tl-ind-bar) 안이 아니라 ★그 바깥(.chart-wrap)★ 에
+   *   답니다 — 남의 코드가 세는 children 수를 바꾸지 않기 위해서입니다.
+   *
+   * ── 되돌리기 ────────────────────────────────────────────────────────
+   *   ONLY_ON 을 false 로 바꾸면 칩이 전부 다시 보입니다(버튼은 남습니다).
+   *   자세한 것은 보고서의 "되돌리는 방법" 을 보세요.
+   * ===================================================================== */
+
+  /** false 로 두면 예전처럼 칩이 전부 보입니다 (되돌리기 스위치) */
+  var ONLY_ON = true;
+
+  /* 아이콘 — ★우리가 그린 것★ 입니다. 트레이딩뷰 것을 가져오지 않았습니다.
+     스프라이트(assets/icons/chart-tools.svg)도 일부러 안 씁니다 — 그건
+     js/chart-drawings.js 가 넣어주는 것이라, 그 파일을 되돌리면 여기 아이콘이
+     조용히 사라집니다. 그래서 이 파일 안에 직접 그립니다. */
+  var ICO_HEAD =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  var ICONS = {
+    eye:
+      ICO_HEAD +
+      '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/>' +
+      '<circle cx="12" cy="12" r="2.6"/></svg>',
+    /* 설정 — 톱니가 아니라 ★조절손잡이(슬라이더)★ 입니다.
+       톱니를 그렸더니 18 크기에서 살이 뭉쳐 ★해 모양★ 으로 보였습니다(실측 캡처).
+       조절손잡이는 같은 크기에서 뜻이 분명합니다. */
+    gear:
+      ICO_HEAD +
+      '<path d="M4 7.5h16M4 12h16M4 16.5h16"/>' +
+      '<circle cx="9" cy="7.5" r="2.1"/><circle cx="15" cy="12" r="2.1"/>' +
+      '<circle cx="8" cy="16.5" r="2.1"/></svg>',
+    trash:
+      ICO_HEAD + '<path d="M4 6.5h16M9.5 6.5V4h5v2.5M6.5 6.5l1 13.5h9l1-13.5"/></svg>'
+  };
+
+  var actsEl = null; /* 버튼 묶음 — 칩 줄 ★바깥★(.chart-wrap)의 자식입니다 */
+  var actsChip = null; /* 지금 어느 칩에 붙어 있나 */
+  var actsPress = null; /* 버튼을 만들 때의 켜짐 상태 — 바뀌면 다시 만듭니다 */
+  var actsHideTimer = 0;
+  var pressWatcher = null;
+
+  /** 마우스를 올릴 수 있는 기기인가 — 트레이딩뷰의 @media (any-hover:hover) 와 같은 판단 */
+  function canHover() {
+    try {
+      if (window.matchMedia) return !!window.matchMedia("(hover: hover)").matches;
+    } catch (e) {
+      /* 못 물어보면 마우스가 있다고 봅니다 — 그래야 데스크톱이 안 바뀝니다 */
+    }
+    return true;
+  }
+
+  /** 칩인가 (접기 버튼·버튼묶음은 칩이 아닙니다) */
+  function chipOf(node) {
+    while (node && node !== document.body) {
+      var c = String(node.className || "");
+      if (c.indexOf("tl-leg-act") !== -1) return null;
+      if (c.indexOf("tl-ind-fold") !== -1) return null;
+      if (c.indexOf("tl-ind-btn") !== -1 || c.indexOf("tl-kit-btn") !== -1) return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  /** 이 칩이 무엇인지 — 틀 지표(kit)인지, 이 파일이 든 거래량(ind)인지 */
+  function chipInfo(chip) {
+    if (!chip || !chip.getAttribute) return null;
+    var kid = chip.getAttribute("data-kit");
+    if (kid) return { who: "kit", id: kid };
+    var ind = chip.getAttribute("data-ind");
+    if (ind) return { who: "ind", id: ind };
+    return null;
+  }
+
+  function makeAct(icon, label, fn) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "tl-leg-act";
+    b.setAttribute("title", label);
+    b.setAttribute("aria-label", label);
+    b.innerHTML = ICONS[icon] || "";
+    b.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      try {
+        fn();
+      } catch (e) {
+        /* 한 버튼이 실패해도 나머지 화면은 그대로 둡니다 */
+      }
+      hideActs();
+    });
+    return b;
+  }
+
+  /** 이 칩에 맞는 버튼을 다시 채웁니다.
+   *  거래량은 ★눈 하나뿐★ 입니다 — 막대를 그리는 것은 js/chart.js 라
+   *  (수정 금지 파일) 설정할 값도 없고 지울 수도 없습니다.
+   *  눌러도 아무 일이 안 일어나는 버튼은 만들지 않습니다. */
+  function fillActs(chip) {
+    if (!actsEl) return false;
+    var info = chipInfo(chip);
+    if (!info) return false;
+    while (actsEl.firstChild) actsEl.removeChild(actsEl.firstChild);
+
+    /* 눈은 ★지금 상태의 반대★ 로 동작합니다.
+       ⚠ 늘 "숨기기" 로 두면 폰에서 막다른 길이 됩니다 — 진짜 터치로 재서
+         찾았습니다(2026-09-04, CDP Input.dispatchTouchEvent, 390).
+         폰은 탭이 토글을 대신하지 않으므로(아래 buildLegendActs) 꺼진
+         거래량 칩을 탭하면 "숨기기" 만 나오고, 눌러도 이미 꺼져 있어
+         ★다시 켤 방법이 없었습니다.★ */
+    if (info.who === "ind") {
+      var indOn = !!(state && state[info.id]);
+      actsEl.appendChild(
+        makeAct("eye", indOn ? "숨기기" : "보이기", function () {
+          setOn(info.id, !indOn);
+        })
+      );
+      return true;
+    }
+
+    var kit = App.ChartIndicatorKit || null;
+    if (!kit) return false;
+    if (typeof kit.setOn === "function") {
+      var kitOn = typeof kit.isOn === "function" ? !!kit.isOn(info.id) : true;
+      actsEl.appendChild(
+        makeAct("eye", kitOn ? "숨기기" : "보이기", function () {
+          kit.setOn(info.id, !kitOn);
+        })
+      );
+    }
+    if (App.ChartIndicatorSettings && typeof App.ChartIndicatorSettings.open === "function") {
+      actsEl.appendChild(
+        makeAct("gear", "설정", function () {
+          App.ChartIndicatorSettings.open(info.id, chip);
+        })
+      );
+    }
+    if (typeof kit.removeInstance === "function") {
+      actsEl.appendChild(
+        makeAct("trash", "지우기", function () {
+          kit.removeInstance(info.id);
+        })
+      );
+    }
+    return !!actsEl.firstChild;
+  }
+
+  /* ── 폰 하단 매수/매도 바 (.tl-order-bar) ────────────────────────────
+   *  ⚠ 이 버튼 묶음은 화면 아래쪽에 놓일 수 있습니다. 칩 줄은 차트 위쪽에
+   *    있지만, 회원이 페이지를 스크롤해 차트 윗부분이 화면 아래로 내려오면
+   *    버튼이 ★고정된 주문 막대 밑★ 으로 들어갑니다.
+   *
+   *  ★오늘(2026-09-04) P1 이 정확히 이 종류였습니다★ — 지표 설정판의
+   *  "확인" 이 매도/숏 위에 얹혀서, 누르면 주문창이 열렸습니다(2f9a196).
+   *  그때 원인이 window.innerHeight 만 보고 .tl-order-bar 를 안 본 것이었습니다.
+   *
+   *  ── 왜 또 적나 (계산이 세 벌이 되는 것 아닌가) ──────────────────────
+   *  js/chart-drawings.js 의 chipFloorY() 와 ★같은 모양★ 입니다. 그 함수는
+   *  밖으로 내주지 않고(모듈 안 지역 함수), tests/chart-popup-floor-census.js 는
+   *  ★파일 안에 .tl-order-bar 를 찾는 코드가 있는지★ 로 보호 여부를 셉니다.
+   *  그래서 빌려 쓰는 것으로는 보호군에 들어가지 못하고, 그 파일을 되돌리면
+   *  여기 바닥이 조용히 사라집니다. 이 프로젝트는 창을 띄우는 모듈이 저마다
+   *  자기 바닥을 갖는 방식입니다(js/chart-indicator-menu.js:423 floorY() 도 같음).
+   *  ⚠ chipFloorY() 를 고치면 ★여기도 같이★ 고치세요.
+   */
+  var ACTS_EDGE = 8;
+
+  function actsFloorY() {
+    var lim = (window.innerHeight ||
+      (document.documentElement && document.documentElement.clientHeight) || 0) - ACTS_EDGE;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return lim;
+    var bar = document.querySelector(".tl-order-bar");
+    if (!bar || !bar.getBoundingClientRect) return lim; /* 1920·768 에는 없습니다 */
+    var cs = null;
+    try {
+      cs = window.getComputedStyle(bar);
+    } catch (e) {
+      cs = null;
+    }
+    if (cs && cs.display === "none") return lim;
+    var r = bar.getBoundingClientRect();
+    if (r.height > 0 && r.top - ACTS_EDGE < lim) lim = r.top - ACTS_EDGE;
+    return lim;
+  }
+
+  /** 칩 옆에 붙입니다. 오른쪽이 모자라면 왼쪽으로, 아래가 모자라면 위로 —
+   *  ★차트 밖으로 나가지 않게★ 잡아 둡니다 (폰에서 특히). */
+  function placeActs(chip) {
+    var wrap = actsEl && actsEl.parentNode;
+    if (!wrap || !chip.getBoundingClientRect || !wrap.getBoundingClientRect) return;
+    var wr = wrap.getBoundingClientRect();
+    var cr = chip.getBoundingClientRect();
+    var aw = actsEl.offsetWidth || 0;
+    var ah = actsEl.offsetHeight || 0;
+    var maxW = wrap.clientWidth || wr.width || 0;
+    var maxH = wrap.clientHeight || wr.height || 0;
+
+    var left = cr.right - wr.left + 4;
+    if (aw && maxW && left + aw > maxW - 2) left = cr.left - wr.left - aw - 4;
+    if (left < 2) left = 2;
+    if (aw && maxW && left + aw > maxW - 2) left = maxW - aw - 2;
+    if (left < 0) left = 0;
+
+    /* ── 세로 — ★화면에 실제로 보이는 띠★ 안에만 놓습니다 ──────────────
+       위끝  = 화면 맨 위 + 8
+       아래끝 = actsFloorY()  (폰 매수/매도 바 윗변 - 8. 위 주석 참고)
+       둘 다 ★화면 기준★ 이라 차트 칸 기준으로 옮겨서 같은 자로 잽니다
+       (js/chart-drawings.js:5991 이 chipFloorY() 를 옮겨 쓰는 것과 같습니다).
+
+       ⚠ 예전에 여기서 ★차트 칸 안★ 으로도 같이 묶었다가 틀렸습니다.
+         차트 칸이 화면보다 훨씬 길어서(360x640 실측 — 차트 y747, 화면 640)
+         "칸 안" 과 "화면 안" 이 서로 다른 답을 내고, 마지막에 있던
+         top<0 -> 0 이 바닥 잡은 것을 도로 풀어 ★바를 160px 침범★ 했습니다
+         (3px 간격 868회 훑어서 찾았습니다). 지금은 ★화면 띠 하나만★ 봅니다. */
+    var visTop = ACTS_EDGE - wr.top;
+    var visBot = actsFloorY() - wr.top;
+    var chipTop = cr.top - wr.top;
+    var chipBot = cr.bottom - wr.top;
+
+    /* 칩 자체가 그 띠 밖이면(스크롤로 화면을 벗어남) ★아예 안 띄웁니다.★
+       칩이 안 보이는데 단추만 떠 있으면 그게 회원이 못 누르는 유령입니다. */
+    if (chipBot <= visTop || chipTop >= visBot) return false;
+
+    var top = chipTop + (cr.height - ah) / 2;
+    if (ah && top + ah > visBot) {
+      /* 아래가 모자라면 ★칩 위★ 로 올립니다.
+         ⚠ 키를 줄이지 않습니다 — 한 줄짜리 단추 띠라 줄이면 손가락으로 못
+           누르는 크기가 됩니다(폰 44x40 은 손가락 하한). 여러 줄짜리 판이면
+           키도 같이 줄여야 합니다 — js/chart-timezone.js 가 그 함정에
+           빠진 적이 있고, 2f9a196 에서 maxHeight 를 같이 안 줄이면 판이
+           안 밀리고 안쪽만 잘린다는 것이 확인됐습니다. */
+      top = chipTop - ah - 4;
+    }
+    if (top < visTop) top = visTop;
+    if (ah && top + ah > visBot) top = visBot - ah;
+    /* 그 자리조차 없으면(띠가 단추보다 얇음) 안 띄웁니다 — 억지로 넣으면
+       반드시 바 밑이나 화면 밖으로 삐져나갑니다. */
+    if (top < visTop - 0.5) return false;
+
+    actsEl.style.left = Math.round(left) + "px";
+    actsEl.style.top = Math.round(top) + "px";
+    return true;
+  }
+
+  function showActs(chip) {
+    if (!actsEl || !chip) return;
+    if (actsHideTimer) {
+      clearTimeout(actsHideTimer);
+      actsHideTimer = 0;
+    }
+    /* 마우스를 칩 위에서 움직이면 mouseover 가 여러 번 옵니다.
+       같은 칩이고 켜짐 상태도 그대로면 다시 만들지 않습니다 —
+       버튼을 매번 새로 만들면 깜빡이고, 누르려던 버튼이 사라집니다. */
+    var press = chip.getAttribute ? chip.getAttribute("aria-pressed") : null;
+    if (actsChip === chip && actsPress === press && actsEl.className.indexOf("tl-leg-open") !== -1) {
+      return;
+    }
+    if (!fillActs(chip)) {
+      hideActs();
+      return;
+    }
+    actsPress = press;
+    actsChip = chip;
+    actsEl.className = "tl-leg-acts tl-leg-open";
+    /* 자리를 못 잡으면(칩이 화면 밖이거나 띠가 너무 얇음) 다시 감춥니다 */
+    if (!placeActs(chip)) hideActs();
+  }
+
+  function hideActs() {
+    if (actsHideTimer) {
+      clearTimeout(actsHideTimer);
+      actsHideTimer = 0;
+    }
+    actsChip = null;
+    actsPress = null;
+    if (actsEl) actsEl.className = "tl-leg-acts";
+  }
+
+  function hideActsSoon() {
+    if (actsHideTimer) clearTimeout(actsHideTimer);
+    /* 칩에서 버튼으로 마우스가 건너갈 시간(4px 틈)을 줍니다 */
+    actsHideTimer = setTimeout(hideActs, 180);
+  }
+
+  /** 켠 것만 보이게 — ★반드시 버튼을 만든 뒤에★ 부릅니다 */
+  /** ⚠ ★class 가 아니라 data 속성★ 을 씁니다.
+   *  이 막대의 class 는 늘 "tl-ind-bar"(또는 +" tl-ind-folded") 하나여야 합니다 —
+   *  setFoldedClass 가 className 을 통째로 새로 쓰고(위), 테스트 하네스도
+   *  className 을 ★글자 그대로 비교★ 합니다(tests/_kit-harness.js:81,
+   *  tests/chart-indicators.test.js:458). 여기에 class 를 하나 더 붙였더니
+   *  가짜 DOM 이 막대를 못 찾아 버튼이 5개 -> 0개로 읽혔습니다(실측).
+   *  data 속성은 className 을 건드리지 않아 둘 다 안전합니다. */
+  function applyOnlyOn() {
+    if (!buttonsEl || !buttonsEl.setAttribute) return;
+    if (ONLY_ON) buttonsEl.setAttribute("data-onlyon", "1");
+    else if (buttonsEl.removeAttribute) buttonsEl.removeAttribute("data-onlyon");
+  }
+
+  /** ⚠ 이 함수가 실패해도 ★칩 줄은 반드시 살아 있어야 합니다.★
+   *  buildButtons() 의 맨 끝에서 불리는데, 여기서 예외가 나면 칩 줄 자체가
+   *  안 만들어집니다(테스트 하네스의 가짜 DOM 에서 실제로 그랬습니다 —
+   *  addEventListener 가 없는 흉내 요소라 터졌고, 버튼 5개가 0개가 됐습니다).
+   *  그래서 통째로 감싸고, 없는 기능은 건너뜁니다. */
+  function buildLegendActs() {
+    if (actsEl || !buttonsEl) return;
+    var wrap = buttonsEl.parentNode;
+    if (!wrap) return;
+    if (!document.createElement || !buttonsEl.addEventListener) {
+      /* 버튼은 못 만들지만 ★켠 것만 보이기★ 는 CSS 라 그대로 걸어 둡니다 */
+      applyOnlyOn();
+      return;
+    }
+    try {
+      buildLegendActsInner(wrap);
+    } catch (e) {
+      /* 버튼을 못 붙여도 칩 줄과 접기는 그대로 씁니다 */
+      applyOnlyOn();
+    }
+  }
+
+  function buildLegendActsInner(wrap) {
+
+    actsEl = document.createElement("div");
+    actsEl.className = "tl-leg-acts";
+    actsEl.setAttribute("aria-label", "지표 다루기");
+    wrap.appendChild(actsEl);
+
+    if (canHover()) {
+      buttonsEl.addEventListener("mouseover", function (ev) {
+        var chip = chipOf(ev.target);
+        if (chip) showActs(chip);
+      });
+      buttonsEl.addEventListener("mouseout", function (ev) {
+        if (chipOf(ev.relatedTarget)) return;
+        hideActsSoon();
+      });
+      actsEl.addEventListener("mouseover", function () {
+        if (actsHideTimer) {
+          clearTimeout(actsHideTimer);
+          actsHideTimer = 0;
+        }
+      });
+      actsEl.addEventListener("mouseout", hideActsSoon);
+    } else {
+      /* ★폰★ — 탭하면 버튼이 뜹니다. 잡기(capture) 단계에서 멈춰야
+         칩 자신의 클릭(=토글)이 같이 일어나지 않습니다. */
+      buttonsEl.addEventListener(
+        "click",
+        function (ev) {
+          var chip = chipOf(ev.target);
+          if (!chip) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (actsChip === chip) hideActs();
+          else showActs(chip);
+        },
+        true
+      );
+      document.addEventListener("click", function (ev) {
+        if (!actsChip) return;
+        var n = ev.target;
+        while (n && n !== document.body) {
+          if (n === actsEl || n === actsChip) return;
+          n = n.parentNode;
+        }
+        hideActs();
+      });
+    }
+
+    if (window.addEventListener) {
+      window.addEventListener("resize", hideActs);
+      window.addEventListener("scroll", hideActs, true);
+    }
+
+    /* ① 버튼을 만든 뒤 ② 감춥니다. ★이 순서를 바꾸지 마세요.★ */
+    applyOnlyOn();
+    watchPressed();
+    refreshFold();
+  }
+
+  /** 켜짐/꺼짐이 바뀌면 칩이 나타나거나 사라집니다 — 줄 높이가 달라지므로
+   *  접기 판단을 다시 하고, 사라진 칩에 붙어 있던 버튼 묶음은 치웁니다.
+   *  ⚠ 켠 것만 보이기는 data 속성이라 className 을 새로 써도 안 지워집니다.
+  function watchPressed() {
+    if (pressWatcher || typeof MutationObserver === "undefined" || !buttonsEl) return;
+    pressWatcher = new MutationObserver(function () {
+      if (isHiddenChip(actsChip)) hideActs();
+      refreshFold();
+      applyOnlyOn();
+    });
+    pressWatcher.observe(buttonsEl, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ["aria-pressed"]
+    });
   }
 
   /* =====================================================================
@@ -915,6 +1414,22 @@ App.ChartIndicators = (function () {
     buildFoldForTest: buildFold,
     refreshFoldForTest: refreshFold,
     buildButtonsForTest: buildButtons,
+    /* 13) 이름표 행동 버튼 — 확인용 */
+    ONLY_ON_FOR_TEST: ONLY_ON,
+    buildLegendActsForTest: buildLegendActs,
+    showActsForTest: showActs,
+    hideActsForTest: hideActs,
+    chipOfForTest: chipOf,
+    fillActsForTest: fillActs,
+    canHoverForTest: canHover,
+    applyOnlyOnForTest: applyOnlyOn,
+    chipCountForTest: chipCount,
+    isHiddenChipForTest: isHiddenChip,
+    actsFloorYForTest: actsFloorY,
+    placeActsForTest: placeActs,
+    getActsElForTest: function () {
+      return actsEl;
+    },
     FOLD_LINE1_FOR_TEST: FOLD_LINE1,
     FOLD_LINE2_FOR_TEST: FOLD_LINE2,
     COLORS: COLORS,
