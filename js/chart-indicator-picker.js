@@ -44,6 +44,49 @@
  * ⚠️ ★색은 트레이딩뷰를 안 베낍니다.★ 확정 팔레트만 씁니다.
  * ⚠️ ★아이콘도 안 가져옵니다.★ 전부 이 파일 안에서 직접 그린 svg 입니다.
  *
+ * -- ★2026-09-03 손질★ 디자인팀 실측이 제작 뒤에 도착해서 반영한 것 ----
+ *
+ *  (1) ★뒤 배경 어둡게 하기(딤)를 없앴습니다★ — 트레이딩뷰는 딤을 안 씁니다.
+ *      디자인팀 근거 둘 — 창 바깥 캔들이 트레이딩뷰 기본색 #089981 / #F23645
+ *      그대로 나오고(초록 G=153 이 그대로면 α=0), DOM 에 덮개 요소가 없습니다.
+ *      우리는 rgba(10,15,28,.72) 였고 지금은 transparent 입니다.
+ *      ⚠️ ★덮개 요소 자체는 남깁니다.★ "바깥을 누르면 닫힘" 을 그것이 잡고
+ *         있고, 트레이딩뷰도 바깥 클릭으로 닫힙니다(디자인팀 실측 확인).
+ *         덮개를 지우면 그 동작이 같이 사라집니다.
+ *
+ *  (2) 창 크기 — ★1020 x 775 를 그대로 둡니다.★ 디자인팀 안(940 x 700)과
+ *      나란히 열어 재고 정했습니다. 근거는 눈대중이 아니라 아래 숫자입니다.
+ *
+ *        글씨 배율     우리 18px / 트레이딩뷰 14px = ★1.286배★
+ *        보이는 줄 수  트레이딩뷰 15줄 · 1020x775 ★13.9줄★ · 940x700 12.1줄
+ *                      (목록 칸 실측 558px / 줄 40px. 940 이면 483px)
+ *        가운데 칸 폭  트레이딩뷰 610 · 1020 이면 ★714(1.17배)★ · 940 이면 636(1.04배)
+ *
+ *      글씨를 1.286배 키워 놓고 칸을 1.04배만 주면 트레이딩뷰보다 ★더 빡빡★ 합니다.
+ *      940 도 글자가 잘리지는 않습니다(가장 긴 줄 실측 469px < 636). 다만 줄 수가
+ *      두 줄 줄고, 3단계에서 지표가 24 -> 31개로 늘면 그 두 줄이 더 아깝습니다.
+ *      1440 화면에서 1020 이면 좌우 210px 씩 남습니다 — 좁지 않습니다.
+ *
+ *  (3) 모서리 — ★10px.★ 트레이딩뷰는 12px 인데 우리 규칙이 "표준 10 · 상한 12"
+ *      라 표준값을 씁니다. 확인만 하고 안 바꿨습니다.
+ *
+ *  (4) ★창을 열면 검색칸에 커서가 갑니다★ (트레이딩뷰와 같습니다).
+ *      단 ★768 이상에서만★ 입니다. 폰에서 키보드가 올라오면 목록이 몇 줄 안 남습니다.
+ *
+ *  (5) ★검색 하이라이트 — 색 없이 굵기(600)만★ 씁니다. 트레이딩뷰는 파랑으로
+ *      칠하는데 확정 팔레트에 파랑이 없습니다. 색을 안 늘리는 쪽을 골랐습니다.
+ *
+ *  (6) ★검색은 왼쪽 분류를 무시하고 전체를 뒤집니다★ (트레이딩뷰 실측).
+ *      검색 중에는 왼쪽 선택 표시가 해제되고, 분류를 다시 누르면 검색어가 비워집니다.
+ *      고치기 전에는 "즐겨찾기" 를 고른 채로는 즐겨찾기 안에서만 찾았습니다.
+ *
+ *  (7) 폰(<=760)은 ★왼쪽 줄을 가로 칩으로 눕히는 지금 방식을 그대로★ 둡니다.
+ *      트레이딩뷰는 전체화면 + 두 단계 드릴다운(분류 목록 -> 지표 목록)인데,
+ *      트레이딩뷰는 왼쪽 줄이 ★8칸★ 이고 우리는 ★2칸★ 입니다.
+ *      2칸짜리 목록을 한 화면 통째로 쓰는 것은 탭을 한 번 더 받는 값을 못 합니다.
+ *      칩 두 개는 360 폭에서 한 줄에 다 들어갑니다(실측). 칸이 5개를 넘어
+ *      한 줄에 안 들어가는 날이 오면 그때 드릴다운으로 바꿉니다.
+ *
  * -- 아직 안 만든 것 (PM 을 거쳐 대표 판단 대기) -----------------------
  * 트레이딩뷰 왼쪽 줄에는 이것도 있습니다 —
  *     내 스크립트 · 구매됨 · 에디터즈 픽 · 탑 · 트렌드 · 시장
@@ -190,7 +233,7 @@ App.ChartIndicatorPicker = (function () {
     var css = [
       "#" + WRAP_ID + "{position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;",
       "  display:flex;align-items:flex-start;justify-content:center;",
-      "  background:rgba(10,15,28,.72);}",
+      "  background:transparent;}",
       "#" + WRAP_ID + ".tl-ipick-off{display:none;}",
 
       ".tl-ipick{display:flex;flex-direction:column;box-sizing:border-box;",
@@ -243,11 +286,16 @@ App.ChartIndicatorPicker = (function () {
       ".tl-ipick-star:hover{color:" + C_MUTED + ";}",
       ".tl-ipick-star[aria-pressed=true]{color:" + C_POINT + ";}",
       ".tl-ipick-star[aria-pressed=true] svg{fill:" + C_POINT + ";}",
-      ".tl-ipick-nm{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
-      ".tl-ipick-note{flex:0 1 auto;color:" + C_MUTED + ";font-size:17px;",
+      /* 이름은 ★안 줄입니다★ — 좁아지면 설명(note)이 먼저 줄어듭니다.
+         768 실측에서 "Ichimoku Cloud" 가 133>120 으로 잘렸습니다. 이름이 잘리면
+         무슨 지표인지 알 수 없고, 설명은 잘려도 이름으로 알 수 있습니다. */
+      ".tl-ipick-nm{flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
+      ".tl-ipick-note{flex:0 1 auto;min-width:0;color:" + C_MUTED + ";font-size:17px;",
       "  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
       ".tl-ipick-on{flex:0 0 auto;margin-left:auto;color:" + C_POINT + ";font-size:17px;",
       "  font-weight:700;}",
+
+      ".tl-ipick-hit{font-weight:600;}",
 
       ".tl-ipick-empty{padding:24px 8px;color:" + C_MUTED + ";font-size:18px;line-height:1.6;}",
 
@@ -294,13 +342,21 @@ App.ChartIndicatorPicker = (function () {
     return hay.indexOf(q) >= 0;
   }
 
+  /** 검색어가 있으면 ★왼쪽 분류를 무시하고 전체★ 를 뒤집니다.
+   *  트레이딩뷰 실측(2026-09-03) — 왼쪽에서 "즐겨찾기" 를 고른 채 검색어를 넣으면
+   *  즐겨찾기 밖 항목도 나오고, 왼쪽의 선택 표시가 ★해제★ 됩니다. */
+  function searching() {
+    return query.trim().length > 0;
+  }
+
   function visibleRows() {
     var q = query.trim().toLowerCase();
     var all = defs();
     var out = [];
+    var wide = searching();
     for (var i = 0; i < all.length; i++) {
       var d = all[i];
-      if (section === "favs" && !favs[d.id]) continue;
+      if (!wide && section === "favs" && !favs[d.id]) continue;
       if (!matches(d, q)) continue;
       out.push(d);
     }
@@ -342,6 +398,7 @@ App.ChartIndicatorPicker = (function () {
     var inp = wrap.querySelector(".tl-ipick-search input");
     inp.addEventListener("input", function () {
       query = inp.value || "";
+      paintRail();
       paintList();
     });
     window.addEventListener("resize", function () {
@@ -366,13 +423,18 @@ App.ChartIndicatorPicker = (function () {
         lastG = it.g;
       }
       html += '<button type="button" class="tl-ipick-nav" data-sec="' + it.key +
-        '" aria-selected="' + (section === it.key) + '"><i>' + it.icon + "</i>" +
+        '" aria-selected="' + (!searching() && section === it.key) + '"><i>' + it.icon + "</i>" +
         "<span>" + it.label + "</span></button>";
     });
     rail.innerHTML = html;
     rail.querySelectorAll(".tl-ipick-nav").forEach(function (b) {
       b.addEventListener("click", function () {
         section = b.getAttribute("data-sec");
+        /* 분류를 고르면 검색어를 비웁니다 — 안 비우면 방금 해제한 선택 표시가
+           그대로 꺼져 있어 "눌렀는데 아무 일도 안 난" 것처럼 보입니다 */
+        query = "";
+        var inp = wrap.querySelector(".tl-ipick-search input");
+        if (inp) inp.value = "";
         paintRail();
         paintList();
       });
@@ -399,9 +461,28 @@ App.ChartIndicatorPicker = (function () {
     });
   }
 
+  /** 맞은 글자를 ★굵기(600)로만★ 표시합니다.
+   *
+   *  트레이딩뷰는 맞은 글자를 파랑(#2962FF)으로 칠하는데 우리 확정 팔레트에
+   *  파랑이 없습니다. 색을 새로 만드는 대신 굵기만 씁니다 — 디자인팀 추천이고
+   *  PM 이 동의한 안입니다(2026-09-03). 줄 글씨는 400 이라 600 이면 눈에 띕니다.
+   *
+   *  ⚠️ ★먼저 자르고 그 다음에 escape★ 합니다. 반대로 하면 "&amp;" 같은 글자
+   *     가운데를 잘라 태그가 깨집니다. */
+  function mark(text, q) {
+    var t = String(text == null ? "" : text);
+    if (!q) return esc(t);
+    var i = t.toLowerCase().indexOf(q);
+    if (i < 0) return esc(t);
+    return esc(t.slice(0, i)) +
+      '<b class="tl-ipick-hit">' + esc(t.slice(i, i + q.length)) + "</b>" +
+      esc(t.slice(i + q.length));
+  }
+
   function paintList() {
     var list = wrap.querySelector(".tl-ipick-list");
     var rows = visibleRows();
+    var q = query.trim().toLowerCase();
     if (!rows.length) {
       list.innerHTML = '<div class="tl-ipick-empty">' +
         (section === "favs"
@@ -415,8 +496,8 @@ App.ChartIndicatorPicker = (function () {
       html += '<div class="tl-ipick-row" data-def="' + esc(d.id) + '" role="button" tabindex="0">' +
         '<button type="button" class="tl-ipick-star" data-fav="' + esc(d.id) + '" ' +
           'aria-pressed="' + (favs[d.id] ? "true" : "false") + '" aria-label="즐겨찾기">' + IC_STAR + "</button>" +
-        '<span class="tl-ipick-nm">' + esc(d.name) + "</span>" +
-        (d.note ? '<span class="tl-ipick-note">' + esc(d.note) + "</span>" : "") +
+        '<span class="tl-ipick-nm">' + mark(d.name, q) + "</span>" +
+        (d.note ? '<span class="tl-ipick-note">' + mark(d.note, q) + "</span>" : "") +
         (n ? '<span class="tl-ipick-on">켜짐 ' + n + "</span>" : "") +
         "</div>";
     });
@@ -467,7 +548,14 @@ App.ChartIndicatorPicker = (function () {
     var inp = wrap.querySelector(".tl-ipick-search input");
     if (inp) {
       inp.value = query;
-      try { inp.focus(); } catch (e) {}
+      /* 트레이딩뷰는 창을 열면 검색칸에 커서가 갑니다(실측).
+         ★단 768 미만에서는 안 합니다★ — 폰에서 화면 절반을 키보드가 덮어
+         정작 지표 목록이 몇 줄 안 보입니다. */
+      if (vpW() >= 768) {
+        try { inp.focus(); } catch (e) {}
+      } else {
+        try { inp.blur(); } catch (e) {}
+      }
     }
   }
 
