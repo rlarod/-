@@ -761,3 +761,12 @@ tests/chart-draw-chip-font-floor.test.js
 #   ★글씨로 풀지 않았습니다★ — 17px 그대로 두고 상자에 오른쪽 끝을 줬습니다.
 # 되돌리기: 이 줄과 tests/chart-pane-label-fit.test.js 삭제
 tests/chart-pane-label-fit.test.js
+
+
+# 2026-09-04 기록팀 — font-size 단위 판정기(tests/_font-size.js)의 단 하나의 출처 봉인.
+#   글씨 바닥값 봉인 9개가 전부 /font-size:\s*(\d+)px/ 로 ★px 라고 적힌 것만★ 셌습니다.
+#   1.0625rem · 1em · 120% · 4vw · clamp(11px,2vw,17px) 로 적으면 통째로 빠져나갑니다.
+#   실측 — .tl-kit-btn 사본에 clamp(11px,2vw,17px) 를 끼웠더니 옛 검사가 옆 규칙의
+#   17px 을 대신 읽어 그대로 초록이었습니다(대표가 글씨 크기로 네 번 지적하신 자리).
+# 되돌리기: 이 줄과 tests/font-size-unit-source.test.js 삭제
+tests/font-size-unit-source.test.js

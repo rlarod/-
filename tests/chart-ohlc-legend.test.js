@@ -53,6 +53,7 @@ const SRC = fs.readFileSync(path.join(REPO, MOD), "utf8");
 const CODE = SRC.replace(/[/][*][^]*?[*][/]/g, "");
 const HTML = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
 const L = require("./_locked-hashes.js");
+const 글씨단위 = require("./_font-size.js");
 
 const ESC = String.fromCharCode(27);
 const MARK_OK = ESC + "[32m" + "✓" + ESC + "[0m";
@@ -445,6 +446,50 @@ console.log("\n십자선 O·H·L·C 범례 (js/chart-ohlc-legend.js)");
     "등록 안 하면 npm test 가 안 돌립니다");
   const 나 = fs.readFileSync(__filename, "utf8");
   ok("되돌리는 방법이 이 파일에 적혀 있다", 나.indexOf("되돌리는 방법") >= 0);
+}
+
+
+/* ===================================================================== */
+절("[9] ★px 말고 다른 단위로 우회하지 않았는가★");
+{
+/* ⚠️ 2026-09-04 기록팀 — ★이 파일의 글씨 검사들이 px 라고 적힌 것만 셌습니다.★
+     1.0625rem(=17px) · 1em · 120% · 13pt · 4vw · calc() · clamp() 로 적으면
+     바닥값 검사를 통째로 빠져나갑니다. 대표가 글씨 크기로 네 번 지적하신 자리입니다.
+
+     ★실측 (2026-09-04, 사본에서 · 진짜 파일은 안 건드렸습니다)★
+       js/chart-indicator-kit.js 사본의 .tl-kit-btn 맨 앞에
+           font-size:clamp(11px, 2vw, 17px)   ← 360 에서는 11px 로 그려집니다
+       를 끼웠더니, 옛 검사는 ★옆 규칙의 17px 을 대신 읽어★ "17px" 이라 보고하고
+       그대로 초록이었습니다. 0.6875rem(=11px) 도 똑같이 17 로 읽혔습니다.
+       17px 미만 개수 검사도 원본 0 · clamp 사본 0 · rem 사본 0 으로 같았습니다.
+
+     ★환산이 아니라 "px 로만 적어라" 로 못 박은 이유★ — rem·em·%·vw·ch·clamp 는
+     화면·부모·글꼴·회원 브라우저 설정에 따라 달라져 정적으로 px 을 못 냅니다.
+     우리 규칙은 ★가장 좁은 360 에서도 17px★ 이라, 좁아지면 작아지는 표기는
+     애초에 쓰면 안 되는 것입니다. 자세한 근거는 tests/_font-size.js 머리말.
+
+     판정은 tests/_font-size.js 한 곳에만 있습니다. 아래 자체검증 줄을 같이 두어,
+     그 한 곳을 헐겁게 고쳐 봉인 9개를 한꺼번에 눈멀게 하는 것을 막습니다. */
+  const 검 = 글씨단위.자체검증();
+  ok("단위 판정기가 표본 " + 검.표본수 + "개를 다 맞춘다 (tests/_font-size.js)",
+    검.전부통과, 검.설명);
+
+  /* [6] 이 실제로 넣은 <style> 에서 크기를 읽어 17px 바닥을 봅니다.
+     ⚠️ 거기 정규식은 px 만 셉니다 — clamp 로 적으면 ★그 선언이 없는 것★ 이 되어
+        다른 규칙 값만으로 "가장 작은 글씨 17px" 이 되고 그대로 초록입니다.
+     그래서 소스와 ★실제로 넣은 <style>★ 을 둘 다 단위로 봅니다. */
+  const 위반S = 글씨단위.단위위반(SRC);
+  ok("chart-ohlc-legend.js 의 font-size 를 px 로만 적었다",
+    위반S.length === 0, 글씨단위.요약(위반S));
+  const tU = 띄우기();
+  const 스타일U = tU.win.document.getElementById(tU.M.STYLE_ID);
+  const cssU = 스타일U ? 스타일U.textContent : "";
+  const 선언수U = 글씨단위.선언들(cssU).length;
+  ok("실제로 넣은 <style> 에서 font-size 선언을 하나 이상 읽었다 (" + 선언수U + "개)",
+    선언수U >= 1, "스타일이 안 들어갔습니다");
+  const 위반C = 글씨단위.단위위반(cssU);
+  ok("실제로 넣은 <style> 도 px 로만 적혀 있다", 위반C.length === 0, 글씨단위.요약(위반C));
+  tU.닫기();
 }
 
 console.log("\n  통과 " + pass + " / 실패 " + fail);
