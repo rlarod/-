@@ -20,6 +20,9 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { boot, REPO } = require("./harness");
+/* font-weight 값을 판정하는 단 하나의 출처 (2026-09-07 · tests/_font-weight.js).
+   정규식을 여기 베끼지 마세요 — 베끼면 반드시 한 곳이 낡습니다. */
+const 굵기 = require("./_font-weight.js");
 
 let pass = 0;
 let fail = 0;
@@ -981,10 +984,41 @@ section("[9] 개미톡식 숫자 표기 / 크기 회귀");
     ok(/sans-serif/.test(chain[chain.length - 1]), "마지막 폴백은 sans-serif 여야 함");
   });
 
-  t("과도한 볼드 금지 — 주문창에 font-weight:800 이상 없음", () => {
+  /* ── 2026-09-07 갱신 — 글자 모양 검사를 ★값 판정★ 으로 바꿨습니다 ────────
+     원래 이 한 줄이었습니다.
+         ok(!/font-weight:(800|900)/.test(block), "800/900 굵기는 쓰지 않음");
+     ★적어 둔 글자 모양 두 개만★ 봅니다. 2026-09-07 실측 — 주문창 블록 사본
+     맨 앞에 넣어 보니 다섯 중 ★넷이 그냥 통과★ 였습니다.
+         font-weight: 800    (공백 하나)  옛 ★통과★ / 새 잡음
+         font-weight:bolder               옛 ★통과★ / 새 잡음
+         font-weight:850     (가변 글꼴)  옛 ★통과★ / 새 잡음
+         FONT-WEIGHT:900     (대문자)     옛 ★통과★ / 새 잡음
+         font-weight:800                  옛 잡음    / 새 잡음
+     반대 방향 구멍도 있었습니다 — 이 블록은 주석으로 잘라낸 구간이라 주석이
+     통째로 들어 있는데, 옛 정규식은 ★주석 산문까지★ 값으로 읽었습니다.
+     실제로 style.css 1629행 주석 안에 죽은 규칙이 인용돼 있습니다
+     (font-weight:500). 판정기는 주석을 떼고 세어 33개로 읽습니다(옛 34개).
+
+     색·글씨 때와 같은 방식입니다 — 정규식을 늘리지 않고 ★값을 판정★ 합니다.
+     상한(700)은 여기 정책이고, "이 값이 몇 굵기인가" 는 판정기가 답합니다.
+     bolder·lighter 를 왜 환산하지 않고 막는지는 tests/_font-weight.js 머리말 참조.
+     되돌리기: 이 검사 셋을 지우고 위 한 줄로 되돌리면 됩니다. */
+  t("과도한 볼드 금지 — 주문창 굵기가 700 을 넘지 않음", () => {
     const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
     const block = orderPanelBlock(css);
-    ok(!/font-weight:(800|900)/.test(block), "800/900 굵기는 쓰지 않음");
+
+    /* ★판정기가 헐거워지면 여기가 먼저 빨개집니다.★
+       이 줄이 없으면 _font-weight.js 한 곳만 고쳐서 검사를 무력화할 수 있습니다. */
+    const 검 = 굵기.자체검증();
+    ok(검.전부통과, "굵기 판정기가 표본 " + 검.표본수 + "개를 못 맞춤: " + 검.설명);
+
+    const 넘음 = 굵기.넘는것(block, 700);
+    ok(넘음.length === 0, "700 을 넘는 굵기: " + 굵기.요약(넘음));
+
+    /* 숫자로 확정 못 하는 표기(bolder·var()·inherit …)는 상한을 잴 수가 없습니다.
+       "몇인지 모르는 값" 을 통과시키면 상한 검사가 뚫린 것과 같습니다. */
+    const 모름 = 굵기.못판정(block);
+    ok(모름.length === 0, "굵기를 숫자로 확정할 수 없는 표기: " + 굵기.요약(모름));
   });
 
   // 전체 크기는 앞으로도 일괄 조정될 수 있으므로, 절대 px가 아니라

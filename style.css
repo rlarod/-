@@ -481,7 +481,14 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
   .chip{padding:9px 0;} /* 터치 타겟을 조금 더 키움(6px→9px) */
   /* 배너 글씨를 키운 뒤라, 좁은 화면에서 5개 탭+로고+로그인상태가 한 줄에
      안 들어가서 줄바꿈되는데, 이때 버튼 크기를 살짝 줄여서 덜 답답하게 함 */
-  .top-banner-nav-btn{padding:8.5px 10px;font-size:13.5px;}
+  /* ★2026-09-07 — 13.5px → 15px (글자 크기 역전 해소)
+     360px 폰은 4884행 @media(max-width:400px) 가 15px 인데, 401~700px 구간은
+     여기 13.5px 이 남아 ★더 큰 폰이 더 작은 글씨★ 였습니다(412 폰에서 확인).
+     실측 401px: 총폭 383.7 / 담는칸 393 → 여유 9.3px (360 의 여유 2.3px 보다 넉넉)
+     401~520 구간은 폭이 빠듯해서 아래 3512행 블록이 메뉴 사이 간격(gap)만
+     2px → 0 으로 줄여 10px 을 벌어 줍니다. 여백·글자는 그대로입니다.
+     되돌리기: 15px 을 13.5px 으로 되돌리고, 3512행 gap 블록을 지우면 됩니다. */
+  .top-banner-nav-btn{padding:8.5px 10px;font-size:15px;}
   .brand .name{font-size:29px;}
   .auth-user-badge{font-size:13px;gap:6px;margin-right:0;}
   .ws-status{font-size:12px;}
@@ -3490,6 +3497,20 @@ html[data-theme="dark"] .menu-bar-inner::after{
      7px 으로 줄이면 402px 에서도 다 들어갑니다(측정 후 여유 약 29px).
      되돌리기: 7px 을 10px 으로 되돌리면 됩니다. */
   .top-banner-nav-btn{padding-left:7px;padding-right:7px;}
+}
+/* 401~520px — 상단 메뉴 글자를 15px 로 올리면서 폭을 되찾는 자리 (2026-09-07)
+   491행에서 이 구간 글자를 13.5px → 15px 로 올렸습니다(역전 해소).
+   15px 은 401px 에서 총폭 393.7 인데 담는칸이 393 이라 0.7px 넘칩니다.
+   ★여백을 줄이지 않고 메뉴 사이 간격(gap)만 2px → 0 으로 없애 10px 을 법니다.★
+   좌우 여백 7px 은 그대로라 이웃한 메뉴 글자 사이는 7+0+7 = 14px 입니다
+   (400px 이하 구간의 8px 보다 넓습니다. 붙어 보이지 않습니다).
+   ⚠️ 400px 이하는 제외합니다 — 거기는 좌우 여백이 3px 이라 gap 을 없애면
+      글자 사이가 6px 이 되어 붙어 보입니다(가독성 바닥 8px).
+   실측 여유 — 401:9.3 / 402:10.3 / 412:20.3 / 430:38.3 / 520:128.3
+   되돌리기: 이 @media 블록 하나를 통째로 지우고 491행 15px 을 13.5px 으로
+             되돌리면 2026-09-07 이전으로 정확히 돌아갑니다. */
+@media (min-width:401px) and (max-width:520px){
+  .top-banner-nav{gap:0px;}
 }
 
 /* ===== 좁은 화면 — 핫딜/마켓 탭 줄바꿈 =====

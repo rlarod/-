@@ -785,3 +785,17 @@ tests/font-size-unit-source.test.js
 #   이 봉인이 정말 빨개지는지도 같이 확인합니다.
 # 되돌리기: 이 줄과 tests/chart-indicator-room.test.js 삭제
 tests/chart-indicator-room.test.js
+
+# 2026-09-07 기록팀 — font-weight 굵기 판정기(tests/_font-weight.js)의 단 하나의 출처 봉인.
+#   주문창 "과도한 볼드 금지" 가 /font-weight:(800|900)/ 한 줄이라 ★글자 모양 두 개만★
+#   봤습니다. 실측 — `font-weight: 800`(공백 하나) · bolder · 850 · 대문자 · 콜론 앞 공백이
+#   ★다섯 다 그냥 통과★ 였습니다. 반대로 주석 산문의 굵기까지 값으로 읽어 거짓 실패도
+#   낼 수 있었습니다(style.css 1629행 주석에 죽은 규칙이 인용돼 있습니다).
+#   색·글씨 때와 같은 방식으로 정규식을 늘리지 않고 ★값을 판정★ 합니다.
+#   bolder·lighter 는 부모 대비 상대값이라 환산이 원리상 안 돼 "쓰지 마라" 로 막았습니다
+#   (_font-size.js 가 rem·em 을 그렇게 처리한 것과 같은 판단. 지금 쓰는 곳 0곳).
+# 되돌리기: 이 줄과 tests/font-weight-value-source.test.js · tests/_font-weight.js 를
+#           git rm -f 로 삭제 (rm 이 아닙니다 — git 에 남으면 위생 봉인이 터집니다).
+#           tests-dir-hygiene 도우미목록의 "_font-weight.js" 줄과 상한 10 → 9,
+#           order-panel.test.js 의 "과도한 볼드 금지" 를 옛 한 줄로 되돌립니다.
+tests/font-weight-value-source.test.js
