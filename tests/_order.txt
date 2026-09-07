@@ -799,6 +799,16 @@ tests/chart-indicator-room.test.js
 #           tests-dir-hygiene 도우미목록의 "_font-weight.js" 줄과 상한 10 → 9,
 #           order-panel.test.js 의 "과도한 볼드 금지" 를 옛 한 줄로 되돌립니다.
 tests/font-weight-value-source.test.js
+# 차트 맨 윗줄 한 줄로 합치기 (3단계 · 차트팀 2026-09-07).
+#   시간 단위 줄(#interval-row)과 도구 막대(.tlc-toolbar)가 따로 두 줄이던 것을
+#   .tlc-toprow 안에서 한 줄로 합쳤습니다. 넘치면 두 줄이 아니라 옆으로 밉니다
+#   (트레이딩뷰 실측 — 390 에서도 h38 한 줄 + 가로 스크롤).
+#   실측 — 폰(360/375/390) 머리 184px -> 44px · 390 첫 화면 캔들 띠 72px -> 213px.
+#   전체화면일 때만 막대를 차트 카드 안으로 되돌립니다(.chart-panel 이 전체화면 요소).
+# 되돌리기: 이 줄과 tests/chart-toprow-seal.test.js 를 git rm -f 로 삭제
+#           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
+tests/chart-toprow-seal.test.js
+
 # 2026-09-07 기록팀 — 차트 위 절대배치 상자에 ★오른쪽 끝★ 이 있는지 ★패턴으로 훑습니다★.
 #   2026-09-03 에 tests/chart-pane-label-fit.test.js 로 같은 병을 봉인했는데,
 #   그 봉인이 ★파일 두 개를 이름으로 적어 둔 명단★ 이었습니다(그 파일 71-72·90-93줄).

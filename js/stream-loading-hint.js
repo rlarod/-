@@ -279,9 +279,39 @@ App.StreamLoadingHint = (function () {
     var lineH = last ? last.height : rr.height;
     var freeFrom = last ? last.right + 10 : rr.left;
 
+    /* ★2026-09-07 차트팀 — 봉 간격 줄이 도구 막대 안으로 들어갔습니다.
+       그 줄은 이제 ★자기 글자 폭만큼만★ 넓습니다(1440 실측 1424 -> 526px).
+       예전 계산은 "줄 오른쪽의 빈 자리" 를 썼는데 그 빈 자리가 없어졌습니다.
+       그대로 두면 칩이 시간 단위 단추 위에 겹쳐 앉습니다.
+
+       그래서 자리를 ★합친 막대의 빈 칸(.tlc-spacer)★ 으로 잡습니다 —
+       전체화면·카메라 단추를 오른쪽 끝으로 미느라 비워 둔 그 칸입니다.
+         1440 실측 — 빈 칸 x536~1240 (704px). 칩(약 150px)이 넉넉히 듭니다.
+       빈 칸이 칩보다 좁으면(폰·768) 예전 규칙 그대로 줄 오른쪽 끝에 맞춥니다.
+       ⚠ 세로(줄의 띠 안)는 한 글자도 안 바꿨습니다 — 칩이 차트 위로 올라가는
+         일이 없어야 합니다(tests/stream-loading-hint-seal.test.js [1]).
+       도구 막대가 아예 없으면(jsdom·차트가 안 뜬 화면) 아래 spacer 가 null 이라
+       예전과 100% 같은 자리로 떨어집니다.
+
+       ── 되돌리는 방법 ─────────────────────────────────────────────────
+       var spacer = ... 부터 그 아래 닫는 } 까지 ★여덟 줄★ 을 지우면 됩니다.
+       (바로 아래 "마지막 버튼 오른쪽" 규칙만 남습니다 = 2026-09-07 이전 그대로)
+       ⚠ ★js/chart-toprow.js 를 되돌린다면 이 토막도 ★같이★ 되돌리세요.★
+         .tlc-spacer 를 만드는 것은 합친 줄이 아니라 js/chart-drawings.js:4254
+         이라서, 합친 줄을 되돌려도 빈 칸은 차트 카드 안에 그대로 남습니다.
+         그러면 칩이 ★세로는 시간 단위 줄 · 가로는 카드 안 빈 칸★ 이라는
+         엉뚱한 자리에 앉습니다(터지지는 않습니다 — 자리만 틀립니다). */
     chip.style.maxWidth = Math.max(120, Math.round(rr.right - rr.left)) + "px";
     var w = chip.offsetWidth;
     var h = chip.offsetHeight;
+    var spacer = document.querySelector(".tlc-toolbar .tlc-spacer");
+    var sr = spacer && spacer.getBoundingClientRect ? spacer.getBoundingClientRect() : null;
+    if (sr && sr.width >= w + 8) {
+      /* 빈 칸 오른쪽에 붙입니다 — 도구 단추를 안 가립니다 */
+      chip.style.left = Math.round(sr.right - 4 - w + sx) + "px";
+      chip.style.top = Math.round(lineTop + sy + (lineH - h) / 2) + "px";
+      return;
+    }
     /* 마지막 버튼 바로 오른쪽에 붙입니다(줄의 일부처럼 읽히게).
        그 자리에 안 들어가면 줄 오른쪽 끝에 맞춥니다. */
     var left = freeFrom;

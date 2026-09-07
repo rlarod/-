@@ -20,9 +20,17 @@
  * 트레이딩뷰도 간격 버튼을 다 늘어놓지 않습니다. 자주 쓰는 몇 개만 밖에
  * 두고 나머지는 메뉴 안입니다. 우리도 같습니다.
  *
- *   밖에 그대로   1분 · 5분 · 15분 · 1시간 · 4시간 · 1일        (수정 전과 동일)
- *   더보기 안     3분 · 30분 · 2시간 · 6시간 · 8시간 · 12시간 · 3일 · 1주 · 1개월
- *                 (8시간 · 3일은 2026-09-03 에 추가 — 바이낸스에 있는 간격입니다)
+ * ★2026-09-07 — 어느 것을 밖에 둘지를 ★회원이 별표로 정합니다.★
+ *   전에는 파일에 6개를 손으로 박아 뒀습니다. 이제 ∨ 메뉴 안 모든 줄에
+ *   별(☆/★)이 있고, 켠 것만 줄에 나옵니다.
+ *
+ *   밖에 그대로   ★별표한 것★ (처음 값은 1분·5분·15분·1시간·4시간·1일 —
+ *                 2026-09-07 이전에 박혀 있던 그 여섯 개와 글자 단위로 같습니다.
+ *                 그래서 ★처음 오는 회원의 화면은 한 픽셀도 안 바뀝니다★)
+ *   ∨ 메뉴 안     나머지 전부. 별표를 켜고 끄는 자리도 여기입니다
+ *   ∨ 버튼        지금 고른 단위가 별표 밖이면 그 이름을 보여 줍니다
+ *                 (= 트레이딩뷰의 "기본 버튼 1개". 별표를 다 꺼도 늘 한 자리)
+ *   저장          App.Storage 의 "chart_interval_favs" 한 칸
  *
  * 즉 ★수정 전 화면의 버튼 줄 높이가 늘지 않습니다.★ 늘어난 것은 "더보기"
  * 버튼 하나뿐이고, 그것도 기존 줄 안에 들어갑니다.
@@ -51,15 +59,108 @@ window.App = window.App || {};
 App.IntervalMore = (function () {
   "use strict";
 
-  /* 더보기 안으로 넣을 간격. 여기 없는 것은 지금처럼 버튼으로 남습니다.
-     ⚠ "1M" 은 대문자입니다(1개월). 소문자 "1m" 은 1분이라 밖에 남습니다. */
-  var MORE = ["3m", "30m", "2h", "6h", "8h", "12h", "3d", "1w", "1M"];
+  /* =====================================================================
+   * 별표(즐겨찾기) — 2026-09-07 차트팀 (트레이딩뷰 방식)
+   * ---------------------------------------------------------------------
+   * 전에는 밖에 남길 6개를 ★파일에 손으로 박아★ 뒀습니다. 이제 회원이 정합니다.
+   *
+   *   밖(줄에 그대로)   회원이 ★별표한 것★
+   *   ∨ 메뉴 안         나머지 전부 + 별표 켜고 끄기
+   *   ∨ 버튼 자체       지금 고른 단위가 별표 밖이면 ★그 이름★ 을 보여 줍니다
+   *                     (= 트레이딩뷰의 "기본 버튼 1개". 별표를 다 꺼도
+   *                       지금 단위는 늘 한 자리 보입니다)
+   *
+   * ★처음 오는 회원의 화면은 수정 전과 한 픽셀도 다르지 않습니다★ —
+   * 기본 별표가 예전에 박혀 있던 그 6개(1분·5분·15분·1시간·4시간·1일)입니다.
+   *
+   * 되돌리는 방법 — 아래 FAV_DEFAULT 를 그대로 두고 이 토막을
+   *   var MORE = ["3m","30m","2h","6h","8h","12h","3d","1w","1M"];
+   * 한 줄로 되돌린 뒤 inMore() 를 옛 반복문으로 되돌리면 됩니다.
+   * 회원이 저장해 둔 별표는 App.Storage 의 "chart_interval_favs" 한 칸뿐입니다.
+   * ===================================================================== */
+  var FAV_KEY = "chart_interval_favs";
+  /* ⚠ 이 6개가 2026-09-07 이전에 밖에 남아 있던 것과 ★글자 단위로 같습니다★.
+     여기를 바꾸면 처음 오는 회원의 첫 화면이 바뀝니다. */
+  var FAV_DEFAULT = ["1m", "5m", "15m", "1h", "4h", "1d"];
+  var favs = null;
+
+  /** 못 고르게 막아 둔 간격(1초·5초·15초 — TL-004). 메뉴에도 안 넣습니다. */
+  function blocked() {
+    try {
+      if (App.IntervalGuard && typeof App.IntervalGuard.getBlocked === "function") {
+        return App.IntervalGuard.getBlocked();
+      }
+    } catch (e) {
+      /* 무시 */
+    }
+    return [];
+  }
+
+  function getFavs() {
+    if (favs) return favs;
+    var v = null;
+    try {
+      if (App.Storage && typeof App.Storage.load === "function") v = App.Storage.load(FAV_KEY);
+    } catch (e) {
+      v = null;
+    }
+    favs = (v && v.length !== undefined) ? Array.prototype.slice.call(v) : FAV_DEFAULT.slice();
+    return favs;
+  }
+
+  function saveFavs() {
+    try {
+      if (App.Storage && typeof App.Storage.save === "function") App.Storage.save(FAV_KEY, favs);
+    } catch (e) {
+      /* 저장을 못 해도 이번 판에서는 그대로 씁니다 */
+    }
+  }
+
+  function isFav(v) {
+    var f = getFavs();
+    for (var i = 0; i < f.length; i++) if (f[i] === v) return true;
+    return false;
+  }
+
+  /** 별표를 켜고 끕니다. 켜면 줄에 나오고, 끄면 메뉴 안으로 들어갑니다. */
+  function toggleFav(v) {
+    var f = getFavs();
+    var at = -1;
+    for (var i = 0; i < f.length; i++) if (f[i] === v) at = i;
+    if (at >= 0) f.splice(at, 1);
+    else f.push(v);
+    saveFavs();
+    refreshHideCss();
+    paint();
+  }
+
+  /** 지금 ∨ 메뉴 안에 들어가 있는 간격들 (= 별표 안 한 것) */
+  function moreList() {
+    var out = [];
+    var all = [];
+    try {
+      all = App.Config.getIntervals();
+    } catch (e) {
+      all = [];
+    }
+    var bl = blocked();
+    for (var i = 0; i < all.length; i++) {
+      var v = all[i].value;
+      if (bl.indexOf(v) >= 0) continue;   /* 막아 둔 간격은 애초에 없는 셈 */
+      if (!isFav(v)) out.push(v);
+    }
+    return out;
+  }
 
   var ROW_ID = "interval-row";
   var STYLE_ID = "tl-interval-more-css";
+  /* 별표에 따라 다시 쓰이는 스타일은 따로 둡니다 (위 injectStyle 주석 참고) */
+  var HIDE_STYLE_ID = "tl-interval-more-hide-css";
   var WRAP_CLASS = "tl-im-wrap";
   var BTN_CLASS = "tl-im-btn";
   var MENU_CLASS = "tl-im-menu";
+  var ROW_CLASS = "tl-im-row";
+  var STAR_CLASS = "tl-im-star";
 
   /* 확정 팔레트만 씁니다 (새 색을 만들지 않습니다) */
   var C_CARD = "#101727";
@@ -85,9 +186,9 @@ App.IntervalMore = (function () {
     return document.getElementById(ROW_ID);
   }
 
+  /** 이 간격이 ∨ 메뉴 안에 있나 (= 별표를 안 한 것) */
   function inMore(v) {
-    for (var i = 0; i < MORE.length; i++) if (MORE[i] === v) return true;
-    return false;
+    return !isFav(v);
   }
 
   function activeNow() {
@@ -113,17 +214,46 @@ App.IntervalMore = (function () {
 
   /* =====================================================================
    * CSS — 글씨 크기는 .interval-btn 과 똑같이 20.5px 입니다 (안 줄입니다)
+   * ---------------------------------------------------------------------
+   * 스타일이 ★두 장★ 입니다.
+   *   STYLE_ID       생김새 — 한 번만 넣고 안 바뀝니다
+   *   HIDE_STYLE_ID  ★별표에 따라 바뀌는 것★ — 줄에서 무엇을 가릴지
+   * 별표를 켜고 끌 때마다 뒤엣것만 다시 씁니다(앞엣것은 그대로 둡니다).
+   * 나눠 두지 않으면 별표를 눌러도 화면이 안 바뀝니다 —
+   * 옛 injectStyle() 은 "이미 있으면 그냥 돌아가는" 구조였습니다.
    * ===================================================================== */
-  function injectStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    /* 더보기로 옮긴 것은 버튼 줄에서 가립니다(마크업은 그대로 둡니다).
-       ⚠ 속성값은 대소문자를 구분합니다 — "1M"(1개월) 과 "1m"(1분)이 다릅니다. */
+
+  /** 별표 안 한 것을 줄에서 가립니다. 마크업은 그대로 둡니다(지우지 않습니다). */
+  function refreshHideCss() {
+    var list = moreList();
     var hide = [];
-    for (var i = 0; i < MORE.length; i++) {
-      hide.push("#" + ROW_ID + ' .interval-btn[data-interval="' + MORE[i] + '"]');
+    /* ⚠ 속성값은 대소문자를 구분합니다 — "1M"(1개월) 과 "1m"(1분)이 다릅니다. */
+    for (var i = 0; i < list.length; i++) {
+      hide.push("#" + ROW_ID + ' .interval-btn[data-interval="' + list[i] + '"]');
     }
+    var css = hide.length ? hide.join(",") + "{display:none !important;}" : "";
+    var s = document.getElementById(HIDE_STYLE_ID);
+    if (!s) {
+      s = document.createElement("style");
+      s.id = HIDE_STYLE_ID;
+      (document.head || document.documentElement).appendChild(s);
+    }
+    if (s.textContent !== css) s.textContent = css;
+  }
+
+  function injectStyle() {
+    refreshHideCss();
+    if (document.getElementById(STYLE_ID)) return;
+    /* ── ∨ 메뉴 크기 (트레이딩뷰 실측 2026-09-07 · 1440) ────────────────────
+     *   트레이딩뷰   폭 180px · 행 32px · 별 24x24 · 글씨 14px
+     *   우리         폭 200px · 행 38px · 별 24x24 · 글씨 ★20.5px★
+     *   ⚠ 글씨를 트레이딩뷰의 14px 로 내리지 않았습니다 (대표가 네 번 지적하신 자리).
+     *     20.5px 글줄이 30px 이라 32px 행에 넣으면 위아래 여백이 1px 씩만 남습니다.
+     *     그래서 행만 32 -> 38 로 올렸습니다(30 + 3 + 3 + 테두리 2).
+     *     폭도 "12시간"(20.5px 고정폭 5글자 = 62px) + 별 24 + 여백이 180 에
+     *     안 들어가서 200 으로 올렸습니다. ★키운 쪽으로만 벗어났습니다.★
+     * ------------------------------------------------------------------ */
     var css =
-      hide.join(",") + "{display:none !important;}" +
       "." + WRAP_CLASS + "{position:relative;display:inline-flex;}" +
       "." + BTN_CLASS + "{background:" + C_TILE + ";border:1px solid " + C_BORDER + ";" +
       "color:" + C_MUTED + ";padding:6px 12px;border-radius:3px;" +
@@ -134,17 +264,34 @@ App.IntervalMore = (function () {
       "color:" + C_POINT + ";}" +
       "." + MENU_CLASS + "{position:absolute;left:0;top:calc(100% + 4px);z-index:60;" +
       "background:" + C_CARD + ";border:1px solid " + C_BORDER + ";border-radius:10px;" +
-      "padding:6px;display:flex;flex-wrap:wrap;gap:6px;width:236px;max-width:calc(100vw - 24px);" +
+      "padding:6px;display:flex;flex-wrap:wrap;gap:6px;width:200px;max-width:calc(100vw - 24px);" +
       /* ★안에서 스크롤★ — 아래 clampMenu() 가 바닥 기준으로 max-height 를 걸 때만
          실제로 동작합니다. 평소에는 내용만큼 커서 스크롤막대가 안 보입니다.
          글씨를 줄이는 대신 이걸 씁니다 (js/chart-timezone.js 와 같은 방식). */
       "overflow-y:auto;overscroll-behavior:contain;}" +
-      "." + MENU_CLASS + " button{flex:1 1 106px;background:" + C_TILE + ";" +
-      "border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";padding:9px 6px;border-radius:6px;" +
-      "font-family:var(--mono);font-size:20.5px;font-weight:600;cursor:pointer;white-space:nowrap;}" +
+      /* 한 줄 = [이름 단추][별 단추]. 한 칸(row)씩 세로로 쌓입니다. */
+      "." + MENU_CLASS + " ." + ROW_CLASS + "{flex:1 1 100%;display:flex;align-items:stretch;gap:4px;}" +
+      "." + MENU_CLASS + " button{flex:1 1 auto;background:" + C_TILE + ";" +
+      "border:1px solid " + C_BORDER + ";color:" + C_TEXT + ";padding:3px 8px;border-radius:6px;" +
+      "font-family:var(--mono);font-size:20.5px;font-weight:600;cursor:pointer;white-space:nowrap;" +
+      "text-align:left;min-height:38px;}" +
       "." + MENU_CLASS + " button:hover{border-color:" + C_MUTED + ";}" +
       "." + MENU_CLASS + " button.on{background:rgba(240,180,41,.12);border-color:" + C_POINT + ";" +
-      "color:" + C_POINT + ";}";
+      "color:" + C_POINT + ";}" +
+      /* 별 단추 — ★24x24★ (트레이딩뷰 실측과 같은 크기).
+         ⚠ ★ / ☆ 글자를 안 씁니다 — tests/no-emoji.test.js 가 U+2600~U+27BF 를
+           이모지로 보고 막습니다(실제로 여기서 한 번 빨개졌습니다).
+           새 아이콘 파일도 안 만듭니다. 별 모양은 아래 SVG path 한 줄입니다.
+         켜짐 = 속을 채우고 골드, 꺼짐 = 테두리만 보조색. 확정 팔레트 두 가지뿐입니다. */
+      "." + MENU_CLASS + " button." + STAR_CLASS + "{flex:0 0 auto;width:34px;min-width:34px;" +
+      "padding:0;display:flex;align-items:center;justify-content:center;" +
+      "color:" + C_MUTED + ";background:transparent;}" +
+      "." + MENU_CLASS + " button." + STAR_CLASS + " svg{width:24px;height:24px;display:block;}" +
+      "." + MENU_CLASS + " button." + STAR_CLASS + " path{fill:none;stroke:currentColor;" +
+      "stroke-width:1.6;stroke-linejoin:round;}" +
+      "." + MENU_CLASS + " button." + STAR_CLASS + '[aria-pressed="true"]{color:' + C_POINT + ";}" +
+      "." + MENU_CLASS + " button." + STAR_CLASS + '[aria-pressed="true"] path{fill:currentColor;}' +
+      "." + MENU_CLASS + " button." + STAR_CLASS + ":hover{border-color:" + C_MUTED + ";}";
     var s = document.createElement("style");
     s.id = STYLE_ID;
     s.textContent = css;
@@ -164,16 +311,39 @@ App.IntervalMore = (function () {
     if (btn) btn.setAttribute("aria-expanded", "false");
   }
 
+  /* 메뉴에 넣을 간격 — ★전부★ 입니다 (막아 둔 1초·5초·15초만 뺍니다).
+     별표한 것도 넣습니다 — 안 그러면 켠 별표를 다시 끌 방법이 없습니다. */
+  function menuList() {
+    var all = [];
+    try {
+      all = App.Config.getIntervals();
+    } catch (e) {
+      all = [];
+    }
+    var bl = blocked();
+    var out = [];
+    for (var i = 0; i < all.length; i++) {
+      if (bl.indexOf(all[i].value) >= 0) continue;
+      out.push(all[i].value);
+    }
+    return out;
+  }
+
   function openMenu() {
     if (!wrap || isOpen()) return;
     injectStyle();
     menu = document.createElement("div");
     menu.className = MENU_CLASS;
     menu.setAttribute("role", "menu");
-    menu.setAttribute("aria-label", "시간 단위 더보기");
+    menu.setAttribute("aria-label", "시간 단위");
     var cur = activeNow();
-    for (var i = 0; i < MORE.length; i++) {
+    var list = menuList();
+    for (var i = 0; i < list.length; i++) {
       (function (v) {
+        /* 한 줄 = [이름 단추][별 단추] (트레이딩뷰와 같은 짜임) */
+        var rowEl = document.createElement("div");
+        rowEl.className = ROW_CLASS;
+
         var b = document.createElement("button");
         b.type = "button";
         b.setAttribute("role", "menuitem");
@@ -184,12 +354,44 @@ App.IntervalMore = (function () {
           ev.stopPropagation();
           pick(v);
         });
-        menu.appendChild(b);
-      })(MORE[i]);
+
+        var star = document.createElement("button");
+        star.type = "button";
+        star.className = STAR_CLASS;
+        star.setAttribute("data-fav", v);
+        paintStar(star, v);
+        star.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          toggleFav(v);
+          paintStar(star, v);
+        });
+
+        rowEl.appendChild(b);
+        rowEl.appendChild(star);
+        menu.appendChild(rowEl);
+      })(list[i]);
     }
     wrap.appendChild(menu);
     btn.setAttribute("aria-expanded", "true");
     clampMenu();
+  }
+
+  /* 별 모양 하나. 24x24 자리에 그립니다(트레이딩뷰 실측과 같은 크기).
+     채움/테두리는 위 CSS 가 aria-pressed 로 갈라 줍니다 — 여기서는 모양만 냅니다. */
+  var STAR_SVG =
+    '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path d="M12 3.2l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1L3.2 9.6l6.1-.9z"/>' +
+    "</svg>";
+
+  /** 별 하나의 모습을 지금 상태에 맞춥니다. 채움 = 줄에 있음 / 테두리 = 메뉴 안 */
+  function paintStar(star, v) {
+    var on = isFav(v);
+    if (star.innerHTML !== STAR_SVG) star.innerHTML = STAR_SVG;
+    star.setAttribute("aria-pressed", on ? "true" : "false");
+    var t = on ? labelOf(v) + " — 줄에서 빼기" : labelOf(v) + " — 줄에 두기";
+    star.setAttribute("title", t);
+    star.setAttribute("aria-label", t);
   }
 
   /* 메뉴를 화면 안으로 넣습니다. 둘 다 실제로 넘쳤던 것을 재서 고친 것입니다.
@@ -276,6 +478,42 @@ App.IntervalMore = (function () {
           if (want < EDGE) want = EDGE;
           menu.style.top = Math.round(want - wr.top) + "px";
         }
+      }
+
+      /* ★마지막 안전망 (2026-09-07 차트팀)★ — 앞의 계산이 어떤 답을 내든
+       * ★결과가 화면 띠(8 ~ 바닥) 안인지 마지막에 한 번 더 봅니다.★
+       * 구멍이 두 개 있었습니다.
+       *
+       (가) ★위로 나가는 것을 아무도 안 봤습니다.★ 여태 "아래로 넘치면" 만 봤고,
+       *      아래가 남으면 그대로 뒀습니다. 메뉴가 짧을 때(7줄 232px)는 아래 넘침이
+       *      먼저 걸려 같이 눌러앉혀졌기 때문에 안 드러났습니다.
+       * (나) ★위로 뒤집은 결과를 아무도 안 봤습니다.★ "위에 자리가 있나" 를
+       *      단추 위쪽 거리로만 재는데, ★단추가 화면 아래쪽 밖★ 이면 그 거리가
+       *      커서 "자리 있음" 이 됩니다. 실측 800x360(폰 눕힘) 스크롤 0 —
+       *      단추가 y678(화면 360 밖)이라 메뉴가 330~674 로 열렸습니다.
+       *      화면 아래 ★+322px★ 입니다. 이건 수정 전에도 같았습니다(메뉴 232px 이던
+       *      시절에도 442~674 로 열렸습니다).
+       *
+       * 2026-09-07 에 메뉴가 ★15줄(별표 포함 전체 간격)★ 로 길어지면서
+       * max-height 가 화면 띠에 딱 맞게 잘라 줍니다. 그러면 아래 넘침이
+       * ★영원히 안 걸리고★, 페이지를 내릴수록 메뉴가 위로 계속 올라갑니다.
+       *
+       *   실측 (localhost, 3px 간격 전수 훑기)
+       *     360x640  821자리 중 ★663자리★ 에서 위로 나감 (최대 수백 px)
+       *     375x812  770자리 중 ★622자리★
+       *     예 — 360x640 스크롤 486 : 메뉴 -7~544 · 바닥 559 (아래는 15px 남음)
+       *   고친 뒤  두 크기 다 ★0자리★.
+       *
+       * max-height 가 이미 "띠보다 크지 않게" 잘라 두므로, 위끝을 8 로 올려도
+       * 아래끝이 바닥을 다시 넘지 않습니다(높이 <= 바닥-8 이라서). */
+      var r3 = menu.getBoundingClientRect();
+      if (r3.bottom > floorY + 0.5 || r3.top < EDGE - 0.5) {
+        var wr3 = wrap.getBoundingClientRect();
+        var want2 = r3.top;
+        if (r3.bottom > floorY) want2 = floorY - r3.height; /* 아래끝 맞추기 */
+        if (want2 < EDGE) want2 = EDGE;                     /* ★위끝이 이깁니다★ */
+        menu.style.bottom = "";
+        menu.style.top = Math.round(want2 - wr3.top) + "px";
       }
     } catch (e) {
       /* 무시 — 못 재면 원래 자리 그대로 둡니다 */
@@ -397,6 +635,8 @@ App.IntervalMore = (function () {
     btn = null;
     var s = document.getElementById(STYLE_ID);
     if (s && s.parentNode) s.parentNode.removeChild(s);
+    var h = document.getElementById(HIDE_STYLE_ID);
+    if (h && h.parentNode) h.parentNode.removeChild(h);
   }
 
   function init() {
@@ -442,9 +682,16 @@ App.IntervalMore = (function () {
     toggle: toggleMenu,
     disable: disable,
     isOpen: isOpen,
-    getMore: function () {
-      return MORE.slice();
+    /* 지금 ∨ 메뉴 안에 들어가 있는 간격들 (= 별표 안 한 것).
+       2026-09-07 이전에는 파일에 박아 둔 고정 목록이었습니다. */
+    getMore: moreList,
+    getFavs: function () {
+      return getFavs().slice();
     },
+    toggleFav: toggleFav,
+    isFav: isFav,
+    FAV_KEY: FAV_KEY,
+    FAV_DEFAULT: FAV_DEFAULT.slice(),
     ROW_ID: ROW_ID,
     STYLE_ID: STYLE_ID
   };

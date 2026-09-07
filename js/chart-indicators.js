@@ -1252,9 +1252,37 @@ App.ChartIndicators = (function () {
       });
     }
 
+    /* ★2026-09-07 차트팀 — 스크롤·창크기 바뀜에 ★다시 자리를 잡습니다.★
+     * 전에는 그냥 hideActs 였습니다. 그것만으로는 아래 자리가 안 잡힙니다 —
+     *
+     *   단추 띠는 차트 칸 안쪽 ★absolute★ 라 페이지가 밀리면 칩과 같이 밀립니다.
+     *   그래서 "보일 때 자리를 잡고 → 스크롤" 하면, scroll 신호가 실제로
+     *   처리되기 ★전★ 의 한 순간 동안 띠가 화면 위로 삐져나가 있습니다.
+     *   PM 실측 (375x812 · 스크롤 714) — 칩 top -30 · bottom 2 인데
+     *   ★단추 top -35★ (띠 높이 42 를 32 짜리 칩에 가운데 맞춤 → 위로 5px).
+     *   ★화면 위로 35px★ 입니다. 안 보이는 단추가 떠 있는 것입니다.
+     *
+     * 이제 스크롤할 때마다 placeActs 를 다시 부르고, 놓을 자리가 없으면
+     * (칩이 화면 밖) 그때 감춥니다. placeActs 안의 막기가 그대로 걸리므로
+     * ★어느 순간을 재도 화면 위로 안 나갑니다.★
+     *
+     * ⚠ 스크롤 신호는 초당 수십 번 옵니다. 그래서 실제 계산은
+     *   requestAnimationFrame 으로 ★한 프레임에 한 번★ 만 합니다.
+     *   (안 묶으면 스크롤할 때마다 레이아웃을 읽어 화면이 버벅입니다)
+     * 되돌리려면 이 토막을 hideActs 두 줄로 되돌리면 됩니다. */
+    var actsRaf = 0;
+    function reflowActs() {
+      if (actsRaf) return;
+      var rq = window.requestAnimationFrame || function (f) { return setTimeout(f, 16); };
+      actsRaf = rq(function () {
+        actsRaf = 0;
+        if (!actsChip || !actsEl || actsEl.className.indexOf("tl-leg-open") === -1) return;
+        if (!placeActs(actsChip)) hideActs();
+      });
+    }
     if (window.addEventListener) {
-      window.addEventListener("resize", hideActs);
-      window.addEventListener("scroll", hideActs, true);
+      window.addEventListener("resize", reflowActs);
+      window.addEventListener("scroll", reflowActs, true);
     }
 
     /* ① 버튼을 만든 뒤 ② 감춥니다. ★이 순서를 바꾸지 마세요.★ */
