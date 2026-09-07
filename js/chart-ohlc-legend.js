@@ -182,7 +182,26 @@ App.ChartOhlcLegend = (function () {
            변동 금액을 도로 감추려면 이 한 줄을 넣습니다.
              "." + EL_CLASS + " .abs{display:none;}"
          ★768 이상은 한 글자도 안 건드렸습니다★ — 거기는 O·H·L 이 다 보입니다. */
-      "@media (max-width:767px){." + EL_CLASS + " .ohlc-min{display:none;}}";
+      /* ── 5단계 (2026-09-07) — ★0.7px 차이로 줄이 왔다갔다 하던 것★ ────
+         360 USDT 실측(2026-09-07, 상자 241px · 한 줄로 폈을 때):
+             변동 1자리 +5.70    231.9px  여유  0.0  → 한 줄 23px
+             변동 2자리 +32.20   241.8px  여유 -0.8  → ★두 줄 48px★
+         0.8px 이 모자라서 시세가 움직일 때마다 이 줄이 23 ↔ 48px 로 오르내리고,
+         --tl-ohlc-h 를 따라 차트 머리가 통째로 들썩였습니다.
+         값이 틀린 것은 아니지만 회원 눈에는 화면이 떨립니다.
+
+         칸 사이 가로 간격만 14 → 10px 로 4px 을 법니다.
+         ★글씨 크기(17px)·팔레트·세로 gap(2px) 은 한 글자도 안 건드립니다★
+         — 세로 gap 은 줄 높이에 직접 붙어서 건드리면 높이가 바뀝니다.
+         그래서 shorthand(gap) 이 아니라 ★column-gap 만★ 씁니다.
+
+         ⚠ 3자리 이상은 여전히 두 줄입니다(251.6px 필요, 10px 로도 -6.6).
+            간격으로 덮을 수 있는 폭이 아니라 여기서 멈췄습니다 — PM 보고 항목.
+         ⚠ 768 이상은 이 규칙 밖이라 그대로 14px 입니다.
+
+         되돌리려면 — 아래 column-gap 한 줄을 지웁니다. */
+      "@media (max-width:767px){." + EL_CLASS + " .ohlc-min{display:none;}" +
+      "." + EL_CLASS + "{column-gap:10px;}}";
     var s = document.createElement("style");
     s.id = STYLE_ID;
     s.textContent = css;
