@@ -1486,6 +1486,12 @@
      차트 위에 겹치지 않고 도구 막대와 차트 사이에 자기 줄로 들어갑니다.
      이 한 줄을 지우면 줄이 사라지고 차트 높이가 그만큼 돌아옵니다. -->
 <script src="js/chart-ohlc-legend.js"></script>
+<!-- 지표 칩 줄(.tl-ind-bar)이 오른쪽 가격축을 덮지 않게 — 그림 영역 폭을
+     ★재서★ max-width 로 넣습니다. 위 chart-ohlc-legend.js 와 같은 처방입니다
+     (가격축 폭이 통화·화면폭에 따라 6가지로 변해 정적 px 을 못 씁니다).
+     js/chart-indicators.js 를 안 고치려고 별도 모듈로 뺐습니다.
+     이 한 줄을 지우면 style.css 의 예비 max-width 만 남습니다. -->
+<script src="js/chart-indbar-room.js"></script>
 <!-- 차트 아래 "표시 기간" 탭 (1D·5D·1M·3M·6M·YTD·1Y·5Y·ALL) — 트레이딩뷰 차트
      하단 date-range 탭을 따라간 것입니다. 차트 ★위★ 의 시간 단위(1분·5분)는
      "봉 하나가 몇 분인가", 이것은 "얼마나 긴 기간을 볼 것인가" 입니다.

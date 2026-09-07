@@ -515,14 +515,24 @@ const 결과 = 훑기(소스맵만들기());
     "못 잡습니다");
 
   /* (다) 교차 파일 보강을 진짜로 읽는지.
-     .tl-ind-bar 는 js 에 left 만 있고 style.css 가 right 를 줍니다.
-     그 한 줄을 사본에서 지우면 잡혀야 하고, 안 지우면 안 잡혀야 합니다. */
-  ok("지금 .tl-ind-bar 는 안 잡힌다 (style.css 가 right 를 주므로 — 오탐 아님)",
+     .tl-ind-bar 는 js 에 left 만 있고 style.css 가 오른쪽 끝을 줍니다.
+     그 한 줄을 사본에서 지우면 잡혀야 하고, 안 지우면 안 잡혀야 합니다.
+
+     ⚠ 2026-09-07 수리팀 — 그 한 줄이 바뀌어 여기 글자도 같이 고쳤습니다.
+       옛 줄  .chart-panel .chart-wrap .tl-ind-bar{right:138px;}
+       새 줄  .chart-panel .chart-wrap .tl-ind-bar{max-width:calc(100% - 184px);}
+       바뀐 이유 — right:138px / 82px 은 ★달러 축만 재고★ 정한 값이라 원화에서
+       모자랐습니다(768·KRW 실측 침범 +87.5px, 칩 글자 EMA(9) +30.0px).
+       이제 js/chart-indbar-room.js 가 그림 영역을 ★재서★ 인라인 max-width 로
+       넣고, style.css 의 이 줄은 ★예비값★ 입니다.
+       ★검사의 뜻은 그대로입니다★ — "다른 파일의 보강이 사라지면 잡는가".
+       right 대신 max-width 라도 위 훑기는 둘 다 「오른쪽 끝 있음」 으로 봅니다. */
+  ok("지금 .tl-ind-bar 는 안 잡힌다 (style.css 가 오른쪽 끝을 주므로 — 오탐 아님)",
     !결과.오른쪽없음.some(function (r) { return /ind-bar/.test(r.sel); }),
     "한 파일만 보면 멀쩡한 것을 잘못 잡습니다");
   const 사본다 = Object.assign({}, 원본맵);
   사본다["style.css"] = (원본맵["style.css"] || "")
-    .replace(".chart-panel .chart-wrap .tl-ind-bar{right:138px;}", "");
+    .replace(".chart-panel .chart-wrap .tl-ind-bar{max-width:calc(100% - 184px);}", "");
   ok("style.css 보강 한 줄을 사본에서 지웠다", 사본다["style.css"] !== 원본맵["style.css"],
     "치환이 안 됐습니다");
   const 결과다 = 훑기(사본다);

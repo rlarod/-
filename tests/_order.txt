@@ -834,3 +834,23 @@ tests/chart-overlay-right-edge.test.js
 # 되돌리기: 이 줄과 tests/chart-ohlc-axis-clear.test.js 를 git rm -f 로 삭제
 #           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
 tests/chart-ohlc-axis-clear.test.js
+
+# 2026-09-07 수리팀 — 지표 칩 줄(.tl-ind-bar)이 ★가격축을 안 덮는가★, ★통화가 바뀌어도★.
+#   style.css 가 오른쪽 끝을 정적 px 두 개(right:138px / 82px)로 막고 있었는데
+#   그 두 값은 2026-08-27 에 ★달러 축만 재고★ 정한 것이라 원화에서 여섯 폭 전부
+#   모자랐습니다. 실측 — 360/375/390 KRW +13.5/+14.5/+13.5 · 768 KRW ★+87.5★ ·
+#   1440 KRW +32.0 · 1920 KRW +31.8. 768·KRW 는 ★칩 글자★ EMA(9) 가 +30.0px 넘었습니다.
+#   가격축 폭은 통화 2 × 글씨 구간 3 = ★여섯 가지★ 라 어떤 고정값도 언젠가 어긋납니다.
+#   이제 js/chart-indbar-room.js 가 그림 칸(자식 셋인 tr 의 가운데)을 재서
+#   인라인 max-width 로 넣습니다. style.css 의 한 줄은 ★예비값★ 입니다.
+#   앞선 봉인 tests/chart-overlay-right-edge.test.js 는 오른끝이 ★있기만 하면★
+#   초록이라 right:98px 로 되돌려도 못 잡습니다. 여기서만 보는 것 —
+#     [A] 정적 px 이 아니라 ★재서★ 넣는가 (통화를 바꿔 실제로 따라가는지 검산)
+#     [B] ★왼끝도★ 재는가 (chart-toolbar.css 7) 의 left:40px 예비 규칙 대비)
+#     [C] 값을 … 로 자르지 않는가 (지표 이름이 잘리면 어느 지표인지 못 읽습니다)
+#   돌연변이 3종으로 확인했습니다 — 정적 px · .chart-wrap 을 자로 쓰기 ·
+#   통화 전환에 다시 재는 길 끊기. 셋 다 빨강이 납니다.
+#   브라우저를 안 씁니다. jsdom 가짜 차트의 칸에 좌표를 물려 셈만 검산합니다.
+# 되돌리기: 이 줄과 tests/chart-indbar-axis-clear.test.js 를 git rm -f 로 삭제
+#           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
+tests/chart-indbar-axis-clear.test.js

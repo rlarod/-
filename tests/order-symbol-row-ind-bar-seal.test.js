@@ -129,32 +129,62 @@ const 데스크톱 = CSS.match(/\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{([^
 ok("데스크톱 규칙이 있다 (.chart-panel .chart-wrap .tl-ind-bar)", !!데스크톱,
   "규칙이 없으면 칩 막대가 내용만큼 늘어나 가격축 위로 올라탑니다");
 
-const 데스크톱right = 데스크톱 && (데스크톱[1].match(/right\s*:\s*(\d+)px/) || [])[1];
-ok("데스크톱에 오른쪽 끝이 있다 (지금 " + 데스크톱right + "px)",
-  데스크톱right !== undefined && Number(데스크톱right) > 0);
-ok("데스크톱 오른쪽 끝이 가격축 폭(130.5px)보다 넉넉하다",
-  Number(데스크톱right) >= 130,
-  "가격축 폭보다 작으면 칩이 다시 눈금 위로 올라탑니다. 실측 130.5px");
+/* ⚠★2026-09-07 수리팀 — 여기 세 검사의 ★재는 방법★ 이 바뀌었습니다★
+ * -------------------------------------------------------------------------
+ * 2026-08-27 에는 오른쪽 끝을 정적 px 두 개(데스크톱 138 / ≤900px 82)로
+ * 막았고, 이 검사도 그 두 숫자가 있는지를 봤습니다.
+ *
+ * 그런데 그 두 값은 ★달러 가격축만 재고★ 정한 것이었습니다(위 머리글의
+ * 74.5 / 130.5 가 둘 다 USDT). 원화 축은 더 넓어서 여섯 폭 ★전부★ 모자랐습니다.
+ *   2026-09-07 실측 (침범 = 상자 오른끝 − 그림 오른끝)
+ *     360 KRW +13.5 · 375 KRW +14.5 · 390 KRW +13.5
+ *     768 KRW ★+87.5★ · 1440 KRW +32.0 · 1920 KRW +31.8
+ *   768·KRW 는 ★칩 글자★ EMA(9) 가 +30.0px 가격축 위로 넘었습니다.
+ *
+ * 게다가 media 경계 900px 는 축이 실제로 바뀌는 자리(767/768)와도 어긋나서,
+ * ★768 이 폰용 82px 을 받고 있었습니다★ (원화 축이 169.5 인 자리인데도요).
+ *
+ * 가격축 폭은 통화 2 × 글씨 구간 3 = ★여섯 가지★ 입니다. 두 값으로도,
+ * 네 값으로도 못 맞춥니다. 그래서 ★재서 넣는 방식★ 으로 바꿨습니다 —
+ *   js/chart-indbar-room.js 가 그림 칸을 재어 인라인 max-width 로 넣고,
+ *   style.css 의 한 줄은 ★예비값★ 으로만 남습니다.
+ *
+ * ★이 절의 뜻은 그대로입니다★ — "칩이 가격축을 덮지 않는가".
+ * 바뀐 것은 그것을 무엇으로 확인하느냐뿐입니다.
+ * 실제 침범 숫자를 검산하는 것은 tests/chart-indbar-axis-clear.test.js 입니다. */
+const 데스크톱maxw = 데스크톱 && (데스크톱[1].match(/max-width\s*:\s*([^;]+)/) || [])[1];
+ok("예비 오른쪽 끝(max-width)이 있다 (지금 " + 데스크톱maxw + ")",
+  !!데스크톱maxw,
+  "js 가 못 잴 때 오른쪽 끝이 통째로 없어집니다");
+ok("예비값이 가장 넓은 가격축(원화 170px)을 견딘다",
+  !!데스크톱maxw && (() => {
+    const n = (데스크톱maxw.match(/(\d+)px/) || [])[1];
+    return n !== undefined && Number(n) >= 170;
+  })(),
+  "실측 — 원화 축이 768 이상에서 169.5~170px 입니다. 이보다 작으면 또 덮습니다");
+ok("옛 정적 right 가 남아 있지 않다 (max-width 와 ★둘 다★ 걸리면 이중으로 좁아짐)",
+  !/right\s*:\s*\d/.test(데스크톱 ? 데스크톱[1] : ""),
+  "right 와 max-width 를 같이 두면 상자가 두 번 깎입니다");
 
-/* 좁은 화면 구간 — 폰 가격축은 74.5px
-   ⚠ style.css 에는 @media (max-width:900px) 블록이 여러 개 있습니다.
-      첫 번째만 보면 엉뚱한 블록을 읽습니다. 칩 규칙이 든 블록을 골라냅니다. */
+/* ★구간을 안 나눴는지★ — 옛 900px 경계가 축이 바뀌는 자리(767/768)와
+   어긋난 것이 이 병의 절반이었습니다. 경계를 없애면 그 실수가 안 납니다. */
 function 칩이든좁은블록(css) {
   const 전체 = css.match(/@media\s*\(max-width:\s*900px\)\s*\{[\s\S]*?\n\}/g) || [];
   return 전체.filter((b) => /\.tl-ind-bar\{/.test(b));
 }
-const 좁은블록들 = 칩이든좁은블록(CSS);
-const 좁은right =
-  좁은블록들.length &&
-  (좁은블록들[0].match(/\.tl-ind-bar\{[^}]*right\s*:\s*(\d+)px/) || [])[1];
-ok("≤900px 구간에도 오른쪽 끝이 있다 (지금 " + 좁은right + "px)",
-  좁은right !== undefined && Number(좁은right) > 0,
-  "폰에서 겹침이 +56.3px 이었습니다");
-ok("≤900px 오른쪽 끝이 폰 가격축 폭(74.5px)보다 넉넉하다",
-  Number(좁은right) >= 74,
-  "실측 74.5px. 이보다 작으면 거래량 칩이 가격 눈금을 덮습니다");
-ok("좁은 화면 값이 데스크톱 값보다 작다 (폰은 화면이 좁아 여백을 덜 준다)",
-  Number(좁은right) < Number(데스크톱right));
+ok("≤900px 로 구간을 다시 나누지 않았다",
+  칩이든좁은블록(CSS).length === 0,
+  "옛 경계 900px 는 축이 바뀌는 자리(767/768)와 어긋나 768 이 폰 값을 받았습니다");
+
+/* ★진짜 오른쪽 끝은 재서 넣습니다★ — 그 길이 살아 있는지 봅니다.
+   이게 없어지면 style.css 예비값만 남아 폰에서 필요 이상으로 좁아집니다. */
+const 재는모듈 = "js/chart-indbar-room.js";
+ok("그림 영역을 재서 넣는 모듈이 있다 (" + 재는모듈 + ")",
+  fs.existsSync(path.join(REPO, 재는모듈)),
+  "이 모듈이 없으면 통화를 바꿀 때 다시 어긋납니다");
+ok("index.html 이 그 모듈을 부른다",
+  read("index.html").indexOf(재는모듈) !== -1,
+  "파일만 있고 안 부르면 아무 일도 안 합니다 — 전형적인 조용한 고장입니다");
 
 /* 칩을 지우거나 감추는 방식으로 '해결' 하지 않았는지 */
 ok("칩을 감추는 방식으로 때우지 않았다",
@@ -202,19 +232,33 @@ const 망가뜨린1 = 주석빼기(
 ok("→ 숨김 규칙을 되돌리면 [1] 이 실패한다", 숨김규칙.test(망가뜨린1),
   "여기서 못 잡으면 [1] 은 가짜입니다");
 
+/* 2026-09-07 — [2] 가 정적 px 검사에서 「예비 max-width + 재는 모듈」 검사로
+   바뀌었으므로, 돌연변이도 같이 바꿉니다. 뜻은 그대로 —
+   ★[2] 가 진짜로 잡는지 스스로 증명한다★ 입니다. */
 const 망가뜨린2 = CSS.replace(
   /\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*\}/,
-  ".chart-panel .chart-wrap .tl-ind-bar{right:0;}"
+  ".chart-panel .chart-wrap .tl-ind-bar{max-width:calc(100% - 90px);}"
 );
-const 망가뜨린2값 = (망가뜨린2.match(/\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*right\s*:\s*(\d+)px/) || [])[1];
-ok("→ 오른쪽 끝을 0 으로 되돌리면 [2] 가 실패한다",
-  망가뜨린2값 === undefined || Number(망가뜨린2값) < 130,
+const 망가뜨린2값 = (망가뜨린2.match(
+  /\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*max-width\s*:[^;]*?(\d+)px/) || [])[1];
+ok("→ 예비값을 원화 축(170px)보다 좁게 되돌리면 [2] 가 실패한다",
+  망가뜨린2값 !== undefined && Number(망가뜨린2값) < 170,
   "여기서 못 잡으면 [2] 는 가짜입니다");
 
-const 망가뜨린3 = 좁은블록들.length ? CSS.replace(좁은블록들[0], "") : CSS;
-ok("→ 좁은 화면 구간을 지우면 [2] 가 실패한다",
-  칩이든좁은블록(망가뜨린3).length === 0 && 좁은블록들.length > 0,
-  "폰만 따로 깨지는 것이 이 프로젝트에서 가장 자주 났던 회귀입니다");
+const 망가뜨린3 = CSS.replace(
+  /\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*\}/,
+  ".chart-panel .chart-wrap .tl-ind-bar{right:138px;}"
+);
+ok("→ 옛 정적 right 로 되돌리면 [2] 가 실패한다",
+  /\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*right\s*:\s*\d/.test(망가뜨린3) &&
+    !/\.chart-panel\s+\.chart-wrap\s+\.tl-ind-bar\{[^}]*max-width/.test(망가뜨린3),
+  "정적 px 으로 되돌아가는 것이 ★이번 사고의 원인★ 입니다");
+
+const 망가뜨린4 = read("index.html").replace(/<script src="js\/chart-indbar-room\.js"><\/script>/, "");
+ok("→ index.html 에서 재는 모듈을 빼면 [2] 가 실패한다",
+  망가뜨린4.indexOf("js/chart-indbar-room.js") === -1 &&
+    read("index.html").indexOf("js/chart-indbar-room.js") !== -1,
+  "파일만 있고 안 부르는 조용한 고장을 못 잡습니다");
 
 /* =========================================================================
  * 마무리
