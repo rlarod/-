@@ -800,6 +800,21 @@ tests/chart-indicator-room.test.js
 #           order-panel.test.js 의 "과도한 볼드 금지" 를 옛 한 줄로 되돌립니다.
 tests/font-weight-value-source.test.js
 
+# 2026-09-07 기록팀 — 차트 위 절대배치 상자에 ★오른쪽 끝★ 이 있는지 ★패턴으로 훑습니다★.
+#   2026-09-03 에 tests/chart-pane-label-fit.test.js 로 같은 병을 봉인했는데,
+#   그 봉인이 ★파일 두 개를 이름으로 적어 둔 명단★ 이었습니다(그 파일 71-72·90-93줄).
+#   ★바로 다음 날★ d7bdc66 로 js/chart-ohlc-legend.js 의 .tl-ohlc 가 절대배치로
+#   전향했고 명단에 못 들어가, 09-07 에 같은 병이 P1 으로 다시 났습니다 —
+#   768 원화에서 OHLC 줄이 가격축 170px 을 덮어 ₩120,900,000 이 ,900,000 으로 읽혔습니다.
+#   그래서 이 봉인은 파일 이름을 안 적고 js/chart-*.js · css/chart-*.css 를 폴더에서
+#   그때그때 읽어, position:absolute 인데 right/max-width/width 가 없는 규칙을 찾아냅니다.
+#   JS 문자열로 이어붙인 CSS("." + EL_CLASS + "{...")도 풀어서 읽습니다 — grep 으로는 안 보입니다.
+#   ⚠ 브라우저로 안 잽니다. overflow:hidden 뒤에는 글자 좌표가 상자 247 을 654 로
+#     보고합니다(조사팀 실측, 침범 +404) — 화면은 멀쩡한데 검사만 빨개집니다.
+# 되돌리기: 이 줄과 tests/chart-overlay-right-edge.test.js 를 git rm -f 로 삭제
+#           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
+tests/chart-overlay-right-edge.test.js
+
 # 2026-09-07 수리팀 — 십자선 OHLC 줄이 ★가격축을 안 덮는가★, 그것도 ★통화가 바뀌어도★.
 #   d7bdc66(09-04)이 .tl-ohlc 를 절대배치로 옮기며 오른끝을 안 정해, 상자가
 #   .chart-wrap(그림 + 가격축) 끝까지 늘어나 가격축 숫자를 덮었습니다.
