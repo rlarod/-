@@ -154,25 +154,35 @@ App.ChartOhlcLegend = (function () {
       "." + EL_CLASS + " .v{font-weight:600;}" +
       "." + EL_CLASS + " .up{color:" + C_UP + ";}" +
       "." + EL_CLASS + " .down{color:" + C_DOWN + ";}" +
-      /* 좁은 화면에서는 절대 변동값을 감춥니다(퍼센트는 남습니다).
-         ★지우는 게 아니라 가리는 것★ 입니다 — 마크업은 그대로 있습니다.
-         이걸 안 하면 360 에서 줄이 3줄이 되어 차트를 그만큼 밀어냅니다. */
+      /* ⚠ 2026-09-07 이전에는 여기서 폰의 변동 ★금액★(.abs)을 감췄습니다.
+         지금은 안 감춥니다 — 트레이딩뷰가 폰에서 금액과 퍼센트를 ★한 덩어리로★
+         남기기 때문입니다(아래 @media 주석의 실측 참조). */
       /* 예비 길 — .chart-wrap 을 못 찾았을 때만 쓰는 ★예전 모양★(자기 줄) */
       "." + EL_CLASS + ".tl-ohlc-row{position:static;padding:5px 2px 6px;max-width:none;" +
       "pointer-events:auto;border-bottom:1px solid " + C_BORDER + ";margin-bottom:4px;}" +
-      /* ── 좁은 화면 (2026-09-04, 2단계) ────────────────────────────────
-         2단계에서 이 줄이 차트 ★위로 올라왔기 때문에★, 두 줄이 되면 캔들을
-         그만큼 덮습니다(360 실측 48). 자기 줄이던 때는 안 덮었습니다.
-         트레이딩뷰도 좁아지면 O·H·L 을 먼저 감춥니다 —
-         실측(2026-09-04): .valueItem-quatTGAC 다섯 칸 중 O·H·L 셋에만
-         unimportant-quatTGAC 가 붙어 있고,
-         .hideUniportantValueItems ... .unimportant{display:none} 규칙이 있습니다.
-         ★다만 우리는 한 가지를 더 합니다★ — 십자선이 실제로 봉을 짚고 있는
-         동안에는 O·H·L 을 다시 보여 줍니다(tl-ohlc-live). 폰에서 봉을 눌러
-         값을 읽는 것이 이 줄의 주된 쓸모라, 그것까지 없애면 기능이 줄어듭니다. */
-      "@media (max-width:767px){." + EL_CLASS + " .abs{display:none;}" +
-      "." + EL_CLASS + " .ohlc-min{display:none;}" +
-      "." + EL_CLASS + ".tl-ohlc-live .ohlc-min{display:inline;}}";
+      /* ── 좁은 화면 (2026-09-07, 4단계) — ★트레이딩뷰와 똑같이★ ────────
+         트레이딩뷰 폰 실측: .valueItem-quatTGAC 다섯 칸 중 O·H·L 셋에만
+         unimportant-quatTGAC 가 붙고 .hideUniportantValueItems ...
+         .unimportant{display:none} 이 걸립니다. 남는 것은 ★C 와 변동★ 이고,
+         변동은 금액과 퍼센트를 ★한 덩어리로★ 그대로 둡니다(한 줄 21px).
+
+         ⚠ 우리는 정확히 뒤집혀 있었습니다 — O·H·L 을 남기고 금액을 버렸습니다.
+           2026-09-04 에 여기 "★다만 우리는 한 가지를 더 합니다★" 라고 적고,
+           십자선이 짚는 동안 폰에서 O·H·L 을 도로 펴 줬습니다(tl-ohlc-live).
+           더 하는 게 아니라 ★기준과 다른 것★ 이었습니다. 그 규칙 때문에 폰에서
+           이 줄이 98px 로 부풀어 360 원화에서 주 칸(162px)의 60.5% 를 덮었습니다.
+         (2026-09-07 PM 결정 "안2" — 차트 시스템은 트레이딩뷰를 따라갑니다.)
+
+         ⚠ tl-ohlc-live 클래스는 ★그대로 답니다★ — "십자선이 짚고 있다" 는 표시라
+           봉인 tests/chart-ohlc-axis-clear.test.js [C] 가 그것을 봅니다.
+           지금은 CSS 가 그 클래스를 쓰지 않을 뿐입니다.
+
+         되살리려면 — 아래 @media 안에 이 한 줄을 도로 넣으면 폰에서도 펴집니다.
+             "." + EL_CLASS + ".tl-ohlc-live .ohlc-min{display:inline;}"
+           변동 금액을 도로 감추려면 이 한 줄을 넣습니다.
+             "." + EL_CLASS + " .abs{display:none;}"
+         ★768 이상은 한 글자도 안 건드렸습니다★ — 거기는 O·H·L 이 다 보입니다. */
+      "@media (max-width:767px){." + EL_CLASS + " .ohlc-min{display:none;}}";
     var s = document.createElement("style");
     s.id = STYLE_ID;
     s.textContent = css;

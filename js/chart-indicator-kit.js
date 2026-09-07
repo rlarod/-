@@ -1683,6 +1683,62 @@ App.ChartIndicatorKit = (function () {
     return null;
   }
 
+  /* ---------------------------------------------------------------------
+   * 13.2-2 이름표 글자를 ★조각으로★ 씁니다 (2026-09-07 디자인팀)
+   *
+   * 통째로 textContent 에 넣으면 CSS 로 일부만 감출 수 없습니다. 그래서
+   * 감출 조각만 span 으로 싸 둡니다 — ★마크업은 남고 화면에서만 빠집니다★.
+   * textContent 는 감춘 조각까지 그대로 돌려주므로, getPaneLabelsForTest 로
+   * 재는 봉인들이 보는 글자는 한 글자도 안 바뀝니다.
+   * ------------------------------------------------------------------- */
+
+  /** 이 화면의 DOM 이 ★자식 글자마디까지 textContent 에 세는지★ 한 번만 확인합니다.
+   *  진짜 브라우저는 셉니다. 테스트용 가짜 DOM(tests/_kit-harness.js 등)은
+   *  textContent 가 그냥 저장해 둔 글자라 자식을 안 셉니다 — 거기서는 조각내지
+   *  않고 ★통째로★ 넣습니다. 그래야 가짜 DOM 에서 나오는 글자가 지금까지와
+   *  한 글자도 안 달라집니다(봉인들이 그 글자를 봅니다). */
+  var canSplit = null;
+  function splitOk() {
+    if (canSplit !== null) return canSplit;
+    canSplit = false;
+    try {
+      var a = document.createElement("i");
+      a.appendChild(document.createTextNode("a"));
+      var b = document.createElement("i");
+      b.textContent = "b";
+      a.appendChild(b);
+      canSplit = (a.textContent === "ab");
+    } catch (e) {
+      canSplit = false;
+    }
+    return canSplit;
+  }
+
+  /** 이름 = 「이름」 + 「(설정값)」. 괄호부터가 설정값입니다 (MA(7) · MACD(12,26,9)). */
+  function setPaneName(nm, text) {
+    if (!splitOk()) { nm.textContent = text; return; }
+    while (nm.firstChild) nm.removeChild(nm.firstChild);
+    var i = text.indexOf("(");
+    if (i <= 0) { nm.textContent = text; return; }
+    nm.appendChild(document.createTextNode(text.slice(0, i)));
+    var sp = document.createElement("span");
+    sp.className = "tl-kit-pset";
+    sp.textContent = text.slice(i);
+    nm.appendChild(sp);
+  }
+
+  /** 값 = 「₩」 + 「숫자」. 원화일 때만 앞에 기호가 붙습니다(App.Utils 규칙). */
+  function setPaneValue(b, text) {
+    if (!splitOk()) { b.textContent = text; return; }
+    while (b.firstChild) b.removeChild(b.firstChild);
+    if (text.charAt(0) !== "₩") { b.textContent = text; return; }
+    var c = document.createElement("span");
+    c.className = "tl-kit-pcur";
+    c.textContent = "₩";
+    b.appendChild(c);
+    b.appendChild(document.createTextNode(text.slice(1)));
+  }
+
   function ensurePaneLabel(it) {
     if (!it || it.pane !== "sub" || !it.live || it.live.label) return;
     var d = defs[it.def];
@@ -1696,7 +1752,7 @@ App.ChartIndicatorKit = (function () {
       el.setAttribute("data-kit", it.id);
       var nm = document.createElement("span");
       nm.className = "tl-kit-pname";
-      nm.textContent = nameOfInst(it);
+      setPaneName(nm, nameOfInst(it));
       el.appendChild(nm);
       var parts = {};
       for (var i = 0; i < d.outputs.length; i++) {
@@ -1803,7 +1859,7 @@ App.ChartIndicatorKit = (function () {
       var parts = it.live.label.parts;
       for (var k in parts) {
         var txt = valueText(d, vals[k]);
-        if (parts[k].textContent !== txt) parts[k].textContent = txt;
+        if (parts[k].textContent !== txt) setPaneValue(parts[k], txt);
       }
     }
   }
@@ -1812,7 +1868,7 @@ App.ChartIndicatorKit = (function () {
   function refreshPaneLabelName(it) {
     if (!it || !it.live || !it.live.label) return;
     var nm = it.live.label.el.querySelector(".tl-kit-pname");
-    if (nm) nm.textContent = nameOfInst(it);
+    if (nm) setPaneName(nm, nameOfInst(it));
   }
 
   /* ---------------------------------------------------------------------
@@ -3129,7 +3185,26 @@ App.ChartIndicatorKit = (function () {
       "font-size:17px;font-weight:600;line-height:1.4;color:#838DA4;white-space:nowrap;" +
       "overflow:hidden;text-overflow:ellipsis;" +
       "font-family:'JetBrains Mono',ui-monospace,monospace;}" +
-      ".tl-kit-plabel b{font-weight:600;margin-left:6px;}";
+      ".tl-kit-plabel b{font-weight:600;margin-left:6px;}" +
+      /* 13.2-2 화면에서 ★감추는★ 두 조각 (2026-09-07 디자인팀 · PM 결정 3·4)
+         ⚠️ 둘 다 ★지우는 게 아니라 감추는 것★ 입니다. 마크업은 그대로 있고
+            글자(textContent)에도 그대로 남습니다 — 봉인들이 재는 값이 안 바뀝니다.
+
+         (1) .tl-kit-pset — 이름 뒤 괄호 안 ★설정값★ ("MACD(12,26,9)" 의 뒷부분)
+             값이 아니라 설정 표시입니다. 폰에서 이것 하나가 66px 을 먹어
+             정작 ★숫자가★ … 로 잘렸습니다.
+             트레이딩뷰도 좁아지면 부가정보부터 감춥니다.
+             ⚠️ 768 이상에서는 그대로 보입니다 — 거기선 잘림이 0 입니다.
+
+         (2) .tl-kit-pcur — 원화 기호 ₩
+             이 숫자들은 ★가격이 아니라 지표 계산값★ 이고, 바로 위 .tl-ohlc 와
+             오른쪽 가격축에 이미 원화 표기가 있습니다.
+             ⚠️ ★환산은 그대로입니다★ — 숫자는 여전히 원화로 바꾼 값입니다.
+                감추는 것은 기호 한 글자뿐입니다.
+
+         되살리려면 — 아래 두 줄 중 해당하는 것만 지웁니다. */
+      "@media (max-width:767px){.tl-kit-pset{display:none;}}" +
+      ".tl-kit-pcur{display:none;}";
     var st = document.createElement("style");
     st.id = "chart-indicator-kit-style";
     st.textContent = css;
