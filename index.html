@@ -1513,6 +1513,16 @@
      js/chart-indicators.js 를 안 고치려고 별도 모듈로 뺐습니다.
      이 한 줄을 지우면 style.css 의 예비 max-width 만 남습니다. -->
 <script src="js/chart-indbar-room.js"></script>
+<!-- 거래량 마지막값 배지가 가격축 눈금을 덮던 것 (2026-09-08 · P1).
+     js/chart.js:247 이 거래량 시리즈에만 lastValueVisible/priceLineVisible 을
+     안 껐습니다(바로 위 캔들에는 껐습니다). 라이브러리 기본값이 둘 다 켜짐이라
+     ① 배지가 79,080.00 을 덮어 .00 만 읽히고 ② 차트를 가로지르는 가로 점선이
+     그려져 회원이 그걸 가격선으로 읽었습니다.
+     축 배지·점선을 끄고 그 숫자를 「● 거래량」 칩에 붙입니다(트레이딩뷰 범례 방식).
+     ★거래량 막대 자체는 그대로입니다★ — visible 을 안 건드립니다.
+     반드시 chart-font.js·chart-indicators.js 뒤.
+     이 한 줄을 지우면 배지와 점선이 그대로 돌아옵니다. -->
+<script src="js/chart-vol-badge.js"></script>
 <!-- 차트 아래 "표시 기간" 탭 (1D·5D·1M·3M·6M·YTD·1Y·5Y·ALL) — 트레이딩뷰 차트
      하단 date-range 탭을 따라간 것입니다. 차트 ★위★ 의 시간 단위(1분·5분)는
      "봉 하나가 몇 분인가", 이것은 "얼마나 긴 기간을 볼 것인가" 입니다.

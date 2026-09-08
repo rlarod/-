@@ -998,3 +998,25 @@ tests/palette-radius-shadow-seal.test.js
 #           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
 #            _order.txt 를 안 올리면 test-registry 가 "목록엔 있는데 git 엔 없다" 로 터집니다)
 tests/revert-instruction-head-seal.test.js
+
+# 2026-09-08 수리팀 — 거래량 마지막값 배지·점선이 ★가격축과 차트를 덮던 것★ (P1).
+#   js/chart.js:247 이 거래량 시리즈에만 lastValueVisible/priceLineVisible 을 안 껐습니다.
+#   ★바로 위 캔들에는 껐습니다★(235~236, "선이 2개로 보였음" 주석) — 거래량만 빠졌습니다.
+#   ① 가격축 배지가 눈금을 덮고(360 KRW 실측 — ₩118,2xx,xxx 가 "00,000" 만 읽힘)
+#   ② 차트를 ★가로지르는 가로 점선★ 이 그려져 회원이 가격선으로 읽었습니다.
+#   실측(2026-09-08 · 표본 12회씩) 겹침 — 360 USDT 100% · 360 KRW 66.7% ·
+#     375 USDT 75% · 375 KRW 100% · 390 USDT 33.3% · 390 KRW 100% ·
+#     768 두 통화 100% · 1440 USDT 91.7% · 1440 KRW 100% · 1920 USDT 83.3% · 1920 KRW 25%.
+#     점선은 여섯 폭 ★전부★ 1줄(폭의 50.0~50.4%). 수정 후 전부 0.
+#   이제 js/chart-vol-badge.js 가 축 배지·점선을 끄고 그 숫자를 「● 거래량」 칩에
+#   붙입니다(트레이딩뷰 범례와 같은 모양). ★가격축을 한 픽셀도 안 건드립니다★ —
+#   정적 px 로 자리를 맞추다 두 번 실패한 병을 아예 안 만듭니다.
+#   여기서만 보는 것 —
+#     [A] 배지·점선을 끄는가            [B] ★거래량 막대를 안 지우는가★(visible 금지)
+#     [C] 오버레이 히스토그램만 고르는가 [D] 숫자를 잃지 않는가(칩에 값)
+#     [E] 거래량을 끄면 값도 사라지는가
+#   돌연변이로 확인했습니다 — 끄는 줄을 지운 사본에서 빨강이 납니다.
+#   브라우저를 안 씁니다. jsdom 가짜 차트에 applyOptions 를 받아 적어 검산합니다.
+# 되돌리기: 이 줄과 tests/chart-vol-badge-seal.test.js 를 git rm -f 로 삭제
+#           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
+tests/chart-vol-badge-seal.test.js
