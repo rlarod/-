@@ -187,28 +187,83 @@ tests/leverage-modal-tiered-warn.test.js
 # 첫 화면이 하얗게 보이던 것 — index.html 의 인라인 배경과 data-theme 를 지킵니다.
 tests/first-paint-dark.test.js
 # 2026-08-31 대표 결정(B) — TL 마켓 상품 판매 중지. 효과 없는 상품에 TL 이 나가던 것.
+# ⚠️ 2026-09-07 — 이 문단은 order-revert-comment-seal 의 ★대표 결재 예외 딱 1건★ 입니다.
+#    (그 봉인 안 "대표결재예외" 목록에 적혀 있습니다. 파일 이름 + 결함 종류가
+#     둘 다 맞을 때만 걸립니다 — 이 문단을 통째로 봐주는 것이 아닙니다)
+#    왜 — 아래 안내는 "SALE_PAUSED 를 false 로" 한 줄이어야 하는데, 그 봉인은
+#    "등록 줄을 지우라 하면 자기 봉인 파일도 git rm 하라" 를 요구합니다. 둘이 맞부딪칩니다.
+#    ★판매 중지는 대표가 정한 상태라 안내를 팀이 못 고칩니다.★ 그래서 봉인 쪽에서 뺐습니다.
+#    (이 줄을 되돌리기 안내 ★위★ 에 적은 이유 — 되돌리기 줄 아래에서 남의 봉인
+#     이름을 대면 그 봉인이 "지울 대상" 으로 읽습니다. 위쪽은 안 봅니다)
 # 되돌리기: js/tl-market.js 의 SALE_PAUSED 를 false 로.
+# ⚠️ 2026-09-08 ★별도 worktree 에서 실제로 눌러 확인했습니다★ — 225개 중 ★2개★ 가 빨개집니다.
+#    ① tl-market-sale-paused  "판매 중지가 켜져 있다" (isSalePaused()===true 단언)
+#    ② market-sale-stop-server "SALE_PAUSED 가 true 다 — false 로 바꾸셨다면 서버도
+#       [되돌리기] 한 줄을 Run 하셔야 합니다"
+#    ⚠️ 2026-09-07 에는 여기에 ①만 적혀 있었습니다. ★눌러보니 ②가 더 있었습니다.★
+#       ②는 고장이 아니라 ★일부러 켜 둔 알림★ 입니다 — 화면만 열고 서버를 안 열면
+#       회원이 개발자도구로 그대로 살 수 있습니다(2026-09-02 P1 이 그거였습니다).
+#       그러니 ②가 빨간 것을 보면 ★서버 SQL 도 같이 Run 하라는 뜻★ 입니다.
+#    ★그래도 안내를 안 고칩니다 — 판매 중지는 대표가 정한 상태입니다.★
+#    대표가 A 로 바꾸시면 그때 이 줄과 봉인 둘을 git rm -f 로 같이 지웁니다.
+#    (봉인 안 힌트에 이미 그렇게 적혀 있습니다 — "결정이 바뀐 것입니다")
 tests/tl-market-sale-paused.test.js
 # 2026-08-31 대표 결재(B건) — "바이낸스 거래 시스템을 따라해 그것만 허용".
 # 명목이 커지면 최대 배율이 구간별로 내려갑니다. ⭐ 제일 중요한 것은 ① —
 # ★이미 열려 있는 포지션은 소급해서 줄지 않는다★ (대표님이 100배를 들고 계십니다).
 # 되돌리기: git checkout -- js/trading.js js/leverage-modal.js
+# ⚠️ 2026-09-07 확인 — 두 가지를 적어만 둡니다. ★안내는 안 고칩니다.★
+#   (가) js/trading.js 는 ★수정 금지 파일★ 이고 B건은 ★대표 결재★ 로 열렸습니다.
+#        되돌리는 것도 대표 결재 사항이라 팀이 임의로 누를 수 없습니다.
+#        레버리지 상한도 대표가 "일단 그럼 100배로 냅두자" 로 정한 값입니다.
+#   (나) "git checkout -- <파일>" 은 ★색인(index)에서 꺼냅니다.★ 이미 커밋된 뒤라면
+#        고쳐진 판이 그대로 나와 ★아무것도 안 되돌아갑니다★ — 오류도 안 납니다
+#        (아래 chat-event-entry-fee 와 같은 병입니다. 그쪽은 실제로 눌러 확인했습니다).
+#        대표 결재가 나면 그때 ★<고친커밋>~1★ 로 꺼내야 합니다.
 tests/bracket-max-leverage-seal.test.js
 # 2026-09-01 — "최대 버튼을 눌렀는데 돈이 모자란다고 한다" 두 결함.
 # (가) 되돌려 계산한 최대 증거금을 엔진 부등호가 소수 마지막 자리 때문에 거절 (29/66)
 # (나) 최대 버튼 뒤 배율을 낮추면 증거금이 반비례로 커짐 (대표님 잔고 96,572 → 482,861)
 # ⭐ 제일 중요한 것은 [2] — ★깎는 양을 사람이 고르지 않는다★ (0.999 곱하기 금지).
-# 되돌리기: index.html 에서 js/max-margin-safe.js 한 줄 삭제
+# 되돌리기: ⚠️ ★한 줄 삭제만으로는 안 됩니다.★ 2026-09-07 별도 worktree 에서
+#           실제로 눌러 확인했습니다 — 한 줄만 지우니 ★3개가 빨개졌습니다★
+#           (html-assets-tracked · mmr-fallback-blindspot · max-margin-safe-seal).
+#           ★2026-09-08 다시 눌러 재확인 — 225개 중 3개, 같은 파일 셋입니다.★
+#   ① index.html 에서 js/max-margin-safe.js 한 줄 삭제
+#   ② git rm -f js/max-margin-safe.js
+#      (안 지우면 html-assets-tracked 가 "안 불리는 js" 로 터집니다)
+#   ③ 이 줄과 tests/max-margin-safe-seal.test.js 를 git rm -f 로 삭제
+#      (rm 은 디스크에서만 지워 git 에 남습니다 — tests-dir-hygiene 이 터집니다)
+#   ④ ⚠️ ★tests/mmr-fallback-blindspot.test.js 는 다른 건의 봉인인데★
+#      "index.html 이 js/max-margin-safe.js 를 엔진보다 뒤에 부른다" 를 단언합니다.
+#      그 검사도 같이 빼야 합니다. ★이 건은 혼자 못 되돌아갑니다.★
 tests/max-margin-safe-seal.test.js
 # 2026-09-02 — 채팅이 "익절" 이라고 말한 금액에 진입 수수료가 안 빠져 있었습니다.
 # 100배에서 ROE 5% 미만이면 실제로는 지갑이 줄었는데 "익절했습니다" 라고 말합니다(P1).
 # 제일 중요한 것은 [2] — 익절/손절 판정도 보정값 기준.
-# 되돌리기: git checkout HEAD -- js/trade-events-chat.js
+# 되돌리기: git checkout 69db042~1 -- js/trade-events-chat.js
+#           + 이 줄과 tests/chat-event-entry-fee.test.js 를 git rm -f 로 삭제
+#             (rm 은 디스크에서만 지워 git 에 남습니다 — tests-dir-hygiene 이 터집니다)
+# ⚠️ 원래 "git checkout ★HEAD★ -- js/trade-events-chat.js" 라고 적혀 있었습니다.
+#    2026-09-07 별도 worktree 에서 실제로 눌러보니 ★아무것도 안 되돌아갑니다★ —
+#    종료코드 0 · md5 ff7816b5… 그대로 · git status 깨끗. HEAD 에는 이미 고친 판이
+#    들어 있으니까요. ★오류가 안 나서 되돌린 줄 알고 넘어갑니다(조용한 고장).★
+#    고친 커밋이 69db042 라 그 ★하나 앞★ 을 꺼내야 합니다.
+#    올바로 꺼내니 이 봉인이 ★10건 빨개졌습니다★ — 그래서 봉인도 같이 지웁니다.
 tests/chat-event-entry-fee.test.js
 # 2026-09-02 — TL 마켓 판매 중지가 ★화면에만★ 걸려 있고 서버는 열려 있던 것(P1).
 # 개발자도구로 purchase_tl_market_item 을 직접 부르면 효과 없는 50 TL 아이템을
 # 지금도 살 수 있었습니다. 제일 중요한 것은 [2] — ★leverage_boost 를 빠뜨리지 않는다★.
 # 되돌리기: supabase/schema-market-sale-stop.sql 의 [되돌리기] 한 줄을 Run
+# ✅ 2026-09-07 확인 — ★이 안내는 고칠 것이 없습니다.★ 되돌려도 파일이 하나도
+#    안 바뀌므로 npm test 는 그대로 초록입니다(이 봉인은 SQL 글자만 읽습니다).
+#    ⚠️ 실서버라 SQL 은 실행하지 않았습니다. 봉인이 fetch·URL 을 전혀 안 쓰고
+#       supabase/*.sql · js/tl-market.js · js/ui.js 만 읽는 것으로 확인했습니다.
+#    ⚠️ 단, 되돌린 뒤에도 이 봉인은 "서버가 잠겨 있다" 고 계속 초록입니다 —
+#       ★봉인이 서버를 못 봅니다.★ SQL 의 [되돌리기] 를 Run 하셨다면
+#       이 줄과 봉인도 git rm -f 로 같이 지워 주세요. 안 지우면 봉인이 거짓말합니다.
+#    ⚠️ SQL 안내 ②(js/tl-market.js 의 SALE_PAUSED 를 false 로)까지 하시면
+#       위 tl-market-sale-paused 봉인이 빨개집니다. 둘은 한 짝입니다.
 tests/market-sale-stop-server.test.js
 # 2026-09-02 — 지표 틀(js/chart-indicator-kit.js) 1,255줄이 봉인 0건으로 배포됐던 것(d49bd27).
 # 제일 중요한 것은 [2] — ★step 이 없으면 정의를 거부★ (틱마다 전체 재계산하는 지표를 막습니다.
@@ -227,7 +282,17 @@ tests/closed-trades-cap-seal.test.js
 # 화면 안에서 로그인" 하는 길에서만 마이페이지가 "로그인 후 확인할 수 있습니다" 로 굳었습니다.
 # ⭐⭐ 제일 중요한 것은 [2] — ★AccountIsolation 을 절대 안 부른다★ (부르면 로컬
 # 거래기록이 지워지고 되돌릴 수 없습니다). 그래서 App.Bus 로 쏘지 않고 안전한 3개만 직접 부릅니다.
-# 되돌리기: index.html 에서 js/auth-changed-bridge.js 한 줄 삭제
+# 되돌리기: ⚠️ ★한 줄 삭제만으로는 안 됩니다.★ 2026-09-07 별도 worktree 에서
+#           실제로 눌러 확인했습니다 — 한 줄만 지우니 ★1개가 빨개졌습니다★
+#           (html-assets-tracked — "안 불리는 js: js/auth-changed-bridge.js").
+#           ★2026-09-08 다시 눌러 재확인 — 225개 중 1개, 같은 파일입니다.★
+#   ① index.html 에서 js/auth-changed-bridge.js 한 줄 삭제
+#   ② git rm -f js/auth-changed-bridge.js
+#   ③ 이 줄과 tests/auth-changed-bridge.test.js 를 git rm -f 로 삭제
+#      (rm 은 디스크에서만 지워 git 에 남습니다 — tests-dir-hygiene 이 터집니다)
+# ⚠️ ★자기 봉인만 보면 못 잡습니다.★ 이 봉인의 [10] 은 "아직 안 실렸으면 통과" 로
+#    일부러 관대하게 돼 있어서, 한 줄을 지워도 ★혼자서는 초록★ 입니다.
+#    빨개지는 것은 옆 봉인(html-assets-tracked)입니다.
 tests/auth-changed-bridge.test.js
 # 2026-09-02 — 지표 6개(EMA·WMA·KDJ·ATR·StochRSI·CCI)가 하루에 늘면서 오늘 세 번 난 사고.
 # 셋 다 사람 눈으로 잡았고 테스트가 없었습니다.
@@ -913,3 +978,23 @@ tests/order-revert-comment-seal.test.js
 #            _order.txt 를 안 올리면 test-registry 가 "목록엔 있는데 git 엔 없다" 로 터집니다.
 #            ★사본에서 실제로 눌러 확인했습니다 — 222개 실행 / 222개 통과 / 0개 실패.★)
 tests/palette-radius-shadow-seal.test.js
+# 2026-09-07 — 감사팀이 커밋 32건에서 찾은 것. 되돌리기 안내에 ★상대 위치★ 를 적어
+#   두었던 것입니다("지금 HEAD 의 하나 앞"). 뒤에 커밋이 쌓이면 엉뚱한 곳을 가리키는데
+#   ★오류가 안 납니다★ — 종료코드 0, git status 깨끗, 파일 그대로. 조용한 고장입니다.
+#   되돌리는 순간은 대개 사고 직후라 제일 나쁜 때입니다.
+#   ⚠️ 지난 커밋 메시지는 ★안 봅니다★ — 훑으면 32건이 그 자리에서 빨개져 켜자마자
+#      끄고 싶은 봉인이 되고, 커밋 메시지는 고칠 수도 없습니다.
+#      ★앞으로 쓰는 자리★ 만 봅니다 — 소스 머리글 · css · sql · index.html · 이 파일.
+#   제일 중요한 것은 [1] — 고정 해시(<해시>~1)는 통과시키고 상대 위치만 막습니다.
+#   ⚠️ 설명용으로 그 형태를 써야 하면 그 줄에 [탈출표] 글자를 같이 적으세요.
+#   ★2026-09-07 실측★ 상대 위치 0건 / 되돌리기 줄 맨몸 0건 /
+#      "git checkout HEAD --"(아무것도 안 되돌아감) 3곳 — 그중 2곳은 사이트 코드라
+#      기록팀이 못 고칩니다(js/trade-events-chat.js · style.css). PM 에게 올렸습니다.
+#      나머지 1곳(tests/narrow-360-fit-seal.test.js)은 오늘 고정 해시로 고쳤습니다.
+#   돌연변이 9종으로 확인 — 잡는 쪽 4개 · ★안 걸려야 하는 쪽 5개★
+#      (고정 해시 · 40자리 해시 · git rm 안내 · 탈출표 · 자기 파일).
+# 되돌리기: 이 줄과 tests/revert-instruction-head-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 "목록엔 있는데 git 엔 없다" 로 터집니다)
+tests/revert-instruction-head-seal.test.js

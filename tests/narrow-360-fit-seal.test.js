@@ -31,7 +31,12 @@
  *   tests/css-duplicate-rules.test.js  - 같은 미디어쿼리 안의 중복
  *
  * 되돌리기: 이 파일은 새로 만든 것이 아니라 갱신입니다. 새 파일이 아니므로 git rm 이 아닙니다.
- *           git checkout HEAD -- tests/narrow-360-fit-seal.test.js
+ *           git checkout 43f8166~1 -- tests/narrow-360-fit-seal.test.js
+ *           ⚠️ 2026-09-07 정정 — 원래 "git checkout HEAD -- …" 였습니다.  설명용·안내아님
+ *              이미 커밋된 뒤라 HEAD 에 갱신된 판이 들어 있어 ★아무것도 안 되돌아갑니다★
+ *              (종료코드 0 · git status 깨끗 · 조용한 고장).
+ *              이 파일을 갱신한 커밋이 43f8166 이라 그 하나 앞을 꺼냅니다.
+ *              (윗줄의 옛 안내 글자는 설명용·안내아님 표식으로 봉인에서 빼둡니다)
  *
  *           ⚠️ ★style.css 를 42cd474 이전으로 되돌리려면 이 파일도 같이 내려야 합니다.★
  *              (401~700 이 13.5px 으로 돌아가면 아래 둘이 빨개집니다)
