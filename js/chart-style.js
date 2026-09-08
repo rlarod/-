@@ -53,10 +53,14 @@
  * 배경 #0A0F1C 위에 검정 6% 라서 사실상 안 보입니다(라이트 테마 때 값이
  * 남은 것으로 보입니다). 그래서 이 창의 격자선은 켜면 팔레트 테두리색
  * #1D273B 로 그립니다.
- *   ⚠ 기본값은 지금 화면 그대로(격자선 꺼짐)입니다. 아무도 이 창을 열지
- *     않으면 차트는 오늘과 한 픽셀도 다르지 않습니다. 바이낸스는 기본이
- *     켜짐이지만, 기본값을 바꾸는 것은 모든 회원 화면이 같이 바뀌는 일이라
- *     본부장 판단으로 남겨 두고 보고만 합니다.
+ *   ⚠ 2026-09-08 갱신 — 격자선 기본값을 이 파일에 ★글자로 적지 않습니다★.
+ *     열 때 chart.options().grid 를 읽어 그대로 보여줍니다(readGridNow).
+ *     2026-09-07 b75dfab 로 js/chart-view-default.js 가 격자선 색을 칠하면서
+ *     화면에는 켜져 보이는데 이 창만 "꺼짐" 으로 적혀 있었고, 그 상태에서
+ *     회원이 ★봉 색만 바꿔도★ 격자선이 사라졌습니다(실측). 그래서 읽습니다.
+ *     격자선 주인 — visible 은 라이브러리 기본(켜짐), 색은
+ *     js/chart-view-default.js. 이 창은 읽어서 보여주다가, 회원이 손댄
+ *     순간부터 주인이 됩니다(그때부터 저 파일이 비켜섭니다).
  *
  * ── 넣지 않은 것 · 왜 ─────────────────────────────────────────────────
  *   · Trade Marker(B/S·Arrows) — 내 체결 자리를 봉 위에 찍는 것입니다.
@@ -232,6 +236,7 @@ App.ChartStyle = (function () {
     if (!o) return null;
     var up = o.upColor;
     var dn = o.downColor;
+    var g0 = readGridNow();
     base = {
       hollow: false,
       up: hex6(up),
@@ -245,9 +250,9 @@ App.ChartStyle = (function () {
       borderDown: hex6(o.borderVisible ? (o.borderDownColor || dn) : dn),
       wickUp: hex6(o.wickUpColor || up),
       wickDown: hex6(o.wickDownColor || dn),
-      gridV: false,
-      gridH: false,
-      gridColor: GRID_DEFAULT.toLowerCase(),
+      gridV: g0.gridV,
+      gridH: g0.gridH,
+      gridColor: g0.gridColor,
       scaleMode: readScaleMode()
     };
     return base;
@@ -264,6 +269,58 @@ App.ChartStyle = (function () {
       /* 무시 */
     }
     return MODE_NORMAL;
+  }
+
+  /* 격자선은 ★그 자리에서 차트를 읽습니다★.
+     여기에 false 를 글자로 박아 두면 창이 거짓말을 합니다 —
+     js/chart-view-default.js 가 격자선을 켜 두었는데 창만 "꺼짐" 으로 보이고,
+     그 상태에서 회원이 ★봉 색만 바꿔도★ applyAll() 이 그 거짓말을 차트에
+     그대로 써서 격자선이 사라집니다. 2026-09-08 에 실제로 그랬습니다
+     (봉 오름색만 #00aaff 로 바꾸자 격자선이 true/true -> false/false 가 되고,
+      저장하면 gridV:false 가 저장소에 박혀 새로고침해도 안 돌아왔습니다).
+     격자선 주인은 한 곳입니다 — visible 은 라이브러리 기본(켜짐), 색은
+     js/chart-view-default.js. 이 창은 ★읽어서 보여주고★, 회원이 손댔을
+     때만 주인이 됩니다. */
+  function readGridNow() {
+    var out = { gridV: false, gridH: false, gridColor: GRID_DEFAULT.toLowerCase() };
+    if (!chart) return out;
+    try {
+      var g = chart.options().grid;
+      if (!g) return out;
+      out.gridV = !!(g.vertLines && g.vertLines.visible);
+      out.gridH = !!(g.horzLines && g.horzLines.visible);
+      var c = (g.vertLines && g.vertLines.color) || (g.horzLines && g.horzLines.color);
+      var h = hex6(c);
+      /* 안 보이던 옛 색(js/chart.js:48 rgba(0,0,0,0.06) -> #000000)이면
+         되돌리기 기준을 팔레트 테두리색에서 시작합니다. 검정으로 되돌리면
+         회원 눈에는 격자선이 사라진 것과 같습니다. */
+      if (h === "#000000") h = GRID_DEFAULT.toLowerCase();
+      out.gridColor = h;
+    } catch (e) {
+      /* 못 읽으면 꺼짐에서 시작합니다 (지금까지와 같은 값) */
+    }
+    return out;
+  }
+
+  /* 창을 열 때마다 격자선만 다시 읽습니다.
+     시작 순서가 고정이 아니라, base 를 만든 시점이 js/chart-view-default.js 가
+     격자선을 칠하기 ★전★ 일 수 있습니다(그 파일은 createChart 를 감싸 두었고
+     재시도도 합니다 — 실측 stats.retries 1회). 그러면 base 만 낡은 값으로 남습니다.
+     회원이 저장해 둔 값(saved)이 있으면 그 뜻이 우선이라 건드리지 않고,
+     이번 창에서 회원이 이미 격자선을 손댔으면 그것도 건드리지 않습니다. */
+  function refreshBaseGrid() {
+    if (!base || saved) return;
+    var untouched = !st || (st.gridV === base.gridV && st.gridH === base.gridH &&
+                            st.gridColor === base.gridColor);
+    var g = readGridNow();
+    base.gridV = g.gridV;
+    base.gridH = g.gridH;
+    base.gridColor = g.gridColor;
+    if (st && untouched) {
+      st.gridV = g.gridV;
+      st.gridH = g.gridH;
+      st.gridColor = g.gridColor;
+    }
   }
 
   /* <input type="color"> 는 #rrggbb 만 받습니다. rgb()/rgba() 도 들어올 수
@@ -761,7 +818,7 @@ App.ChartStyle = (function () {
     n2.className = "tl-cs-note";
     n2.textContent =
       "바이낸스는 격자선이 처음부터 켜져 있고 색은 #323C46 입니다(실측). " +
-      "우리는 지금 화면을 그대로 두려고 꺼짐으로 시작합니다.";
+      "우리도 켜져 있고, 어두운 배경에 맞춰 #1D273B 로 그립니다.";
     pane.appendChild(n2);
   }
 
@@ -861,6 +918,7 @@ App.ChartStyle = (function () {
   function open() {
     if (modal) return true;
     if (!readBase()) return false;
+    refreshBaseGrid();
     wrapCandleType();
     st = clone(st || saved || base);
     modal = build();
@@ -944,9 +1002,30 @@ App.ChartStyle = (function () {
     apply: applyAll,
     PANEL_ID: PANEL_ID,
     STORAGE_KEY: STORAGE_KEY,
-    /* 확인용 */
+    /* 확인용.
+       ⚠ ★JSON.stringify 가 되어야 합니다★. chart·candle 은 라이브러리 객체라
+       안에 자기 자신을 가리키는 고리가 있습니다. 그냥 내주면
+       "TypeError: Converting circular structure to JSON" 으로 그 자리에서
+       터집니다 — 2026-09-08 에 PM 이 이 함수를 부르려다 그렇게 막혔습니다.
+       봉인(tests/chart-style-seal.test.js)은 !!S.chart · !!S.candle 로
+       ★있는지만★ 보므로 자리는 그대로 두고, JSON 으로 옮길 때만
+       toJSON() 이 안전한 것만 골라 내보냅니다. */
     getStateForTest: function () {
-      return { base: base, st: st, saved: saved, chart: chart, candle: candle, wrappedType: wrappedType };
+      var out = {
+        base: base, st: st, saved: saved,
+        chart: chart, candle: candle, wrappedType: wrappedType,
+        /* 창이 뭐라고 하든 ★지금 차트의 진짜 격자선★ */
+        gridNow: readGridNow(),
+        isOpen: !!modal
+      };
+      out.toJSON = function () {
+        return {
+          base: base, st: st, saved: saved,
+          hasChart: !!chart, hasCandle: !!candle,
+          wrappedType: wrappedType, gridNow: out.gridNow, isOpen: out.isOpen
+        };
+      };
+      return out;
     }
   };
 })();
