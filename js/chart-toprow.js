@@ -139,6 +139,47 @@ App.ChartTopRow = (function () {
   function q(s) { return document.querySelector(s); }
 
   /* =====================================================================
+   * 옆으로 민 자리 지키기 (2026-09-08 · P2)
+   * ---------------------------------------------------------------------
+   * ── 무슨 고장이었나 ──────────────────────────────────────────────────
+   *   전체화면에 들어가면 도구 막대가 ★맨 왼쪽으로 되돌아갔습니다.★
+   *   회원이 오른쪽 끝(나가기 단추 쪽)까지 밀어 놓고 전체화면을 켜면
+   *   처음으로 튕겨 나가, ★나가기 단추가 화면 밖★ 에 있게 됩니다.
+   *   폰에는 Esc 가 없어서 나갈 길이 사라집니다.
+   *
+   * ── 원인 ─────────────────────────────────────────────────────────────
+   *   ★코드 어디에도 scrollLeft = 0 은 없습니다.★
+   *   옆으로 밀리는 상자(.tlc-toolbar)가 합친 줄 안에 있는데, 그 줄의
+   *   부모를 바꾸면 브라우저가 상자를 떼었다 붙입니다. 떼는 순간
+   *   ★밀어 놓은 위치가 사라집니다.★ DOM 이동 자체가 원인입니다.
+   *
+   *   조사팀 실측 (390) — 끝까지 밀면 607.
+   *     ① 같은 부모·같은 자리에 다시 끼우기만 해도  → 0
+   *     ② .chart-panel 안으로 옮기면               → 0
+   *     ③ 원래 자리로 되돌려도                     → 0
+   *
+   * ── 처방 ─────────────────────────────────────────────────────────────
+   *   옮기기 ★직전★ 에 적어 두고 옮긴 ★직후★ 에 그대로 되돌려 놓습니다.
+   *   ★같은 함수 안에서 동기로★ 해야 합니다 — 한 프레임이라도 미루면
+   *   회원 눈에 한 번 튀었다가 돌아오는 것이 보입니다.
+   *   조사팀이 실제로 눌러 동기로 넣으면 607 이 유지되는 것을 확인했습니다.
+   *
+   *   ⚠ 막대를 옮기는 자리 ★전부★ 에 씁니다 — 하나만 빠져도 그 길로 0 이 됩니다.
+   *     build() 의 첫 이동 · 전체화면 들어갈 때 · 나올 때 · 막대 되찾을 때.
+   * ===================================================================== */
+  function keepScroll(옮기기) {
+    var keep = 0;
+    try {
+      if (bar && typeof bar.scrollLeft === "number") keep = bar.scrollLeft;
+    } catch (e) { keep = 0; }
+    옮기기();
+    if (!keep) return;   /* 원래 맨 왼쪽이었으면 되돌릴 것이 없습니다 */
+    try {
+      if (bar && bar.scrollLeft !== keep) bar.scrollLeft = keep;
+    } catch (e) { /* 무시 — 자리만 못 지킬 뿐 나머지는 그대로 됩니다 */ }
+  }
+
+  /* =====================================================================
    * 자리 옮기기
    * ===================================================================== */
   function build() {
@@ -163,7 +204,8 @@ App.ChartTopRow = (function () {
 
     /* 막대는 ★언제나★ 합친 줄 안입니다. 전체화면에는 줄째로 들어갑니다
        (전에는 막대만 옮겼는데, 그러면 밀기 표시가 빈 줄에 남아 안 보였습니다) */
-    if (bar.parentNode !== toprow) toprow.appendChild(bar);
+    /* ★옮기면 밀어 놓은 자리가 0 이 됩니다★ — keepScroll 설명 참고 */
+    if (bar.parentNode !== toprow) keepScroll(function () { toprow.appendChild(bar); });
     if (hint && hint.parentNode !== toprow) toprow.appendChild(hint);
 
     /* 시간 단위 줄을 막대 맨 앞으로 + 구분선 하나 */
@@ -207,14 +249,17 @@ App.ChartTopRow = (function () {
         /* 나올 때 제자리로 돌아오려고 지금 자리를 적어 둡니다 */
         home = toprow.parentNode;
         homeNext = toprow.nextSibling;
-        p.insertBefore(toprow, p.firstChild);
+        /* ★들어갈 때★ 밀어 놓은 자리를 지킵니다 — 안 지키면 나가기 단추가
+           화면 밖(실측 156~200px)에 남고 폰에는 Esc 가 없습니다 */
+        keepScroll(function () { p.insertBefore(toprow, p.firstChild); });
       }
     } else if (home && toprow.parentNode !== home) {
       var next = (homeNext && homeNext.parentNode === home) ? homeNext : null;
-      home.insertBefore(toprow, next);
+      /* ★나올 때도★ 같은 병입니다 (조사팀 실측 — 나올 때도 0 이었습니다) */
+      keepScroll(function () { home.insertBefore(toprow, next); });
     }
     /* 막대는 어느 쪽이든 합친 줄 안입니다 — 줄째로 옮기니 › 표시도 같이 따라갑니다 */
-    if (bar.parentNode !== toprow) toprow.insertBefore(bar, hint || null);
+    if (bar.parentNode !== toprow) keepScroll(function () { toprow.insertBefore(bar, hint || null); });
     schedule();
   }
 
@@ -361,17 +406,21 @@ App.ChartTopRow = (function () {
     off = true;
     /* 자리를 수정 전으로 되돌립니다 */
     try {
-      var row = document.getElementById(ROW_ID);
-      var p = q(".chart-panel");
-      /* 전체화면 중이면 합친 줄이 카드 안에 있습니다 — 먼저 제자리로 되돌립니다 */
-      if (toprow && home && toprow.parentNode !== home) {
-        var n0 = (homeNext && homeNext.parentNode === home) ? homeNext : null;
-        home.insertBefore(toprow, n0);
-      }
-      if (toprow && row && toprow.parentNode) toprow.parentNode.insertBefore(row, toprow);
-      if (bar && p) p.insertBefore(bar, p.firstChild);
-      if (sep && sep.parentNode) sep.parentNode.removeChild(sep);
-      if (toprow && toprow.parentNode) toprow.parentNode.removeChild(toprow);
+      /* ★여기도 막대를 옮깁니다★ — 되돌리는 길이라고 민 자리를 잃을 이유가 없습니다.
+         묶어서 한 번에 감쌉니다(옮기는 동안은 어차피 중간 값이 안 보입니다). */
+      keepScroll(function () {
+        var row = document.getElementById(ROW_ID);
+        var p = q(".chart-panel");
+        /* 전체화면 중이면 합친 줄이 카드 안에 있습니다 — 먼저 제자리로 되돌립니다 */
+        if (toprow && home && toprow.parentNode !== home) {
+          var n0 = (homeNext && homeNext.parentNode === home) ? homeNext : null;
+          home.insertBefore(toprow, n0);
+        }
+        if (toprow && row && toprow.parentNode) toprow.parentNode.insertBefore(row, toprow);
+        if (bar && p) p.insertBefore(bar, p.firstChild);
+        if (sep && sep.parentNode) sep.parentNode.removeChild(sep);
+        if (toprow && toprow.parentNode) toprow.parentNode.removeChild(toprow);
+      });
     } catch (e) { /* 무시 */ }
     toprow = null; hint = null; sep = null;
   }
