@@ -329,7 +329,12 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
 .ws-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--text-faint);}
 .ws-dot.ok{background:#34D399;box-shadow:0 0 6px rgba(52,211,153,0.6);}
 .ws-dot.fail{background:var(--red);box-shadow:0 0 6px rgba(229,72,77,0.6);}
-.ws-dot.pending{background:var(--gold);box-shadow:0 0 6px rgba(29,95,214,0.6);}
+.ws-dot.pending{background:var(--gold);box-shadow:0 0 6px rgba(240,180,41,0.6);}
+/* [디자인 2026-09-08] 위 .ws-dot.pending 는 ★색만★ 고쳤습니다. 옛값 rgba(29,95,214,0.6)
+   은 삭제된 밝은 모드의 --gold(파랑) 잔재라, 금색 점 둘레에만 파란 빛이 돌았습니다.
+   확정 팔레트 골드 #F0B429 = rgba(240,180,41) 로 맞췄습니다.
+   ⚠️ 그림자 자체는 지우지 않았습니다 — 이 점은 헤더 우측에 있어 저희가 눈으로 못 봅니다(PM 지시).
+   되돌리려면 rgba(240,180,41,0.6) 을 rgba(29,95,214,0.6) 으로 되돌리면 됩니다. */
 .ws-sep{color:var(--text-faint);}
 .mono-strong{font-family:var(--mono);font-weight:700;color:var(--text);}
 
@@ -575,7 +580,11 @@ input[type=range]{
 }
 input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;
-  box-shadow:0 0 0 2px rgba(29,95,214,0.20);
+  /* [디자인 2026-09-08] ★색만★ 교정. 옛값 rgba(29,95,214,0.20) 은 삭제된 밝은 모드
+     --gold(파랑) 잔재입니다. 손잡이는 금색인데 둘레 링만 파랬습니다.
+     ⚠️ 그림자는 지우지 않았습니다 — 레버리지 슬라이더는 로그인 화면이라 못 봅니다(PM 지시).
+     되돌리려면 rgba(240,180,41,0.20) -> rgba(29,95,214,0.20). */
+  box-shadow:0 0 0 2px rgba(240,180,41,0.20);
 }
 
 /* ---------- LONG / SHORT 버튼 ---------- */
@@ -3116,7 +3125,13 @@ html[data-currency="KRW"] .position-table th:nth-child(3){width:10%;}
 .hd-card{
   position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;
   padding:16px;border:1px solid var(--border);border-radius:3px;
-  background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  background:var(--surface);
+  /* [디자인 2026-09-08] 그림자를 지웠습니다(PM 지시).
+     옛값 ->  box-shadow:0 1px 2px rgba(0,0,0,0.04);
+     아래쪽 html[data-theme="dark"] .hd-card{box-shadow:none} 규칙이 이미 덮고 있었고
+     우리는 다크 하나로만 운영하므로 ★한 번도 그려진 적이 없습니다★
+     (핫딜 페이지 카드 6개 computed box-shadow = none 실측 · 지운 뒤에도 none).
+     되돌리려면 위 옛값 한 줄을 background 줄 뒤에 다시 붙이면 됩니다. */
 }
 .hd-card-out{opacity:0.55;}
 .hd-badges{display:flex;gap:4px;flex-wrap:wrap;min-height:20px;}
@@ -3188,7 +3203,12 @@ html[data-theme="dark"] .hd-thumb{background:var(--surface3);}
   position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
   margin:0;padding:12px;
   background:var(--surface);border:1px solid var(--border);border-radius:3px;
-  box-shadow:0 3px 8px rgba(0,0,0,0.16);
+  /* [디자인 2026-09-08] 그림자를 지웠습니다(PM 지시).
+     옛값 ->  box-shadow:0 3px 8px rgba(0,0,0,0.16);
+     바로 아래 html[data-theme="dark"] 규칙이 0.5 로 덮고 있어, 다크 전용인
+     우리 화면에서는 ★한 번도 그려진 적이 없습니다★
+     (computed = rgba(0,0,0,0.5) 0px 3px 8px 실측 · 지운 뒤에도 같은 값).
+     되돌리려면 위 옛값 한 줄을 이 주석 자리에 다시 넣으면 됩니다. */
 }
 .top-mode-row > .leverage-field-top #lev-slider{width:100%;display:block;}
 html[data-theme="dark"] .top-mode-row > .leverage-field-top{
