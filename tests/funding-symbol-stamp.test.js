@@ -16,10 +16,17 @@
  *
  *  (3) 이번 세션에서 생긴 행만 찍는다 — 소급 변경 금지
  *
- *  (4) App.Storage.save 를 새로 감싸지 않는다
- *      감싸는 모듈이 4개에서 5개가 되면 도장 순서가 뒤집혀
+ *  (4) 이 파일(js/funding-qty-symbol.js)은 App.Storage.save 를 새로 감싸지 않는다
+ *      감싸는 모듈이 늘면 도장 순서가 뒤집혀
  *      다른 종목 포지션이 비트코인으로 둔갑합니다(2026-08-27 P1).
  *      그래서 이미 감싸고 있는 stampTradingDoc() 안에 넣었습니다.
+ *
+ *      ⚠ 2026-09-09 — 기준선이 4개에서 ★5개★ 가 됐습니다.
+ *        js/pending-order-restore-guard.js 가 늘었습니다
+ *        ([P1] 새로고침하면 미체결 지정가 주문이 사라지던 것).
+ *        ★js/symbol-sync-bridge.js 뒤★ = 가장 바깥이라 도장 순서는
+ *        뒤집히지 않습니다. 그 자리는 tests/storage-save-wrap-order.test.js
+ *        가 따로 못 박습니다 — ★여기서는 개수만★ 봅니다.
  *
  * 판정 규칙을 그대로 옮긴 가짜로 돌려서 숫자로 확인합니다.
  * ========================================================================= */
@@ -87,8 +94,10 @@ console.log("\n  (4) App.Storage.save 를 새로 감싸지 않았다");
   const WRAP = /App\.Storage\.save\s*=(?!=)/;
   const 감싸는 = files.filter((f) =>
     WRAP.test(read("js/" + f).replace(/\/\*[\s\S]*?\*\//g, " ")));
-  ok("App.Storage.save 를 감싸는 모듈이 4개 그대로다 (" + 감싸는.length + "개)",
-    감싸는.length === 4, 감싸는.join(", "));
+  ok("App.Storage.save 를 감싸는 모듈이 5개 그대로다 (2026-09-09 기준선, " + 감싸는.length + "개)",
+    감싸는.length === 5, 감싸는.join(", ") +
+    " — 늘렸다면 index.html 에서 어디에 넣었는지 확인하고" +
+    " tests/storage-save-wrap-order.test.js 의 기준선을 같이 고치세요");
 }
 
 /* ===================================================================== */

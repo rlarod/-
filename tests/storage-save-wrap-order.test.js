@@ -41,6 +41,9 @@
  *   4개입니다. chart-indicators / chart-drawings / chart-oscillators 는
  *   자기 설정을 저장하려고 save() 를 부르기만 하고 감싸지는 않습니다.
  *   위험한 것은 "감싸는 4개의 순서" 이므로 그쪽을 엄격하게 박고,
+ *   ★2026-09-09 — js/pending-order-restore-guard.js 가 늘어 5개가 됐습니다.★
+ *   ([P1] 새로고침하면 미체결 지정가 주문이 사라지던 것. symbol-sync-bridge 뒤 =
+ *    가장 바깥. 되살린 pendingOrder 에 종목 도장이 찍히려면 그 자리여야 합니다.)
  *   나머지 3개는 "감싸기 시작하면 실패" 하도록 반대로 못 박았습니다.
  *   (참고 — save() 를 부르기만 하는 모듈은 js 전체로 11개입니다.
  *    그 개수는 계속 늘 수 있어 기준으로 삼지 않습니다.)
@@ -88,6 +91,11 @@ const 감싸는모듈_기준 = [
   "js/symbol-guard.js",
   "js/ghost-position-guard.js",
   "js/symbol-sync-bridge.js",
+  /* 2026-09-09 추가 — [P1] 새로고침하면 미체결 지정가 주문이 사라지던 것.
+     ★symbol-sync-bridge.js 뒤★ = 가장 바깥이라야 합니다. 그래야 되살린
+     pendingOrder 에 bridge·guard 가 같은 저장 한 번 안에서 종목 도장을 찍습니다.
+     앞으로 옮기면 되살린 주문에 종목이 안 찍힙니다. */
+  "js/pending-order-restore-guard.js",
 ];
 
 /* 부르기만 하고 감싸지는 않는 것들(수리팀이 센 7개 중 나머지 3개).
@@ -98,13 +106,14 @@ const 부르기만_기준 = [
   "js/chart-oscillators.js",
 ];
 
-const 순서있는7개 = [
+const 순서있는8개 = [
   "js/funding-restore-guard.js",
   "js/symbol-guard.js",
   "js/chart-indicators.js",
   "js/chart-drawings.js",
   "js/ghost-position-guard.js",
   "js/symbol-sync-bridge.js",
+  "js/pending-order-restore-guard.js", /* 2026-09-09 추가 */
   "js/chart-oscillators.js",
 ];
 
@@ -121,7 +130,7 @@ console.log("\nApp.Storage.save 감싸기 — 순서가 바뀌면 포지션 종�
 section("[1] App.Storage.save 를 감싸는 모듈");
 const 감싸는모듈 = JS_FILES.map((f) => "js/" + f).filter((rel) => WRAP.test(strip(read(rel))));
 {
-  ok("감싸는 모듈이 4개다(2026-08-27 기준선)", 감싸는모듈.length === 4,
+  ok("감싸는 모듈이 5개다(2026-09-09 기준선)", 감싸는모듈.length === 5,
     감싸는모듈.length + "개: " + 감싸는모듈.join(", ") +
     " — 감싸는 모듈이 늘면 순서에 따라 도장이 뒤집힙니다. " +
     "늘렸다면 index.html 에서 js/symbol-sync-bridge.js 보다 " +
@@ -166,24 +175,24 @@ function 줄번호(rel) {
     g > 0 && b > 0 && b > g,
     위험문구 + " 지금 위치: symbol-guard " + g + "행 / symbol-sync-bridge " + b + "행");
 
-  /* 감싸는 4개 전체 순서. 하나라도 자리가 바뀌면 알려줍니다. */
+  /* 감싸는 5개 전체 순서. 하나라도 자리가 바뀌면 알려줍니다. */
   const 실린순서 = 감싸는모듈_기준
     .map((f) => ({ f: f, line: 줄번호(f) }))
     .sort((a, c) => a.line - c.line)
     .map((x) => x.f);
-  ok("감싸는 4개 순서가 기준선 그대로다",
+  ok("감싸는 5개 순서가 기준선 그대로다",
     실린순서.join(" → ") === 감싸는모듈_기준.join(" → "),
     "지금: " + 실린순서.join(" → ") + "\n     기준: " + 감싸는모듈_기준.join(" → ") +
     " — 감싸는 순서가 바뀌면 symbol 도장을 누가 먼저 찍는지가 뒤집힙니다");
 
   감싸는모듈_기준.forEach((f) => ok(f + " 가 index.html 에 실려 있다", 줄번호(f) > 0));
 
-  /* 수리팀이 센 7개가 전부 실려 있고 그 상대 순서도 그대로인지. */
-  const 일곱 = 순서있는7개.map((f) => ({ f: f, line: 줄번호(f) }));
-  ok("7개가 전부 index.html 에 실려 있다", 일곱.every((x) => x.line > 0),
+  /* 8개가 전부 실려 있고 그 상대 순서도 그대로인지. */
+  const 일곱 = 순서있는8개.map((f) => ({ f: f, line: 줄번호(f) }));
+  ok("8개가 전부 index.html 에 실려 있다", 일곱.every((x) => x.line > 0),
     일곱.filter((x) => x.line < 0).map((x) => x.f).join(", ") + " 가 없습니다");
   const 정렬 = 일곱.slice().sort((a, c) => a.line - c.line).map((x) => x.f);
-  ok("7개의 상대 순서가 2026-08-27 그대로다", 정렬.join(" → ") === 순서있는7개.join(" → "),
+  ok("8개의 상대 순서가 2026-09-09 기준선 그대로다", 정렬.join(" → ") === 순서있는8개.join(" → "),
     "지금: " + 정렬.join(" → "));
 
   /* js/symbol-guard.js 는 js/trading.js 보다 앞이어야 합니다

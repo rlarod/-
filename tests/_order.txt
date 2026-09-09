@@ -1108,3 +1108,21 @@ tests/chart-series-axis-badge-seal.test.js
 #             228개 실행 / 228개 통과 → ★227개 실행 / 227개 통과 / 0개 실패★
 #             (되돌리기 전 원래 숫자와 정확히 같습니다)★
 tests/repo-root-hygiene.test.js
+
+# 2026-09-09 — [P1] 새로고침하면 ★미체결 지정가 주문이 사라지고 그 돈을 되찾을 길이
+#   없던★ 것. js/auth.js:415 가 hydrate 때 pendingOrder 를 null 로 덮어썼습니다.
+#   체결 판정은 100% 브라우저 안에서만 돌고(서버에 체결 엔진 없음), 취소 단추는
+#   숨겨진 카드 안에만 있어 서버 orders 행이 OPEN 인 채로 영원히 남았습니다.
+#   조사팀 확인 — tests/ 에서 pendingOrder 를 쓰는 파일이 20개인데
+#   ★hydrate 가 그것을 null 로 만드는 것을 막는 봉인은 0개★ 였습니다.
+#   ⚠ 이 봉인에서 제일 중요한 것은 [C] armed 입니다 — 되살리기를 항상 켜두면
+#     회원이 주문을 취소·체결한 뒤에도 되살아나 ★증거금이 두 번 잡힙니다.★
+#     고치려던 것보다 더 나쁜 고장이라 돌연변이 ② 로 따로 재현해 확인합니다.
+#   ⚠ 이 건은 혼자 되돌아가지 않습니다. js/pending-order-restore-guard.js ·
+#     index.html · tests/storage-save-wrap-order.test.js 의 기준선(감싸는 모듈 5개)
+#     까지 같이 되돌려야 합니다. 자세한 순서는 그 건의 되돌리기 안내를 보세요.
+# 되돌리기: 이 줄과 tests/pending-order-restore.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+tests/pending-order-restore.test.js

@@ -1395,6 +1395,17 @@
      그래서 이 다리가 찍는 도장도 이제 종목마다 실제로 달라집니다.
      symbol-guard.js 뒤여야 합니다(도장을 먼저 찍어야 함). 이 한 줄만 지우면 원래대로. -->
 <script src="js/symbol-sync-bridge.js"></script>
+<!-- [P1] 새로고침하면 ★미체결 지정가 주문이 사라지고 그 돈을 되찾을 길이 없던★ 것.
+     js/auth.js:415 가 복원할 때 pendingOrder 를 null 로 덮어씁니다(hydrate → boot 순서).
+     체결 판정은 100% 브라우저 안에서만 돌고(서버에 체결 엔진 없음), 취소 단추는
+     숨겨진 카드 안에만 있어서 서버 orders 행이 OPEN 인 채로 영원히 남았습니다.
+     js/auth.js·js/trading.js·js/ui.js·js/supabase-sync.js 무수정.
+     App.Storage.save 를 감싸 ★복원 구간에서만★(App.bootApp 전) 되살립니다.
+     로컬에 있으면 그것을(tp·sl·종목까지), 없으면 서버 orderHistory 의 OPEN 지정가로.
+     ⚠ symbol-sync-bridge.js 뒤여야 합니다 — 우리가 가장 바깥이라야 되살린 주문에
+       종목 도장이 같은 저장 한 번 안에서 찍힙니다.
+     이 한 줄만 지우면 원래대로 돌아갑니다. -->
+<script src="js/pending-order-restore-guard.js"></script>
 <!-- 펀딩 정산 내역 "수량" 칸이 종목을 안 보던 것 (js/ui.js:599 무수정).
      ui.js 는 formatQty 에 종목을 안 넘겨서 "지금 활성 종목" 단위로 떨어집니다.
      symbol-sync-bridge.js 가 찍어 둔 f.symbol 을 읽어 그린 뒤에 덮어씁니다.
