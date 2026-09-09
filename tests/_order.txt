@@ -1043,3 +1043,68 @@ tests/chart-vol-badge-seal.test.js
 # 되돌리기: 이 줄과 tests/chart-toprow-scroll-keep.test.js 를 git rm -f 로 삭제
 #           (rm 이 아닙니다 — git 에 남으면 tests-dir-hygiene 이 터집니다).
 tests/chart-toprow-scroll-keep.test.js
+
+# 2026-09-09 기록팀 — ★시리즈를 만들 때 마지막값 배지·가로 점선을 껐는가★ 를 소스 글자로.
+#   가격축이 가려지는 병이 사흘에 세 번 났습니다 — 09-07 .tl-ohlc(8efb985) ·
+#   09-07 .tl-ind-bar(c3dfca3) · 09-08 ★거래량 배지 + 가짜 가격선★(053bfea, P1).
+#   앞 둘은 ★배치★ 문제라 chart-overlay-right-edge 가 CSS 규칙으로 잡습니다.
+#   세 번째는 ★기본값★ 문제입니다 — addSeries 에 옵션을 안 적어 라이브러리 기본값이
+#   켜졌고, 캔버스에 ctx.fillText 로 찍히므로 ★선택자도 CSS 규칙도 없습니다★.
+#   CSS 를 아무리 훑어도 영원히 안 잡힙니다. 그래서 ★소스에 적었는가★ 를 봅니다.
+#   ★착수 전 실측(2026-09-09)★ js/ 전체 addSeries·addCustomSeries 호출 ★16곳★.
+#     두 옵션을 안 적은 곳은 ★js/chart.js:247 단 1곳★ 이고 그 1곳이 이번 P1 입니다.
+#     보조지표(RSI·MACD·kit 의 EMA/WMA/KDJ/ATR/StochRSI/CCI …)는 ★전부 적어 뒀습니다★ —
+#     같은 병이 더 있지는 않았습니다. 그래서 "안 적었으면 무조건 빨강" 이 아니라
+#     ★"잠긴 파일이면 밖에서 끄는 모듈과 짝"★ 으로 만들었습니다(js/chart.js 는 못 고칩니다).
+#   제일 중요한 것은 [4] — ★우회 모듈이 js/chart.js 보다 뒤에 실리는가★.
+#     앞에 실리면 원본이 나중에 시리즈를 만들며 배지가 되살아납니다.
+#     tests/chart-vol-badge-seal.test.js 는 chart-font·chart-indicators 뒤만 봅니다 —
+#     ★원본 뒤인가는 아무도 안 보고 있었습니다.★ 두 벌이 아닙니다.
+#   ⚠ 보조 pane 지표는 lastValueVisible 이 true 인 것이 있습니다(RSI·MACD 선).
+#     자기 칸의 축이라 메인 가격축을 안 덮습니다 — 값은 안 따지고 ★적었는가★ 만 봅니다.
+#     값으로 따지는 것은 [5] priceLineVisible: true 0곳 하나뿐입니다.
+#   ⚠ 브라우저를 안 씁니다. 캔버스 겹침을 픽셀로 재는 검사는 ★일부러 안 만들었습니다★ —
+#     overflow:hidden 뒤에서 좌표가 247 을 654 로 보고합니다(chart-indbar-axis-clear [6]).
+#   돌연변이 5종으로 확인 — 잡는 쪽 3개(끄는 줄 삭제 · 순서 뒤집기 · 옵션 없는 새 시리즈) ·
+#     ★안 걸려야 하는 쪽 2개★(제대로 적은 시리즈 · 주석 안의 예시).
+# 되돌리기: 이 줄과 tests/chart-series-axis-badge-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 "목록엔 있는데 git 엔 없다" 로 터집니다)
+#           + tests/chart-overlay-right-edge.test.js 머리글에서 이 파일을 가리키는
+#             줄도 지우세요. ★그것만은 테스트가 안 깨집니다★ — 주석이라 아무 봉인도
+#             안 울고, 없어진 파일을 가리키는 안내만 조용히 남습니다.
+#           ★2026-09-09 별도 worktree 에서 실제로 눌러 확인했습니다 —
+#             229개 실행 / 229개 통과 → ★228개 실행 / 228개 통과 / 0개 실패★.★
+tests/chart-series-axis-badge-seal.test.js
+
+# 2026-09-09 기록팀 — ★저장소 뿌리★ 에 흘린 파일이 커밋에 들어가는 것.
+#   2026-09-08 PM 이 격리 확인을 하다 worktree 뿌리에 파일을 하나 흘렸는데,
+#   git add -A 로 같이 올라갔는데도 ★아무 봉인도 안 울었습니다★.
+#   tests-dir-hygiene 은 ★tests/ 안만★ 보고, shots-gitignore-seal 은 shots/ 만 봅니다.
+#   그 봉인 머리글에 적힌 사고(tests/tw-probe-tmp.js)와 ★똑같은 병인데★ 흘린 자리가
+#   한 칸 위였다는 이유로 그물 밖이었습니다. CLAUDE.md 에 -A 사고가 두 번(fde463a ·
+#   799e3f6) 적혀 있는데도 또 났습니다 — ★문서에 적는 것만으로는 안 막힙니다.★
+#   뿌리는 ★Vercel 이 그대로 서비스하는 자리★ 이고 저장소는 Public 입니다.
+#   ★2026-09-09 실측★ 추적되는 뿌리 파일 ★12개★ · 폴더 ★9개★. 그 12개를 기준목록에
+#     ★이유와 함께★ 적었고 13번째가 나타나면 빨개집니다(상한 14 — 넘기면 그것도 빨강).
+#     ⚠ 한글 이름(오픈전-점검보고서.md)이 있어 ★git ls-files -z★ 로 읽습니다.
+#       그냥 ls-files 는 8진수 따옴표로 뱉어 기준목록과 영원히 안 맞습니다.
+#   제일 중요한 것은 [4] — ★뿌리의 .test.js 는 추적 여부와 상관없이 잡습니다★.
+#     _order.txt 가 tests/ 안만 등록하므로 뿌리에 두면 ★아무도 안 돌립니다★ —
+#     초록인데 한 번도 안 돈 테스트가 됩니다(조용한 고장).
+#   ⚠ 디스크에만 있는 파일은 봐줍니다(작업 중 임시 파일은 정상) — ★커밋에 들어가는
+#     순간★ 만 막습니다. tests-dir-hygiene 과 같은 판단입니다. 폴더 안은 안 봅니다.
+#   ⚠ 돌연변이를 ★진짜 파일을 만들지 않고★ 목록에 가짜 이름을 끼워 셈만 해서 확인합니다.
+#     뿌리에 파일을 흘리지 말자는 봉인이 뿌리에 파일을 흘리면 안 됩니다.
+#   돌연변이 5종 — 잡는 쪽 3개(흘린 파일 · 뿌리 .test.js · 임시 낱말) ·
+#     ★안 걸려야 하는 쪽 2개★(template 안의 temp · 폴더 안 파일).
+# 되돌리기: 이 줄과 tests/repo-root-hygiene.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 "목록엔 있는데 git 엔 없다" 로 터집니다)
+#           ⚠ 다른 파일에 딸린 것이 없습니다 — 이 건은 ★혼자 되돌아갑니다★.
+#           ★2026-09-09 별도 worktree 에서 실제로 눌러 확인했습니다 —
+#             228개 실행 / 228개 통과 → ★227개 실행 / 227개 통과 / 0개 실패★
+#             (되돌리기 전 원래 숫자와 정확히 같습니다)★
+tests/repo-root-hygiene.test.js
