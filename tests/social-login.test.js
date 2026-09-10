@@ -291,23 +291,26 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok("두 번 넣어도 하나만 생긴다", doc.querySelectorAll("#social-login-kakao").length === 1);
   }
 
-  /* ---------- 네이버 ---------- */
+  /* ---------- 네이버 ----------
+     ⚠ 2026-09-10 대표 지시 "네이버 로그인은 일단빼자" 로 ★버튼만★ 껐습니다.
+       그전에 여기 있던 "네이버 버튼이 있다" / "버튼을 눌렀더니 custom:naver 로
+       보낸다" 두 검사는 ★버튼이 없어졌으므로★ 목록 확인으로 바꿉니다.
+       ★목록에서 네이버가 사라지는 것★ 은 tests/naver-login-hidden.test.js 가
+       따로 지키고 있습니다(기존 네이버 회원 판정이 깨지는 조용한 고장). */
   {
-    const { doc, calls } = boot({});
+    const { doc, K } = boot({});
     await sleep(20);
-    const btn = doc.getElementById("social-login-naver");
-    ok("네이버 버튼이 있다", !!btn);
-    ok("네이버 버튼 문구가 한국어다", btn && /네이버/.test(btn.textContent));
-    btn.click();
-    await sleep(30);
-    const c = calls.find((x) => x[0] === "oauth");
+    ok("네이버 버튼은 지금 화면에 없다(2026-09-10 대표 지시)",
+      !doc.getElementById("social-login-naver"));
+    const nv = K.PROVIDERS.filter(function (x) { return x.key === "naver"; })[0];
+    ok("그래도 네이버 항목 자체는 남아 있다", !!nv,
+      "지우면 기존 네이버 회원이 '닉네임+비밀번호 회원' 으로 잘못 판정됩니다");
     /* Supabase 기본 목록에 네이버가 없어서 대시보드에 직접 등록해야 하고,
        그때 정한 이름이 provider 가 됩니다. 이 값이 Supabase 설정과 다르면
-       버튼을 눌러도 그냥 실패합니다. 그래서 값을 못박아 둡니다. */
+       되살렸을 때 버튼을 눌러도 그냥 실패합니다. 그래서 값을 못박아 둡니다. */
     ok("네이버는 직접 등록한 이름(custom:naver)으로 보낸다",
-      c && c[1].provider === "custom:naver", c && c[1].provider);
-    ok("네이버도 지금 보던 페이지로 돌아온다",
-      c && c[1].options.redirectTo === "https://tl.test/index.html");
+      nv && nv.id === "custom:naver", nv && nv.id);
+    ok("되살리기용 표시가 hidden 한 줄뿐이다", nv && nv.hidden === true);
   }
   {
     const naverUser = {

@@ -1126,3 +1126,16 @@ tests/repo-root-hygiene.test.js
 #           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
 #            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
 tests/pending-order-restore.test.js
+
+# 2026-09-10 — 대표 지시 "네이버 로그인은 일단빼자".
+#   「네이버로 계속하기」 버튼을 ★지우지 않고 껐습니다★ (PROVIDERS 의 hidden:true 한 줄).
+#   ⚠ 이 봉인의 핵심은 [A] 입니다 — PROVIDERS 에서 네이버를 ★통째로 지우면★
+#     providerById → isSocialProvider → isSocialUser 가 전부 false 가 되어
+#     ★이미 네이버로 가입한 회원★ 이 "닉네임+비밀번호 회원" 으로 잘못 분류됩니다.
+#     오류도 안 나고 화면도 멀쩡한 조용한 고장이라 사람 눈으로는 못 잡습니다.
+#   [B] 는 버튼이 다시 나타나는 것을, [C] 는 카카오가 멀쩡한지를 봅니다.
+# 되돌리기: 이 줄과 tests/naver-login-hidden.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+tests/naver-login-hidden.test.js

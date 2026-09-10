@@ -60,6 +60,22 @@ App.SocialLogin = (function () {
       label: "네이버로 계속하기",
       short: "네이버",
       cls: "naver-login-btn",
+
+      /* ⭐ 2026-09-10 대표 지시 — "네이버 로그인은 일단빼자"
+       * ★되살리는 방법 — 바로 아래 hidden:true 한 줄만 지우면 끝입니다.★
+       *
+       * hidden:true 는 ★버튼을 안 그린다★ 는 뜻일 뿐입니다.
+       * 이 항목 자체는 ★일부러 남겨둡니다. 지우면 안 됩니다.★
+       *
+       * ⚠ 왜 통째로 지우면 안 되나 — 조용한 고장이 납니다
+       *   providerById() → isSocialProvider() → isSocialUser() 가 이 목록을 뒤집니다.
+       *   여기서 네이버를 빼면 ★이미 네이버로 가입한 회원★ 이
+       *   "닉네임+비밀번호 회원" 으로 잘못 판정됩니다(isSocialUser 가 false).
+       *   그러면 닉네임 관문·개인정보 저장 흐름이 통째로 어긋나는데
+       *   ★오류도 안 나고 화면도 멀쩡합니다.★
+       *   그래서 "목록에는 남기고 버튼만 안 그린다" 로 갑니다.
+       *   이 표시를 보는 곳은 buttonHtml() ★한 곳뿐★ 입니다. 판정 함수는 안 봅니다. */
+      hidden: true,
     },
   ];
 
@@ -175,6 +191,10 @@ App.SocialLogin = (function () {
     var html = '<div class="social-login-or"><span>또는</span></div>' +
       '<div class="social-login-row">';
     PROVIDERS.forEach(function (p) {
+      /* hidden 인 수단은 ★버튼만★ 안 만듭니다(2026-09-10 대표 지시로 네이버).
+         목록에는 그대로 남아 있어 isSocialUser 등 판정은 계속 동작합니다.
+         되살리려면 PROVIDERS 의 hidden:true 한 줄을 지우면 됩니다. */
+      if (p.hidden) return;
       html +=
         '<button type="button" class="social-login-btn ' + p.cls + '" ' +
         'data-provider="' + p.id + '" id="social-login-' + p.key + '" ' +
