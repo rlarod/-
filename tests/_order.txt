@@ -1139,3 +1139,35 @@ tests/pending-order-restore.test.js
 #           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
 #            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
 tests/naver-login-hidden.test.js
+
+# 2026-10-01 — [P1 조용한 고장] 전광판(#ticker-board-panel) 의 "준비중" 배지가
+#   ★현실에서는 한 개도 안 뜨는데 봉인은 초록★ 이던 것.
+#   js/symbol-registry.js 의 네 종목이 전부 enabled:true 라 isMock() 이 4개 전부
+#   false 이고, js/ticker-board.js:57 의 배지 조건이 ★영원히 거짓★ 입니다.
+#   그런데 tests/ticker-board-seal.test.js:87~90 은 가짜 SymbolRegistry 스텁에
+#   "준비중 종목" 을 손으로 넣어 줘서 배지가 당연히 붙었습니다 —
+#   ★실제 js/symbol-registry.js 로는 한 번도 안 돌렸습니다.★
+#   이 파일은 index.html 1200~1203·1245 와 같은 순서로 ★실제 파일 4개★ 를 태워
+#   isMock() 을 진짜로 불러 보고, 지금 고장을 "[현황]" 으로 적어 둡니다.
+#   고쳐지면 그 줄들이 빨강이 되면서 "이제 기준을 바꿔라" 고 알려줍니다.
+#   ⚠ [3] 이 제일 중요합니다 — "전광판 검사 중 실제 레지스트리를 태우는 것이
+#     최소 1개" 를 강제합니다. 이 파일을 지우면 그 자리에서 터집니다.
+# 되돌리기: 이 줄과 tests/ticker-board-reality-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#           ⚠ 다른 파일에 딸린 것이 없습니다 — 이 건은 ★혼자 되돌아갑니다★.
+tests/ticker-board-reality-seal.test.js
+
+# 2026-10-01 — 네 종목 시세 공급(js/all-symbol-feed.js). 수리팀.
+#   js/websocket.js 가 ★보고 있는 한 종목★ 만 열어서 나머지 3개는 값이
+#   영원히 없었습니다(오류 0건 = 조용한 고장). 자기 소켓을 따로 여는
+#   ★데이터 전용★ 모듈을 지킵니다 — DOM 접근 0건 · null/0 구분 ·
+#   끊기면 다시 붙기 · /market 경로(root 로 열면 메시지 0건).
+# 되돌리기: 이 줄과 tests/all-symbol-feed.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 js/all-symbol-feed.js · index.html · main.js 와 ★한 묶음★ 입니다.
+#     되돌릴 때 넷을 같이 되돌리세요(테스트만 지우면 모듈이 남습니다).
+tests/all-symbol-feed.test.js

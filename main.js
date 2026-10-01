@@ -151,7 +151,12 @@
     const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "TradesFit", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "MarketWarPowerBar", "Trading", "OrderInfoPanel", "SymbolSwitchPriceClear", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
       ⚡ 알림 띠를 없애고 알림을 다시 채팅에 보이게 했습니다.
       되살리려면 이 주석을 풀고 index.html 의 <script src="js/chat-split.js"> 도 푸세요. */
-      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI", "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
+      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI",
+      /* 네 종목 전부의 시세를 받는 데이터 전용 모듈. "UI" 뒤에 둡니다 —
+         UI.init() 이 DOM 을 재배치하기 전에 끼어들 이유가 없고(이 모듈은
+         DOM 을 아예 안 봅니다), 소켓을 여는 일이라 늦게 열수록 안전합니다. */
+      "AllSymbolFeed",
+      "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
       /* 종목 전환(4번 관문). WS 뒤에 둡니다 — 소켓 감싸기는 스크립트를 읽는 즉시
          이미 끝나 있고, 여기 init() 은 화면 글자(종목명·단위)만 맞춥니다.
          RecentTrades 가 만든 패널 제목도 같이 고치므로 그보다 뒤여야 합니다. */
