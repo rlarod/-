@@ -62,6 +62,12 @@
 <!-- 매수/매도 압력 바 — 체결이 없을 때 가짜 50:50 대신 회색 빗금(모름)을 보입니다.
      2026-08-28. 되돌리기: 이 link 한 줄만 지우면 원래대로. -->
 <link rel="stylesheet" href="css/order-pressure-unknown.css">
+<!-- 업비트식 2단 배치(★안 B★) — 2026-10-01 대표 지시 "차트는 왼쪽 종목은 오른쪽".
+     왼쪽 990(차트 위 / 주문|호가 아래) + 오른쪽 400(종목·포지션·내 정보·채팅).
+     ⚠ style.css 보다 ★뒤★ 에 있어야 합니다 — 1열 전환 지점을 1799 -> 1100 으로
+       내리는 규칙이 style.css 의 @media(max-width:1799px) 를 덮어야 하기 때문입니다.
+     되돌리기: 이 link 한 줄만 지우면 배치가 전부 원래대로 돌아옵니다. -->
+<link rel="stylesheet" href="css/upbit-layout.css">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- 글꼴 파일이 실제로 오는 곳. 미리 연결해 두면 첫 글꼴이 빨리 옵니다. 이 줄만 지우면 원래대로. -->
@@ -1264,6 +1270,16 @@
      반드시 js/symbol-registry.js(종목 목록) 뒤에 있어야 합니다.
      이 한 줄을 지우면 소켓이 아예 안 열리고 어제와 100% 같아집니다. -->
 <script src="js/all-symbol-feed.js"></script>
+<!-- 업비트식 개편(★안 B★) 오른쪽 400px 열 — 종목 목록 4줄 + 내 포지션 요약.
+     2026-10-01 대표 지시 "차트는 왼쪽 종목은 오른쪽".
+     · 시세는 바로 위 모듈(App.AllSymbolFeed)에서만 받아옵니다. 소켓을 또 열지 않습니다
+       ⚠ 이 주석에 그 파일 ★경로★ 를 적지 마세요 — 봉인이 index.html 안의
+         등장 횟수를 세어 "두 번이면 소켓이 두 개" 로 보고 터집니다
+     · 손익·등락률을 다시 계산하지 않습니다 — 화면의 글자/거래소 값을 그대로 씁니다
+     · 아직 안 온 값(null)은 "불러오는 중" 으로 적습니다(조용한 고장 방지)
+     ⚠ main.js 목록에서 "UI" 뒤에 있어야 합니다(UI.init 이 자리를 다시 잡습니다).
+     되돌리기: 이 한 줄과 main.js 의 "UpbitRightColumn" 을 지우면 카드가 사라집니다. -->
+<script src="js/upbit-right-column.js"></script>
 <!-- 차트 축 글씨 크기 — 캔버스라 CSS로 못 키웁니다. createChart를 감싸
      layout.fontSize를 넣습니다. 반드시 js/chart.js 앞에 있어야 합니다. -->
 <script src="js/chart-font.js"></script>

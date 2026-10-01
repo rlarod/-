@@ -156,6 +156,11 @@
          UI.init() 이 DOM 을 재배치하기 전에 끼어들 이유가 없고(이 모듈은
          DOM 을 아예 안 봅니다), 소켓을 여는 일이라 늦게 열수록 안전합니다. */
       "AllSymbolFeed",
+      /* 업비트식 개편(★안 B★) 오른쪽 400px 열 — 종목 목록 4줄 + 내 포지션 요약.
+         ⚠ 반드시 "UI" ★뒤★ 입니다 — UI.init() 이 historyPanel.innerHTML = "" 로
+            통째로 비우고 포지션 자리를 다시 잡습니다. 그 전에 켜면 비춰줄 글자가
+            아직 없습니다. 시세는 바로 위 AllSymbolFeed 에서만 받습니다. */
+      "UpbitRightColumn",
       "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
       /* 종목 전환(4번 관문). WS 뒤에 둡니다 — 소켓 감싸기는 스크립트를 읽는 즉시
          이미 끝나 있고, 여기 init() 은 화면 글자(종목명·단위)만 맞춥니다.

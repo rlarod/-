@@ -1171,3 +1171,17 @@ tests/ticker-board-reality-seal.test.js
 #   ⚠ 이 건은 js/all-symbol-feed.js · index.html · main.js 와 ★한 묶음★ 입니다.
 #     되돌릴 때 넷을 같이 되돌리세요(테스트만 지우면 모듈이 남습니다).
 tests/all-symbol-feed.test.js
+
+# 2026-10-01 — 업비트식 2단 배치(★안 B★). 수리팀. 대표 지시
+#   "홈페이지를 완전히 개편할거야 업비트 처럼 갈거야 / 차트는 왼쪽 종목은 오른쪽"
+#   왼쪽 990(차트 620 / 주문 492 | 호가 492) + 오른쪽 400(종목·포지션·내 정보·채팅).
+#   지키는 것 — ★세 열을 새 <div> 로 안 감쌈★(order-sheet-mobile 이 직계 자식을 찾음)
+#              ★차트 행이 확정 px★(auto 면 19초에 1,830 → 14,080px 로 무한 증가)
+#              오른쪽 열 % 금지 · null/0 구분 · 손익 재계산 0 · 전광판 안 켬
+# 되돌리기: 이 줄과 tests/upbit-layout-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/upbit-layout.css · js/upbit-right-column.js · index.html · main.js 와
+#     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
+tests/upbit-layout-seal.test.js

@@ -1,0 +1,199 @@
+/* =========================================================================
+ * css/upbit-layout.css — 업비트식 2단 배치 (★안 B★)
+ * =========================================================================
+ * 대표 지시 2026-10-01 — "홈페이지를 완전히 개편할거야 업비트 처럼 갈거야
+ *                        차트는 왼쪽 종목은 오른쪽"
+ * PM 이 시안 A·B 중 ★안 B★ 로 확정했습니다.
+ *
+ *     왼쪽 990   차트(그림 영역 560px) / 그 아래 가로 2분할 — 주문 | 호가
+ *     오른쪽 400 종목 목록 4줄 / 내 포지션 요약 / 내 정보(로그인) / 채팅
+ *
+ * ── ⛔ DOM 을 하나도 안 옮깁니다 (조사팀 제약 1) ─────────────────────────
+ *   js/order-sheet-mobile.js:63 이 ".main-grid > .side-column" 을 ★직계 자식★
+ *   으로 찾습니다. style.css:4464~4466 · 4538 · 4541 도 전부 ">" 선택자입니다.
+ *   그래서 세 열을 새 <div> 로 감싸지 않고 ★grid-template-areas★ 로 자리만
+ *   바꿉니다. DOM 순서(차트 → 호가 → 주문)는 그대로입니다.
+ *
+ * ── ⛔ 행 높이를 auto 로 두지 않습니다 (조사팀 제약 2) ───────────────────
+ *   js/chart.js 는 autoSize:true(ResizeObserver) 입니다. 차트가 든 행을
+ *   내용 기준(auto)으로 두면
+ *       차트가 커짐 → 행이 커짐 → 차트가 또 커짐
+ *   으로 무한히 늘어납니다 (PM 실측 — 19초에 1830px → 14,080px).
+ *   그래서 ★차트가 든 1행만 확정 px★ 로 못박습니다(--tl-chart-row).
+ *   2행(주문|호가)에는 차트가 없으므로 auto 로 둬도 되먹임이 생기지 않습니다.
+ *
+ * ── 오른쪽 열은 % 가 아니라 고정 400px 입니다 ────────────────────────────
+ *   조사팀 실측 — 23% 면 1440 에서 327.5px 인데 종목 표 3칸 최소폭이 451.9px 라
+ *   124px 넘칩니다. 업비트처럼 고정 400px 로 둡니다.
+ *
+ * ── 1열 전환 지점을 1799px → 1100px 로 내립니다 ──────────────────────────
+ *   업비트식 2열의 이론적 최소폭은 942px 입니다
+ *   (조사팀 실측 — 주문 288.63 + 호가 219 + gap 4 + 우측 400 + gap 14 + 패딩 16).
+ *   1100 은 거기서 158px 여유를 둔 값입니다. 1100 미만은 지금처럼 세로로 쌓입니다
+ *   (style.css 의 @media(max-width:1799px) · @media(max-width:1300px) 가 그대로 담당).
+ *
+ * ── 색·글씨 ──────────────────────────────────────────────────────────────
+ *   확정 팔레트 9색만 씁니다. 업비트 색을 베끼지 않았습니다.
+ *   상승 #26C281 / 하락 #F0506E — 하락(빨강)은 손익 표시에만.
+ *   글씨는 17px 바닥. 그림자 없음(카드 위 흰색 3% inset 선만). 모서리 10px.
+ *   이모지 없음(아이콘은 인라인 SVG).
+ *
+ * ── 되돌리는 방법 ────────────────────────────────────────────────────────
+ *   index.html 의 <link rel="stylesheet" href="css/upbit-layout.css"> 한 줄을
+ *   지우면 배치가 전부 원래대로 돌아갑니다(style.css 는 한 글자도 안 고쳤습니다).
+ * ========================================================================= */
+
+:root{
+  /* 차트가 든 행의 ★확정 높이★. 안쪽 여백 19px + 아래 도구 줄 41px 을 빼면
+     차트 그림 영역(.chart-wrap)이 560px 이 됩니다 — 1440 실측으로 맞췄습니다.
+     ⚠ 이 값을 auto 로 바꾸면 차트가 무한히 커집니다(위 설명 참고). */
+  --tl-chart-row:620px;
+  --tl-right-col:400px;
+}
+
+/* =========================================================================
+ * 1) 2열 틀 — 왼쪽 가변 + 오른쪽 400 고정
+ * ========================================================================= */
+@media (min-width:1100px){
+  .page-shell{
+    /* 업비트 실측 — 가운데 1404(왼쪽 990 + gap 14 + 오른쪽 400) + 좌우 패딩 16 */
+    max-width:1420px;
+    grid-template-columns:minmax(0,1fr) var(--tl-right-col);
+    gap:14px;
+  }
+
+  /* ---- 왼쪽: 차트 위 / 주문|호가 아래 ----
+     DOM 순서는 차트 → 호가 → 주문 그대로이고, 보이는 자리만 영역 이름으로 바꿉니다. */
+  .page-left .main-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:var(--tl-chart-row) auto;
+    grid-template-areas:
+      "tlchart tlchart"
+      "tlorder tlbook";
+    gap:6px;
+    height:auto;          /* 행 높이는 위 grid-template-rows 가 정합니다 */
+  }
+  .page-left .main-grid > .chart-column{grid-area:tlchart;height:100%;min-height:0;}
+  /* ---- 2행 높이는 ★주문창★ 이 정합니다 ----
+     업비트도 주문 칸 높이에 호가 칸을 맞춥니다.
+     주문창은 자기 내용만큼(실측 1,142px) 차지하고 안에 스크롤이 생기지 않습니다. */
+  .page-left .main-grid > .side-column{
+    grid-area:tlorder;
+    height:auto;overflow:visible;
+  }
+  .page-left .main-grid > .side-column > .order-panel{
+    /* style.css:2233 의 flex:1 을 덮습니다 — 그게 켜져 있으면 주문창이
+       호가 칸 높이(1,675px)까지 늘어나 아래쪽에 533px 빈 칸이 생깁니다(실측). */
+    flex:0 0 auto;min-height:0;
+  }
+  /* 호가 칸은 ★행 높이를 결정하지 않고 받기만★ 합니다.
+     height:0 이면 "자동" 행 계산에 자기 내용을 보태지 않고,
+     min-height:100% 로 정해진 행 높이를 그대로 채웁니다.
+     ⚠ 이렇게 하지 않으면 최근체결 30줄(1,110px)이 행을 밀어올려
+       주문창까지 같이 늘어납니다(실측 1,675px). */
+  .page-left .main-grid > .orderbook-column{
+    grid-area:tlbook;
+    height:0;min-height:100%;
+    overflow:hidden;
+  }
+  /* 차트 캔버스는 "행 높이를 그대로 채운다" 가 유일한 규칙입니다.
+     @media(max-width:1300px) 의 70vh/min-height:520px 가 1100~1300 구간에서
+     이 행을 깨뜨리므로 선택자를 한 단계 길게 써서 확실히 덮습니다. */
+  .page-left .main-grid .chart-column .chart-container{height:100%;min-height:0;}
+  .page-left .main-grid .order-panel{height:auto;}
+
+  /* ---- 오른쪽 열 ----
+     종목 목록 → 내 포지션 요약 → 내 정보 → 채팅 순서입니다.
+     (js/upbit-right-column.js 가 앞의 두 카드를 .page-right 맨 위에 넣습니다) */
+  .page-right{gap:6px;}
+  /* ⛔ 채팅(.side-chat-panel)은 ★한 줄도 안 건드립니다★.
+     팝업 전환은 ★다음 건★ 이라 PM 이 따로 배정했습니다. 지금은 오른쪽 열
+     맨 아래에 예전 그대로 둡니다 — 1800px 이상의 sticky 동작도 그대로입니다.
+     (한 번 풀어봤는데 style.css 쪽 규칙과 엉켜 값이 오락가락했습니다.
+      다음 건에서 팝업으로 빼면 이 자리 자체가 없어지므로 손대지 않습니다.) */
+}
+
+/* =========================================================================
+ * 2) 오른쪽 열 — 종목 목록
+ * ========================================================================= */
+.tl-sym-list{padding:0;overflow:hidden;}
+.tl-sym-table{width:100%;border-collapse:collapse;table-layout:auto;}
+/* 표 머리글이 이 카드의 제목 역할을 합니다(업비트와 같은 모양).
+   따로 제목 줄을 두면 "종목" 이 두 줄 연달아 나옵니다. */
+.tl-sym-table th{
+  font-size:17px;font-weight:500;color:#838DA4;text-align:right;
+  padding:12px 10px 10px;border-bottom:1px solid #1D273B;white-space:nowrap;
+}
+.tl-sym-table th:first-child{text-align:left;}
+.tl-sym-table td{
+  padding:11px 10px;border-bottom:1px solid #1D273B;
+  font-size:17px;color:#E7ECF5;text-align:right;white-space:nowrap;
+}
+.tl-sym-table tr:last-child td{border-bottom:0;}
+.tl-sym-row{cursor:pointer;}
+.tl-sym-row:hover td{background:#0D1422;}
+.tl-sym-row.is-active td{background:#0D1422;}
+.tl-sym-row.is-active .tl-sym-kr{color:#F0B429;}
+
+.tl-sym-name{text-align:left !important;}
+.tl-sym-kr{display:block;font-size:17px;font-weight:600;color:#E7ECF5;}
+.tl-sym-code{
+  display:block;font-size:17px;color:#838DA4;margin-top:2px;
+  font-family:var(--mono, "JetBrains Mono", monospace);letter-spacing:-0.03em;
+}
+.tl-sym-price{font-variant-numeric:tabular-nums;font-family:var(--mono, "JetBrains Mono", monospace);}
+.tl-sym-chg{font-variant-numeric:tabular-nums;font-family:var(--mono, "JetBrains Mono", monospace);}
+.tl-sym-chg.up{color:#26C281;}
+.tl-sym-chg.down{color:#F0506E;}
+.tl-sym-chg.flat{color:#838DA4;}
+
+/* 값이 ★아직 한 번도 안 온★ 줄 — 그냥 "-" 로 두면 회원이 고장인 줄 모릅니다.
+   말로 "불러오는 중" 이라고 적습니다(숫자를 지어내지 않습니다). */
+.tl-sym-wait{color:#838DA4;font-size:17px;font-family:inherit;}
+.tl-sym-note{
+  padding:10px 12px;border-top:1px solid #1D273B;
+  font-size:17px;line-height:1.45;color:#838DA4;
+}
+.tl-sym-note[hidden]{display:none;}
+
+/* =========================================================================
+ * 3) 오른쪽 열 — 내 포지션 요약
+ * =========================================================================
+ * 아래 주문창 안의 포지션 표(#position-card)의 ★글자를 그대로 비춰줍니다★.
+ * 손익·수익률을 다시 계산하지 않습니다(계산식은 대표 결재 항목).
+ * ========================================================================= */
+.tl-pos{padding:0;overflow:hidden;}
+.tl-pos > .field-label{padding:11px 12px 7px;}
+.tl-pos-empty{padding:26px 12px;text-align:center;font-size:17px;color:#838DA4;}
+.tl-pos-empty[hidden],.tl-pos-body[hidden]{display:none;}
+.tl-pos-body{padding:4px 12px 12px;}
+.tl-pos-head{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;color:#E7ECF5;}
+.tl-pos-pnl{
+  margin:6px 0 10px;font-size:26px;font-weight:700;color:#E7ECF5;
+  font-variant-numeric:tabular-nums;
+}
+.tl-pos-rows{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.tl-pos-rows > div{
+  background:#0D1422;border:1px solid #1D273B;border-radius:10px;
+  padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0;
+}
+.tl-pos-rows span{font-size:17px;color:#838DA4;}
+.tl-pos-rows b{
+  font-size:17px;color:#E7ECF5;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.tl-pos-note{
+  padding:10px 12px;border-top:1px solid #1D273B;
+  font-size:17px;line-height:1.45;color:#838DA4;
+}
+.tl-pos-note b{color:#E7ECF5;font-weight:600;}
+
+/* 카드 모서리 10px + 위쪽 흰색 3% 선(inset).
+   ★그림자가 아닙니다★ — 확정 규칙대로 그림자는 쓰지 않고 얇은 선만 넣습니다.
+   .panel 기본값은 모서리 2px 이라 여기서만 10px 로 올립니다. */
+.tl-sym-list,.tl-pos{
+  position:relative;
+  border-radius:10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}
