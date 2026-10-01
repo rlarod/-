@@ -1,0 +1,75 @@
+/* =========================================================================
+ * css/symbol-search.css — 오른쪽 종목 목록의 ★검색칸★
+ * =========================================================================
+ * 사양서(TL-024) 7번 / 2026-10-01 PM 배정 · 수리팀
+ *
+ * ── 왜 별도 파일인가 ────────────────────────────────────────────────────
+ *   · style.css 는 tests/css-duplicate-rules.test.js 가 ★중복 규칙 개수를
+ *     고정★ 하고 있어 덧붙이면 그 자리에서 터집니다.
+ *   · css/upbit-layout.css 는 오늘 올린 파일이고
+ *     tests/upbit-layout-seal.test.js 가 본문을 읽습니다.
+ *   그래서 새 파일에서 ★뒤에서 덮습니다★.
+ *
+ * ── 확정 규칙 ───────────────────────────────────────────────────────────
+ *   확정 팔레트 9색만 / 글씨 17px 바닥 / 그림자 없음(inset 한 줄은 예외) /
+ *   모서리 10px 이하 / 이모지 없음(돋보기는 인라인 SVG)
+ * ========================================================================= */
+
+/* 검색칸 한 줄 — 카드 맨 위, 표 머리글 바로 앞 */
+.tl-symsearch{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:10px 10px 0;
+  padding:0 12px;
+  height:44px;
+  background:#0D1422;
+  border:1px solid #1D273B;
+  border-radius:10px;
+  box-sizing:border-box;
+  min-width:0;
+}
+
+/* 돋보기 — 이모지가 아니라 인라인 SVG 입니다(stroke:currentColor) */
+.tl-symsearch-ico{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  color:#838DA4;
+}
+.tl-symsearch-ico svg{display:block;}
+
+.tl-symsearch-input{
+  flex:1 1 auto;
+  min-width:0;
+  width:100%;
+  height:100%;
+  margin:0;
+  padding:0;
+  border:0;
+  outline:none;
+  background:transparent;
+  color:#E7ECF5;
+  font-family:inherit;
+  font-size:17px;
+  line-height:1.3;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.tl-symsearch-input::placeholder{color:#838DA4;opacity:1;}
+.tl-symsearch-input::-webkit-search-cancel-button{display:none;}
+
+/* 글자를 치고 있는 중임을 알 수 있게 테두리만 바꿉니다(그림자 금지) */
+.tl-symsearch:focus-within{border-color:#F0B429;}
+
+/* 하나도 안 맞을 때 — ★빈 칸으로 두지 않습니다★(조용한 고장 방지) */
+.tl-symsearch-empty{
+  padding:22px 12px;
+  text-align:center;
+  font-size:17px;
+  line-height:1.45;
+  color:#838DA4;
+  border-top:1px solid #1D273B;
+}
+.tl-symsearch-empty[hidden]{display:none;}

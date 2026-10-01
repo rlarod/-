@@ -168,6 +168,10 @@
             통째로 비우고 포지션 자리를 다시 잡습니다. 그 전에 켜면 비춰줄 글자가
             아직 없습니다. 시세는 바로 위 AllSymbolFeed 에서만 받습니다. */
       "UpbitRightColumn",
+      /* 그 종목 목록의 ★검색칸★ — 사양서(TL-024) 7번.
+         ⚠ 반드시 "UpbitRightColumn" ★뒤★ 입니다 — 그 모듈이 카드(#tl-sym-list)를
+            만든 뒤에 칸을 끼워 넣습니다. 앞에 두면 카드가 아직 없습니다. */
+      "SymbolSearch",
       "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
       /* 종목 전환(4번 관문). WS 뒤에 둡니다 — 소켓 감싸기는 스크립트를 읽는 즉시
          이미 끝나 있고, 여기 init() 은 화면 글자(종목명·단위)만 맞춥니다.

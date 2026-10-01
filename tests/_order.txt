@@ -1201,3 +1201,21 @@ tests/upbit-layout-seal.test.js
 #   ⚠ 이 건은 css/chat-popup.css · js/chat-popup.js · index.html · main.js 와
 #     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
 tests/chat-popup-seal.test.js
+
+# 마켓 목록 ★검색창★ — 2026-10-01 PM 배정 / 수리팀 (사양서 TL-024 7번)
+#   "[돋보기] 종목 검색" 칸. 한글 이름과 종목 코드 ★둘 다★ 로 거릅니다.
+#   지키는 것: ⭐ classList 가 아니라 style.display 로 숨긴다 —
+#              js/upbit-right-column.js 의 renderSymbols() 가 1초마다
+#              tr.className 을 ★통째로 덮어서★ classList 로 숨기면
+#              1초 뒤 저절로 되살아납니다(조용한 고장, 손 확인으로는 못 잡음).
+#              jsdom 에서 renderSymbols() 를 ★실제로 다시 돌려★ 확인합니다 ·
+#              하나도 안 맞으면 "찾는 종목이 없습니다"(빈 화면 금지) ·
+#              종목 이름을 파일에 안 적음(SymbolRegistry 단일 출처) ·
+#              돋보기는 인라인 SVG(이모지 금지) · 입력칸 글씨 17px 이상
+# 되돌리기: 이 줄과 tests/symbol-search-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/symbol-search.css · js/symbol-search.js · index.html · main.js 와
+#     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
+tests/symbol-search-seal.test.js
