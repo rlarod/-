@@ -36,6 +36,24 @@
  *   훑고, 한글 이름은 App.SymbolRegistry 에서 읽습니다(단일 출처).
  *   줄이 새로 생기면 MutationObserver 가 검색어를 다시 적용합니다.
  *
+ * ── ⭐ 2026-10-01 추가 — 탭과 ★한 곳에서★ 합쳐 판정합니다 ───────────────
+ *   카테고리 탭([전체][코인][주식][보유][관심] — js/symbol-category-tabs.js)이
+ *   같은 tr.style.display 를 쓰면 ★서로를 덮습니다★. 나중에 돈 쪽이 이기고,
+ *   먼저 돈 쪽의 조건은 조용히 사라집니다.
+ *
+ *   그래서 ★줄을 숨기는 곳은 아래 apply() 한 곳뿐★ 으로 두고, 탭은
+ *   "이 줄이 지금 탭에 드느냐" 만 대답하는 함수를 맡깁니다.
+ *
+ *       App.SymbolSearch.setExtraFilter({ test: fn(tr)->bool,
+ *                                         emptyText: fn()->string })
+ *
+ *   한 줄이 보이는 조건 =  검색어에 맞는다  ★그리고★  탭에 든다  (교집합)
+ *       [주식] + "삼성"  ->  삼성전자 1줄
+ *       [코인] + "삼성"  ->  0줄 + "찾는 종목이 없습니다."
+ *
+ *   ⚠ 안 걸면(null) 지금까지와 ★완전히 같게★ 동작합니다. 탭 모듈을 빼도
+ *     검색은 그대로 삽니다.
+ *
  * ── 되돌리는 방법 ────────────────────────────────────────────────────────
  *   index.html 의 <script src="js/symbol-search.js"></script> 한 줄과
  *   main.js 의 "SymbolSearch" 한 개를 지우면 칸이 사라집니다.
@@ -52,8 +70,15 @@
   var INPUT_ID = "tl-symsearch-input";
   var EMPTY_ID = "tl-symsearch-empty";
 
+  /* 하나도 안 맞을 때의 기본 문구. 글자를 한 곳에만 둡니다 —
+     build() 와 apply() 가 따로 적으면 둘이 어긋납니다. */
+  var NOT_FOUND = "찾는 종목이 없습니다.";
+
   var started = false;
   var query = "";
+
+  /* 바깥에서 더해주는 조건(지금은 카테고리 탭 하나). 없으면 null. */
+  var extra = null;
 
   function id(v) { return document.getElementById(v); }
 
@@ -147,7 +172,7 @@
       empty.className = "tl-symsearch-empty";
       empty.id = EMPTY_ID;
       empty.hidden = true;
-      empty.textContent = "찾는 종목이 없습니다.";
+      empty.textContent = NOT_FOUND;
       var note = id("tl-sym-note");
       if (note && note.parentNode === card) card.insertBefore(empty, note);
       else card.appendChild(empty);
@@ -170,13 +195,42 @@
     return Array.prototype.slice.call(list);
   }
 
+  /* 검색어에 맞는가 */
+  function queryPass(tr) {
+    return !query || haystack(tr).indexOf(query) >= 0;
+  }
+
+  /* 바깥 조건(탭)에 드는가. 안 걸려 있으면 전부 통과입니다.
+     탭 모듈이 터져도 목록이 사라지지 않게, 예외는 "통과" 로 받습니다 —
+     여기서 false 로 떨어지면 줄이 통째로 안 보이는 조용한 고장이 됩니다. */
+  function extraPass(tr) {
+    if (!extra || typeof extra.test !== "function") return true;
+    try { return extra.test(tr) !== false; } catch (e) { return true; }
+  }
+
+  /* 0줄일 때 뭐라고 적을지.
+     ★검색어를 치고 있으면 검색 쪽 문구가 이깁니다★ —
+     [코인] 탭에서 "삼성" 을 치면 "관심 종목이 없습니다" 가 아니라
+     "찾는 종목이 없습니다" 가 맞습니다. */
+  function emptyText() {
+    if (!query && extra && typeof extra.emptyText === "function") {
+      try {
+        var t = extra.emptyText();
+        if (t) return String(t);
+      } catch (e) { /* noop */ }
+    }
+    return NOT_FOUND;
+  }
+
   function apply() {
     var list = rows();
     if (!list.length) return;
 
     var shown = [];
     list.forEach(function (tr) {
-      var hit = !query || haystack(tr).indexOf(query) >= 0;
+      /* 두 조건을 ★여기 한 곳에서★ 합칩니다(교집합).
+         탭이 따로 숨기면 서로를 덮습니다 — 파일 머리말 참고. */
+      var hit = queryPass(tr) && extraPass(tr);
       /* ★className 을 건드리지 않습니다★ — renderSymbols() 가 1초마다 덮습니다 */
       tr.style.display = hit ? "" : "none";
       if (hit) shown.push(tr);
@@ -198,7 +252,12 @@
     }
 
     var empty = id(EMPTY_ID);
-    if (empty) empty.hidden = shown.length > 0;
+    if (empty) {
+      empty.hidden = shown.length > 0;
+      /* 빈 화면을 만들지 않습니다. 왜 비었는지 그때그때 다시 적습니다 —
+         탭을 옮기면 이유가 바뀌기 때문입니다(관심 없음 / 보유 없음 / 못 찾음). */
+      if (!empty.hidden) empty.textContent = emptyText();
+    }
 
     var tbody = id(BODY_ID);
     if (tbody) tbody.setAttribute("data-visible-rows", String(shown.length));
@@ -238,6 +297,14 @@
 
   App.SymbolSearch = {
     init: init,
+    /* 카테고리 탭이 조건을 맡기는 통로(js/symbol-category-tabs.js).
+       null 을 넣으면 조건이 풀리고 검색만 남습니다. */
+    setExtraFilter: function (f) {
+      extra = f && typeof f.test === "function" ? f : null;
+      apply();
+    },
+    /* 탭이 "내 조건이 아직 걸려 있나" 를 확인할 때 씁니다 */
+    hasExtraFilter: function () { return !!extra; },
     /* 테스트에서 들여다보는 통로 */
     apply: apply,
     setQuery: function (v) { query = norm(v); apply(); },

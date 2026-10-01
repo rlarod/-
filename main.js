@@ -172,6 +172,11 @@
          ⚠ 반드시 "UpbitRightColumn" ★뒤★ 입니다 — 그 모듈이 카드(#tl-sym-list)를
             만든 뒤에 칸을 끼워 넣습니다. 앞에 두면 카드가 아직 없습니다. */
       "SymbolSearch",
+      /* 그 목록의 ★카테고리 탭★ [전체][코인][주식][보유][관심] + 관심 별.
+         ⚠ 반드시 "SymbolSearch" ★뒤★ 입니다 — 줄을 숨기는 자리는 그 모듈
+            한 곳뿐이고, 탭은 거기에 조건만 맡깁니다(setExtraFilter).
+            앞에 두면 맡길 상대가 아직 없어 탭이 안 켜집니다. */
+      "SymbolCategoryTabs",
       "QtyPriceOrder", "AmiTalkOrderPanel", "OrderbookClickOrder", "WS",
       /* 종목 전환(4번 관문). WS 뒤에 둡니다 — 소켓 감싸기는 스크립트를 읽는 즉시
          이미 끝나 있고, 여기 init() 은 화면 글자(종목명·단위)만 맞춥니다.

@@ -1,0 +1,145 @@
+/* =========================================================================
+ * css/symbol-category-tabs.css — 종목 목록 ★카테고리 탭★ + ★관심 별★
+ * =========================================================================
+ * 대표 지시 2026-10-01 "업비트랑 비슷하게 ㄱㄱ 카테고리들도"
+ *
+ * ── 왜 별도 파일인가 ────────────────────────────────────────────────────
+ *   · style.css          tests/css-duplicate-rules.test.js 가 중복 규칙
+ *                        개수를 고정합니다 — 덧붙이면 그 자리에서 터집니다
+ *   · css/upbit-layout.css  tests/upbit-layout-seal.test.js 가 본문을 읽습니다
+ *   그래서 새 파일에서 ★뒤에서 덮습니다★ (index.html 에서 style.css 보다 뒤).
+ *
+ * ── 확정 규칙 ───────────────────────────────────────────────────────────
+ *   확정 팔레트 9색만 / 글씨 17px 바닥 / 그림자 없음 / 모서리 10px /
+ *   이모지 없음(별은 js 가 인라인 SVG 로 그립니다)
+ *
+ * ── ⚠ 탭 5개가 안 들어갈 때 ★글씨를 줄이지 않습니다★ ──────────────────
+ *   flex-shrink:0 으로 글자가 눌리지 않게 두고, 모자라면 overflow-x 로
+ *   옆으로 밉니다. 들어갈 때는 flex-grow:1 이 빈 자리를 고르게 나눕니다.
+ *   (실측 — 가장 좁은 360 에서도 다섯 개가 한 줄에 들어갑니다. 숫자는 보고서)
+ *
+ * ── ⚠ 별은 ★새 칸(td)★ 이 아니라 종목명 칸 ★안쪽★ 에 겹쳐 올립니다 ────
+ *   js/upbit-right-column.js 의 renderSymbols() 가 칸을 ★번호로★ 찾아
+ *   씁니다(cells[1]=현재가 cells[2]=등락률). td 를 하나 끼우면 번호가 밀려
+ *   종목명 칸에 현재가가 찍힙니다(2026-10-01 실측).
+ *   그래서 칸은 3개 그대로 두고, td 를 position:relative 로 만든 뒤
+ *   별을 absolute 로 왼쪽에 놓고 padding-left 로 자리를 냅니다.
+ *   display:table-cell 을 ★바꾸지 않습니다★ — 바꾸면 표 열 정렬이 깨집니다.
+ *
+ * ── 되돌리는 방법 ───────────────────────────────────────────────────────
+ *   index.html 의 이 파일 link 한 줄을 지우면 탭과 별의 모양만 사라집니다
+ *   (기능까지 빼려면 짝이 되는 script 줄과 main.js 등록도 같이 지웁니다).
+ * ========================================================================= */
+
+/* 탭 줄 — 검색칸 아래, 표 위 */
+.tl-symcat{
+  display:flex;
+  align-items:stretch;
+  gap:6px;
+  margin:8px 10px 0;
+  padding:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  min-width:0;
+}
+.tl-symcat::-webkit-scrollbar{width:0;height:0;}
+
+.tl-symcat-btn{
+  /* 들어갈 때는 빈 자리를 나눠 갖고, 모자라면 ★글씨를 줄이지 않고★ 넘칩니다 */
+  flex:1 0 auto;
+  white-space:nowrap;
+  box-sizing:border-box;
+  height:40px;
+  padding:0 8px;
+  margin:0;
+  border:1px solid #1D273B;
+  border-radius:10px;
+  background:#0D1422;
+  color:#838DA4;
+  font-family:inherit;
+  font-size:17px;
+  font-weight:600;
+  line-height:1;
+  text-align:center;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+/* 고른 탭 — 그림자 대신 테두리와 글자색으로만 구분합니다 */
+.tl-symcat-btn[aria-selected="true"]{
+  background:#1D273B;
+  border-color:#F0B429;
+  color:#F0B429;
+}
+
+/* ---------------------------------------------------------------------------
+ * 관심 별 — 종목명 칸 안쪽 왼쪽
+ * ------------------------------------------------------------------------- */
+
+/* ⚠ display 를 바꾸지 않습니다(table-cell 그대로). 자리만 냅니다.
+ *
+ * ★★ 34px 은 눈대중이 아니라 ★360 에서 실제로 재고 고른 값★ 입니다 ★★
+ *   표(.tl-sym-table)는 내용이 요구하는 최소폭(min-content)으로 벌어집니다.
+ *   그 최소폭이 카드 안쪽(360 에서 342px)보다 커지면 ★표가 카드를 밀고
+ *   나갑니다★. 페이지 가로 스크롤은 안 생기므로(카드가 안에 가둠)
+ *   "가로 스크롤 없음" 만 보면 ★못 잡는 종류의 잘림★ 입니다.
+ *
+ *   2026-10-01 실측 (padding-left 별 표 최소폭 / 360 에서 쓸 수 있는 폭 342px)
+ *       10px (원래)   314px     여유 28px   <- 내가 쓸 수 있는 예산
+ *       30px          334px     여유  8px
+ *       32px          336px     여유  6px
+ *       34px          338px     여유  4px
+ *       38px          342px     여유  0px   <- 여기서 딱 붙습니다
+ *       44px          348px   ★ 6px 넘침 ★  <- 처음 넣은 값. 카드를 밀어냄
+ *
+ *   그래서 34px 으로 내리고, 좁은 화면에서만 오른쪽 여백을 10 -> 4px 로
+ *   줄여 최소폭을 332px 까지 낮췄습니다 — ★360 에서 여유 10px★.
+ *   (앞으로 종목 코드가 더 긴 종목이 늘어도 버틸 만큼은 남겨둡니다)
+ */
+.tl-sym-table td.tl-sym-name{
+  position:relative;
+  padding-left:34px;
+}
+
+/* 표 머리글도 같은 만큼 밀어 열이 어긋나지 않게 합니다 */
+.tl-sym-table thead th:first-child{
+  padding-left:34px;
+}
+
+/* 좁은 화면에서 표 최소폭을 더 낮춥니다(위 실측표 참고) */
+@media (max-width:420px){
+  .tl-sym-table td.tl-sym-name{padding-right:4px;}
+}
+
+/* 별 — 가로는 좁게(표 최소폭 예산), 세로로 넓혀 누르기 쉽게 만듭니다.
+   줄 높이가 73px 이라 세로로 늘릴 자리는 넉넉합니다(실측).
+   가로를 키우면 그만큼 표가 카드를 밀고 나갑니다 — 위 실측표. */
+.tl-symfav{
+  position:absolute;
+  left:2px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  width:30px;
+  height:52px;
+  padding:0;
+  margin:0;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#838DA4;
+  line-height:0;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.tl-symfav svg{display:block;}
+
+/* 켜진 별만 포인트(골드). 빨강은 손익 표시에만 씁니다. */
+.tl-symfav[data-on="1"]{color:#F0B429;}

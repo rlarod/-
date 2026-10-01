@@ -1219,3 +1219,29 @@ tests/chat-popup-seal.test.js
 #   ⚠ 이 건은 css/symbol-search.css · js/symbol-search.js · index.html · main.js 와
 #     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
 tests/symbol-search-seal.test.js
+
+# 종목 목록 ★카테고리 탭★ — 2026-10-01 PM 배정 / 수리팀
+#   대표 지시: "업비트랑 비슷하게 ㄱㄱ 카테고리들도"
+#   [전체] [코인] [주식] [보유] [관심] 5개 + 줄 맨 앞 ★관심 별★
+#   지키는 것: ⭐ 줄을 숨기는 곳은 ★검색 모듈 한 곳★ 이다 — 탭이 따로
+#              tr.style.display 를 쓰면 둘이 서로를 덮어 조건 하나가 조용히
+#              사라집니다. 탭은 setExtraFilter 로 조건만 맡기고 ★교집합★ 입니다ㆍ
+#              ⭐ 별을 담으려고 ★새 칸(td)을 만들지 않는다★ — renderSymbols()
+#              가 칸을 ★번호로★ 찾아 써서, 칸이 하나 늘면 종목명 칸에 현재가가
+#              찍힙니다(2026-10-01 실측) · jsdom 에서 renderSymbols() 를
+#              ★실제로 다시 돌려★ 거른 상태와 칸 수를 확인합니다 ·
+#              별을 눌러도 ★종목이 안 바뀐다★(stopPropagation) ·
+#              별표는 ★localStorage 에만★ 남는다(서버로 안 보냄) ·
+#              0줄일 때 왜 비었는지 말로 적는다(빈 화면 금지) ·
+#              ⛔ "지수" 금지 — QQQUSDT 는 지수가 아니라 ETF 입니다 ·
+#              종목 이름을 파일에 안 적음(SymbolRegistry 단일 출처) +
+#              ★모든 종목이 코인·주식 중 한 곳에는 든다★ ·
+#              별은 인라인 SVG(이모지 금지) · 탭 글씨 17px 이상
+# 되돌리기: 이 줄과 tests/symbol-category-tabs-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/symbol-category-tabs.css · js/symbol-category-tabs.js ·
+#     js/symbol-search.js · index.html · main.js 와 ★한 묶음★ 입니다.
+#     되돌릴 때 여섯을 같이 되돌리세요.
+tests/symbol-category-tabs-seal.test.js
