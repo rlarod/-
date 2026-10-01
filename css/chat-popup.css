@@ -1,0 +1,171 @@
+/* =========================================================================
+ * css/chat-popup.css — 실시간 채팅을 ★켰다 껐다 하는 팝업★ 으로
+ * =========================================================================
+ * 대표 지시 2026-10-01 — "채팅창은 팝업창?? 같은 걸로 켯다 껏다 할수있게하고"
+ *
+ * 그전에는 채팅이 오른쪽 열에 ★늘 펼쳐져★ 있었습니다.
+ * 이제 오른쪽 아래 "채팅" 버튼을 눌러야 뜨고, 닫기(X)로 내립니다.
+ *
+ * ── ⛔ DOM 을 하나도 안 옮깁니다 ────────────────────────────────────────
+ *   #right-chat-panel 은 index.html 의 .page-right 안 ★그 자리 그대로★ 입니다.
+ *   position:fixed 로 ★보이는 자리만★ 띄웁니다.
+ *
+ *   왜 이렇게 했나 — 디자인 시안(/tmp/tl-design-mock)은 채팅을 document.body
+ *   로 옮겼습니다. 그렇게 하면 style.css 의
+ *       .page-right .chat-msg / .chat-msg-event / .chat-input-row / .chat-err …
+ *   ★25개 규칙이 전부 안 먹습니다★ (전부 .page-right 자손 선택자입니다).
+ *   글씨 크기·간격·익절 초록/청산 빨강이 통째로 날아갑니다.
+ *   제자리에 두면 한 줄도 안 베끼고 그대로 살아 있습니다.
+ *
+ *   덤으로 tests/top-panel.test.js:81~86 (".page-right 안에 #chat-panel 이
+ *   있고 notice-box 보다 뒤") 도 그대로 통과합니다.
+ *
+ * ── ⛔ 마크업을 지우지 않습니다 ─────────────────────────────────────────
+ *   닫힌 상태는 display:none 일 뿐입니다. 되살리면 예전 모습 그대로입니다.
+ *
+ * ── 머리글은 ★이미 있는 .field-label 을 다시 씁니다★ ───────────────────
+ *   "실시간 채팅" 글자가 거기 이미 있습니다. 새 머리글을 만들면 제목이 두 줄
+ *   연달아 나옵니다. 134px 파란 띠(다크에선 #0D1422)를 팝업용으로 낮추고,
+ *   js/chat-popup.js 가 닫기 버튼 하나만 그 안에 넣습니다.
+ *
+ * ── 색·글씨 ──────────────────────────────────────────────────────────────
+ *   확정 팔레트 9색만. 글씨 17px 바닥. 그림자 없음(카드 위 흰색 3% inset 선만).
+ *   모서리 10px. 이모지 없음 — 말풍선·X 는 인라인 SVG.
+ *
+ * ── ⚠ style.css 보다 ★뒤★ 에 있어야 합니다 ─────────────────────────────
+ *   .page-right .side-chat-panel > .page-chat-col 의 sticky/100vh 를 덮습니다.
+ *
+ * ── 되돌리는 방법 ────────────────────────────────────────────────────────
+ *   index.html 의 <link rel="stylesheet" href="css/chat-popup.css"> 한 줄과
+ *   <script src="js/chat-popup.js"> 한 줄, main.js 의 "ChatPopup" 한 개를
+ *   지우면 채팅이 예전처럼 오른쪽 열에 늘 펼쳐집니다.
+ * ========================================================================= */
+
+/* html.tl-chat-ready 는 js/chat-popup.js 가 켤 때만 붙습니다.
+   JS 가 안 뜨면 아래 규칙이 하나도 안 걸려서 ★예전 그대로★ 입니다
+   (채팅이 통째로 사라지는 조용한 고장을 막습니다). */
+
+/* =========================================================================
+ * 1) 떠 있는 "채팅" 버튼
+ * ========================================================================= */
+html.tl-chat-ready .tl-chat-fab{
+  position:fixed;right:18px;bottom:18px;z-index:940;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  width:97px;height:52px;padding:0;
+  border-radius:10px;
+  background:#101727;border:1px solid #1D273B;
+  /* ★그림자가 아닙니다★ — 확정 규칙대로 카드 위 흰색 3% 선(inset)만 넣습니다. */
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+  color:#E7ECF5;font-family:inherit;font-size:17px;font-weight:700;
+  line-height:1;cursor:pointer;
+}
+html.tl-chat-ready .tl-chat-fab:hover{border-color:#F0B429;color:#F0B429;}
+html.tl-chat-ready .tl-chat-fab:focus-visible{outline:2px solid #F0B429;outline-offset:2px;}
+html.tl-chat-ready .tl-chat-fab svg{flex:0 0 auto;}
+/* 열려 있는 동안에는 버튼을 내립니다 — 팝업 닫기(X)가 그 역할을 합니다. */
+html.tl-chat-open .tl-chat-fab{display:none;}
+
+/* =========================================================================
+ * 2) 팝업 — #right-chat-panel 을 제자리에서 띄웁니다
+ * =========================================================================
+ * 선택자에 id 를 넣어 .page-right .side-chat-panel(클래스 2개) 보다 확실히
+ * 세게 만듭니다. style.css 를 한 글자도 안 고치고 덮기 위해서입니다.
+ * ========================================================================= */
+html.tl-chat-ready #right-chat-panel{
+  position:fixed;right:18px;bottom:18px;left:auto;top:auto;z-index:950;
+  width:380px;height:min(620px, calc(100vh - 36px));
+  margin:0;padding:0;flex:0 0 auto;
+  display:none;flex-direction:column;
+  overflow:visible;
+}
+html.tl-chat-open #right-chat-panel{display:flex;}
+
+/* 안쪽 열 — style.css 의 sticky/top:6px/height:calc(100vh-12px) 를 끕니다. */
+html.tl-chat-ready #right-chat-panel > .page-chat-col{
+  position:static;top:auto;
+  height:100%;max-height:none;min-height:0;
+  flex:1 1 auto;display:flex;min-width:0;
+}
+
+/* 팝업 본체 — 카드 모서리 10px + 위쪽 흰색 3% 선(inset). 그림자 없음. */
+html.tl-chat-ready #right-chat-panel #chat-panel{
+  flex:1 1 auto;min-height:0;min-width:0;height:100%;width:100%;
+  display:flex;flex-direction:column;
+  background:#101727;border:1px solid #1D273B;border-radius:10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+  padding:0;overflow:hidden;
+}
+
+/* 머리글 — 134px 파란 띠를 팝업 크기로 낮춥니다(마크업은 그대로). */
+html.tl-chat-ready #right-chat-panel #chat-panel > .field-label{
+  flex:0 0 auto;
+  height:auto;min-height:0;margin:0;padding:12px 14px;
+  background:#0D1422;border-bottom:1px solid #1D273B;border-radius:10px 10px 0 0;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:17px;font-weight:700;color:#E7ECF5;
+}
+html.tl-chat-ready #right-chat-panel #chat-panel > .field-label span{
+  font-size:17px;color:#E7ECF5;
+}
+
+/* 닫기 버튼 — js/chat-popup.js 가 머리글 안에 넣습니다. 아이콘은 인라인 SVG. */
+html.tl-chat-ready .tl-chat-pop-close{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;padding:0;margin:-6px -6px -6px 0;
+  background:transparent;border:0;border-radius:10px;
+  color:#838DA4;cursor:pointer;line-height:0;
+}
+html.tl-chat-ready .tl-chat-pop-close:hover{color:#E7ECF5;background:#0A0F1C;}
+html.tl-chat-ready .tl-chat-pop-close:focus-visible{outline:2px solid #F0B429;outline-offset:-2px;}
+
+/* 메시지 칸 — @media(max-width:1799px) 의 max-height:46vh 를 끕니다.
+   팝업 높이를 이미 정해 뒀는데 거기에 또 46vh 가 걸리면 입력칸이 밀려납니다. */
+html.tl-chat-ready #right-chat-panel .chat-messages{
+  flex:1 1 auto;min-height:0;max-height:none;height:auto;overflow-y:auto;
+}
+html.tl-chat-ready #right-chat-panel .chat-input-row{flex:0 0 auto;}
+html.tl-chat-ready #right-chat-panel .chat-err{flex:0 0 auto;}
+
+/* =========================================================================
+ * 3) 떠 있는 버튼이 ★뒤 카드를 덮는 것★ 을 줄입니다
+ * =========================================================================
+ * PM 이 시안 캡처에서 "채팅 버튼이 로그인 칸 오른쪽 아래 모서리를 덮는다" 고
+ * 지적했습니다. 떠 있는 버튼은 본래 본문 위에 뜨므로 아래 두 가지로 줄입니다.
+ *
+ *   ① 페이지 맨 아래에 버튼 자리를 비웁니다(아래 padding-bottom).
+ *      → 끝까지 내렸을 때 겹침 0.
+ *   ② 1686px 이상에서는 본문 틀(최대 1420px) ★바깥 여백★ 에 버튼이 들어가므로
+ *      겹침이 아예 0 입니다(1420 + (97+18+18)*2 = 1686).
+ * ========================================================================= */
+html.tl-chat-ready .page-shell{padding-bottom:88px;}   /* 52 + 18*2 */
+
+/* =========================================================================
+ * 4) 좁은 화면
+ * ========================================================================= */
+@media (max-width:1100px){
+  html.tl-chat-ready #right-chat-panel{
+    right:8px;bottom:8px;
+    width:min(380px, calc(100vw - 16px));
+    height:min(70vh, 560px);
+  }
+  html.tl-chat-ready .tl-chat-fab{right:12px;bottom:12px;}
+  html.tl-chat-ready .page-shell{padding-bottom:76px;}  /* 52 + 12*2 */
+}
+
+/* 700px 이하에는 화면 아래에 "매수/롱 · 매도/숏" 고정 막대가 있습니다
+   (style.css:4511, z-index 990). 그 위로 올립니다. */
+@media (max-width:700px){
+  html.tl-chat-ready .tl-chat-fab{
+    bottom:calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+  html.tl-chat-ready #right-chat-panel{
+    bottom:calc(86px + env(safe-area-inset-bottom, 0px));
+    height:min(62vh, 520px);
+  }
+  /* 고정 막대(84px) + 버튼(52px) + 사이 여백 = 156px */
+  html.tl-chat-ready .page-shell,
+  html.tl-chat-ready body[data-tl-order-sheet] .page-shell{
+    padding-bottom:calc(156px + env(safe-area-inset-bottom, 0px));
+  }
+}

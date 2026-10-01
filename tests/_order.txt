@@ -1185,3 +1185,19 @@ tests/all-symbol-feed.test.js
 #   ⚠ 이 건은 css/upbit-layout.css · js/upbit-right-column.js · index.html · main.js 와
 #     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
 tests/upbit-layout-seal.test.js
+
+# 실시간 채팅 ★팝업(켜고 끄기)★ — 2026-10-01 대표 지시 / 수리팀
+#   "채팅창은 팝업창?? 같은 걸로 켯다 껏다 할수있게하고"
+#   지키는 것: DOM 이동 0 (js/chat.js 가 캐시한 노드 4개 보존) ·
+#              닫힘은 display:none 일 뿐(마크업 보존) ·
+#              ★열 때 맨 아래로 직접 내리기★(닫혀 있으면 scrollHeight 가 0 이라
+#              js/chat.js:74 가 아무 일도 못 합니다 — 열면 옛 메시지가 보입니다) ·
+#              js/layout-align.js 를 init 가로채기로 끄고 main.js 에서 그보다 앞 ·
+#              JS 가 안 떠도 채팅이 안 사라짐(모든 CSS 가 html.tl-chat-ready 아래)
+# 되돌리기: 이 줄과 tests/chat-popup-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/chat-popup.css · js/chat-popup.js · index.html · main.js 와
+#     ★한 묶음★ 입니다. 되돌릴 때 다섯을 같이 되돌리세요.
+tests/chat-popup-seal.test.js

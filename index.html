@@ -68,6 +68,13 @@
        내리는 규칙이 style.css 의 @media(max-width:1799px) 를 덮어야 하기 때문입니다.
      되돌리기: 이 link 한 줄만 지우면 배치가 전부 원래대로 돌아옵니다. -->
 <link rel="stylesheet" href="css/upbit-layout.css">
+<!-- 실시간 채팅을 ★켰다 껐다 하는 팝업★ 으로 — 2026-10-01 대표 지시
+     "채팅창은 팝업창?? 같은 걸로 켯다 껏다 할수있게하고".
+     ⚠ style.css 보다 ★뒤★ 여야 합니다(.page-chat-col 의 sticky/100vh 를 덮습니다).
+     ⚠ 마크업은 .page-right 안 ★그 자리 그대로★ 입니다. 보이는 자리만 띄웁니다.
+     되돌리기: 이 link 한 줄 + js/chat-popup.js 줄 + main.js 의 "ChatPopup" 을 지우면
+               채팅이 예전처럼 오른쪽 열에 늘 펼쳐집니다. -->
+<link rel="stylesheet" href="css/chat-popup.css">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- 글꼴 파일이 실제로 오는 곳. 미리 연결해 두면 첫 글꼴이 빨리 옵니다. 이 줄만 지우면 원래대로. -->
@@ -1245,6 +1252,11 @@
      서버는 supabase/schema-trading-cycle.sql -->
 <script src="js/cycle-pnl.js"></script>
 <script src="js/layout-align.js"></script>
+<!-- 실시간 채팅 팝업(켜고 끄기) — 2026-10-01 대표 지시.
+     ⚠ main.js 목록에서 "ChatPopup" 은 ★"LayoutAlign" 보다 앞★ 이어야 합니다
+       (바로 위 js/layout-align.js 의 init 을 가로채 끕니다 — 이유는 파일 머리말).
+     되돌리기: 이 script 한 줄 + css/chat-popup.css 줄 + main.js 의 "ChatPopup". -->
+<script src="js/chat-popup.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/board-gallery-style.js"></script>
 <script src="js/board-paging.js"></script>

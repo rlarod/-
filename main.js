@@ -151,7 +151,14 @@
     const modules = ["Chart", "OrderBook", "OrderbookPriceArrow", "OrderbookMarkPrice", "TradeStreamFix", "RecentTrades", "OrderbookTabs", "TradesFit", "ObHeaderCurrency","MarketWar", "OrderPressureBar", "MarketWarPowerBar", "Trading", "OrderInfoPanel", "SymbolSwitchPriceClear", "SupabaseSync", "TradeHistory", "Leaderboard", "TableScrollHint","Chat", "TradeEventsChat", "ChatEventStyle", /* "ChatSplit" — 2026-08-24 대표 결정("B안")으로 연결 끊음.
       ⚡ 알림 띠를 없애고 알림을 다시 채팅에 보이게 했습니다.
       되살리려면 이 주석을 풀고 index.html 의 <script src="js/chat-split.js"> 도 푸세요. */
-      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI",
+      "DailyRecharge", "PositionTableExtra", "LimitClose", "AdminMenu",
+      /* 실시간 채팅 팝업(켜고 끄기) — 2026-10-01 대표 지시.
+         ⚠ 반드시 "LayoutAlign" ★앞★ 입니다. 채팅이 팝업이 되면 LayoutAlign 이
+           맞출 대상(오른쪽 열에 세로로 선 채팅)이 없어지는데, 그대로 켜 두면
+           1800px 이상에서 .page-chat-col 높이를 거래 행 높이로 밀어 넣어
+           팝업 밖으로 입력칸이 나갑니다. 그래서 여기서 먼저 켜서 그쪽 init 을
+           가로챕니다(js/chat-popup.js 머리말 참고). */
+      "ChatPopup", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI",
       /* 네 종목 전부의 시세를 받는 데이터 전용 모듈. "UI" 뒤에 둡니다 —
          UI.init() 이 DOM 을 재배치하기 전에 끼어들 이유가 없고(이 모듈은
          DOM 을 아예 안 봅니다), 소켓을 여는 일이라 늦게 열수록 안전합니다. */
