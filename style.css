@@ -136,8 +136,16 @@ a:hover{text-decoration:underline;}
      로고 블록 높이 37px 기준으로 헤더 63px, 좌측 8px, 간격 48px가 됩니다. */
   /* 로고를 키우면서(110px) 위아래 여백을 줄여 헤더가 과하게 두꺼워지지
      않게 했습니다. 실측: 여백 30px -> 14px, 헤더 170px -> 138px. */
-  max-width:var(--content-max);margin:0 auto;padding:14px 8px;
-  display:flex;align-items:center;gap:48px;flex-wrap:nowrap;min-width:0;
+  /* ★2026-10-08 — 위아래 여백 14 -> 7px, 메뉴 줄을 이 상자 안으로 받았습니다★
+     로고 45px + 7px x2 = 59px (+ 아래 테두리 1px) = 헤더 60px.
+     row-gap 을 0 으로 못박습니다 - 1200px 미만에서 메뉴가 둘째 줄로 내려갈 때
+     column-gap 48 이 줄 간격으로도 먹으면 헤더가 48px 더 두꺼워집니다.
+     ⚠️ 이 주석 안에 여백 값을 CSS 선언 꼴(여백속성:A B)로 적지 마십시오 —
+        tests/top-panel.test.js 가 규칙 안의 ★첫 번째★ 그 꼴을 집어서
+        주석을 실제 값으로 읽습니다(2026-10-08 에 73px 로 잘못 읽혔습니다).
+     되돌리기 값은 이 파일 맨 끝 「헤더 한 줄」 절에 적어 두었습니다. */
+  max-width:var(--content-max);margin:0 auto;padding:7px 8px;
+  display:flex;align-items:center;column-gap:48px;row-gap:0;flex-wrap:wrap;min-width:0;
 }
 .top-banner-right{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-left:auto;flex:0 0 auto;}
 
@@ -156,12 +164,38 @@ a:hover{text-decoration:underline;}
   scrollbar-width:none;-ms-overflow-style:none;
 }
 .top-banner-nav::-webkit-scrollbar{display:none;}
+
+/* ★2026-10-08 — 메뉴 줄이 헤더(.top-banner-inner) 안으로 들어왔습니다★
+   1200px 미만에서는 ★둘째 줄★ 로 내려 지금처럼 두 줄로 보이게 합니다.
+   order:9 로 .top-banner-right 뒤로 보내 둘째 줄에 혼자 놓입니다.
+   조사팀 실측 — 1920·1440·1300·1220 은 한 줄 가능(넘침 0), 1101 은 23px,
+   1000 은 100px, 768 은 158px, 360 은 248px 넘칩니다(메뉴 글자 26px 때문).
+   글자 26px 은 대표 지시로 ★못 줄입니다★.
+
+   메뉴 줄의 담는칸 = 이 상자(.top-banner-inner) 의 안쪽 폭 입니다.
+   2026-10-08 이전의 .menu-bar-inner 와 ★똑같은 값★ 이 되게 맞춰 놨습니다.
+     521px 이상   좌우 8px  (base, 147행)        담는칸 = 폭 - 16px
+     520px 이하   좌우 4px  (3589행 블록)        담는칸 = 폭 -  8px
+   안 맞추면 360px 에서 TL 마켓 이 다시 17.8px 잘립니다.
+   ⚠️ 음수 여백으로는 못 넓힙니다 — flex-basis:100% 라 폭이 부모 안쪽 폭으로
+      고정되고 음수 여백은 ★자리만 옮깁니다★ (390px 에서 실제로 그랬습니다).
+   ⚠️ margin 을 0 이라도 적어 둡니다 — tests/narrow-360-fit-seal.test.js 의
+      메뉴재기() 가 이 값을 읽어 담는칸을 셉니다. */
+.top-banner-inner > .top-banner-nav{
+  flex:0 0 100%;order:9;margin-left:0;margin-right:0;
+}
 .top-banner-nav-btn{
   /* 레퍼런스 실측 기준(헤더 63px 고정): 헤더/메뉴 = 1.692 -> 메뉴 높이 37px,
      글자높이/메뉴높이 = 0.269 -> font-size 14px, item 좌우 패딩 = 콘텐츠 폭의 1.17% -> 22px */
   flex:0 0 auto;white-space:nowrap;
   background:transparent;border:none;color:rgba(255,255,255,0.86);
-  padding:20px 22px;border-radius:0;font-family:var(--sans);font-size:26px;font-weight:600;
+  /* ★2026-10-08 — 위아래 20px -> 4px★ (좌우 22px 은 ★그대로★ 입니다)
+     메뉴 줄이 헤더 안으로 들어와서, 버튼 높이가 로고 45px 보다 커지면
+     헤더 60px 이 안 나옵니다. 26px x 1.4 + 4 x2 = 44.4px 로 로고 안에 들어갑니다.
+     ⚠️ 글자 26px 과 좌우 22px 은 tests/top-panel.test.js 가 범위로 막고 있습니다.
+        줄이지 마십시오 - 대표가 '글씨 작다' 고 세 번 말씀하셨습니다.
+     되돌리기: 4px 을 20px 으로. */
+  padding:4px 22px;border-radius:0;font-family:var(--sans);font-size:26px;font-weight:600;
   cursor:pointer;transition:.12s;letter-spacing:-0.02em;line-height:1.4;
 }
 /* 1366px 이하(노트북 기본 해상도)에서도 9개가 한 줄에 다 들어가도록 좌우 여백만 축소 */
@@ -187,15 +221,27 @@ a:hover{text-decoration:underline;}
   padding:0;border-radius:0;margin-left:4px;vertical-align:super;letter-spacing:-0.02em;
 }
 
+/* ★2026-10-08 — 로고 110px -> 45px (대표 지시)★
+     대표: "로고 줄여도 됌"  /  대표: "그대로 ㄱㄱ"
+   헤더 높이는 로고가 정합니다(헤더 = 로고 + 위아래 여백 + 테두리 1px).
+   업비트 실측은 헤더 60.0px / 로고 18px 인데 우리는 216px 이었습니다.
+   45px + 여백 7px x2 = 59px, 테두리 1px 을 더해 ★헤더 60px★ 입니다.
+   ⚠️ 40px 밑으로는 내리지 마십시오 - tests/top-panel.test.js 가 막습니다.
+   ⚠️ 주석을 이 규칙 ★안쪽★ 에 적지 마십시오 - tests/tl-brand.test.js 는
+      여는 중괄호 다음 400글자 안에서 width:auto 를 찾습니다. 주석이
+      길어지면 밀려나서 ★엉뚱한 이유로★ 빨개집니다(2026-10-08 에 겪었습니다).
+   되돌리기: height 45px -> 110px. 그때 tests/top-panel.test.js 의 헤더 상한
+             70 도 160 으로 같이 올려야 합니다. */
+
 /* ===== TL 브랜드 로고 =====
    로고는 공식 원본 이미지를 그대로 씁니다. 형태·비율·색을 CSS로 바꾸지 않고
    높이만 헤더에 맞추고, 가로는 aspect-ratio로 원본 비율(1461:328 = 4.454)을
    유지합니다. 사이트 이름이 바로 보이도록 충분히 크게 둡니다. */
 .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none;}
 .brand-logo{
-  /* 사장님 지시(2026-08-18): 68px는 너무 작아 안 보임 -> 크게.
-     로고 자체는 그대로 두고 표시 높이만 키웁니다. */
-  height:110px;width:auto;display:block;
+  /* 2026-08-18 사장님 지시로 68px -> 110px, 2026-10-08 대표 지시로 110px -> 45px.
+     근거·되돌리기는 이 규칙 ★바로 위★ 주석에 있습니다. */
+  height:45px;width:auto;display:block;
   /* 이미지가 늦게 떠도 헤더 높이가 흔들리지 않게 자리를 미리 잡습니다.
      밝은 버전과 다크 버전은 원본 비율이 서로 다릅니다(4.454 / 4.896). */
   /* 2026-08-18: 배너 소재의 로고 부분으로 교체 — 비율이 바뀌었습니다. */
@@ -518,7 +564,14 @@ html[data-theme="dark"] .brand-logo.brand-logo-dark{display:block;}
 }
 @media (max-width:400px){
   .stats-bar{gap:10px;}
-  .top-banner-inner{padding:12px 14px;}
+  /* ★2026-10-08 — 좌우(14px) 를 떼고 위아래만 남겼습니다★
+     메뉴 줄이 헤더 안으로 들어오면서 좌우 여백이 그대로 ★메뉴 담는칸★ 이
+     됐습니다. 14px 이면 360px 에서 담는칸이 332px 이라 TL 마켓 이 17.8px
+     잘립니다. 좌우는 3519행대 @media (max-width:520px) 에서 4px 으로 잡습니다
+     (옛 .menu-bar-inner 와 같은 값). ⚠️ 여기서 다시 padding 축약형을 쓰면
+     그 4px 을 덮어 버리고 media-cascade-order 봉인이 터집니다.
+     되돌리기: 아래 두 줄을 위아래·좌우 한 줄(12px 14px)로. */
+  .top-banner-inner{padding-top:12px;padding-bottom:12px;}
   /* 메뉴 버튼 규칙은 파일 맨 뒤 "360px 안내문구 잘림" 블록으로 옮겼습니다.
      (≤520 규칙보다 뒤에 있어야 좁은 폭 값이 살아납니다) */
   .mypage-grid{grid-template-columns:1fr;}
@@ -2099,7 +2152,13 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
    262px 생겼습니다. 모바일에서는 다시 줄바꿈을 허용하고 우측 상태 표시를
    접어 한 줄에 로고만 남깁니다(요소는 숨기기만 하고 삭제하지 않음). */
 @media (max-width:760px){
-  .top-banner-inner{flex-wrap:wrap;gap:8px;}
+  /* ★2026-10-08 — row-gap:0 을 같이 넣었습니다★
+     gap:8px 은 ★가로·세로 둘 다★ 입니다. 메뉴 줄이 헤더의 둘째 줄로
+     들어오면서 이 8px 이 줄 간격으로도 먹어, 360~390 에서 헤더가
+     148px -> 155px 으로 ★오히려 7px 두꺼워졌습니다★(실측).
+     가로 8px 은 그대로 두고 세로만 0 으로 되돌립니다.
+     되돌리기: row-gap:0 세 글자만 지우면 됩니다. */
+  .top-banner-inner{flex-wrap:wrap;gap:8px;row-gap:0;}
   .top-banner-right{margin-left:0;flex-wrap:wrap;gap:8px;}
   .ws-status{display:none;}
   .brand .name{font-size:17px;}
@@ -2444,7 +2503,16 @@ tr.empty td{font-family:var(--sans);text-align:center;color:var(--text-faint);pa
 .top-banner-right > *{display:none;}                 /* 안쪽은 전부 계속 숨김 */
 .top-banner-right > #currency-toggle{display:flex;}  /* 통화 버튼만 되살림 */
 /* 우측이 빠진 만큼 헤더 공지 줄이 남은 폭을 씁니다 */
-.top-banner-inner > .header-notice{margin-right:0;}
+/* ★2026-10-08 — overflow:hidden 을 같이 넣었습니다★
+   메뉴 줄이 헤더 안으로 들어오면서 1200~1300px 대에서 공지 칸이 0px 까지
+   눌립니다. 그때 [공지] 빨간 배지(36px)만 상자 밖으로 삐져나와, 글은 없고
+   배지만 떠 있는 모양이 됐습니다(1200 실측 — 상자 0px, 배지 오른쪽 끝 1039px).
+   칸이 좁아지면 배지까지 같이 잘리게 합니다. 폭이 있는 화면(1440·1920)에서는
+   예전처럼 [공지] + 한 줄 + 말줄임이 그대로 보입니다.
+   ⚠️ 규칙을 새로 더하지 않고 이 자리에 넣었습니다 —
+      tests/css-duplicate-rules.test.js 가 같은 선택자 두 벌을 잡습니다.
+   되돌리기: overflow:hidden 세 글자만 지우면 됩니다. */
+.top-banner-inner > .header-notice{margin-right:0;overflow:hidden;}
 
 /* =========================================================================
  * 내 정보 박스 — 제목 띠 제거 후 내부 재배분
@@ -3513,6 +3581,17 @@ html[data-theme="dark"] .menu-bar-inner::after{
 /* 좁은 화면에서는 메뉴 좌우 여백을 줄여 한 개라도 더 보이게 */
 @media (max-width:520px){
   .menu-bar-inner{padding:0 4px;}
+  /* ★2026-10-08★ 메뉴 줄이 헤더 안으로 들어왔습니다. 담는칸을 옛
+     .menu-bar-inner(이 블록 바로 위 줄, 좌우 4px) 와 ★똑같이★ 맞춥니다.
+     음수 여백으로는 안 됩니다 — 메뉴 줄은 flex-basis:100% 라 폭이 부모
+     안쪽 폭으로 고정되고, 음수 여백은 ★자리만 옮기고 폭은 그대로★ 입니다
+     (390px 실측 — 왼쪽으로 10px 밀리고 오른쪽에 24px 빈 자리가 남았습니다).
+     그래서 상자(.top-banner-inner) 의 좌우 여백 자체를 4px 로 내립니다.
+       400px 이하 14px -> 4px / 401~520px 8px -> 4px  (담는칸 = 폭 - 8px, 옛 값 그대로)
+     ⚠️ 위아래 여백은 안 건드립니다. 400 블록(566행)에서 따로 잡습니다 —
+        거기서 padding 한 줄로 네 방향을 다 잡으면 이 규칙을 덮어버리고
+        tests/media-cascade-order.test.js 가 ★좁은 쪽이 앞이라★ 터집니다. */
+  .top-banner-inner{padding-left:4px;padding-right:4px;}
   /* 좌우 10px 이면 401~408px 구간에서 마지막 메뉴("TL 마켓")가 3px 잘렸습니다.
      7px 으로 줄이면 402px 에서도 다 들어갑니다(측정 후 여유 약 29px).
      되돌리기: 7px 을 10px 으로 되돌리면 됩니다. */
@@ -5448,3 +5527,85 @@ html[data-cur="KRW"] .ob-mark-price-row{font-size:13px;white-space:nowrap;}
  * 이 절 자체를 되돌리려면 — 주석뿐이라 지워도 화면은 그대로입니다.
  *          git checkout HEAD -- style.css
  * ========================================================================= */
+
+/* =========================================================================
+ * ★헤더 한 줄 — 2026-10-08 (대표 지시)★
+ * =========================================================================
+ *   PM: "로고 110px -> 45px 로 줄여도 되는지요"   대표: ★"로고 줄여도 됌"★
+ *   PM: "파란 메뉴 띠가 사라집니다. 그대로 갈까요?" 대표: ★"그대로 ㄱㄱ"★
+ *
+ * 무엇을 왜 — 업비트 헤더는 1440 에서 ★정확히 60.0px★ 인데 우리는 216px
+ *   (로고 띠 139 + 파란 메뉴 줄 77) 이었습니다. 차트가 y=442 에서 시작해
+ *   첫 화면(1440x900)에 458px 밖에 안 들어왔습니다.
+ *
+ * .top-banner 와 .menu-bar 는 <body> 바로 아래 ★형제★ 라 CSS 로는 못 묶습니다.
+ * 그래서 index.html 에서 <nav class="top-banner-nav"> 블록을 .top-banner-inner
+ * 안으로 옮겼습니다(버튼 6개·글자 26px·좌우 여백 22px·id 는 그대로).
+ *
+ * ⚠️ 치수는 ★이 파일(style.css) 안에서만★ 고칩니다. 새 CSS 파일에서 덮으면
+ *    narrow-360-fit-seal · media-cascade-order · top-panel 세 봉인이 전부
+ *    style.css 만 읽기 때문에 ★봉인은 초록인데 화면 값은 다른★ 상태가 됩니다.
+ * ⚠️ 새 미디어쿼리는 min-width 만 씁니다. max-width 를 새로 넣으면
+ *    media-cascade-order 와 narrow-360-fit-seal 의 밴드 검사가 터집니다.
+ *    (아래 max-width:520 / 400 두 블록은 ★이미 있는 밴드★ 를 그대로 따라간
+ *     음수 여백뿐이고, 좁은 쪽이 파일에서 더 뒤에 오게 순서를 지켰습니다.)
+ *
+ * 되돌리기 — 이 절 전체를 지우고 아래 셋을 되돌리면 2026-10-08 이전으로 갑니다.
+ *     .brand-logo        height:45px  -> 110px
+ *     .top-banner-inner  padding:7px 8px -> 14px 8px
+ *                        column-gap:48px;row-gap:0;flex-wrap:wrap -> gap:48px;flex-wrap:nowrap
+ *     .top-banner-nav-btn padding:4px 22px -> 20px 22px
+ *   index.html 의 <nav class="top-banner-nav"> 블록을 .menu-bar-inner 안으로.
+ *   tests/top-panel.test.js 의 헤더 상한 70 -> 160.
+ * ========================================================================= */
+
+/* (1) 파란 메뉴 띠는 빈 상자만 남았습니다 — ★화면에서만★ 숨깁니다.
+       마크업과 147행의 `.menu-bar{width:100%;background:#1769B3;}` 선언은
+       그대로 보존합니다(나중에 되살릴 수 있게).
+       ⚠️ `.menu-bar{...}` 를 두 번째로 쓰지 않습니다 — 147행 원문을
+          tests/top-panel.test.js 가 글자 그대로 대조하고,
+          tests/css-duplicate-rules.test.js 가 같은 선택자 두 벌을 잡습니다.
+          그래서 인접 형제 선택자로 적습니다. */
+.top-banner + .menu-bar{display:none;}
+
+/* (2) 1200px 미만에서 메뉴 줄을 둘째 줄로 내리는 규칙은 ★이 파일 위쪽★ 에 있습니다.
+       · 기본 규칙(flex:0 0 100%; order:9)   — .top-banner-nav::-webkit-scrollbar 바로 아래
+       · 520px 이하 상자 좌우 여백 4px        — "좁은 화면에서는 메뉴 좌우 여백을 줄여" 블록
+       · 400px 이하 상자 위아래 여백만        — 566행대 @media (max-width:400px) 블록
+       ⚠️ 여기(맨 끝)에 두면 안 됩니다 — 기본 규칙이 위 두 max-width 블록보다
+          ★뒤★ 가 되어 음수 여백이 조용히 죽습니다(tests/media-cascade-order.test.js
+          가 말하는 바로 그 사고). 그래서 일부러 흩어 놓고 여기에 지도만 남깁니다.
+       ⚠️ 400px 이하 전용 미디어쿼리 블록을 ★새로 만들지 마십시오★ —
+          tests/media-cascade-order.test.js 가 lastIndexOf 로 ★맨 뒤★ 의 그 블록을
+          찾아 그 안의 메뉴 규칙을 집습니다. 빈 400 블록을 뒤에 더하면
+          돌연변이 검사가 null 을 집어 2건이 빨개집니다(2026-10-08 에 겪었습니다). */
+
+/* (3) 1200px 이상 — 로고 · 메뉴 · 공지 · USDT/KRW 가 ★전부 한 줄★ (업비트와 같은 모양).
+       버튼 높이 26px x 1.4 + 4px x2 = 44.4px 로 로고 45px 안에 들어가므로
+       헤더 높이는 로고가 그대로 정합니다(45 + 7x2 + 테두리 1 = 60px). */
+@media (min-width:1200px){
+  .top-banner-inner{flex-wrap:nowrap;}
+  .top-banner-inner > .top-banner-nav{flex:0 0 auto;order:0;margin-left:0;margin-right:0;}
+  /* 1200~1366px 에서는 위쪽 `@media (max-width:1366px)` 가 메뉴 버튼 위아래
+     여백을 7.5px 로 올립니다(9개를 한 줄에 넣던 시절 값). 그러면 버튼이
+     51.4px 이 되어 ★헤더가 60 -> 66px★ 으로 두꺼워집니다(1200 실측 66px).
+     좌우 12px 은 폭을 버는 값이라 ★그대로 두고★ 위아래만 되돌립니다.
+     선택자를 더 구체적으로 써서 이깁니다(0,3,0 > 0,1,0) — 1366 블록은
+     그대로 두므로 되돌리기가 이 네 줄 삭제로 끝납니다. */
+  .top-banner-inner > .top-banner-nav > .top-banner-nav-btn{padding-top:4px;padding-bottom:4px;}
+}
+
+/* (4) 메뉴 밀기 힌트 — 담는 상자가 .menu-bar-inner 에서 .top-banner-inner 로
+       바뀌었습니다(js/menu-scroll-hint.js 가 nav.parentElement 에 has-more 를 붙입니다).
+       nav 는 overflow 컨테이너라 ::after 가 잘리고, .top-banner-inner 에 달면
+       첫 줄의 USDT/KRW 버튼까지 덮습니다. 그래서 nav 자신의 배경 그라데이션으로
+       그립니다 — background-attachment 기본값(scroll)이라 내용과 같이 밀리지 않고
+       보이는 영역 오른쪽 끝에 붙어 있습니다. 색은 변수라 테마가 바뀌면 따라옵니다.
+       3505행의 옛 `.menu-bar-inner.has-more::after` 규칙은 되돌림용으로 남겨 둡니다. */
+.top-banner-inner.has-more > .top-banner-nav{
+  background-image:linear-gradient(to right, rgba(255,255,255,0), var(--surface));
+  background-repeat:no-repeat;background-position:right center;background-size:26px 100%;
+}
+html[data-theme="dark"] .top-banner-inner.has-more > .top-banner-nav{
+  background-image:linear-gradient(to right, rgba(16,23,39,0), var(--surface));
+}

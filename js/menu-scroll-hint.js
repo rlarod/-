@@ -19,7 +19,12 @@ App.MenuScrollHint = (function () {
 
   function update() {
     var nav = document.querySelector(".top-banner-nav");
-    var box = document.querySelector(".menu-bar-inner");
+    /* ★2026-10-08 — ".menu-bar-inner" 를 글자로 박아 두던 것을 고쳤습니다★
+       그날 index.html 에서 <nav> 를 헤더(.top-banner-inner) 안으로 옮겼습니다.
+       그대로 두면 ★nav 가 그 상자 안에 없는데도 힌트 클래스만 빈 상자에 붙어★
+       오류도 없이 힌트가 사라집니다(조용한 고장). nav 의 실제 부모를 씁니다.
+       되돌리기: 아래 한 줄을 document.querySelector(".menu-bar-inner") 로. */
+    var box = nav.parentElement || document.querySelector(".menu-bar-inner");
     if (!nav || !box) return;
     /* 남은 스크롤이 2px 넘게 있으면 더 볼 게 있다는 뜻입니다. */
     var more = nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 2;

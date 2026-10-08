@@ -471,12 +471,55 @@ function pxv(v) {
 }
 function 글자폭(F) { return 실측_글자폭_17px * F / 17; }
 
+/* ── nav 의 ★실제 부모★ 를 index.html 에서 찾습니다 (2026-10-08 새로 넣음) ───
+   ⚠️ 왜 필요한가 — 아래 메뉴재기() 는 담는칸을 `.menu-bar-inner` 의 좌우
+      여백으로 계산하고 있었습니다. 2026-10-08 에 <nav class="top-banner-nav">
+      가 헤더(.top-banner-inner) 안으로 옮겨지면서, ★nav 가 그 상자 안에
+      없는데도 이 봉인은 계속 초록★ 이 됩니다.
+      ★숫자는 맞는데 대상이 틀린★ 상태 — 360 봉인이 통째로 무의미해집니다.
+      오류도 안 나고 값도 그럴듯해서 아무도 모릅니다(조용한 고장).
+
+   그래서 선택자를 글자로 박지 않고 ★HTML 에서 찾아★ 씁니다. 다음에 또
+   옮겨도 봉인이 따라갑니다. 못 찾으면 ★조용히 통과하지 않고★ null 을
+   돌려주고, 아래 (다-0) 이 빨개집니다.
+
+   여는/닫는 태그를 세어 올라갑니다. 주석 안의 태그를 세면 깊이가 틀리므로
+   먼저 지우고, 닫는 태그가 없는 것(img·meta·link…)은 쌓지 않습니다. */
+const 빈태그 = /^(?:img|br|hr|input|meta|link|source|area|base|col|embed|param|track|wbr)$/i;
+function nav부모선택자(html) {
+  const i = html.indexOf('<nav class="top-banner-nav"');
+  if (i < 0) return null;
+  const 앞 = html.slice(0, i).replace(/<!--[\s\S]*?-->/g, "");
+  const 스택 = [];
+  const re = /<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g;
+  let m;
+  while ((m = re.exec(앞))) {
+    if (m[1] === "/") 스택.pop();
+    else if (!빈태그.test(m[2]) && !/\/\s*$/.test(m[3])) 스택.push(m[3]);
+  }
+  const 부모속성 = 스택[스택.length - 1];
+  if (부모속성 === undefined) return null;
+  const c = String(부모속성).match(/class\s*=\s*"([^"]*)"/);
+  if (!c) return null;
+  const 첫 = c[1].trim().split(/\s+/)[0];
+  return 첫 ? "." + 첫 : null;
+}
+const 담는칸선택자 = nav부모선택자(HTML);
+
 /* 이 폭에서 메뉴가 실제로 몇 px 을 차지하는가 */
 function 메뉴재기(css, w) {
   const 버튼 = 적용값(css, ".top-banner-nav-btn", w);
   const 첫버튼 = 적용값(css, ".top-banner-nav > .top-banner-nav-btn:first-child", w);
   const 줄 = 적용값(css, ".top-banner-nav", w);
-  const 칸 = 적용값(css, ".menu-bar-inner", w);
+  /* 담는칸은 ★nav 의 실제 부모★ 기준입니다 (바로 위 nav부모선택자 참조).
+     못 찾았으면 옛 상자로 떨어지지만, (다-0) 이 먼저 빨개져 알려 줍니다. */
+  const 칸 = 적용값(css, 담는칸선택자 || ".menu-bar-inner", w);
+  /* nav 자신에 붙은 좌우 여백도 셉니다 — 부모가 .top-banner-inner 가 되면서
+     둘째 줄만 ★음수 여백★ 으로 부모 여백 밖으로 흘려보내고 있습니다
+     (style.css 맨 끝 "헤더 한 줄" 절). 이걸 안 세면 360px 에서 담는칸을
+     20px 작게 봐서, 멀쩡한 화면을 넘침으로 오판합니다. */
+  const 줄자식 = 담는칸선택자
+    ? 적용값(css, 담는칸선택자 + " > .top-banner-nav", w) : {};
 
   const F = pxv(버튼["font-size"]);
   const pl = pxv(버튼["padding-left"]), pr = pxv(버튼["padding-right"]);
@@ -485,15 +528,23 @@ function 메뉴재기(css, w) {
   /* gap:2px / gap:10px 16px - 가로 간격은 마지막 값입니다 */
   const g = pxv(String(줄["gap"] || "").trim().split(/\s+/).pop());
   const 칸왼 = pxv(칸["padding-left"]), 칸오 = pxv(칸["padding-right"]);
+  /* 안 적힌 여백은 CSS 기본값 0 입니다. 부모 여백은 ★0 으로 치지 않습니다★ —
+     NaN 으로 남겨서 "상자를 못 읽었다" 를 아래 검사가 잡게 둡니다. */
+  const 영 = (v) => (isNaN(pxv(v)) ? 0 : pxv(v));
+  const 줄왼 = 영(줄자식["margin-left"] !== undefined ? 줄자식["margin-left"] : 줄["margin-left"]) +
+               영(줄자식["padding-left"] !== undefined ? 줄자식["padding-left"] : 줄["padding-left"]);
+  const 줄오 = 영(줄자식["margin-right"] !== undefined ? 줄자식["margin-right"] : 줄["margin-right"]) +
+               영(줄자식["padding-right"] !== undefined ? 줄자식["padding-right"] : 줄["padding-right"]);
 
   const 개수 = 6;                                    /* [5] 가 6개를 지킵니다 */
   const 여백합 = 개수 * (pl + pr) - pl + 첫왼;        /* 첫 버튼 왼쪽만 갈아 끼웁니다 */
   const 간격합 = (개수 - 1) * g;
   const 총폭 = 글자폭(F) + 여백합 + 간격합;
-  const 담는칸 = w - 칸왼 - 칸오;
+  const 담는칸 = w - 칸왼 - 칸오 - 줄왼 - 줄오;
   return {
     F: F, pl: pl, pr: pr, 첫왼: 첫왼, gap: g,
     총폭: 총폭, 담는칸: 담는칸, 여유: 담는칸 - 총폭,
+    칸: 담는칸선택자 || ".menu-bar-inner", 칸왼: 칸왼, 칸오: 칸오, 줄왼: 줄왼, 줄오: 줄오,
     이웃간격: pr + g + pl                             /* 옆 메뉴 글자와 떨어진 거리 */
   };
 }
@@ -725,6 +776,42 @@ console.log("\n  [4] 상단 메뉴 - 바닥은 " + 바닥 + "px, 천장은 '360 
       .filter((b) => !/nav-coming-soon/.test(b))
       .map((b) => b.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()).join("|") === 실측_라벨);
 
+  /* ★(다-0) 담는칸을 ★맞는 상자★ 에서 재고 있는가 (2026-10-08 새로 넣음)★
+     ────────────────────────────────────────────────────────────────────────
+     이 절 아래 모든 폭 검사는 "담는칸" 하나에 걸려 있습니다. 2026-10-08 에
+     <nav> 가 .menu-bar-inner 에서 .top-banner-inner 로 옮겨졌는데, 그때
+     여기가 옛 이름을 글자로 박고 있었습니다. 두 상자의 좌우 여백이 공교롭게
+     비슷해서 ★숫자는 그럴듯하고 봉인은 초록★ 인데, 재는 대상은 이미
+     화면에 없는 빈 상자였습니다. 그 상태를 못 잡게 여기서 못 박습니다. */
+  {
+    ok("nav 의 실제 부모를 index.html 에서 찾았다 (지금 " + 담는칸선택자 + ")",
+      !!담는칸선택자,
+      "못 찾으면 담는칸을 옛 상자에서 재게 되어 아래 폭 검사가 전부 무의미해집니다");
+    const m0 = 메뉴재기(CSS, 360);
+    console.log("    담는 상자 " + m0.칸 + " 좌우 " + m0.칸왼 + "/" + m0.칸오 +
+      " · nav 좌우 " + m0.줄왼 + "/" + m0.줄오 + " => 담는칸 " + m0.담는칸 + "px");
+    ok("그 상자의 좌우 여백을 style.css 에서 숫자로 읽었다 (NaN 이 아니다)",
+      !isNaN(m0.칸왼) && !isNaN(m0.칸오),
+      m0.칸 + " 의 padding-left/right 를 못 읽었습니다: " + m0.칸왼 + "/" + m0.칸오);
+    ok("담는칸이 0 보다 크고 화면 폭(360) 을 넘지 않는다 (지금 " + m0.담는칸 + "px)",
+      m0.담는칸 > 0 && m0.담는칸 <= 360);
+    /* ★자기 함정★ — 상자 선택자를 손으로 박아 두는 짓을 다시 하면
+       잡히는가. 옛 이름(.menu-bar-inner) 은 2026-10-08 부터 nav 를 담고
+       있지 않으므로, HTML 이 말하는 부모와 ★달라야★ 정상입니다. */
+    ok("옛 상자 이름(.menu-bar-inner) 을 글자로 박아 두지 않았다",
+      담는칸선택자 !== null,
+      "담는칸선택자 가 null 이면 코드가 옛 이름으로 떨어집니다");
+    /* ★돌연변이★ — HTML 에서 nav 를 다른 상자로 옮기면 이 봉인이 알아채는가 */
+    const 옮긴HTML = HTML.replace(
+      '<nav class="top-banner-nav">',
+      '<div class="가짜상자"><nav class="top-banner-nav">');
+    ok("★nav 를 다른 상자로 옮기면 봉인이 그 상자를 따라간다★ (대상이 안 굳는다)",
+      nav부모선택자(옮긴HTML) === ".가짜상자",
+      "찾은 부모: " + nav부모선택자(옮긴HTML));
+    ok("(자기 함정) nav 가 아예 없으면 null 을 돌려준다 (조용히 통과 금지)",
+      nav부모선택자("<html><body><div class=\"a\"></div></body></html>") === null);
+  }
+
   for (const w of [360, 375, 390, 402]) {
     const m = 메뉴재기(CSS, w);
     console.log("    " + w + "px -> 글자 " + m.F + "px, 여백 " + m.pl + "/" + m.pr +
@@ -795,7 +882,11 @@ console.log("\n  [4] 상단 메뉴 - 바닥은 " + 바닥 + "px, 천장은 '360 
          하나라도 어긋나면 계산기를 못 믿으니 위 (다) 도 못 믿습니다. */
   console.log("\n    [자체검증] 디자인팀 2026-09-04 실측표 5줄을 계산기가 재현하는가");
   const 표본 = (F, p, g) =>
-    ".menu-bar-inner{padding:0 4px;}\n" +
+    /* ★2026-10-08 — 담는 상자 이름을 글자로 박지 않습니다★
+       nav 가 .menu-bar-inner 에서 .top-banner-inner 로 옮겨졌습니다.
+       여기만 옛 이름으로 두면 사본에 상자가 없어 담는칸이 NaN 이 되고,
+       자체검증 5줄이 통째로 헛돕니다(실제로 그렇게 빨개졌습니다). */
+    (담는칸선택자 || ".menu-bar-inner") + "{padding:0 4px;}\n" +
     ".top-banner-nav{display:flex;gap:" + g + "px;}\n" +
     ".top-banner-nav-btn{padding:8.5px " + p + "px;font-size:" + F + "px;}\n" +
     ".top-banner-nav > .top-banner-nav-btn:first-child{padding-left:8px;}\n";
