@@ -158,7 +158,7 @@
            1800px 이상에서 .page-chat-col 높이를 거래 행 높이로 밀어 넣어
            팝업 밖으로 입력칸이 나갑니다. 그래서 여기서 먼저 켜서 그쪽 init 을
            가로챕니다(js/chat-popup.js 머리말 참고). */
-      "ChatPopup", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI",
+      "ChatPopup", "LayoutAlign", "Theme", "BoardGalleryStyle", "BoardPaging", "Admin", "Board", "MyPage", "SymbolSelector", "Rank", "NoticeBoard", "NoticeCompact", "UserPanel", "AdSlots", "TickerBoard", "PageNav", "UI",
       /* 네 종목 전부의 시세를 받는 데이터 전용 모듈. "UI" 뒤에 둡니다 —
          UI.init() 이 DOM 을 재배치하기 전에 끼어들 이유가 없고(이 모듈은
          DOM 을 아예 안 봅니다), 소켓을 여는 일이라 늦게 열수록 안전합니다. */

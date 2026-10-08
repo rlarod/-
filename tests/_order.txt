@@ -1245,3 +1245,83 @@ tests/symbol-search-seal.test.js
 #     js/symbol-search.js · index.html · main.js 와 ★한 묶음★ 입니다.
 #     되돌릴 때 여섯을 같이 되돌리세요.
 tests/symbol-category-tabs-seal.test.js
+# ─────────────────────────────────────────────────────────────────────────
+# 공지/커뮤니티 박스를 ★한 줄 띠★ 로 (TL-024 · 2026-10-08 대표 지시)
+#   대표: "업비트랑 차이가 너무 심해;; 크기부터 모든 ㄷㄷ 다 분석해서 ㄱㄱ"
+#   1440 실측 — 차트 위가 업비트보다 591px 두꺼웠고 그중 232px 이 이 박스.
+#   232px -> 47px (-185px). 차트 시작 y=708 -> y=522.
+#   지키는 것: 공지 글·개수·순서·마크업 보존(지우는 코드 자체가 없음) ·
+#              펼친 버튼이 음수 top 으로 메뉴 줄을 덮지 않음(시안의 top:-40px
+#              을 그대로 쓰면 NAV.top-banner-nav 위에 겹쳐 메뉴를 못 누름) ·
+#              접힘은 display:none 으로만 · 띠 높이 36px 못박음 ·
+#              글씨 17px 바닥 · 빨강 안 씀 · style.css 무수정
+# 되돌리기: 이 줄과 tests/notice-compact-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/notice-compact.css · js/notice-compact.js ·
+#     index.html · main.js 와 ★한 묶음★ 입니다. 되돌릴 때 넷을 같이 되돌리세요.
+tests/notice-compact-seal.test.js
+# ─────────────────────────────────────────────────────────────────────────
+# 넓은 화면에서 ★왼쪽 종목 탭 줄★ 숨기기 (TL-024 · 2026-10-08 대표 지시)
+#   1440 실측 — 종목 탭 줄 49px -> 0px. 업비트에는 이 줄이 없고, 우리 탭 4개는
+#   오른쪽 종목 목록(.tl-sym-list)과 하는 일이 똑같습니다.
+#   ⚠⚠ 이 봉인이 막는 진짜 사고 — ★폰에서 종목을 못 바꾸게 되는 것★
+#   css/upbit-layout.css 가 min-width:1100px 에서만 오른쪽 열을 옆에 붙입니다.
+#   1100 아래에서는 오른쪽 열이 맨 아래로 내려가므로(390 실측 y=1795,
+#   360 실측 y=2265) 그 폭에서 이 탭까지 숨기면 종목을 바꿀 길이 없어집니다.
+#   화면은 멀쩡하고 오류도 안 나는 조용한 고장이고, 넓은 모니터로 보는
+#   사람은 영원히 못 봅니다.
+#   지키는 것: ★두 파일의 분기점 숫자를 직접 꺼내 맞춰봄★ (한쪽만 고치면 터짐) ·
+#              max-width 로 숨기는 규칙 금지 · 미디어쿼리 밖 선언 0개 ·
+#              마크업 보존(display 로만) · 글씨 19px·누르는 칸 48px 무수정 ·
+#              style.css · css/upbit-layout.css 무수정
+# 되돌리기: 이 줄과 tests/symbol-tabs-wide-hide-seal.test.js 를 git rm -f 로
+#           삭제한 뒤 ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/symbol-tabs-wide-hide.css · index.html 과 ★한 묶음★ 입니다.
+tests/symbol-tabs-wide-hide-seal.test.js
+# ─────────────────────────────────────────────────────────────────────────
+# 시세 바 높이 줄이기 (TL-024 · 2026-10-08 대표 지시)
+#   1440 실측 — 업비트 44px / 우리 103px. 103px -> 72px (-31px).
+#   ⚠ "한 줄" 은 숫자로 불가능합니다 — 항목 7개 폭 합 1,379.9px + 간격 30px
+#     인데 바가 쓸 수 있는 폭은 988px 뿐(.page-left 안에 있어 990px).
+#     422px 모자라서 간격을 0 으로 해도 안 들어갑니다.
+#   103px 의 정체는 "두 줄" 이 아니라 ★첫 줄이 혼자 61.8px★ 인 것이었습니다
+#   (대표가격 블록만 2단: 이름표 위 / 값 아래). 그 하나를 나란히 눕혀 37.8px.
+#   지키는 것: ★글씨를 한 글자도 안 줄임★ (새 CSS 에 font-size 0줄 ·
+#              style.css 의 27px 가격·17px 이름표·18px 값 그대로 ·
+#              transform:scale 같은 우회 축소 금지) ·
+#              ★nowrap + overflow-x 로 되돌리지 않음★ (그러면 마크가격이
+#              상자 안에 갇혀 사라집니다 — 2026-08-24 실제 사고, 페이지 가로
+#              스크롤로는 안 잡힘) · 항목 5개 보존 · height 못박기 금지 ·
+#              line-height 축소 금지 · style.css 무수정
+# 되돌리기: 이 줄과 tests/stats-bar-dense-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/stats-bar-dense.css · index.html 과 ★한 묶음★ 입니다.
+tests/stats-bar-dense-seal.test.js
+# ─────────────────────────────────────────────────────────────────────────
+# 오른쪽 종목 줄 높이 (TL-024 · 2026-10-08 대표 지시)
+#   1440 실측 — 업비트 45px / 우리 72.6px (1.6배). 72.6px -> 51.2px.
+#   네 줄 합 289.9px -> 204.3px (-85.6px). 카드 448.2px -> 362.5px.
+#   72.6px 의 내역: 위여백 11.0 + 이름 23.8 + 사이 2.0 + 코드 23.8 +
+#   아래여백 11.0 + 줄아래선 1.0. 우리는 이름/코드 ★두 줄★ 이라 업비트의
+#   45px 까지는 못 내려갑니다(두 줄 최소값 48.6px).
+#   지키는 것: ★글씨 17px 한 글자도 안 건드림★ (새 CSS 에 font-size 0줄 ·
+#              css/upbit-layout.css 의 17px 세 곳 그대로 · scale/zoom 우회 금지) ·
+#              ★별 누르는 칸 44px 이상 ★이면서★ 줄 안에 들어감★ —
+#              css/symbol-category-tabs.css 가 별을 52px 로 둔 전제("줄 높이가
+#              73px 이라 자리가 넉넉하다")가 이 건으로 깨집니다. 삐져나오면
+#              위아래 줄의 별과 겹쳐 어느 종목의 별을 누른 건지 모르게 됩니다.
+#              줄 높이를 CSS 값으로 ★계산해서★ 둘을 동시에 봅니다 ·
+#              줄간격 1.25 이상(한글 붙음 방지) · padding shorthand 금지
+#              (별 자리 padding-left:34px 가 지워짐) · style.css 무수정
+# 되돌리기: 이 줄과 tests/symbol-row-dense-seal.test.js 를 git rm -f 로 삭제한 뒤
+#           ★git add tests/_order.txt★ 까지 해야 끝납니다.
+#           (rm 이 아니라 git rm — git 에 남으면 tests-dir-hygiene 이 터집니다.
+#            _order.txt 를 안 올리면 test-registry 가 '목록엔 있는데 git 엔 없다' 로 터집니다)
+#   ⚠ 이 건은 css/symbol-row-dense.css · index.html 과 ★한 묶음★ 입니다.
+tests/symbol-row-dense-seal.test.js
